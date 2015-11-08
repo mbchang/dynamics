@@ -13,12 +13,12 @@ function plot_train_losses(losses_file, plotfolder)
     local train_losses = torch.log(torch.Tensor(data.losses))
     local grad_norms = torch.Tensor(data.grad_norms)
 
-    gnuplot.pngfigure(plotfolder..'/trainlosses.png')
+    -- gnuplot.pngfigure(plotfolder..'/trainlosses.png')
     gnuplot.xlabel('batch   ')
     gnuplot.ylabel('Log BCE Loss')
     gnuplot.title('Losses On Training Set')
     gnuplot.plot(train_losses)
-    gnuplot.plotflush()
+    -- gnuplot.plotflush()
 end
 
 function plot_experiment_results(experiment_results_file, plotfolder)
@@ -50,6 +50,6 @@ function plot_experiment_results(experiment_results_file, plotfolder)
 end
 
 -- plot_experiment_results(common_mp.results_folder .. '/experiment_results.t7', 'plots')
--- plot_train_losses(common_mp.results_folder .. '/losses,lr=0.0005_results.t7', 'hey')
+plot_train_losses(common_mp.results_folder .. '/losses,lr=0.0005_results.t7', 'hey')
 
 
