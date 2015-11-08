@@ -32,3 +32,4 @@ DCNN
 
 Notes
     Not sure if the .t7 file in 'physics_engine' is needed
+    When plotting train_losses, you are plotting ACROSS all epochs
