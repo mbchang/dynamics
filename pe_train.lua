@@ -188,7 +188,7 @@ function Trainer:train(num_iters, epoch_num)
     end
     torch.save(self.logs.savefile, self.protos)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
-    return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.logs.savefile
+    return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.protos --self.logs.savefile
 end    
 
 -- train_mp.learning_rate = 5e-4

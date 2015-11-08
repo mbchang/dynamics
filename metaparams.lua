@@ -1,6 +1,6 @@
 T = require 'pl.tablex'
 
-pc = false
+pc = true
 
 function merge_tables(t1, t2) 
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable

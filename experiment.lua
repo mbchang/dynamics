@@ -1,5 +1,6 @@
 require 'torch'
 require 'metaparams'
+local model_utils = require 'model_utils'
 
 if common_mp.cuda then
     require 'cutorch'
@@ -13,8 +14,8 @@ print('<torch> set nb of threads to ' .. torch.getnumthreads())
 local Trainer = require 'pe_train'
 local Tester = require 'pe_test'
 
-local trainer = Trainer.create('train', train_mp, train_mp_ignore)  -- need to specify learning rate here
-local tester = Tester.create('dev', test_mp)
+local trainer = Trainer.create('data_small', train_mp, train_mp_ignore)  -- need to specify learning rate here
+local tester = Tester.create('data_small', test_mp)
 
 local learning_rates = {5e-4, 5e-5, 5e-6}
 local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
@@ -26,33 +27,26 @@ for index, learning_rate in pairs(learning_rates) do
     trainer:reset(learning_rate)
     local train_losses = {}
 
-
-
-
-
-
     for i = 1, trainer.mp.max_epochs do
-        local train_loss, modelfile = trainer:train(200, i)  -- trainer.train_loader.nbatches
+        -- Train
+        local train_loss, model = trainer:train(20, i)  -- trainer.train_loader.nbatches
+        local p, gp = model_utils.combine_all_parameters(unpack(model)) -- model:getParameters()
+        local paramNorm, gpNorm = p:norm(), gp:norm()
+        -- local gpNorm = gp:norm()
 
-
-
-        -- TODO: trainer:train should outpu train_loss, self.protos; and tester should initialize ITS self.protos to the protos that train gives, this is NOT copy!
-
-        p, gp = model:getParameters()
-        paramNorm = p:norm()
-        gpNorm = gp:norm()
-
+        -- Test
         local dev_losses = {}
-        local dev_loss = tester:test(modelfile, 10)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
-        
-        p, gp = model:getParameters()
+        local dev_loss = tester:test(model, 10)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        local p, gp = model_utils.combine_all_parameters(unpack(model)) -- model:getParameters()
         assert(p:norm() == paramNorm)
         assert(gp:norm() == gpNorm)
 
+        -- Record loss
         train_losses[#train_losses+1] = train_loss
         dev_losses[#dev_losses+1] = dev_loss
         print('avg dev loss\t', dev_loss)
 
+        -- Save results
         local all_results = {results_learning_rates = torch.Tensor(learning_rates),
                         results_train_losses = torch.Tensor(train_losses),
                         results_dev_losses = torch.Tensor(dev_losses)}
@@ -61,11 +55,6 @@ for index, learning_rate in pairs(learning_rates) do
         if common_mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
-
-
-
-
-
 
 end
 

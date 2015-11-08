@@ -35,9 +35,9 @@ function Tester.create(dataset, mp)
 end
 
 
-function Tester:load_model(modelfile)
+function Tester:load_model(model)
     ------------------------------------ Create Model ------------------------------------
-    self.protos                 = torch.load(modelfile)
+    self.protos                 = model -- torch.load(modelfile)
     self.protos.criterion       = nn.MSECriterion()
 
     if common_mp.cuda then 
