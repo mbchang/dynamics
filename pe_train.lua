@@ -43,7 +43,7 @@ function Trainer:prepare_logs(learning_rate)
     self.logs.savefile = common_mp.results_folder .. '/saved_model,lr=' .. self.mp.learning_rate
     -- self.logs.savefile = self.cmd:string(self.logs.savefile, self.mp, self.mp_ignore) .. '.t7'
     self.logs.savefile = self.logs.savefile .. '.t7'
-    self.logs.lossesfile = common_mp.results_folder .. '/losses,lr=' .. self.mp.learning_rate .. '.t7'
+    self.logs.lossesfile = common_mp.results_folder .. '/losses,lr=' .. self.mp.learning_rate .. '_results.t7'
     self.logs.train_losses = {losses={}, grad_norms={}}
     collectgarbage()
 end

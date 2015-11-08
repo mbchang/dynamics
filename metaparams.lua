@@ -1,6 +1,6 @@
 T = require 'pl.tablex'
 
-pc = true
+pc = false
 
 function merge_tables(t1, t2) 
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
@@ -14,12 +14,26 @@ function merge_tables(t1, t2)
     return merged_table
 end
 
+personal_mp = {
+    feature_maps = 16,
+    batch_size = 3,
+    seq_length = 2,
+    max_epochs = 3
+}
+
+openmind_mp = {
+    feature_maps = 32,
+    batch_size = 100,
+    seq_length = 5,
+    max_epochs = 20
+}
+
 -- Common parameters
 common_mp = {
     -- Convolutional Parameters
     frame_height          = 150,
     frame_width           = 150,
-    feature_maps          = 96,  -- 96 on openmind, 16 on local
+    -- feature_maps          = 96,  -- 96 on openmind, 16 on local
     color_channels        = 3,
     encoder_filter_size   = 5,
     decoder_filter_size   = 7,
@@ -38,16 +52,23 @@ common_mp = {
     rand_init_wts         = false
 }
 
+if pc then 
+    common_mp.feature_maps = personal_mp.feature_maps
+else
+    common_mp.feature_maps = openmind_mp.feature_maps
+end
+
 -- Logging parameters
 common_mp.results_folder = 'results_featmaps='..common_mp.feature_maps..'_seqlen=3'
 
+
 -- Training parameters
 train_mp = merge_tables(common_mp, {
-      batch_size            = 100,  -- 100 on openmind
-      seq_length            = 3,  -- Something like 2 in, 1 out
+      -- batch_size            = 100,  -- 100 on openmind
+      -- seq_length            = 3,  -- Something like 2 in, 1 out
       shuffle               = false,
       max_grad_norm         = 10,
-      max_epochs            = 20,  -- 100 on openmind
+      -- max_epochs            = 20,  -- 100 on openmind
       seed                  = 123,
 
       -- Data Logging Parameters
@@ -66,25 +87,12 @@ train_mp_ignore = {
 
 -- Testing parameters
 test_mp = merge_tables(common_mp, {      
-      batch_size            = 100,
-      seq_length            = 3,
+      -- batch_size            = 100,
+      -- seq_length            = 3,
       shuffle               = true,
       seed                  = 234
 })
 
-personal_mp = {
-    feature_maps = 16,
-    batch_size = 3,
-    seq_length = 2,
-    max_epochs = 3
-}
-
-openmind_mp = {
-    feature_maps = 32,
-    batch_size = 100,
-    seq_length = 5,
-    max_epochs = 20
-}
 
 if pc then 
     train_mp = merge_tables(train_mp, personal_mp)
@@ -93,5 +101,6 @@ else
     train_mp = merge_tables(train_mp, openmind_mp)
     test_mp = merge_tables(test_mp, openmind_mp)  
 end
+
 
 
