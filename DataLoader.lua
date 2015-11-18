@@ -1,13 +1,14 @@
---[[
-Looks in the data folder, which contains a bunch of images and loops through them
-to make a 4d video
---]]
+-- data loader for object model
 
 require 'metaparams'
 require 'torch'
 require 'math'
 require 'image'
 require 'lfs'
+require 'torch'
+require 'paths'
+require 'hdf5'
+require 'data_utils'
 
 if common_mp.cuda then
     require 'cutorch'
@@ -18,150 +19,148 @@ if common_mp.cudnn then
     require 'cudnn'
 end
 
-local DataLoader = {}
-DataLoader.__index = DataLoader
-
-function split_table(table, num_chunks)
-    --[[
-        input
-            :type table: table
-            :param table: table of elements
-            
-            :type num_chunks: int
-            :param num_chunks: number of chunks you want to split the table into
-        output
-            :type: table of subtables
-            :value: the number of subtables is num_chunks, each of size math.floor(#table/num_chunks)
-    --]]
-    local n = #table
-    local chunk_size = math.floor(n/num_chunks)
-    local splitted_table = {}
-    local current_chunk = {}
-    for i = 1, n do
-        current_chunk[#current_chunk+1] = table[i]
-        if i % chunk_size == 0 then
-            splitted_table[#splitted_table+1] = current_chunk
-            current_chunk = {}
-        end
-    end
-    collectgarbage()
-    return splitted_table
-end
+local dataloader = {}
+dataloader.__index = dataloader
 
 
-function find_all_sequences(folders_list, parent_folder_path, seq_length)
-    local data_list = {}
-    for f = 1, #folders_list do
-        local data_path = parent_folder_path .. '/' .. folders_list[f]
+--[[ Loads the dataset as a table of configurations
 
-        -- get number of images in this folder
-        local num_images_f = io.popen('ls "' .. data_path .. '" | wc -l')
-        local num_images = nil
-        for x in num_images_f:lines() do num_images = x end
-        local num_examples = math.floor(num_images/(seq_length))
-        num_images = num_examples*seq_length
+    Input
+        .h5 file data
+        The data for each configuration is spread out across 3 keys in the .h5 file
+        Let <config> be the configuration name
+            "<config>particles": (num_samples, num_particles, windowsize, [px, py, vx, vy, mass])
+            "<config>goos": (num_samples, num_goos, [left, top, right, bottom, gooStrength])
+            "<config>mask": binary vector of length 5, trailing zeros are padding when #particles < 6
 
-        -- cycle through images
-        local p = io.popen('find "' .. data_path .. '" -type f -name "*.png"')  -- Note: this is not in order!
-        local j = 0
-        local ex_string = {}
-        for img_name in p:lines() do
-            j = j + 1
-            ex_string[#ex_string+1] = data_path .. '/' .. j .. '.png'  -- force the images to be in order
-            if j % seq_length == 0 then
-                data_list[#data_list+1] = ex_string
-                ex_string = {}
+    Output
+    {
+        configuration:
+            {
+              particles : DoubleTensor - size: (num_samples x num_particles x windowsize x 5)
+              goos : DoubleTensor - size: (num_samples x num_goos x 5)
+              mask : DoubleTensor - size: 5 
+            }
+    }
+
+    The last dimension of particles is 5 because: [px, py, vx, vy, mass]
+    The last dimension of goos is 5 because: [left, top, right, bottom, gooStrength]
+    The mask is dimension 5 because: our data has at most 6 particles -- ]]
+function load_data(dataset_name, dataset_folder)
+    local dataset_file = hdf5.open(dataset_folder .. '/' .. dataset_name, 'r')
+
+    -- Get all keys: note they might not be in order though!
+    local examples = {}
+    local subkeys = {'particles', 'goos', 'mask'}  -- hardcoded
+    for k,v in pairs(dataset_file:all()) do
+
+        -- find the subkey of interest
+        local this_subkey
+        local example_key
+        local counter = 0
+        for sk, sv in pairs(subkeys) do
+            if k:find(sv) then
+                counter = counter + 1
+                this_subkey = sv
+                example_key = k:sub(0,k:find(sv)-1)
             end
         end
-    end
-    collectgarbage()
-    return data_list
-end
+        assert(counter == 1)
+        assert(this_subkey and example_key)
 
--- function isfile(filename)
---     local file = io.open(filename, 'r')
---     return file != nil
--- end
-
-function DataLoader.create(dataset, seq_length, batch_size, shuffle)
-    --[[
-        input
-            :type dataset: str
-            :param dataset: name of folder containing training examples
-
-            :type seq_length: int
-            :param seq_length: length of sequence
-    --]]
-    local self = {}
-    setmetatable(self, DataLoader)
-
-    ---------------------------------- Initialize stuff ----------------------------------
-    self.current_batch = 1
-    self.dataset_name = dataset  -- string
-    self.seq_length = seq_length
-    self.batch_size = batch_size
-    -- self.data_folder_path = "/home/mbchang/datasets/bounce/" .. dataset
-    self.data_folder_path = "/Users/MichaelChang/Documents/SuperUROPlink/Code/NOF/datagen/bounce/" .. dataset
-    self.data_folder = {}  -- keys are example ids, values are the folder name
-    for folder in lfs.dir(self.data_folder_path) do
-        if (#folder ==13) then -- this has time information
-            self.data_folder[#self.data_folder+1] = folder
+        if examples[example_key] then
+            examples[example_key][this_subkey] = v
+        else
+            examples[example_key] = {}
+            examples[example_key][this_subkey] = v
         end
     end
+    print(examples)
+    return examples
+end
 
-    --------------------------------- Find all sequences ---------------------------------
-    -- Note that if the number of images in a certain folder < seq_length, that folder is skipped
-    self.data_list = find_all_sequences(self.data_folder, self.data_folder_path, self.seq_length)
-    self.num_examples = #self.data_list
-    self.nbatches = math.floor(self.num_examples / self.batch_size)
 
-    --------------------------------- Split into batches ---------------------------------
-    self.batches = split_table(self.data_list, self.nbatches)
+function dataloader.create(dataset_name, dataset_folder, shuffle)
+    --[[
+        Input
+            dataset_file: file containing data
+            batch_size: batch size
+            shuffle: boolean
+    --]]
+    local self = {}
+    setmetatable(self, dataloader)
+
+    self.dataset_name = dataset_name  -- string
+    self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
+    self.configs = get_keys(self.dataset)  -- table of all keys
+    self.nbatches = #self.configs
     if shuffle then 
         self.batch_idxs = torch.randperm(self.nbatches)
     else
         self.batch_idxs = torch.range(1,self.nbatches)
     end
-
-    --------------------------- Save list of batches into file ---------------------------
-    local batches_file = common_mp.results_folder .. '/examples_for_'..self.dataset_name..'_'..'seq_len='..self.seq_length .. '_' ..'batchsize='..self.batch_size
-    if io.open(batches_file, 'r') == nil then 
-        torch.save(batches_file, self.batches) 
-        print('Saved batches file.')
-    end
+    self.current_batch = 1
 
     collectgarbage()
     return self
 end
 
 
-function DataLoader:next_batch(mp)
-    ----------------------------------- Load Batchfile -----------------------------------
-    -- print(self.batch_idxs[self.current_batch])
-    local batch_files = self.batches[self.batch_idxs[self.current_batch]]
+--[[ Expands the number of examples per batch to have an example per particle
+    Input: batch_particles: (num_samples x num_particles x windowsize x 5)
+    Output: 
+        {
+            
+        }
+
+--]]
+function expand_for_each_particle(batch_particles)
+    local num_samples, num_particles, windowsize = unpack(minibatch_p:size)
+    local this_particles = {}
+    local other_particles = {}
+    for p=1:num_samples do
+        this = batch_particles[{{},{i},{},{}}]  -- (num_samples x windowsize x 5)
+        other = torch.cat(batch_particles[{{},{1,i-1},{},{}}], 
+                        batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 5)
+
+        this_particles[#this_particles+1] = this
+        other_particles[#other_particles+1] = other
+    end
+
+    this_particles = torch.cat(this_particles,1)  -- concatenate along batch dimension
+    other_particles = torch.cat(other_particles,1)
+    return this_particles, other_particles
+end
+
+
+function dataloader:next_batch()
     self.current_batch = self.current_batch + 1
     if self.current_batch > self.nbatches then self.current_batch = 1 end
 
-    --------------------------------- Populate With Data ---------------------------------
-    local minibatch = torch.Tensor(torch.LongStorage{#batch_files, self.seq_length, mp.color_channels, mp.frame_height, mp.frame_width})
-    for i = 1, #batch_files do
-        for t = 1, self.seq_length do 
-            img = image.load(batch_files[i][t])
-            img = img/255 -- normalize
-            minibatch[{i,t}] = img
-        end
-    end 
+    local minibatch_data = self.dataset[self.configs[self.batch_idxs[current_batch]]]
+    local minibatch_p = minibatch_data.particles  -- (num_samples x num_particles x windowsize x 5)
+    local minibatch_g = minibatch_data.goos  -- (num_samples x num_goos x 5)
+    local minibatch_m = minibatch_data.mask  -- 5
+    local num_samples, num_particles, windowsize = unpack(minibatch_p:size)
+    local this_particles, other_particles = expand_for_each_particle(minibatch_p)
 
-    -- Here define training example pairs
-    local x  = minibatch
-    local y = minibatch
+    -- split into x and y
+    local num_past = math.floor(windowsize/2)
+    local this_x = this_particles[{{},{},{1,num_past},{}}]
+    local others_x = other_particles[{{},{},{1,num_past},{}}]
+    local y = this_particles[{{},{},{num_past+1,-1},{}}]
 
+    -- cuda
     if common_mp.cuda then
-        x = x:cuda()
-        y = y:cuda()
+        this_x      = this_x:cuda()
+        others_x    = others_x:cuda()
+        goos        = goos:cuda()
+        mask        = mask:cuda()
+        y           = y:cuda()
     end
-    return x, y
+
+    return {this_x, others_x, goos, mask, y}
 end
 
-return DataLoader
+return dataloader
 
