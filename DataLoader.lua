@@ -82,8 +82,8 @@ end
 function dataloader.create(dataset_name, dataset_folder, shuffle)
     --[[
         Input
-            dataset_file: file containing data
-            batch_size: batch size
+            dataset_name: file containing data, like 'trainset'
+            dataset_folder: folder containing the .h5 files
             shuffle: boolean
     --]]
     local self = {}
@@ -130,6 +130,8 @@ function expand_for_each_particle(batch_particles)
                         batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 5)
         end
         assert(this:size()[1] == other:size()[1])
+        print(this:size())
+        print(other:size())
         this_particles[#this_particles+1] = this
         other_particles[#other_particles+1] = other
     end
@@ -152,13 +154,26 @@ function dataloader:next_batch()
     local minibatch_m = minibatch_data.mask  -- 5
     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))
+    local num_particles = minibatch_p:size(2)
+
+    -- print('ORIG')
+    -- print('minibatch_p[{{1,2},{},{},{}}]')
+    -- print(minibatch_p[{{1,2},{},{},{}}])
+    -- print('minibatch_g[{{1,2},{},{}}]')
+    -- print(minibatch_g[{{1,2},{},{}}])
+
+    -- expand goos to number of examples. m_goos stays constant anyways
+    local m_goos = {}
+    for i=1,num_particles do
+        m_goos[#m_goos+1] = minibatch_g
+    end
+    m_goos = torch.cat(m_goos,1)
     
     -- pad other_particles with 0s
     assert(minibatch_m[minibatch_m:eq(0)]:size(1) == 5 - other_particles:size()[2])  -- make sure we are padding the right amount
     local num_to_pad = #torch.totable(minibatch_m[minibatch_m:eq(0)])
     if num_to_pad > 0 then 
         local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, 5):fill(0)
-        -- print(pad_p)
         other_particles = torch.cat(other_particles, pad_p, 2)
     end
 
@@ -171,6 +186,7 @@ function dataloader:next_batch()
     -- assert num_samples are correct
     assert(this_x:size(1) == num_samples and
             others_x:size(1) == num_samples and 
+            m_goos:size(1) == num_samples and
             y:size(1) == num_samples)
     -- assert number of axes of tensors are correct
     assert(this_x:size():size(1)==3 and 
@@ -179,25 +195,34 @@ function dataloader:next_batch()
     -- assert seq length is correct
     assert(this_x:size(2)==num_past and 
             others_x:size(3)==num_past and 
-            y:size(3)==num_past)
+            y:size(2)==num_past)
     -- check padding
     assert(others_x:size()[2]==5)
     -- check data dimension
     assert(this_x:size()[3] == 5 and others_x:size()[4] == 5 and y:size()[3] == 5)
 
+    -- print('after')
+    -- print('this_x[{{1,2},{},{}}]')
+    -- print(this_x[{{1,2},{},{}}])
+    -- print('others_x[{{1,2},{},{},{}}]')
+    -- print(others_x[{{1,2},{},{},{}}])
+    -- print('m_goos[{{1,2},{},{}}]')
+    -- print(m_goos[{{1,2},{},{}}])
+
     -- cuda
     if common_mp.cuda then
-        this_x      = this_x:cuda()
-        others_x    = others_x:cuda()
-        goos        = goos:cuda()
-        mask        = mask:cuda()
-        y           = y:cuda()
+        this_x          = this_x:cuda()
+        others_x        = others_x:cuda()
+        m_goos          = m_goos:cuda()
+        minibatch_m     = minibatch_m:cuda()
+        y               = y:cuda()
     end
-    return {this=this_x, others=others_x, goos=minibatch_g, mask=minibatch_m, y=y}
+    return {this=this_x, others=others_x, goos=m_goos, mask=minibatch_m, y=y}
 end
 
 -- return dataloader
 
-d = dataloader.create('trainset','hey',false)
+d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
+-- d = dataloader.create('trainset','hey',false)
 print(d:next_batch())
 
