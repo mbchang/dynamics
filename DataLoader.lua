@@ -75,7 +75,6 @@ function load_data(dataset_name, dataset_folder)
             examples[example_key][this_subkey] = v
         end
     end
-    -- print(examples)
     return examples
 end
 
@@ -153,6 +152,7 @@ function dataloader:next_batch()
     local minibatch_m = minibatch_data.mask  -- 5
     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))
+    
     -- pad other_particles with 0s
     assert(minibatch_m[minibatch_m:eq(0)]:size(1) == 5 - other_particles:size()[2])  -- make sure we are padding the right amount
     local num_to_pad = #torch.totable(minibatch_m[minibatch_m:eq(0)])
