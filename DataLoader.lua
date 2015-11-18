@@ -22,6 +22,8 @@ end
 local dataloader = {}
 dataloader.__index = dataloader
 
+-- TODO: normalize pixel coordinates!
+
 
 --[[ Loads the dataset as a table of configurations
 
@@ -111,7 +113,6 @@ end
         {
             
         }
-
 --]]
 function expand_for_each_particle(batch_particles)
     local num_samples, num_particles, windowsize = unpack(torch.totable(batch_particles:size()))
@@ -120,7 +121,6 @@ function expand_for_each_particle(batch_particles)
     for i=1,num_particles do
         local this = torch.squeeze(batch_particles[{{},{i},{},{}}])  -- (num_samples x windowsize x 5)
         local other
-        -- Note that this has not been squeezed!
         if i == 1 then
             other = batch_particles[{{},{i+1,-1},{},{}}]
         elseif i == num_particles then
@@ -130,8 +130,6 @@ function expand_for_each_particle(batch_particles)
                         batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 5)
         end
         assert(this:size()[1] == other:size()[1])
-        print(this:size())
-        print(other:size())
         this_particles[#this_particles+1] = this
         other_particles[#other_particles+1] = other
     end
@@ -144,6 +142,28 @@ function expand_for_each_particle(batch_particles)
 end
 
 
+--[[
+    Each batch is a table of 5 things: {this, others, goos, mask, y}
+
+        this: particle of interest, past timesteps
+            (num_samples x windowsize/2 x 5)
+            last dimension: [px, py, vx, vy, mass]
+
+        others: other particles, past timesteps
+            (num_samples x (num_particles-1) x windowsize/2 x 5)
+            last dimension: [px, py, vx, vy, mass]
+
+        goos: goos, constant across time
+            (num_samples x num_goos x 5)
+            last dimension: [left, top, right, bottom, gooStrength]
+
+        mask: mask for the number of particles
+            tensor of length 5, 0s padded at the end if num_particles < 6
+
+        y: particle of interest, future timesteps
+            (num_samples x windowsize/2 x 5)
+            last dimension: [px, py, vx, vy, mass]
+--]]
 function dataloader:next_batch()
     self.current_batch = self.current_batch + 1
     if self.current_batch > self.nbatches then self.current_batch = 1 end
@@ -156,17 +176,9 @@ function dataloader:next_batch()
     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))
     local num_particles = minibatch_p:size(2)
 
-    -- print('ORIG')
-    -- print('minibatch_p[{{1,2},{},{},{}}]')
-    -- print(minibatch_p[{{1,2},{},{},{}}])
-    -- print('minibatch_g[{{1,2},{},{}}]')
-    -- print(minibatch_g[{{1,2},{},{}}])
-
     -- expand goos to number of examples. m_goos stays constant anyways
     local m_goos = {}
-    for i=1,num_particles do
-        m_goos[#m_goos+1] = minibatch_g
-    end
+    for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end
     m_goos = torch.cat(m_goos,1)
     
     -- pad other_particles with 0s
@@ -184,30 +196,18 @@ function dataloader:next_batch()
     local y = this_particles[{{},{num_past+1,-1},{}}]
 
     -- assert num_samples are correct
-    assert(this_x:size(1) == num_samples and
-            others_x:size(1) == num_samples and 
-            m_goos:size(1) == num_samples and
-            y:size(1) == num_samples)
+    assert(this_x:size(1) == num_samples and others_x:size(1) == num_samples and 
+            m_goos:size(1) == num_samples and y:size(1) == num_samples)
     -- assert number of axes of tensors are correct
-    assert(this_x:size():size(1)==3 and 
-            others_x:size():size(1)==4 and 
+    assert(this_x:size():size(1)==3 and others_x:size():size(1)==4 and 
             y:size():size(1)==3)
     -- assert seq length is correct
-    assert(this_x:size(2)==num_past and 
-            others_x:size(3)==num_past and 
+    assert(this_x:size(2)==num_past and others_x:size(3)==num_past and 
             y:size(2)==num_past)
     -- check padding
-    assert(others_x:size()[2]==5)
+    assert(others_x:size(2)==5)
     -- check data dimension
-    assert(this_x:size()[3] == 5 and others_x:size()[4] == 5 and y:size()[3] == 5)
-
-    -- print('after')
-    -- print('this_x[{{1,2},{},{}}]')
-    -- print(this_x[{{1,2},{},{}}])
-    -- print('others_x[{{1,2},{},{},{}}]')
-    -- print(others_x[{{1,2},{},{},{}}])
-    -- print('m_goos[{{1,2},{},{}}]')
-    -- print(m_goos[{{1,2},{},{}}])
+    assert(this_x:size(3) == 5 and others_x:size(4) == 5 and y:size(3) == 5)
 
     -- cuda
     if common_mp.cuda then
