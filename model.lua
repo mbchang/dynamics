@@ -2,6 +2,9 @@ require 'metaparams'
 require 'nn'
 require 'torch'
 require 'nngraph'
+require 'Base'
+local model_utils = require 'model_utils'
+
 -- require 'SteppableLSTM'
 
 if common_mp.cuda then
@@ -150,6 +153,95 @@ function init_baseline_decoder(mp, input_dim)
 end
 
 
+function lstm(x, prev_c, prev_h, params)
+    -- Calculate all four gates in one go
+    local i2h = nn.Linear(params.rnn_inp_dim, 4*params.rnn_hid_dim)(x) -- this is the problem when I go two layers
+    local h2h = nn.Linear(params.rnn_hid_dim, 4*params.rnn_hid_dim)(prev_h)
+    local gates = nn.CAddTable()({i2h, h2h})
+
+    -- Reshape to (bsize, n_gates, hid_size)
+    -- Then slize the n_gates dimension, i.e dimension 2
+    local reshaped_gates =  nn.Reshape(4,params.rnn_hid_dim)(gates)
+    local sliced_gates = nn.SplitTable(2)(reshaped_gates)
+
+    -- Use select gate to fetch each gate and apply nonlinearity
+    local in_gate          = nn.Sigmoid()(nn.SelectTable(1)(sliced_gates))
+    local in_transform     = nn.Tanh()(nn.SelectTable(2)(sliced_gates))
+    local forget_gate      = nn.Sigmoid()(nn.SelectTable(3)(sliced_gates))
+    local out_gate         = nn.Sigmoid()(nn.SelectTable(4)(sliced_gates))
+
+    local next_c           = nn.CAddTable()({
+      nn.CMulTable()({forget_gate, prev_c}),
+      nn.CMulTable()({in_gate,     in_transform})
+    })
+    local next_h           = nn.CMulTable()({out_gate, nn.Tanh()(next_c)})
+
+    return next_c, next_h
+end
+
+
+function init_object_encoder(particle_dim, rnn_inp_dim)
+    assert(rnn_inp_dim % 2 == 0)
+    local thisp     = nn.Identity()() -- this particle of interest
+    local contextp  = nn.Identity()() -- the context particle
+
+    local thisp_out     = nn.Linear(particle_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/3)
+    local contextp_out  = nn.Linear(particle_dim, rnn_inp_dim/2)(contextp)     -- (batch_size, rnn_inp_dim/3)
+
+    -- Concatenate
+    local encoder_out = nn.JoinTable(2)({thisp_out, contextp_out})  -- (batch_size, rnn_inp_dim)
+
+    return nn.gModule({thisp, contextp}, {encoder_out})
+end
+
+
+function init_object_decoder(rnn_hid_dim, out_dim)
+    local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
+    local decoder_out = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
+
+    return nn.gModule({rnn_out}, {decoder_out}) 
+end
+
+
+-- do not need the mask
+-- params: layers, particle_dim, goo_dim, rnn_inp_dim, rnn_hid_dim, out_dim
+function init_network(params)
+    -- Initialize encoder and decoder
+    local encoder = init_object_encoder(params.particle_dim, params.rnn_inp_dim)
+    local decoder = init_object_decoder(params.rnn_hid_dim, params.out_dim)
+
+    -- Input to netowrk
+    local thisp_past    = nn.Identity()() -- this particle of interest, past
+    local contextp      = nn.Identity()() -- the context particle
+    local thisp_future  = nn.Identity()() -- the particle of interet, future
+
+    -- Input to LSTM
+    local lstm_input = encoder({thisp_past, contextp})
+    local prev_s = nn.Identity()() -- LSTM
+
+    -- Go through each layer of LSTM
+    local rnn_inp = {[0] = nn.Identity()(lstm_input)}  -- rnn_inp[i] holds the input at layer i+1
+    local next_s = {}
+    local split = {prev_s:split(2 * params.layers)}
+    local next_c, next_h
+    for layer_idx = 1, params.layers do
+        local prev_c         = split[2 * layer_idx - 1]  -- odd entries
+        local prev_h         = split[2 * layer_idx]  -- even entries
+        local dropped        = rnn_inp[layer_idx - 1]
+        next_c, next_h = lstm(dropped, prev_c, prev_h, params)  -- you can make this a gModule if you wnant
+        table.insert(next_s, next_c)
+        table.insert(next_s, next_h)
+        rnn_inp[layer_idx] = next_h
+    end
+
+    local prediction = decoder({next_h})  -- next_h is the output of the last layer
+    local err = nn.MSECriterion()({prediction, thisp_future})  -- should be MSECriterion()({prediction, thisp_future})
+    print('err', err)
+    return nn.gModule({thisp_past, contextp, prev_s, thisp_future}, {err, nn.Identity()(next_s), prediction})  -- last output should be prediction
+end
+
+
+
 function init_baseline_lstm(mp, input_size, rnn_size)
     if mp.cudnn then 
         --------------------- input structure ---------------------
@@ -240,7 +332,6 @@ function init_baseline_model()
 
     -- LSTM
     local lstm_allout   = {lstm({encoder_out, prev_c, prev_h}):split(2)} -- can you use unpack here? maybe not when defining the graphs
-    -- local lstm_out      = lstm_allout[1] -- PROBLEM: lstm_out is nil? 
     local next_c        = lstm_allout[1]
     local next_h        = lstm_allout[2]
 
@@ -277,77 +368,96 @@ function init_baseline_cnn_model()
 end
 
 
---[[
+-- Create Model
+function test_model()
+    local params = {
+                    layers          = 2,
+                    particle_dim    = 7,
+                    rnn_inp_dim     = 50,
+                    rnn_hid_dim     = 50,  -- problem: basically inpdim and hiddim should be the same if you want to do multilayer
+                    out_dim         = 7
+                    }
 
--- From "Learning to Execute"
-function create_network()
-  local x                = nn.Identity()()
-  local y                = nn.Identity()()
-  local prev_s           = nn.Identity()()
-  local i                = {[0] = Embedding(symbolsManager.vocab_size,
-                                            mp.rnn_size)(x)}
-  local next_s           = {}
-  local splitted         = {prev_s:split(2 * mp.layers)}
-  for layer_idx = 1, mp.layers do
-    local prev_c         = splitted[2 * layer_idx - 1]
-    local prev_h         = splitted[2 * layer_idx]
-    local next_c, next_h = lstm(i[layer_idx - 1], prev_c, prev_h)
-    table.insert(next_s, next_c)
-    table.insert(next_s, next_h)
-    i[layer_idx] = next_h
-  end
-  local h2y              = nn.Linear(mp.rnn_size, symbolsManager.vocab_size)
-  local pred             = nn.LogSoftMax()(h2y(i[mp.layers]))
-  local err              = MaskedLoss()({pred, y})
-  local module           = nn.gModule({x, y, prev_s}, 
-                                      {err, nn.Identity()(next_s)})
-  module:getParameters():uniform(-mp.init_weight, mp.init_weight)
-  return module:cuda()
+    local batch_size = 8
+    local seq_length = 3
+
+    -- Data
+    local thisp_past       = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
+    local contextp         = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
+    local thisp_future     = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
+
+    print('thisp_past',thisp_past:size())
+    print('contextp', contextp:size())
+    print('thisp_future', thisp_future:size())
+
+    -- State
+    local s = {}
+    for j = 0, seq_length do
+        s[j] = {}
+        for d = 1, 2 * params.layers do
+            s[j][d] = torch.random(torch.Tensor(batch_size, params.rnn_hid_dim)) 
+        end
+    end
+
+    -- Network
+    local network = init_network(params)
+    local rnns = g_cloneManyTimes(network, seq_length, not network.parameters)
+
+    -- Forward
+    local loss = {}
+    local predictions = {}
+    for i = 1, seq_length do
+        local sim1 = s[i-1]
+        loss[i], s[i], predictions[i] = unpack(rnns[i]:forward({thisp_past[{{},i}], contextp[{{},i}], sim1, thisp_future[{{},i}]}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+        print('loss', loss[i])
+        print('s[i]', s[i])
+        print('predictions', predictions[i])
+    end 
+    print(loss)
+    print(s)
+    print(predictions)
 end
 
 
--- --]]
 
--- Create Model
-function test_model(mp)
-    mp.batch_size = 3
-    mp.seq_length = 2
 
-    -- Data
-    local x          = torch.random(torch.Tensor(torch.LongStorage{mp.batch_size, mp.seq_length, mp.color_channels, mp.frame_height, mp.frame_width}))
-    local prev_c     = torch.ones(mp.batch_size, mp.LSTM_hidden_dim)
-    local prev_h     = torch.ones(mp.batch_size, mp.LSTM_hidden_dim)
+-- -- nn.gModule({thisp_past,contextp, thisp_future}, {err, nn.Identity()(next_s), prediction}) 
 
-    -- Model
-    local encoder = init_baseline_encoder(mp, mp.LSTM_input_dim)
-    local lstm = nn.SteppableLSTM(mp.LSTM_input_dim, mp.LSTM_hidden_dim, mp.LSTM_hidden_dim, 1, false)  -- TODO: consider the hidden-output connection of LSTM!
-    local decoder = init_baseline_decoder(mp, mp.LSTM_input_dim, mp.LSTM_hidden_dim)
-    local criterion = nn.BCECriterion()
 
-    -- Initial conditions
-    local embeddings = {}
-    local lstm_c = {[0]=self.lstm_init_state.initstate_c} -- internal cell states of LSTM
-    local lstm_h = {[0]=self.lstm_init_state.initstate_h} -- output values of LSTM
-    local predictions = {}
+--     local x          = torch.random(torch.Tensor(torch.LongStorage{mp.batch_size, mp.seq_length, mp.color_channels, mp.frame_height, mp.frame_width}))
+--     local prev_c     = torch.ones(mp.batch_size, mp.LSTM_hidden_dim)
+--     local prev_h     = torch.ones(mp.batch_size, mp.LSTM_hidden_dim)
 
-    -- Forward pass
-    local loss = 0
-    for t = 1,mp.seq_length do
-        embeddings[t] = encoder:forward(torch.squeeze(x[{{},{t}}]))
+--     -- Model
+--     local encoder = init_baseline_encoder(mp, mp.LSTM_input_dim)
+--     local lstm = nn.SteppableLSTM(mp.LSTM_input_dim, mp.LSTM_hidden_dim, mp.LSTM_hidden_dim, 1, false)  -- TODO: consider the hidden-output connection of LSTM!
+--     local decoder = init_baseline_decoder(mp, mp.LSTM_input_dim, mp.LSTM_hidden_dim)
+--     local criterion = nn.BCECriterion()
+
+--     -- Initial conditions
+--     local embeddings = {}
+--     local lstm_c = {[0]=self.lstm_init_state.initstate_c} -- internal cell states of LSTM
+--     local lstm_h = {[0]=self.lstm_init_state.initstate_h} -- output values of LSTM
+--     local predictions = {}
+
+--     -- Forward pass
+--     local loss = 0
+--     for t = 1,mp.seq_length do
+--         embeddings[t] = encoder:forward(torch.squeeze(x[{{},{t}}]))
         
-        lstm_c[t], lstm_h[t] = unpack(self.clones.lstm[t]:forward{embeddings[t], lstm_c[t-1], lstm_h[t-1]})
-        predictions[t] = self.clones.decoder[t]:forward(lstm_h[t])
-        loss = loss + self.clones.criterion[t]:forward(predictions[t], torch.squeeze(y[{{},{t}}]))
+--         lstm_c[t], lstm_h[t] = unpack(self.clones.lstm[t]:forward{embeddings[t], lstm_c[t-1], lstm_h[t-1]})
+--         predictions[t] = self.clones.decoder[t]:forward(lstm_h[t])
+--         loss = loss + self.clones.criterion[t]:forward(predictions[t], torch.squeeze(y[{{},{t}}]))
 
-        -- DEBUGGING
-        --image.display(predictions[t])  -- here you can also save the image
-    end
-    collectgarbage()
-    return loss, embeddings, lstm_c, lstm_h, predictions
-end 
+--         -- DEBUGGING
+--         --image.display(predictions[t])  -- here you can also save the image
+--     end
+--     collectgarbage()
+--     return loss, embeddings, lstm_c, lstm_h, predictions
+-- end 
 
 
-
+test_model()
 
 
 
