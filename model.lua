@@ -182,11 +182,11 @@ end
 
 function init_object_encoder(particle_dim, rnn_inp_dim)
     assert(rnn_inp_dim % 2 == 0)
-    local thisp     = nn.Identity()() -- this particle of interest
-    local contextp  = nn.Identity()() -- the context particle
+    local thisp     = nn.Identity()() -- this particle of interest  (batch_size, particle_dim)
+    local contextp  = nn.Identity()() -- the context particle  (batch_size, partilce_dim)
 
-    local thisp_out     = nn.Linear(particle_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/3)
-    local contextp_out  = nn.Linear(particle_dim, rnn_inp_dim/2)(contextp)     -- (batch_size, rnn_inp_dim/3)
+    local thisp_out     = nn.Linear(particle_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/2)
+    local contextp_out  = nn.Linear(particle_dim, rnn_inp_dim/2)(contextp) -- (batch_size, rnn_inp_dim/2)
 
     -- Concatenate
     local encoder_out = nn.JoinTable(2)({thisp_out, contextp_out})  -- (batch_size, rnn_inp_dim)
@@ -236,10 +236,8 @@ function init_network(params)
 
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
     local err = nn.MSECriterion()({prediction, thisp_future})  -- should be MSECriterion()({prediction, thisp_future})
-    print('err', err)
     return nn.gModule({thisp_past, contextp, prev_s, thisp_future}, {err, nn.Identity()(next_s), prediction})  -- last output should be prediction
 end
-
 
 
 function init_baseline_lstm(mp, input_size, rnn_size)
@@ -386,10 +384,6 @@ function test_model()
     local contextp         = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
     local thisp_future     = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
 
-    print('thisp_past',thisp_past:size())
-    print('contextp', contextp:size())
-    print('thisp_future', thisp_future:size())
-
     -- State
     local s = {}
     for j = 0, seq_length do
@@ -413,9 +407,32 @@ function test_model()
         print('s[i]', s[i])
         print('predictions', predictions[i])
     end 
-    print(loss)
-    print(s)
-    print(predictions)
+end
+
+
+function test_encoder()
+    local params = {
+                    layers          = 2,
+                    particle_dim    = 7,
+                    rnn_inp_dim     = 50,
+                    rnn_hid_dim     = 50,  -- problem: basically inpdim and hiddim should be the same if you want to do multilayer
+                    out_dim         = 7
+                    }
+
+    local batch_size = 8
+    local seq_length = 3
+
+    -- Data
+    local thisp_past       = torch.random(torch.Tensor(batch_size, params.particle_dim))
+    local contextp         = torch.random(torch.Tensor(batch_size, params.particle_dim))
+
+    print(thisp_past:size())
+    print(contextp:size())
+
+    local encoder = init_object_encoder(params.particle_dim, params.rnn_inp_dim)
+    local encoder_out = encoder:forward({thisp_past, contextp})
+
+    print(encoder_out:size())
 end
 
 
@@ -457,7 +474,7 @@ end
 -- end 
 
 
-test_model()
-
+-- test_model()
+test_encoder()
 
 
