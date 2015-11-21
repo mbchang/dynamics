@@ -69,5 +69,5 @@ test_mp = merge_tables(common_mp, {
       shuffle               = true,
 })
 
-common_mp.results_folder = create_experiment_string(
-                            {'batch_size', 'seq_length', 'layers', 'rnn_dim'}, common_mp)
+common_mp.data_folder = '/om/user/mbchang/physics-data/dataset_files'
+common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim'}, common_mp)

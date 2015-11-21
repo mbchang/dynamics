@@ -1,6 +1,7 @@
 require 'torch'
 require 'paths'
 require 'hdf5'
+require 'data_utils'
 
 --[[ Loads the dataset as a table of configurations
 
@@ -25,8 +26,8 @@ require 'hdf5'
     The last dimension of particles is 5 because: [px, py, vx, vy, mass]
     The last dimension of goos is 5 because: [left, top, right, bottom, gooStrength]
     The mask is dimension 5 because: our data has at most 6 particles -- ]]
-function load_data(dataset_name)
-    local dataset_file = hdf5.open(dataset_name, 'r')
+function load_data(dataset_name, dataset_folder)
+    local dataset_file = hdf5.open(dataset_folder .. '/' .. dataset_name, 'r')
 
     -- Get all keys: note they might not be in order though!
     local examples = {}
@@ -54,9 +55,12 @@ function load_data(dataset_name)
             examples[example_key][this_subkey] = v
         end
     end
-    print(examples)
+    -- print(examples)
+    print(get_keys(examples))
     return examples
 end
+
+
 
 -- remove trailing and leading whitespace from string.
 -- http://en.wikipedia.org/wiki/Trim_(8programming)
@@ -111,6 +115,6 @@ function test_fix_input_syntax()
 end 
 
 
-load_data('hey/trainset.h5')
-load_data('hey/valset.h5')
-load_data('hey/testset.h5')
+load_data('trainset.h5', 'hey')
+-- load_data('valset.h5', '/om/user/mbchang/physics-data/dataset_files')
+-- load_data('testset.h5', '/om/user/mbchang/physics-data/dataset_files')

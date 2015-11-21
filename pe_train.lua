@@ -8,7 +8,6 @@ require 'optim'
 require 'model'
 require 'image'
 require 'rmsprop'
-require 'SteppableLSTM'
 
 if common_mp.cuda then
     require 'cutorch'
@@ -25,13 +24,12 @@ local model_utils = require 'model_utils'
 local Trainer = {}
 Trainer.__index = Trainer
 
-function Trainer.create(dataset, mp, mp_ignore)
+function Trainer.create(dataset, mp)
     local self = {}
     setmetatable(self, Trainer)
     self.mp = mp
-    self.mp_ignore = mp_ignore
     self.dataset = dataset  -- string name of folder containing trainig examples
-    self.train_loader = DataLoader.create(self.dataset, self.mp.seq_length, self.mp.batch_size, self.mp.shuffle)
+    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.shuffle)
     collectgarbage()
     return self
 end
@@ -41,57 +39,38 @@ function Trainer:prepare_logs(learning_rate)
     self.logs = {}
     self.cmd = torch.CmdLine()
     self.logs.savefile = common_mp.results_folder .. '/saved_model,lr=' .. self.mp.learning_rate
-    -- self.logs.savefile = self.cmd:string(self.logs.savefile, self.mp, self.mp_ignore) .. '.t7'
     self.logs.savefile = self.logs.savefile .. '.t7'
     self.logs.lossesfile = common_mp.results_folder .. '/losses,lr=' .. self.mp.learning_rate .. '_results.t7'
     self.logs.train_losses = {losses={}, grad_norms={}}
     collectgarbage()
 end
 
-function Trainer:create_model()
-    ------------------------------------ Create Model ------------------------------------
-    self.protos        = {}
-    self.protos.encoder      = init_baseline_encoder(self.mp, self.mp.LSTM_input_dim)
-    self.protos.lstm         = init_baseline_lstm(self.mp, self.mp.LSTM_input_dim, self.mp.LSTM_hidden_dim)
-    -- controller = nn.SteppableLSTM(vocab_size, vocab_size, opt.rnn_size, opt.num_layers, opt.dropout)
-    self.protos.decoder      = init_baseline_decoder(self.mp, self.mp.LSTM_hidden_dim)
-    self.protos.criterion    = nn.BCECriterion()
 
-    if common_mp.cuda then 
-        self.protos.encoder:cuda()
-        self.protos.lstm:cuda()
-        self.protos.decoder:cuda()
-        self.protos.criterion:cuda()
-    end
+function Trainer:create_model()
+    self.network = init_network(self.mp)
+    if common_mp.cuda then self.network:cuda() end
 
     ------------------------------------- Parameters -------------------------------------
     self.theta = {}
-    self.theta.params, self.theta.grad_params = model_utils.combine_all_parameters(self.protos.encoder, self.protos.lstm, self.protos.decoder) 
+    self.theta.params, self.theta.grad_params = self.network:getParameters()
+    -- self.theta.params, self.theta.grad_params = model_utils.combine_all_parameters(self.protos.encoder, self.protos.lstm, self.protos.decoder) 
     print('self.theta.params', #self.theta.params)
+
     ------------------------------------ Clone Model -------------------------------------
-    self.clones = {}
-    for name,proto in pairs(self.protos) do
-        self.clones[name] = model_utils.clone_many_times(proto, self.mp.seq_length, not proto.parameters)  -- clone 1 times
-    end
+    self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not network.parameters)
 
     -------------------------------- Initialize LSTM State -------------------------------
-    self.lstm_init_state = {}
-    -- LSTM initial state (zero initially, but final state gets sent to initial state when we do BPTT)
-    self.lstm_init_state.initstate_c = torch.zeros(self.mp.batch_size, self.mp.LSTM_hidden_dim)
-    self.lstm_init_state.initstate_h = self.lstm_init_state.initstate_c:clone()
-
-    -- LSTM final state's backward message (dloss/dfinalstate) is 0, since it doesn't influence predictions
-    self.lstm_init_state.dfinalstate_c = self.lstm_init_state.initstate_c:clone()
-    self.lstm_init_state.dfinalstate_h = self.lstm_init_state.initstate_c:clone()  -- actually not used
-
-    if common_mp.cuda then
-        self.lstm_init_state.initstate_c = self.lstm_init_state.initstate_c:cuda()
-        self.lstm_init_state.initstate_h = self.lstm_init_state.initstate_h:cuda()
-        self.lstm_init_state.dfinalstate_c = self.lstm_init_state.dfinalstate_c:cuda()
-        self.lstm_init_state.dfinalstate_h = self.lstm_init_state.dfinalstate_h:cuda()
+    -- TODO: write a reset function to reset state
+    self.s = {}
+    for j = 0, seq_length do
+        self.s[j] = {}
+        for d = 1, 2 * params.layers do
+            self.s[j][d] = model_utils.transfer_data(torch.zeros(torch.Tensor(self.mp.batch_size, self.mp.rnn_dim)), common_mp.cuda) 
+        end
     end
     collectgarbage()
 end
+
 
 function Trainer:forward_pass_train(params_, x, y)
     if params_ ~= self.theta.params then
@@ -99,25 +78,28 @@ function Trainer:forward_pass_train(params_, x, y)
     end
     self.theta.grad_params:zero()  -- reset gradient
 
-    ------------------- forward pass -------------------
-    local embeddings = {}
-    local lstm_c = {[0]=self.lstm_init_state.initstate_c} -- internal cell states of LSTM
-    local lstm_h = {[0]=self.lstm_init_state.initstate_h} -- output values of LSTM
+    -- unpack inputs
+    local thisp_past    = x.this
+    local contextp      = x.others
+    local goos          = x.goos
+    local mask          = x.mask
+    local thisp_future  = y
+
+    local accum_loss = 0
+    local loss = {}
     local predictions = {}
+    for i = 1, seq_length do
+        local sim1 = s[i-1]
+        loss[i], s[i], predictions[i] = unpack(rnns[i]:forward({thisp_past[{{},i}], contextp[{{},i}], sim1, thisp_future[{{},i}]}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+        accum_loss = accum_loss + loss[i]
+    end 
 
-    local loss = 0
-    for t = 1,self.mp.seq_length do
-        embeddings[t] = self.clones.encoder[t]:forward(torch.squeeze(x[{{},{t}}]))
-        lstm_c[t], lstm_h[t] = unpack(self.clones.lstm[t]:forward{embeddings[t], lstm_c[t-1], lstm_h[t-1]})
-        predictions[t] = self.clones.decoder[t]:forward(lstm_h[t])
-        loss = loss + self.clones.criterion[t]:forward(predictions[t], torch.squeeze(y[{{},{t}}]))
+    -- TODO: look at what Tejas did
 
-        -- DEBUGGING
-        --image.display(predictions[t])  -- here you can also save the image
-    end
     collectgarbage()
-    return loss, embeddings, lstm_c, lstm_h, predictions
+    return accum_loss, embeddings, lstm_c, lstm_h, predictions
 end
+
 
 function Trainer:backward_pass_train(x, y, loss, embeddings, lstm_c, lstm_h, predictions)
     local dembeddings = {}
@@ -151,10 +133,12 @@ function Trainer:backward_pass_train(x, y, loss, embeddings, lstm_c, lstm_h, pre
     return loss, self.theta.grad_params
 end
 
+
 function Trainer:reset(learning_rate)
     self:prepare_logs(learning_rate)
     self:create_model()  -- maybe put this into constructor
 end
+
 
 function Trainer:train(num_iters, epoch_num)
 

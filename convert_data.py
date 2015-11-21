@@ -7,7 +7,7 @@ import h5py
 
 # Hardcoded Global Variables
 G_w_width, G_w_height = 640.0,480.0
-G_max_velocity, G_min_velocity = 4500.0, -4500.0
+G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
 G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
 G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
 G_num_videos = 500.0
@@ -98,7 +98,12 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     path_slice = np.dstack((path_slice, masses))
     path_slice = np.dstack((path_slice, np.ones((num_objects, num_steps))))  # object ids: particle = 1
     path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
+    assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
+    # print 'max velocity', np.max(np.abs(path_slice[:,:,2:4]))
+    # print 'min velocity', np.min(np.abs(path_slice[:,:,2:4]))
+    # print np.count_nonzero(path_slice[:,:,2:4]>1) + np.count_nonzero(path_slice[:,:,2:4]<-1)
+    # print path_slice[:,:,2:4].shape
     assert path_slice.shape == (num_objects, num_steps, 8)
 
     # get goos
@@ -110,12 +115,27 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         for i in xrange(len(boxes)):
             box = boxes[i]
             left, top, right, bottom = box[:]
-            w = right - left
-            h = bottom - top
+            w = right - left  # right > left
+            h = bottom - top  # bottom > top
             assert w > 0 and h > 0
             cx = (right + left)/2
             cy = (bottom + top)/2
             boxes[i] = np.array([cx, cy, w, h])
+        return boxes
+
+    def crop_to_window(boxes):
+        """
+            boxes: np array of (num_boxes, [left, top, right, bottom])
+            crops these dimensions so that they are inside the window dimensions
+        """
+        for i in xrange(len(boxes)):
+            box = boxes[i]
+            left, top, right, bottom = box[:]
+            new_left = max(0, left)
+            new_top = max(0, top)
+            new_right = min(G_w_width, right)
+            new_bottom = min(G_w_height, bottom)
+            boxes[i] = np.array([new_left, new_top, new_right, new_bottom])
         return boxes
 
     goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
@@ -124,8 +144,10 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     goo_strengths = one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
     goos = np.concatenate((goos[:,:-1], goo_strengths), 1)  # (num_goos, 7)  one hot
     goos = np.concatenate((goos, np.zeros((num_goos,1))), 1)  # (num_goos, 8)  object ids: goo = 0
+    goos[:,:4] = crop_to_window(goos[:,:4])  # crop so that dimensions are inside window
     goos[:,:4] = ltrb2xywh(goos[:,:4])  # convert [left, top, right, bottom] to [cx, cy, w, h]
     goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
+    assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
     assert goos.shape == (num_goos, 8)
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
@@ -271,7 +293,9 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     trainset = flatten_dataset(trainset)
     valset = flatten_dataset(valset)
     testset = flatten_dataset(testset)
-    
+
+    # normalize velocity
+
     # save each dictionary as a separate h5py file
     return trainset, valset, testset
 
@@ -285,6 +309,14 @@ def flatten_dataset(dataset):
         mask[num_particles-1] = 1  # if there are four particles, then mask is [0, 0, 1, 0, 0]
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
+
+
+def normalize_velocity(trainset, valset, testset):
+    """
+
+    """
+    pass
+
 
 
 def stack(list_of_nparrays):
@@ -527,8 +559,6 @@ def test_write_data_file():
     num_val_samples_per = 1  # 10
     num_test_samples_per = 1  # 10
     create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
-
-
 
 
 if __name__ == "__main__":

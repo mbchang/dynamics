@@ -5,8 +5,6 @@ require 'nngraph'
 require 'Base'
 local model_utils = require 'model_utils'
 
--- require 'SteppableLSTM'
-
 if common_mp.cuda then
     require 'cutorch'
     require 'cunn'
@@ -77,7 +75,6 @@ function init_baseline_encoder(mp, output_dim)
         collectgarbage()
         return nn.gModule({encoder_in}, {encoder_out})  -- input and output must be in table!
     end
-
 end 
 
 
@@ -155,13 +152,13 @@ end
 
 function lstm(x, prev_c, prev_h, params)
     -- Calculate all four gates in one go
-    local i2h = nn.Linear(params.rnn_inp_dim, 4*params.rnn_hid_dim)(x) -- this is the problem when I go two layers
-    local h2h = nn.Linear(params.rnn_hid_dim, 4*params.rnn_hid_dim)(prev_h)
+    local i2h = nn.Linear(params.rnn_dim, 4*params.rnn_dim)(x) -- this is the problem when I go two layers
+    local h2h = nn.Linear(params.rnn_dim, 4*params.rnn_dim)(prev_h)
     local gates = nn.CAddTable()({i2h, h2h})
 
     -- Reshape to (bsize, n_gates, hid_size)
     -- Then slize the n_gates dimension, i.e dimension 2
-    local reshaped_gates =  nn.Reshape(4,params.rnn_hid_dim)(gates)
+    local reshaped_gates =  nn.Reshape(4,params.rnn_dim)(gates)
     local sliced_gates = nn.SplitTable(2)(reshaped_gates)
 
     -- Use select gate to fetch each gate and apply nonlinearity
@@ -207,8 +204,8 @@ end
 -- params: layers, particle_dim, goo_dim, rnn_inp_dim, rnn_hid_dim, out_dim
 function init_network(params)
     -- Initialize encoder and decoder
-    local encoder = init_object_encoder(params.particle_dim, params.rnn_inp_dim)
-    local decoder = init_object_decoder(params.rnn_hid_dim, params.out_dim)
+    local encoder = init_object_encoder(params.particle_dim, params.rnn_dim)
+    local decoder = init_object_decoder(params.rnn_dim, params.out_dim)
 
     -- Input to netowrk
     local thisp_past    = nn.Identity()() -- this particle of interest, past
@@ -371,8 +368,7 @@ function test_model()
     local params = {
                     layers          = 2,
                     particle_dim    = 7,
-                    rnn_inp_dim     = 50,
-                    rnn_hid_dim     = 50,  -- problem: basically inpdim and hiddim should be the same if you want to do multilayer
+                    rnn_dim         = 50,
                     out_dim         = 7
                     }
 
@@ -389,7 +385,7 @@ function test_model()
     for j = 0, seq_length do
         s[j] = {}
         for d = 1, 2 * params.layers do
-            s[j][d] = torch.random(torch.Tensor(batch_size, params.rnn_hid_dim)) 
+            s[j][d] = torch.random(torch.Tensor(batch_size, params.rnn_dim)) 
         end
     end
 
@@ -474,7 +470,7 @@ end
 -- end 
 
 
--- test_model()
-test_encoder()
+test_model()
+-- test_encoder()
 
 

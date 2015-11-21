@@ -2,6 +2,14 @@ require 'torch'
 
 local model_utils = {}
 
+function model_utils.transfer_data(x, should_cuda)
+    if should_cuda then 
+        return x:cuda()
+    else
+        return x
+    end
+end
+
 function model_utils.combine_all_parameters(...)
     --[[ like module:getParameters, but operates on many modules ]]--
 
