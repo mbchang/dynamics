@@ -12,6 +12,7 @@ G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
 G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
 G_num_videos = 500.0
 G_num_timesteps = 400.0
+G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on 
 
 
 def convert_file(path):
@@ -100,10 +101,6 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
     assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
-    # print 'max velocity', np.max(np.abs(path_slice[:,:,2:4]))
-    # print 'min velocity', np.min(np.abs(path_slice[:,:,2:4]))
-    # print np.count_nonzero(path_slice[:,:,2:4]>1) + np.count_nonzero(path_slice[:,:,2:4]<-1)
-    # print path_slice[:,:,2:4].shape
     assert path_slice.shape == (num_objects, num_steps, 8)
 
     # get goos
@@ -140,15 +137,17 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
 
     goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
     num_goos = goos.shape[0]
-    goo_strengths = goos[:,-1]  
-    goo_strengths = one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
-    goos = np.concatenate((goos[:,:-1], goo_strengths), 1)  # (num_goos, 7)  one hot
-    goos = np.concatenate((goos, np.zeros((num_goos,1))), 1)  # (num_goos, 8)  object ids: goo = 0
-    goos[:,:4] = crop_to_window(goos[:,:4])  # crop so that dimensions are inside window
-    goos[:,:4] = ltrb2xywh(goos[:,:4])  # convert [left, top, right, bottom] to [cx, cy, w, h]
-    goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
-    assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
-    assert goos.shape == (num_goos, 8)
+
+    if num_goos > 0:
+        goo_strengths = goos[:,-1]  
+        goo_strengths = one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
+        goos = np.concatenate((goos[:,:-1], goo_strengths), 1)  # (num_goos, 7)  one hot
+        goos = np.concatenate((goos, np.zeros((num_goos,1))), 1)  # (num_goos, 8)  object ids: goo = 0
+        goos[:,:4] = crop_to_window(goos[:,:4])  # crop so that dimensions are inside window
+        goos[:,:4] = ltrb2xywh(goos[:,:4])  # convert [left, top, right, bottom] to [cx, cy, w, h]
+        goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
+        assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
+        assert goos.shape == (num_goos, 8)
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
     goos = np.asarray(goos, dtype=np.float64)
@@ -294,8 +293,6 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     valset = flatten_dataset(valset)
     testset = flatten_dataset(testset)
 
-    # normalize velocity
-
     # save each dictionary as a separate h5py file
     return trainset, valset, testset
 
@@ -304,19 +301,13 @@ def flatten_dataset(dataset):
     for k in dataset.keys():
         flattened_dataset[k+'particles'] = dataset[k][0]  # (num_samples, num_particles, windowsize, [px, py, vx, vy, [onehot mass]])
         flattened_dataset[k+'goos'] = dataset[k][1]  # (num_samples, num_goos, [cx, cy, width, height, [onehot goostrength]])
-        mask = np.zeros(5)  # max number of particles is 6, so mask is 5
+        mask = np.zeros(G_num_objects)  # max number of objects is 6 + 5, so mask is 10
         num_particles = dataset[k][0].shape[1]
-        mask[num_particles-1] = 1  # if there are four particles, then mask is [0, 0, 1, 0, 0]
+        num_goos = dataset[k][1].shape[1]
+        # if there are four particles and 2 goos , then mask is [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+        mask[num_particles + num_goos - 1 - 1] = 1  # first -1 for 0-indexing, second -1 because we condition on one particle
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
-
-
-def normalize_velocity(trainset, valset, testset):
-    """
-
-    """
-    pass
-
 
 
 def stack(list_of_nparrays):
@@ -349,19 +340,19 @@ def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
     g.close()
 
 def save_all_datasets():
-    # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
-    # data_root = '/om/user/mbchang/physics-data/data'
-    # windowsize = 20  # 2
-    # num_train_samples_per = 30  # 3
-    # num_val_samples_per = 10  # 1
-    # num_test_samples_per = 10  # 1
+    dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
+    data_root = '/om/user/mbchang/physics-data/data'
+    windowsize = 20  # 2
+    num_train_samples_per = 30  # 3
+    num_val_samples_per = 10  # 1
+    num_test_samples_per = 10  # 1
 
-    dataset_files_folder = 'hey'
-    data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
-    windowsize = 10  # 20
-    num_train_samples_per = 3  # 30
-    num_val_samples_per = 1  # 10
-    num_test_samples_per = 1  # 10
+    # dataset_files_folder = 'hey'
+    # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
+    # windowsize = 10  # 20
+    # num_train_samples_per = 3  # 30
+    # num_val_samples_per = 1  # 10
+    # num_test_samples_per = 1  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
     
