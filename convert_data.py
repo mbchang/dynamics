@@ -5,6 +5,15 @@ import pprint
 import h5py
 
 
+# Hardcoded Global Variables
+G_w_width, G_w_height = 640.0,480.0
+G_max_velocity, G_min_velocity = 4500.0, -4500.0
+G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
+G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
+G_num_videos = 500.0
+G_num_timesteps = 400.0
+
+
 def convert_file(path):
     """
         input
@@ -27,6 +36,23 @@ def convert_file(path):
 
     return particles, goos, observedPath
 
+def one_hot(array, discrete_values):
+    """
+        The values in the array come from the list discrete_values.
+        For example, if discrete_values is [0.33, 1.0, 3.0] then all the values in this 
+        array are in [0.33, 1.0, 3.0].
+
+        This method adds another axis (last axis) and makes these values into a one-hot
+        encoding of those discrete values. For example, if the array was shape (4,10)
+        and len(discrete_values) was 3, then this method will produce an array 
+        with shape (4,10,3)
+    """
+    n_values = len(discrete_values)
+    broadcast = tuple([1 for i in xrange(array.ndim)] + [n_values])
+    array = np.tile(np.expand_dims(array,array.ndim+1), broadcast)
+    for i in xrange(n_values): array[...,i] = array[...,i] == discrete_values[i]
+    return array
+
 def construct_example(particles, goos, observedPath, starttime, windowsize):
     """
         input
@@ -42,10 +68,17 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
             :starttime + windowsize < 400
 
         output
-            :path_slice: np array (numObjects, numSteps, [px, py, vx, vy, mass])
-            :goos: np array [left, top, right, bottom, gooStrength]
+            :path_slice: np array (numObjects, numSteps, [px, py, vx, vy, [onehot mass]])
+            :goos: np array [cx, cy, width, height, [onehot goo strength], objectid]
+            :mask? TODO
+
+        masses: [0.33, 1.0, 3.0]
+        gooStrength: [0, -5, -20]
+
+        object id: 1 if particle, 0 if goo
     """
     assert starttime + windowsize < len(observedPath)  # 400 is the total length of the video
+
 
     path_slice = observedPath[starttime:starttime+windowsize]  # (windowsize, [pos, vel], numObjects, [x,y])
 
@@ -59,13 +92,41 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     # get masses
     masses = tuple(np.array([p['mass'] for p in particles]) for i in xrange(num_steps))
     masses = np.column_stack(masses)  # (numObjects, numSteps)
+    masses = one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)
 
-    # turn it into (numObjects, numSteps, [px, py, vx, vy, mass])
+    # turn it into (numObjects, numSteps, [px, py, vx, vy, [one-hot-mass]]) = (numObjects, numSteps, 7)
     path_slice = np.dstack((path_slice, masses))
-    assert path_slice.shape == (num_objects, num_steps, 5)
+    path_slice = np.dstack((path_slice, np.ones((num_objects, num_steps))))  # object ids: particle = 1
+    path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
+    path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
+    assert path_slice.shape == (num_objects, num_steps, 8)
 
     # get goos
-    goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # [left, top, right, bottom, gooStrength]
+    def ltrb2xywh(boxes):
+        """
+            boxes: np array of (num_boxes, [left, top, right, bottom])
+            out: np array of (num_boxes, [cx, cy, width, height])
+        """
+        for i in xrange(len(boxes)):
+            box = boxes[i]
+            left, top, right, bottom = box[:]
+            w = right - left
+            h = bottom - top
+            assert w > 0 and h > 0
+            cx = (right + left)/2
+            cy = (bottom + top)/2
+            boxes[i] = np.array([cx, cy, w, h])
+        return boxes
+
+    goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
+    num_goos = goos.shape[0]
+    goo_strengths = goos[:,-1]  
+    goo_strengths = one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
+    goos = np.concatenate((goos[:,:-1], goo_strengths), 1)  # (num_goos, 7)  one hot
+    goos = np.concatenate((goos, np.zeros((num_goos,1))), 1)  # (num_goos, 8)  object ids: goo = 0
+    goos[:,:4] = ltrb2xywh(goos[:,:4])  # convert [left, top, right, bottom] to [cx, cy, w, h]
+    goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
+    assert goos.shape == (num_goos, 8)
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
     goos = np.asarray(goos, dtype=np.float64)
@@ -96,13 +157,16 @@ def get_examples_for_video(video_path, num_samples, windowsize):
     print 'video', video_path[video_path.rfind('/')+1:]
     print 'video samples:', samples_idxs
 
-    # separate here
+    # separate here!
     video_sample_particles = []
     video_sample_goos = []
     for starttime in samples_idxs:
         sample_particles, sample_goos = construct_example(particles, goos, observedPath, starttime, windowsize)
         video_sample_particles.append(sample_particles)
         video_sample_goos.append(sample_goos)
+
+    # stack(video_sample_particles): (num_samples_in_video, num_objects, windowsize, 5)
+    # stack(video_sample_goos): (num_samples_in_video, num_goos, 5)
 
     return stack(video_sample_particles), stack(video_sample_goos) 
 
@@ -138,6 +202,9 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
     config_sample_particles = np.vstack(config_sample_particles)
     config_sample_goos = np.vstack(config_sample_goos)
 
+    # config_sample_particles: (num_samples_in_config, num_objects, windowsize, 5)
+    # config_sample_goos: (num_samples_in_config, num_goos, 5)
+
     return config_sample_particles, config_sample_goos 
 
 
@@ -156,9 +223,6 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
 
         Train, val, test are split on the video level, not within the video
     """
-    # Hardcoded
-    num_videos = 500
-    num_timesteps = 400
 
     # Number of Examples
     num_world_configs = len(os.listdir(data_root))  # assume the first world in data_root is representative
@@ -175,6 +239,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     valset      = {}  # a dictionary of val examples, with 120 keys for world-config
     testset     = {}  # a dictionary of test examples, with 120 keys for world-config
 
+    # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
     for world_config in os.listdir(data_root):
         print '\n########################################################################'
         print 'WORLD CONFIG:', world_config
@@ -206,20 +271,21 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     trainset = flatten_dataset(trainset)
     valset = flatten_dataset(valset)
     testset = flatten_dataset(testset)
-
+    
     # save each dictionary as a separate h5py file
     return trainset, valset, testset
 
 def flatten_dataset(dataset):
     flattened_dataset = {}
     for k in dataset.keys():
-        flattened_dataset[k+'particles'] = dataset[k][0]  # (num_samples, num_particles, windowsize, [px, py, vx, vy, mass])
-        flattened_dataset[k+'goos'] = dataset[k][1]  # (num_samples, num_goos, [left, top, right, bottom, gooStrength])
+        flattened_dataset[k+'particles'] = dataset[k][0]  # (num_samples, num_particles, windowsize, [px, py, vx, vy, [onehot mass]])
+        flattened_dataset[k+'goos'] = dataset[k][1]  # (num_samples, num_goos, [cx, cy, width, height, [onehot goostrength]])
         mask = np.zeros(5)  # max number of particles is 6, so mask is 5
         num_particles = dataset[k][0].shape[1]
-        mask[:num_particles-1] = 1
+        mask[num_particles-1] = 1  # if there are four particles, then mask is [0, 0, 1, 0, 0]
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
+
 
 def stack(list_of_nparrays):
     """
@@ -228,6 +294,7 @@ def stack(list_of_nparrays):
         output
             :stack each numpy array along a new dimension: axis=0
     """
+    st = lambda a: np.vstack(([np.expand_dims(x,axis=0) for x in a]))
     stacked = np.vstack(([np.expand_dims(x,axis=0) for x in list_of_nparrays]))
     assert stacked.shape[0] == len(list_of_nparrays)
     assert stacked.shape[1:] == list_of_nparrays[0].shape
@@ -249,20 +316,20 @@ def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
         print g[k][:].shape
     g.close()
 
-def save_all_datasets(data_root, dataset_files_folder):
-    """
-        data_root: folder containing data
-        dataset_files_folder: folder to save the dataset files in
-    """
-    windowsize = 20  # 2
-    num_train_samples_per = 30  # 3
-    num_val_samples_per = 10  # 1
-    num_test_samples_per = 10  # 1
+def save_all_datasets():
+    # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
+    # data_root = '/om/user/mbchang/physics-data/data'
+    # windowsize = 20  # 2
+    # num_train_samples_per = 30  # 3
+    # num_val_samples_per = 10  # 1
+    # num_test_samples_per = 10  # 1
 
-    # windowsize = 10  # 20
-    # num_train_samples_per = 3  # 30
-    # num_val_samples_per = 1  # 10
-    # num_test_samples_per = 1  # 10
+    dataset_files_folder = 'hey'
+    data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
+    windowsize = 10  # 20
+    num_train_samples_per = 3  # 30
+    num_val_samples_per = 1  # 10
+    num_test_samples_per = 1  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
     
@@ -453,7 +520,18 @@ def create_all_videos():
             pythonToGraphics(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
 
 
+def test_write_data_file():
+    data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
+    windowsize = 2  # 20
+    num_train_samples_per = 3  # 30
+    num_val_samples_per = 1  # 10
+    num_test_samples_per = 1  # 10
+    create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
+
+
+
+
 if __name__ == "__main__":
-    save_all_datasets(data_root, dataset_files_folder)
+    save_all_datasets()
 
     
