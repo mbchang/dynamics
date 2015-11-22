@@ -177,13 +177,13 @@ function lstm(x, prev_c, prev_h, params)
 end
 
 
-function init_object_encoder(particle_dim, rnn_inp_dim)
+function init_object_encoder(input_dim, rnn_inp_dim)
     assert(rnn_inp_dim % 2 == 0)
-    local thisp     = nn.Identity()() -- this particle of interest  (batch_size, particle_dim)
+    local thisp     = nn.Identity()() -- this particle of interest  (batch_size, input_dim)
     local contextp  = nn.Identity()() -- the context particle  (batch_size, partilce_dim)
 
-    local thisp_out     = nn.Linear(particle_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/2)
-    local contextp_out  = nn.Linear(particle_dim, rnn_inp_dim/2)(contextp) -- (batch_size, rnn_inp_dim/2)
+    local thisp_out     = nn.Linear(input_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/2)
+    local contextp_out  = nn.Linear(input_dim, rnn_inp_dim/2)(contextp) -- (batch_size, rnn_inp_dim/2)
 
     -- Concatenate
     local encoder_out = nn.JoinTable(2)({thisp_out, contextp_out})  -- (batch_size, rnn_inp_dim)
@@ -201,10 +201,10 @@ end
 
 
 -- do not need the mask
--- params: layers, particle_dim, goo_dim, rnn_inp_dim, rnn_hid_dim, out_dim
+-- params: layers, input_dim, goo_dim, rnn_inp_dim, rnn_hid_dim, out_dim
 function init_network(params)
     -- Initialize encoder and decoder
-    local encoder = init_object_encoder(params.particle_dim, params.rnn_dim)
+    local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
     local decoder = init_object_decoder(params.rnn_dim, params.out_dim)
 
     -- Input to netowrk
@@ -367,18 +367,18 @@ end
 function test_model()
     local params = {
                     layers          = 2,
-                    particle_dim    = 7,
+                    input_dim        = 8,
                     rnn_dim         = 50,
-                    out_dim         = 7
+                    out_dim         = 8
                     }
 
     local batch_size = 8
     local seq_length = 3
 
     -- Data
-    local thisp_past       = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
-    local contextp         = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
-    local thisp_future     = torch.random(torch.Tensor(batch_size, seq_length, params.particle_dim))
+    local thisp_past       = torch.random(torch.Tensor(batch_size, seq_length, params.input_dim))
+    local contextp         = torch.random(torch.Tensor(batch_size, seq_length, params.input_dim))
+    local thisp_future     = torch.random(torch.Tensor(batch_size, seq_length, params.input_dim))
 
     -- State
     local s = {}
@@ -409,7 +409,7 @@ end
 function test_encoder()
     local params = {
                     layers          = 2,
-                    particle_dim    = 7,
+                    input_dim    = 7,
                     rnn_inp_dim     = 50,
                     rnn_hid_dim     = 50,  -- problem: basically inpdim and hiddim should be the same if you want to do multilayer
                     out_dim         = 7
@@ -419,13 +419,13 @@ function test_encoder()
     local seq_length = 3
 
     -- Data
-    local thisp_past       = torch.random(torch.Tensor(batch_size, params.particle_dim))
-    local contextp         = torch.random(torch.Tensor(batch_size, params.particle_dim))
+    local thisp_past       = torch.random(torch.Tensor(batch_size, params.input_dim))
+    local contextp         = torch.random(torch.Tensor(batch_size, params.input_dim))
 
     print(thisp_past:size())
     print(contextp:size())
 
-    local encoder = init_object_encoder(params.particle_dim, params.rnn_inp_dim)
+    local encoder = init_object_encoder(params.input_dim, params.rnn_inp_dim)
     local encoder_out = encoder:forward({thisp_past, contextp})
 
     print(encoder_out:size())

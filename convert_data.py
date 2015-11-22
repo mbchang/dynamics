@@ -344,19 +344,19 @@ def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
     g.close()
 
 def save_all_datasets():
-    # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
-    # data_root = '/om/user/mbchang/physics-data/data'
-    # windowsize = 20  # 2
-    # num_train_samples_per = 30  # 3
-    # num_val_samples_per = 10  # 1
-    # num_test_samples_per = 10  # 1
+    dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
+    data_root = '/om/user/mbchang/physics-data/data'
+    windowsize = 20  # 2
+    num_train_samples_per = 30  # 3
+    num_val_samples_per = 10  # 1
+    num_test_samples_per = 10  # 1
 
-    dataset_files_folder = 'hey'
-    data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data'
-    windowsize = 10  # 20
-    num_train_samples_per = 3  # 30
-    num_val_samples_per = 1  # 10
-    num_test_samples_per = 1  # 10
+    # dataset_files_folder = 'hey'
+    # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data'
+    # windowsize = 10  # 20
+    # num_train_samples_per = 3  # 30
+    # num_val_samples_per = 1  # 10
+    # num_test_samples_per = 1  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
     

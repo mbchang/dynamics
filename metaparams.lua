@@ -23,14 +23,14 @@ end
 
 personal_mp = {
     batch_size  = 3,
-    seq_length  = 2,
+    seq_length  = 10,
     max_epochs  = 3, 
     cuda        = false
 }
 
 openmind_mp = {
     batch_size = 100,
-    seq_length = 5,
+    seq_length = 10,
     max_epochs = 20, 
     cuda       = false
 }
@@ -38,9 +38,9 @@ openmind_mp = {
 -- Common parameters
 common_mp = {
     layers        = 2,
-    particle_dim  = 7,
+    input_dim     = 8*10, -- winsize is 10
     rnn_dim       = 50,
-    out_dim       = 7,
+    out_dim       = 8*10, -- winsize is 10
     cudnn         = false,
     rand_init_wts = false,
     seed          = 123
