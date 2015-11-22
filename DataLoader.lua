@@ -266,7 +266,7 @@ function dataloader:next_batch()
     -- cuda
     if common_mp.cuda then
         this_x          = this_x:cuda()
-        others_x        = others_x:cuda()
+        context_x       = context_x:cuda()
         minibatch_m     = minibatch_m:cuda()
         y               = y:cuda()
     end
