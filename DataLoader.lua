@@ -270,6 +270,13 @@ function dataloader:next_batch()
         minibatch_m     = minibatch_m:cuda()
         y               = y:cuda()
     end
+
+    -- Reshape
+    this_x:resize(num_samples, num_past*object_dim)
+    context_x:resize(num_samples, max_other_objects, num_past*object_dim)
+    y:resize(num_samples, num_past*object_dim)
+
+    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
     return {this=this_x, context=context_x, y=y, mask=minibatch_m}
 end
 
