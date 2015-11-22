@@ -262,6 +262,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
 
     # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
     for world_config in os.listdir(data_root):
+        # if 'np=2_ng=0' in world_config:  # TAKEOUT
         print '\n########################################################################'
         print 'WORLD CONFIG:', world_config
         config_path = os.path.join(data_root, world_config)
@@ -305,7 +306,10 @@ def flatten_dataset(dataset):
         num_particles = dataset[k][0].shape[1]
         num_goos = dataset[k][1].shape[1]
         # if there are four particles and 2 goos , then mask is [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
-        mask[num_particles + num_goos - 1 - 1] = 1  # first -1 for 0-indexing, second -1 because we condition on one particle
+        if num_particles + num_goos == 1:  # this means context is empty
+            mask[0] = 1
+        else:
+            mask[num_particles + num_goos - 1 - 1] = 1  # first -1 for 0-indexing, second -1 because we condition on one particle
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
 
@@ -340,19 +344,19 @@ def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
     g.close()
 
 def save_all_datasets():
-    dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
-    data_root = '/om/user/mbchang/physics-data/data'
-    windowsize = 20  # 2
-    num_train_samples_per = 30  # 3
-    num_val_samples_per = 10  # 1
-    num_test_samples_per = 10  # 1
+    # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
+    # data_root = '/om/user/mbchang/physics-data/data'
+    # windowsize = 20  # 2
+    # num_train_samples_per = 30  # 3
+    # num_val_samples_per = 10  # 1
+    # num_test_samples_per = 10  # 1
 
-    # dataset_files_folder = 'hey'
-    # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
-    # windowsize = 10  # 20
-    # num_train_samples_per = 3  # 30
-    # num_val_samples_per = 1  # 10
-    # num_test_samples_per = 1  # 10
+    dataset_files_folder = 'hey'
+    data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data'
+    windowsize = 10  # 20
+    num_train_samples_per = 3  # 30
+    num_val_samples_per = 1  # 10
+    num_test_samples_per = 1  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
     
