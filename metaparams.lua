@@ -38,9 +38,9 @@ openmind_mp = {
 -- Common parameters
 common_mp = {
     layers        = 2,
-    input_dim     = 8*10, -- winsize is 10
+    input_dim     = 4*10, -- winsize/2 is 10
     rnn_dim       = 50,
-    out_dim       = 8*10, -- winsize is 10
+    out_dim       = 4*10, -- winsize/2 is 10
     cudnn         = false,
     rand_init_wts = false,
     seed          = 123
@@ -52,6 +52,9 @@ else
     common_mp = merge_tables(common_mp, openmind_mp)
 end
 
+-- common_mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files'
+common_mp.dataset_folder = 'hey'
+common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim'}, common_mp)
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
@@ -69,5 +72,4 @@ test_mp = merge_tables(common_mp, {
       shuffle               = true,
 })
 
-common_mp.data_folder = '/om/user/mbchang/physics-data/dataset_files'
-common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim'}, common_mp)
+
