@@ -25,23 +25,24 @@ personal_mp = {
     batch_size  = 1,
     seq_length  = 10,
     max_epochs  = 100, 
-    cuda        = false
+    dataset_folder = 'hey',
+    cuda        = false,
+    cunn        = false
 }
 
 openmind_mp = {
     batch_size = 100,
-    seq_length = 10,
-    max_epochs = 20, 
-    cuda       = false
+    seq_length = 20,
+    max_epochs = 100, 
+    dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
+    cuda       = true,
+    cunn       = false
 }
 
 -- Common parameters
 common_mp = {
     layers        = 4,
-    input_dim     = 4*10, -- winsize/2 is 10
     rnn_dim       = 100,
-    out_dim       = 4*10, -- winsize/2 is 10
-    cudnn         = false,
     rand_init_wts = false,
     seed          = 123
 }
@@ -52,8 +53,8 @@ else
     common_mp = merge_tables(common_mp, openmind_mp)
 end
 
--- common_mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files'
-common_mp.dataset_folder = 'hey'
+common_mp.input_dim = 8*common_mp.seq_length/2
+common_mp.out_dim = 8*common_mp.seq_length/2
 common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim'}, common_mp)
 
 -- Training parameters

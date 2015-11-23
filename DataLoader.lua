@@ -11,14 +11,8 @@ require 'hdf5'
 require 'data_utils'
 require 'torchx'
 
-if common_mp.cuda then
-    require 'cutorch'
-    require 'cunn'
-end
-
-if common_mp.cudnn then
-    require 'cudnn'
-end
+if common_mp.cuda then require 'cutorch' end
+if common_mp.cunn then require 'cunn' end
 
 local dataloader = {}
 dataloader.__index = dataloader

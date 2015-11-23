@@ -2,10 +2,8 @@ require 'torch'
 require 'metaparams'
 local model_utils = require 'model_utils'
 
-if common_mp.cuda then
-    require 'cutorch'
-    require 'cunn'
-end
+if common_mp.cuda then require 'cutorch' end
+if common_mp.cunn then require 'cunn' end
 
 -- threads
 torch.setnumthreads(4)
