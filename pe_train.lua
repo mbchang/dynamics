@@ -215,7 +215,7 @@ function Trainer:train(num_iters, epoch_num)
         end
 
         if i % self.mp.save_every == 0 then 
-            torch.save(self.logs.savefile, self.protos)
+            torch.save(self.logs.savefile, self.network)
             torch.save(self.logs.lossesfile, self.logs.train_losses)
             print('saved model')
         end
