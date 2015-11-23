@@ -83,7 +83,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, dataset_folder, mp, shuffle)
+function dataloader.create(dataset_name, dataset_folder, batch_size, shuffle)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -92,7 +92,7 @@ function dataloader.create(dataset_name, dataset_folder, mp, shuffle)
     --]]
     local self = {}
     setmetatable(self, dataloader)
-    self.mp = mp
+    self.batch_size = batch_size
     self.dataset_name = dataset_name  -- string
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
@@ -324,8 +324,8 @@ function dataloader:count_examples()
         total_samples = total_samples + num_samples
         config_sizes[i] = num_samples -- each config has an id
     end
-    assert(total_samples % self.mp.batch_size == 0)
-    local num_batches = total_samples/self.mp.batch_size
+    assert(total_samples % self.batch_size == 0)
+    local num_batches = total_samples/self.batch_size
     return total_samples, num_batches, config_sizes
 end
 
@@ -343,29 +343,29 @@ end
 function dataloader:get_batch_info()
     -- assumption that a config contains more than one batch
     -- self.current_batch = self.current_batch + 1
-    self.current_batch_in_config = self.current_batch_in_config + self.mp.batch_size 
-    -- current batch is the range: [self.current_batch_in_config - self.mp.batch_size + 1, self.current_batch_in_config]
+    self.current_batch_in_config = self.current_batch_in_config + self.batch_size 
+    -- current batch is the range: [self.current_batch_in_config - self.batch_size + 1, self.current_batch_in_config]
 
     if self.current_batch_in_config > self.config_sizes[self.config_idxs[self.current_config]] then 
         self.current_config = self.current_config + 1
-        self.current_batch_in_config = self.mp.batch_size -- reset current_batch_in_config
+        self.current_batch_in_config = self.batch_size -- reset current_batch_in_config
     end
 
     if self.current_config > self.num_configs then
         -- assert(self.current_batch == self.num_batches+1)
         self.current_config = 1
         -- self.current_batch = 0
-        assert(self.current_batch_in_config == self.mp.batch_size)
+        assert(self.current_batch_in_config == self.batch_size)
     end
 
     print('config: '.. self.configs[self.config_idxs[self.current_config]] .. 
             ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
-            ' current batch: ' .. '[' .. self.current_batch_in_config - self.mp.batch_size + 1 .. 
+            ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 .. 
             ',' .. self.current_batch_in_config .. ']')
 
     return {self.configs[self.config_idxs[self.current_config]],  -- config name 
             -- self.config_sizes[self.config_idxs[self.current_config]],  -- config capacity
-            self.current_batch_in_config - self.mp.batch_size + 1,  -- start index in config
+            self.current_batch_in_config - self.batch_size + 1,  -- start index in config
             self.current_batch_in_config}  -- end index in config
 
 
@@ -380,27 +380,26 @@ function dataloader:next_batch()
     print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch])
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
     print(config_name, start, finish)
-    local x = self:next_config(config_name, start, finish)
-    print(x)
-
+    local nextbatch = self:next_config(config_name, start, finish)
+    return nextbatch
 end
 
 
--- return dataloader
+return dataloader
 
--- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
-d = dataloader.create('trainset','hey',train_mp, true)
--- for i=1,20 do
--- print(d:next_batch()) end
--- print(d:next_batch())
-print(d.batchlist)
-print('num_batches:', d.num_batches)
--- for i=1,d.num_batches do 
--- end
--- print(d:count_examples(d.config_idxs))
--- d:compute_batches()
+-- -- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
+-- d = dataloader.create('trainset','hey',train_mp, true)
+-- -- for i=1,20 do
+-- -- print(d:next_batch()) end
+-- -- print(d:next_batch())
+-- print(d.batchlist)
+-- print('num_batches:', d.num_batches)
+-- -- for i=1,d.num_batches do 
+-- -- end
+-- -- print(d:count_examples(d.config_idxs))
+-- -- d:compute_batches()
 
-d:next_batch()
+-- d:next_batch()
 
 
 

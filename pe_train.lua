@@ -29,7 +29,7 @@ function Trainer.create(dataset, mp)
     setmetatable(self, Trainer)
     self.mp = mp
     self.dataset = dataset  -- string name of folder containing trainig examples
-    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.shuffle)
+    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, self.mp.shuffle)
     collectgarbage()
     return self
 end
@@ -56,7 +56,7 @@ function Trainer:create_model()
     print('self.theta.params', #self.theta.params)
 
     ------------------------------------ Clone Model -------------------------------------
-    self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not network.parameters)
+    self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
 
     -------------------------------- Initialize LSTM State -------------------------------
     -- This will cache the values that s takes on in one forward pass
@@ -64,17 +64,17 @@ function Trainer:create_model()
     for j = 0, self.mp.seq_length do
         self.s[j] = {}
         for d = 1, 2 * self.mp.layers do
-            self.s[j][d] = model_utils.transfer_data(torch.zeros(torch.Tensor(self.mp.batch_size, self.mp.rnn_dim)), common_mp.cuda) 
+            self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda) 
         end
     end
     -- This will cache the values of the grad of the s 
     self.ds = {}
-    for d = 1, 2 * params.layers do
-        self.ds[d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim))
+    for d = 1, 2 * self.mp.layers do
+        self.ds[d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda)
     end
 
-    -- This will cache the err
-    self.err = model_utils.transfer_data(torch.zeros(self.mp.seq_length))
+    -- This will cache the err (not sure if this is necessary)
+    self.err = model_utils.transfer_data(torch.zeros(self.mp.seq_length), common_mp.cuda)
 
     collectgarbage()
 end
@@ -109,87 +109,67 @@ function Trainer:forward_pass_train(params_, x, y)
     local context       = x.context:clone()
     local this_future   = y:clone()
 
+    print(this_past:size())
+    print(self.mp.batch_size)
+    print(self.mp.input_dim)
+
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
     assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.input_dim)
 
-    local accum_loss = 0
-    local loss = {}
+    local loss = torch.zeros(self.mp.seq_length)
     local predictions = {}
-    for i = 1, seq_length do
+    for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
-        accum_loss = accum_loss + loss[i]
     end 
 
     collectgarbage()
-    return accum_loss, self.s, predictions
+    print(loss:sum())
+    return loss:sum(), self.s, predictions
 end
 
 
 function Trainer:backward_pass_train(x, y, mask, loss, state, predictions)
+    -- loss and predictions are unused
+
     -- assert that state equals self.s
     for j = 0, self.mp.seq_length do
         for d = 1, 2 * self.mp.layers do
-            assert(torch.sum(state:eq(self.s)) == torch.numel(self.s))
+            -- print(state[j][d])
+            -- print(self.s[j][d])
+            assert(torch.sum(state[j][d]:eq(self.s[j][d])) == torch.numel(self.s[j][d]))
         end
     end 
 
     self.theta.grad_params:zero()
-    self.reset_ds()
+    self:reset_ds()
 
     -- unpack inputs. All of these have been CUDAed already if need be
     local this_past     = x.this:clone()
     local context       = x.context:clone()
     local this_future   = y:clone()
 
-    for i = self.mp.params.seq_length, 1, -1 do
+    for i = self.mp.seq_length, 1, -1 do
         local sim1 = state[i - 1]
-        local derr = mask:clone()[i]
-        local dpred = transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim))
-        local dnewx = transfer_data(torch.zeros(params.bsize, 32, 32))
-        local dpast, self.ds = unpack(self.rnns[i]:backward({this_past, context, sim1}, {derr, self.ds, dpred}))
+        local derr
+        if mask:clone()[i] == 1 then 
+            derr = model_utils.transfer_data(torch.ones(1), common_mp.cuda)
+        elseif mask:clone()[i] == 0 then
+            derr = model_utils.transfer_data(torch.zeros(1), common_mp.cuda)
+        else
+            error('invalid mask')
+        end
+        local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), common_mp.cuda)
+        local dtp, dc, dsim1, dtf = unpack(self.rnns[i]:backward({this_past, context[{{},i}], sim1, this_future}, {derr, self.ds, dpred}))
+        g_replace_table(self.ds, dsim1)
         -- cutorch.synchronize()
     end
     self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
     collectgarbage()
     return loss, self.theta.grad_params
 end
-
-
--- function Trainer:backward_pass_train(x, y, loss, embeddings, lstm_c, lstm_h, predictions)
---     local dembeddings = {}
---     local dlstm_c = {[self.mp.seq_length]=self.lstm_init_state.dfinalstate_c}    -- internal cell states of LSTM
---     local dlstm_h = {}                                  -- output values of LSTM
-
---     for t = self.mp.seq_length, 1, -1 do
---         local doutput_t = self.clones.criterion[t]:backward(predictions[t], torch.squeeze(y[{{},{t}}]))
-
---         if t == self.mp.seq_length then
---             assert(dlstm_h[t] == nil)
---             dlstm_h[t] = self.clones.decoder[t]:backward(lstm_h[t], doutput_t)
---         else
---             dlstm_h[t]:add(self.clones.decoder[t]:backward(lstm_h[t], doutput_t))
---         end
-
---         dembeddings[t], dlstm_c[t-1], dlstm_h[t-1] = unpack(self.clones.lstm[t]:backward(
---             {embeddings[t], lstm_c[t-1], lstm_h[t-1]}, -- input to the lstm
---             {dlstm_c[t], dlstm_h[t]}  -- output of the lstm 
---         ))
-
---         self.clones.encoder[t]:backward(torch.squeeze(x[{{},{t}}]), dembeddings[t])
---         collectgarbage()
---     end
-
---     self.lstm_init_state.initstate_c:copy(lstm_c[#lstm_c])
---     self.lstm_init_state.initstate_h:copy(lstm_h[#lstm_h])
-
---     self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
---     collectgarbage()
---     return loss, self.theta.grad_params
--- end
-
 
 
 
@@ -205,22 +185,12 @@ function Trainer:train(num_iters, epoch_num)
     function feval_train(params_)
         -- feval MUST return loss, grad_loss in order to get fed into the optimizer!
         local this, context, y, mask = unpack(self.train_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
-        local train_loss, state, predictions = self:forward_pass_train(params_, {this,context}, y)
-        local loss, grad_loss = self:backward_pass_train({this,context}, y, mask, train_loss, , state, predictions)
+        local train_loss, state, predictions = self:forward_pass_train(params_, {this=this,context=context}, y)
+        local loss, grad_loss = self:backward_pass_train({this=this,context=context}, y, mask, train_loss, state, predictions)
         assert(loss == train_loss)
         collectgarbage()
         return loss, grad_loss
     end
-
-    -- function feval_train(params_)
-    --     -- feval MUST return loss, grad_loss in order to get fed into the optimizer!
-    --     local x, y = self.train_loader:next_batch(self.mp)  -- the way it is defined in loader is to just keep cycling through the same dataset
-    --     local train_loss, embeddings, lstm_c, lstm_h, predictions = self:forward_pass_train(params_, x, y)
-    --     local loss, grad_loss = self:backward_pass_train(x, y, train_loss, embeddings, lstm_c, lstm_h, predictions)
-    --     assert(loss == train_loss)
-    --     collectgarbage()
-    --     return loss, grad_loss
-    -- end
 
     -- here do epoch training
     local optim_state = {learningRate = self.mp.learning_rate}
@@ -245,14 +215,16 @@ function Trainer:train(num_iters, epoch_num)
     return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.protos --self.logs.savefile
 end    
 
--- train_mp.learning_rate = 5e-4
--- torch.manualSeed(123)
--- trainer = Trainer.create('train', train_mp, train_mp_ignore)
--- trainer:reset(5e-4)
--- final_loss = trainer:train(200, 0)
+train_mp.learning_rate = 5e-4
+torch.manualSeed(123)
+print(train_mp)
+-- assert(false)
+trainer = Trainer.create('trainset', train_mp)
+trainer:reset(5e-4)
+final_loss = trainer:train(2, 0)
 -- print(final_loss)
 
-return Trainer
+-- return Trainer
 
 
 
