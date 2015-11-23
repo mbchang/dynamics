@@ -14,8 +14,8 @@ print('<torch> set nb of threads to ' .. torch.getnumthreads())
 local Trainer = require 'pe_train'
 local Tester = require 'pe_test'
 
-local trainer = Trainer.create('data_small', train_mp, train_mp_ignore)  -- need to specify learning rate here
-local tester = Tester.create('data_small', test_mp)
+local trainer = Trainer.create('trainset', train_mp)  -- need to specify learning rate here
+local tester = Tester.create('testset', test_mp)
 
 local learning_rates = {5e-4, 5e-5, 5e-6}
 local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
@@ -30,19 +30,32 @@ for index, learning_rate in pairs(learning_rates) do
     local train_losses = {}
     local dev_losses = {}
 
+    local oldp, oldgp 
+
     for i = 1, trainer.mp.max_epochs do
+
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
-        local train_loss, model = trainer:train(20, i)  -- trainer.train_loader.nbatches  
-        local p, gp = model_utils.combine_all_parameters(unpack(model)) -- model:getParameters()
-        local paramNorm, gpNorm = p:norm(), gp:norm()
+        local train_loss, model = trainer:train(trainer.train_loader.num_batches , i)  -- trainer.train_loader.num_batches  
+        -- local p, gp = model:parameters()
+        -- local paramNorm, gpNorm = p:norm(), gp:norm()
+        -- if oldp and oldgp then 
+        --     print('p:norm() ~= oldp:norm()', p:norm() ~= oldp:norm(), p:norm())
+        --     print('gp:norm() ~= gp:norm()', gp:norm() ~= gp:norm(), gp:norm())
+        --     assert(p:norm() ~= oldp:norm())
+        --     assert(gp:norm() ~= gp:norm())
+        -- end
+        -- oldp = p
+        -- oldgp = gp
+
+        -- BUG: the model returned by trainer does not get updated!
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
-        local dev_loss = tester:test(model, 10)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
-        local p, gp = model_utils.combine_all_parameters(unpack(model)) -- model:getParameters()
-        assert(p:norm() == paramNorm)
-        assert(gp:norm() == gpNorm)
+        local dev_loss = tester:test(model, p, tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        -- local p, gp = model:getParameters()
+        -- assert(p:norm() == paramNorm)
+        -- assert(gp:norm() == gpNorm) -- this fails
 
         -- Record loss
         train_losses[#train_losses+1] = train_loss

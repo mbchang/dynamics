@@ -129,7 +129,9 @@ function expand_for_each_particle(batch_particles)
     local other_particles = {}
     if num_particles > 1 then 
         for i=1,num_particles do
-            local this = torch.squeeze(batch_particles[{{},{i},{},{}}])  -- (num_samples x windowsize x 8)
+            local this = batch_particles[{{},{i},{},{}}]
+            -- print('this:size()', this:size())
+            this:resize(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8)
             this_particles[#this_particles+1] = this
 
             local other
@@ -145,7 +147,8 @@ function expand_for_each_particle(batch_particles)
             other_particles[#other_particles+1] = other
         end
     else
-        this_particles[#this_particles+1] = torch.squeeze(batch_particles[{{},{1},{},{}}]) -- (num_samples x windowsize x 8)
+        local this = batch_particles[{{},{i},{},{}}]
+        this_particles[#this_particles+1] = this:resize(this:size(1), this:size(3), this:size(4)) -- (num_samples x windowsize x 8)
     end
     this_particles = torch.cat(this_particles,1)  -- concatenate along batch dimension
 
@@ -192,6 +195,15 @@ function dataloader:next_config(current_config, start, finish)
     local this_particles, other_particles = expand_for_each_particle(minibatch_p) 
     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
     local num_particles = minibatch_p:size(2)
+    if num_samples ~= minibatch_p:size(1) * num_particles then
+        print('num_samples', num_samples)
+        print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
+        print('minibatch_p:size()', minibatch_p:size(1))
+        print('num_particles', num_particles)
+        print('this_particles:size()', this_particles:size())
+        print('other_particles:size()', other_particles:size())
+    end
+
     assert(num_samples == minibatch_p:size(1) * num_particles)
 
     -- check if m_goos is empty
@@ -280,7 +292,6 @@ function dataloader:next_config(current_config, start, finish)
     y:resize(num_samples, num_past*object_dim)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
-
 
     -- here only get the batch you need. There is a lot of redundant computation here
     this_x = this_x[{{start,finish}}]

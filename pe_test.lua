@@ -41,11 +41,12 @@ function Tester:load_model(model)
     if common_mp.cuda then self.network:cuda() end
 
     ------------------------------------- Parameters -------------------------------------
-    self.theta = {}
-    self.theta.params, self.theta.grad_params = self.network:getParameters()
+    -- self.theta = {}
+    -- self.theta.params, self.theta.grad_params = self.network:getParameters()
 
     ------------------------------------ Clone Model -------------------------------------
-    self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
+    -- self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
+    self.rnns = model_utils.clone_many_times(self.network, self.mp.seq_length, not self.network.parameters)
 
     -- This will cache the values that s takes on in one forward pass
     self.s = {}
@@ -58,38 +59,18 @@ function Tester:load_model(model)
     collectgarbage()
 end
 
-
-function Trainer:forward_pass_train(params_, x, y)
-    -- x is a table!
-    if params_ ~= self.theta.params then self.theta.params:copy(params_) end
-    self.theta.grad_params:zero()  -- reset gradient
-    self:reset_state()  -- reset s
-
-    -- unpack inputs
-    local this_past     = x.this:clone()
-    local context       = x.context:clone()
-    local this_future   = y:clone()
-
-    assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
-    assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
-            and context:size(3) == self.mp.input_dim)
-    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.input_dim)
-
-    local loss = torch.zeros(self.mp.seq_length)
-    local predictions = {}
-    for i = 1, self.mp.seq_length do
-        local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
-        loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
-    end 
-
-    collectgarbage()
-    return loss:sum(), self.s, predictions
+function Tester:reset_state()
+    for j = 0, self.mp.seq_length do
+        for d = 1, 2 * self.mp.layers do
+            self.s[j][d]:zero()
+        end
+    end
 end
 
 
 function Tester:forward_pass_test(params_, x, y)
-    if params_ ~= self.theta.params then self.theta.params:copy(params_) end
-    self.theta.grad_params:zero()  -- reset gradient
+    -- if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+    -- self.theta.grad_params:zero()  -- reset gradient
     self:reset_state()  -- reset s
 
     ------------------ get minibatch -------------------
@@ -106,16 +87,17 @@ function Tester:forward_pass_test(params_, x, y)
     end 
 
     collectgarbage()
+    -- print('test_loss: ' ..loss:sum())
     return loss:sum()
 end
 
 
-function Tester:test(model, num_iters)
+function Tester:test(model, params_, num_iters)
     self:load_model(model)
     local sum_loss = 0
     for i = 1, num_iters do 
         local this, context, y, mask = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
-        local test_loss = self:forward_pass_test(self.theta.params, {this=this,context=context}, y)
+        local test_loss = self:forward_pass_test(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
     end
     local avg_loss = sum_loss/num_iters

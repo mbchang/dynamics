@@ -56,11 +56,11 @@ function Trainer:create_model()
     ------------------------------------- Parameters -------------------------------------
     self.theta = {}
     self.theta.params, self.theta.grad_params = self.network:getParameters()
-    -- self.theta.params, self.theta.grad_params = model_utils.combine_all_parameters(self.protos.encoder, self.protos.lstm, self.protos.decoder) 
     print('self.theta.params', #self.theta.params)
 
     ------------------------------------ Clone Model -------------------------------------
-    self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
+    -- self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
+    self.rnns = model_utils.clone_many_times(self.network, self.mp.seq_length, not self.network.parameters)
 
     -------------------------------- Initialize LSTM State -------------------------------
     -- This will cache the values that s takes on in one forward pass
@@ -190,10 +190,25 @@ function Trainer:train(num_iters, epoch_num)
                          updateDecay = 0.01}
 
     for i = 1,num_iters do 
-        epoch_num = math.floor(i/self.train_loader.num_batches)  -- so epoch_num as a parameter might be irrelevant, but we hope that the parent function knows num_batches
+        -- epoch_num = math.floor(i/self.train_loader.num_batches)  -- so epoch_num as a parameter might be irrelevant, but we hope that the parent function knows num_batches
+        -- local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
         self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()
+        -- print('params:norm', self.theta.params:norm())
+        -- print('grad_params:norm', self.theta.grad_params:norm())
+
+        -- NEEDED TO UPDATE THE PARAMETERS MANUALLY (How do i get around this?)
+        local p, gp = self.network:getParameters()
+        p:copy(self.theta.params)
+        gp:copy(self.theta.grad_params)
+        -- print('networkp:norm', p:norm())
+        -- print('networkgp:norm', gp:norm())
+
+
+        -- for some reason the network is not updating its parameters!
+
+
 
         if i % self.mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, i, loss[1], self.theta.grad_params:norm()))
@@ -208,19 +223,21 @@ function Trainer:train(num_iters, epoch_num)
     end
     torch.save(self.logs.savefile, self.network)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
+
+    -- the BUG is that self.network's params are not getting updated!
     return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
 end    
 
-train_mp.learning_rate = 5e-2
-torch.manualSeed(123)
--- print(train_mp)
--- assert(false)
-trainer = Trainer.create('trainset', train_mp)
-trainer:reset(5e-2)
-final_loss = trainer:train(1000, 0)
+-- train_mp.learning_rate = 5e-2
+-- torch.manualSeed(123)
+-- -- print(train_mp)
+-- -- assert(false)
+-- trainer = Trainer.create('trainset', train_mp)
+-- trainer:reset(5e-2)
+-- final_loss = trainer:train(1000, 0)
 -- print(final_loss)
 
--- return Trainer
+return Trainer
 
 
 

@@ -22,9 +22,9 @@ end
 
 
 personal_mp = {
-    batch_size  = 9,
+    batch_size  = 1,
     seq_length  = 10,
-    max_epochs  = 3, 
+    max_epochs  = 100, 
     cuda        = false
 }
 
