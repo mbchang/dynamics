@@ -77,9 +77,6 @@ function Trainer:create_model()
         self.ds[d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda)
     end
 
-    -- This will cache the err (not sure if this is necessary)
-    self.err = model_utils.transfer_data(torch.zeros(self.mp.seq_length), common_mp.cuda)
-
     collectgarbage()
 end
 

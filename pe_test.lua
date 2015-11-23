@@ -29,7 +29,7 @@ function Tester.create(dataset, mp)
     setmetatable(self, Tester)
     self.mp = mp
     self.dataset = dataset  -- string for the dataset folder
-    self.test_loader = DataLoader.create(self.dataset, self.mp.seq_length, self.mp.batch_size, self.mp.shuffle)
+    self.test_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, self.mp.shuffle)
     collectgarbage()
     return self
 end
@@ -37,76 +37,85 @@ end
 
 function Tester:load_model(model)
     ------------------------------------ Create Model ------------------------------------
-    self.protos                 = model -- torch.load(modelfile)
-    self.protos.criterion       = nn.MSECriterion()
-
-    if common_mp.cuda then 
-        self.protos.encoder:cuda()
-        self.protos.lstm:cuda()
-        self.protos.decoder:cuda()
-        self.protos.criterion:cuda()
-    end
+    self.network                 = model -- torch.load(modelfile)
+    if common_mp.cuda then self.network:cuda() end
 
     ------------------------------------- Parameters -------------------------------------
     self.theta = {}
-    self.theta.params, self.theta.grad_params = model_utils.combine_all_parameters(self.protos.encoder, self.protos.lstm, self.protos.decoder) 
+    self.theta.params, self.theta.grad_params = self.network:getParameters()
 
     ------------------------------------ Clone Model -------------------------------------
-    self.clones = {}
-    for name,proto in pairs(self.protos) do
-        self.clones[name] = model_utils.clone_many_times(proto, self.mp.seq_length, not proto.parameters)  -- clone 1 times
-    end
+    self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
 
-    -------------------------------- Initialize LSTM State -------------------------------
-    self.lstm_init_state = {}
-    -- LSTM initial state (zero initially, but final state gets sent to initial state when we do BPTT)
-    self.lstm_init_state.initstate_c = torch.zeros(self.mp.batch_size, self.mp.LSTM_hidden_dim)
-    self.lstm_init_state.initstate_h = self.lstm_init_state.initstate_c:clone()
-
-    if common_mp.cuda then
-        self.lstm_init_state.initstate_c = self.lstm_init_state.initstate_c:cuda()
-        self.lstm_init_state.initstate_h = self.lstm_init_state.initstate_h:cuda()
+    -- This will cache the values that s takes on in one forward pass
+    self.s = {}
+    for j = 0, self.mp.seq_length do
+        self.s[j] = {}
+        for d = 1, 2 * self.mp.layers do
+            self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda) 
+        end
     end
     collectgarbage()
+end
+
+
+function Trainer:forward_pass_train(params_, x, y)
+    -- x is a table!
+    if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+    self.theta.grad_params:zero()  -- reset gradient
+    self:reset_state()  -- reset s
+
+    -- unpack inputs
+    local this_past     = x.this:clone()
+    local context       = x.context:clone()
+    local this_future   = y:clone()
+
+    assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
+    assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
+            and context:size(3) == self.mp.input_dim)
+    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.input_dim)
+
+    local loss = torch.zeros(self.mp.seq_length)
+    local predictions = {}
+    for i = 1, self.mp.seq_length do
+        local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
+        loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+    end 
+
+    collectgarbage()
+    return loss:sum(), self.s, predictions
 end
 
 
 function Tester:forward_pass_test(params_, x, y)
-    if params_ ~= self.theta.params then
-        self.theta.params:copy(params_)
-    end
+    if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
+    self:reset_state()  -- reset s
 
     ------------------ get minibatch -------------------
-    -- local x, y = self.test_loader:next_batch(self.mp)  -- the way it is defined in loader is to just keep cycling through the same dataset
-    local test_loss = 0
+    local this_past     = x.this:clone()
+    local context       = x.context:clone()
+    local this_future   = y:clone()
 
     ------------------- forward pass -------------------
-    local embeddings = {}
-    local lstm_c = {[0]=self.lstm_init_state.initstate_c} -- internal cell states of LSTM
-    local lstm_h = {[0]=self.lstm_init_state.initstate_h} -- output values of LSTM
+    local loss = torch.zeros(self.mp.seq_length)
     local predictions = {}
+    for i = 1, self.mp.seq_length do
+        local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
+        loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+    end 
 
-    for t = 1,self.mp.seq_length do
-        embeddings[t] = self.clones.encoder[t]:forward(torch.squeeze(x[{{},{t}}]))
-        lstm_c[t], lstm_h[t] = unpack(self.clones.lstm[t]:forward{embeddings[t], lstm_c[t-1], lstm_h[t-1]})
-        predictions[t] = self.clones.decoder[t]:forward(lstm_h[t])
-        test_loss = test_loss + self.clones.criterion[t]:forward(predictions[t], torch.squeeze(y[{{},{t}}]))
-
-        -- DEBUGGING
-        -- image.display(predictions[t])  -- here you can also save the image
-    end
     collectgarbage()
-    return test_loss
+    return loss:sum()
 end
 
 
-function Tester:test(modelfile, num_iters)
-    self:load_model(modelfile)
+function Tester:test(model, num_iters)
+    self:load_model(model)
     local sum_loss = 0
     for i = 1, num_iters do 
-        local x, y = self.test_loader:next_batch(self.mp)
-        local test_loss = self:forward_pass_test(self.theta.params, x, y) 
+        local this, context, y, mask = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
+        local test_loss = self:forward_pass_test(self.theta.params, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
     end
     local avg_loss = sum_loss/num_iters
@@ -115,4 +124,5 @@ function Tester:test(modelfile, num_iters)
 end
 
 return Tester
+
 
