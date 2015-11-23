@@ -22,7 +22,7 @@ end
 
 
 personal_mp = {
-    batch_size  = 3,
+    batch_size  = 9,
     seq_length  = 10,
     max_epochs  = 3, 
     cuda        = false
@@ -37,9 +37,9 @@ openmind_mp = {
 
 -- Common parameters
 common_mp = {
-    layers        = 2,
+    layers        = 4,
     input_dim     = 4*10, -- winsize/2 is 10
-    rnn_dim       = 50,
+    rnn_dim       = 100,
     out_dim       = 4*10, -- winsize/2 is 10
     cudnn         = false,
     rand_init_wts = false,
@@ -58,7 +58,7 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
-      shuffle               = false,
+      shuffle               = true,
       max_grad_norm         = 10,
 
       -- Data Logging Parameters

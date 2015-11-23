@@ -110,10 +110,6 @@ function dataloader.create(dataset_name, dataset_folder, batch_size, shuffle)
         self.batch_idxs = torch.range(1,self.num_batches)
     end
 
-
-    print(self.total_examples, self.num_batches)
-
-
     collectgarbage()
     return self
 end
@@ -188,15 +184,6 @@ end
     Note that num_samples = num_examples * num_particles
 --]]
 function dataloader:next_config(current_config, start, finish)
-    -- self.current_batch = self.current_batch + 1
-    -- if self.current_batch > self.nbatches then self.current_batch = 1 end
-    -- print(self.configs[self.batch_idxs[self.current_batch]])
-
-    print ('current config: ' .. current_config)
-    print('start: ' .. start)
-    print('finish: ' .. finish)
-    -- local current_config_name = self.configs[self.config_idxs[current_config]]
-
     local minibatch_data = self.dataset[current_config]
     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
     local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}? 
@@ -232,7 +219,7 @@ function dataloader:next_config(current_config, start, finish)
     -- create context 
     local context
     if num_other_particles > 0 and num_goos > 0 then
-        print('num_other_particles > 0 and num_goos > 0')
+        -- print('num_other_particles > 0 and num_goos > 0')
         context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
         if num_to_pad > 0 then 
             local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
@@ -242,17 +229,17 @@ function dataloader:next_config(current_config, start, finish)
         assert(num_to_pad > 0)
         local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
         if num_other_particles > 0 then -- no goos
-            print('num_other_particles > 0 and num_goos = 0')
+            -- print('num_other_particles > 0 and num_goos = 0')
             assert(torch.type(m_goos)=='table')
             assert(not next(m_goos))  -- the table had better be empty
             context = torch.cat(other_particles, pad_p, 2)
         elseif num_goos > 0 then -- no other objects
-            print('num_other_particles = 0 and num_goos > 0')
+            -- print('num_other_particles = 0 and num_goos > 0')
             assert(torch.type(other_particles)=='table')
             assert(not next(other_particles))  -- the table had better be empty
             context = torch.cat(m_goos, pad_p, 2)
         else
-            print('num_other_particles = 0 and num_goos = 0')
+            -- print('num_other_particles = 0 and num_goos = 0')
             assert(num_other_particles == 0 and num_goos == 0)
             assert(num_to_pad == max_other_objects)
             context = pad_p  -- context is just the pad then
@@ -296,19 +283,9 @@ function dataloader:next_config(current_config, start, finish)
 
 
     -- here only get the batch you need. There is a lot of redundant computation here
-    print('before')
-    print(this_x:size())
-    print(context_x:size())
-    print(y:size())
-
     this_x = this_x[{{start,finish}}]
     context_x = context_x[{{start,finish}}]
     y = y[{{start,finish}}]
-
-    print('after')
-    print(this_x:size())
-    print(context_x:size())
-    print(y:size())
 
     collectgarbage()
     return {this_x, context_x, y, minibatch_m}
@@ -342,7 +319,6 @@ end
 
 function dataloader:get_batch_info()
     -- assumption that a config contains more than one batch
-    -- self.current_batch = self.current_batch + 1
     self.current_batch_in_config = self.current_batch_in_config + self.batch_size 
     -- current batch is the range: [self.current_batch_in_config - self.batch_size + 1, self.current_batch_in_config]
 
@@ -358,28 +334,25 @@ function dataloader:get_batch_info()
         assert(self.current_batch_in_config == self.batch_size)
     end
 
-    print('config: '.. self.configs[self.config_idxs[self.current_config]] .. 
-            ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
-            ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 .. 
-            ',' .. self.current_batch_in_config .. ']')
+    -- print('config: '.. self.configs[self.config_idxs[self.current_config]] .. 
+    --         ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
+    --         ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 .. 
+    --         ',' .. self.current_batch_in_config .. ']')
 
     return {self.configs[self.config_idxs[self.current_config]],  -- config name 
             -- self.config_sizes[self.config_idxs[self.current_config]],  -- config capacity
             self.current_batch_in_config - self.batch_size + 1,  -- start index in config
             self.current_batch_in_config}  -- end index in config
-
-
-    -- by now you should have the correct self.current_config and the self.current_batch_in_config
-    -- local batch = self:next_config(self.current_config, self.current_batch_in_config)
 end
 
 function dataloader:next_batch()
     self.current_batch = self.current_batch + 1
     if self.current_batch > self.num_batches then self.current_batch = 1 end
 
-    print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch])
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
-    print(config_name, start, finish)
+    -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+    -- print(config_name, start, finish)
     local nextbatch = self:next_config(config_name, start, finish)
     return nextbatch
 end

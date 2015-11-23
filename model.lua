@@ -433,11 +433,11 @@ function test_model()
 
 
 
-    config = {
-        learningRate = 0.0001,
-        momentumDecay = 0.1,
-        updateDecay = 0.01
-    }
+    -- config = {
+    --     learningRate = 0.0001,
+    --     momentumDecay = 0.1,
+    --     updateDecay = 0.01
+    -- }
     -- p = rmsprop(gp, p, config, state)
 
 

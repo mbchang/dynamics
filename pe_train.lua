@@ -8,6 +8,7 @@ require 'optim'
 require 'model'
 require 'image'
 require 'rmsprop'
+require 'paths' 
 
 if common_mp.cuda then
     require 'cutorch'
@@ -42,6 +43,9 @@ function Trainer:prepare_logs(learning_rate)
     self.logs.savefile = self.logs.savefile .. '.t7'
     self.logs.lossesfile = common_mp.results_folder .. '/losses,lr=' .. self.mp.learning_rate .. '_results.t7'
     self.logs.train_losses = {losses={}, grad_norms={}}
+
+    if not paths.dirp(common_mp.results_folder) then paths.mkdir(common_mp.results_folder) end
+
     collectgarbage()
 end
 
@@ -109,9 +113,9 @@ function Trainer:forward_pass_train(params_, x, y)
     local context       = x.context:clone()
     local this_future   = y:clone()
 
-    print(this_past:size())
-    print(self.mp.batch_size)
-    print(self.mp.input_dim)
+    -- print(this_past:size())
+    -- print(self.mp.batch_size)
+    -- print(self.mp.input_dim)
 
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
@@ -126,7 +130,7 @@ function Trainer:forward_pass_train(params_, x, y)
     end 
 
     collectgarbage()
-    print(loss:sum())
+    -- print(loss:sum())
     return loss:sum(), self.s, predictions
 end
 
@@ -172,7 +176,6 @@ function Trainer:backward_pass_train(x, y, mask, loss, state, predictions)
 end
 
 
-
 function Trainer:reset(learning_rate)
     self:prepare_logs(learning_rate)
     self:create_model()  -- maybe put this into constructor
@@ -180,7 +183,6 @@ end
 
 
 function Trainer:train(num_iters, epoch_num)
-
 
     function feval_train(params_)
         -- feval MUST return loss, grad_loss in order to get fed into the optimizer!
@@ -193,8 +195,12 @@ function Trainer:train(num_iters, epoch_num)
     end
 
     -- here do epoch training
-    local optim_state = {learningRate = self.mp.learning_rate}
+    local optim_state = {learningRate = self.mp.learning_rate,
+                         momentumDecay = 0.1, 
+                         updateDecay = 0.01}
+
     for i = 1,num_iters do 
+        epoch_num = math.floor(i/self.train_loader.num_batches)  -- so epoch_num as a parameter might be irrelevant, but we hope that the parent function knows num_batches
         local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
         self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()
@@ -215,13 +221,13 @@ function Trainer:train(num_iters, epoch_num)
     return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.protos --self.logs.savefile
 end    
 
-train_mp.learning_rate = 5e-4
+train_mp.learning_rate = 5e-2
 torch.manualSeed(123)
-print(train_mp)
+-- print(train_mp)
 -- assert(false)
 trainer = Trainer.create('trainset', train_mp)
-trainer:reset(5e-4)
-final_loss = trainer:train(2, 0)
+trainer:reset(5e-2)
+final_loss = trainer:train(1000, 0)
 -- print(final_loss)
 
 -- return Trainer

@@ -23,10 +23,7 @@ RETURN:
 ]]
 
 function rmsprop(opfunc, x, config, state)
-    --  print(opfunc)
-    --  print(x)
-    --  print(config)
-    --  print(state)
+
 
    -- get parameters
    local config = config or {}
