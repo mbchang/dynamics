@@ -97,21 +97,22 @@ function dataloader.create(dataset_name, dataset_folder, mp, shuffle)
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
     self.num_configs = #self.configs 
-
-    self.config_idxs = torch.range(1, self.num_configs)
-    self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.config_idxs)
-
-    self.current_config = 1
+    self.config_idxs = torch.range(1,self.num_configs)
+    self.total_examples, self.num_batches, self.config_sizes = self:count_examples()
+    self.current_config = 1  -- only used in compute_batches()
+    self.current_batch_in_config = 0  -- only used in compute_batches()
+    self.batchlist = self:compute_batches()
     self.current_batch = 0
-    self.current_batch_in_config = 0
+
+    if shuffle then 
+        self.batch_idxs = torch.randperm(self.num_batches)
+    else
+        self.batch_idxs = torch.range(1,self.num_batches)
+    end
+
+
     print(self.total_examples, self.num_batches)
 
-
-    -- if shuffle then 
-    --     self.config_idxs = torch.randperm(self.num_configs)
-    -- else
-    --     self.config_idxs = torch.range(1,self.num_configs)
-    -- end
 
     collectgarbage()
     return self
@@ -186,16 +187,17 @@ end
 
     Note that num_samples = num_examples * num_particles
 --]]
-function dataloader:next_config(current_config, current_batch_in_config)
+function dataloader:next_config(current_config, start, finish)
     -- self.current_batch = self.current_batch + 1
     -- if self.current_batch > self.nbatches then self.current_batch = 1 end
     -- print(self.configs[self.batch_idxs[self.current_batch]])
 
-    local current_config_name = self.configs[self.config_idxs[current_config]]
-    print ('current config: ' .. current_config_name)
+    print ('current config: ' .. current_config)
+    print('start: ' .. start)
+    print('finish: ' .. finish)
+    -- local current_config_name = self.configs[self.config_idxs[current_config]]
 
-
-    local minibatch_data = self.dataset[current_config_name]
+    local minibatch_data = self.dataset[current_config]
     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
     local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}? 
     local minibatch_m = minibatch_data.mask  -- 8
@@ -291,18 +293,36 @@ function dataloader:next_config(current_config, current_batch_in_config)
     y:resize(num_samples, num_past*object_dim)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
+
+
+    -- here only get the batch you need. There is a lot of redundant computation here
+    print('before')
+    print(this_x:size())
+    print(context_x:size())
+    print(y:size())
+
+    this_x = this_x[{{start,finish}}]
+    context_x = context_x[{{start,finish}}]
+    y = y[{{start,finish}}]
+
+    print('after')
+    print(this_x:size())
+    print(context_x:size())
+    print(y:size())
+
+    collectgarbage()
     return {this_x, context_x, y, minibatch_m}
 end
 
 
-function dataloader:count_examples(config_idxs)
+function dataloader:count_examples()
     local total_samples = 0
     local config_sizes = {}
     for i, config in pairs(self.configs) do
         local config_examples = self.dataset[config]
         local num_samples = config_examples.particles:size(1)*config_examples.particles:size(2)
         total_samples = total_samples + num_samples
-        config_sizes[config_idxs[i]] = num_samples -- each config has an id
+        config_sizes[i] = num_samples -- each config has an id
     end
     assert(total_samples % self.mp.batch_size == 0)
     local num_batches = total_samples/self.mp.batch_size
@@ -310,10 +330,19 @@ function dataloader:count_examples(config_idxs)
 end
 
 
+function dataloader:compute_batches()
+    local batchlist = {}
+    for i=1,self.num_batches do 
+        batchlist[#batchlist+1] = self:get_batch_info()
+    end
+    assert(self.num_batches == #batchlist)
+    return batchlist
+end
 
-function dataloader:next_batch()
+
+function dataloader:get_batch_info()
     -- assumption that a config contains more than one batch
-    self.current_batch = self.current_batch + 1
+    -- self.current_batch = self.current_batch + 1
     self.current_batch_in_config = self.current_batch_in_config + self.mp.batch_size 
     -- current batch is the range: [self.current_batch_in_config - self.mp.batch_size + 1, self.current_batch_in_config]
 
@@ -323,9 +352,9 @@ function dataloader:next_batch()
     end
 
     if self.current_config > self.num_configs then
-        assert(self.current_batch == self.num_batches+1)
+        -- assert(self.current_batch == self.num_batches+1)
         self.current_config = 1
-        self.current_batch = 0
+        -- self.current_batch = 0
         assert(self.current_batch_in_config == self.mp.batch_size)
     end
 
@@ -334,22 +363,44 @@ function dataloader:next_batch()
             ' current batch: ' .. '[' .. self.current_batch_in_config - self.mp.batch_size + 1 .. 
             ',' .. self.current_batch_in_config .. ']')
 
+    return {self.configs[self.config_idxs[self.current_config]],  -- config name 
+            -- self.config_sizes[self.config_idxs[self.current_config]],  -- config capacity
+            self.current_batch_in_config - self.mp.batch_size + 1,  -- start index in config
+            self.current_batch_in_config}  -- end index in config
+
+
     -- by now you should have the correct self.current_config and the self.current_batch_in_config
     -- local batch = self:next_config(self.current_config, self.current_batch_in_config)
 end
 
+function dataloader:next_batch()
+    self.current_batch = self.current_batch + 1
+    if self.current_batch > self.num_batches then self.current_batch = 1 end
+
+    print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch])
+    local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
+    print(config_name, start, finish)
+    local x = self:next_config(config_name, start, finish)
+    print(x)
+
+end
+
+
 -- return dataloader
 
 -- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
-d = dataloader.create('trainset','hey',train_mp, false)
+d = dataloader.create('trainset','hey',train_mp, true)
 -- for i=1,20 do
 -- print(d:next_batch()) end
 -- print(d:next_batch())
+print(d.batchlist)
 print('num_batches:', d.num_batches)
-for i=1,d.num_batches do 
-    d:next_batch()
-end
+-- for i=1,d.num_batches do 
+-- end
 -- print(d:count_examples(d.config_idxs))
+-- d:compute_batches()
+
+d:next_batch()
 
 
 
