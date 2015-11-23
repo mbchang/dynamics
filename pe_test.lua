@@ -68,9 +68,9 @@ function Tester:forward_pass_test(params_, x, y)
     self:reset_state()  -- reset s
 
     ------------------ get minibatch -------------------
-    local this_past     = x.this:clone()
-    local context       = x.context:clone()
-    local this_future   = y:clone()
+    local this_past     = model_utils.transfer_data(x.this:clone(), common_mp.cuda)
+    local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
+    local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
 
     ------------------- forward pass -------------------
     local loss = torch.zeros(self.mp.seq_length)

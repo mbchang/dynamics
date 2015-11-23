@@ -1,6 +1,6 @@
 local T = require 'pl.tablex'
 
-local pc = true
+local pc = false
 
 function merge_tables(t1, t2) 
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
@@ -17,7 +17,7 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername
+    return foldername..'gpu'
 end
 
 
@@ -26,17 +26,19 @@ personal_mp = {
     seq_length  = 10,
     max_epochs  = 100, 
     dataset_folder = 'hey',
+    num_threads = 1,
     cuda        = false,
     cunn        = false
 }
 
 openmind_mp = {
     batch_size = 100,
-    seq_length = 10,
-    max_epochs = 100, 
+    seq_length = 10,  -- equals windowsize/2
+    max_epochs = 5, 
     dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
+    num_threads = 4,
     cuda       = true,
-    cunn       = false
+    cunn       = true
 }
 
 -- Common parameters

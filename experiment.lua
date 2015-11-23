@@ -6,8 +6,8 @@ if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
 
 -- threads
-torch.setnumthreads(4)
-print('<torch> set nb of threads to ' .. torch.getnumthreads())
+-- torch.setnumthreads(common_mp.num_threads)
+-- print('<torch> set nb of threads to ' .. torch.getnumthreads())
 
 local Trainer = require 'pe_train'
 local Tester = require 'pe_test'
@@ -15,7 +15,10 @@ local Tester = require 'pe_test'
 local trainer = Trainer.create('trainset', train_mp)  -- need to specify learning rate here
 local tester = Tester.create('testset', test_mp)
 
+-- local learning_rates = {5e-4, 5e-5, 5e-6}
+-- local learning_rates = {5e-4, 5e-5, 5e-6}
 local learning_rates = {5e-4, 5e-5, 5e-6}
+
 local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
 
 if common_mp.rand_init_wts then torch.manualSeed(123) end

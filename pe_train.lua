@@ -100,19 +100,31 @@ function Trainer:forward_pass_train(params_, x, y)
     self:reset_state()  -- reset s
 
     -- unpack inputs
-    local this_past     = x.this:clone()
-    local context       = x.context:clone()
-    local this_future   = y:clone()
+    local this_past     = model_utils.transfer_data(x.this:clone(), common_mp.cuda)
+    local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
+    local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
+
+
+    -- print(this_past)
+    -- assert(false)
+
+    -- print('this_past', type(this_past))
+    -- print('context', type(context))
+    -- print('this_future', type(this_future))
+    -- assert(false)
+
 
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
     assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.input_dim)
 
-    local loss = torch.zeros(self.mp.seq_length)
+    local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), common_mp.cuda)
     local predictions = {}
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
+        -- print('sim1', type(sim1))
+        -- print(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
     end 
 
@@ -135,9 +147,9 @@ function Trainer:backward_pass_train(x, y, mask, loss, state, predictions)
     self:reset_ds()
 
     -- unpack inputs. All of these have been CUDAed already if need be
-    local this_past     = x.this:clone()
-    local context       = x.context:clone()
-    local this_future   = y:clone()
+    local this_past     = model_utils.transfer_data(x.this:clone(), common_mp.cuda)
+    local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
+    local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
 
     for i = self.mp.seq_length, 1, -1 do
         local sim1 = state[i - 1]
