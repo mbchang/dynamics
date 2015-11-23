@@ -48,7 +48,6 @@ for index, learning_rate in pairs(learning_rates) do
         -- oldp = p
         -- oldgp = gp
 
-        -- BUG: the model returned by trainer does not get updated!
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
