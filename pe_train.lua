@@ -113,10 +113,6 @@ function Trainer:forward_pass_train(params_, x, y)
     local context       = x.context:clone()
     local this_future   = y:clone()
 
-    -- print(this_past:size())
-    -- print(self.mp.batch_size)
-    -- print(self.mp.input_dim)
-
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
@@ -130,7 +126,6 @@ function Trainer:forward_pass_train(params_, x, y)
     end 
 
     collectgarbage()
-    -- print(loss:sum())
     return loss:sum(), self.s, predictions
 end
 
@@ -141,8 +136,6 @@ function Trainer:backward_pass_train(x, y, mask, loss, state, predictions)
     -- assert that state equals self.s
     for j = 0, self.mp.seq_length do
         for d = 1, 2 * self.mp.layers do
-            -- print(state[j][d])
-            -- print(self.s[j][d])
             assert(torch.sum(state[j][d]:eq(self.s[j][d])) == torch.numel(self.s[j][d]))
         end
     end 
@@ -216,9 +209,9 @@ function Trainer:train(num_iters, epoch_num)
         end
         collectgarbage()
     end
-    torch.save(self.logs.savefile, self.protos)
+    torch.save(self.logs.savefile, self.network)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
-    return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.protos --self.logs.savefile
+    return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
 end    
 
 train_mp.learning_rate = 5e-2
