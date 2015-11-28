@@ -1,6 +1,6 @@
 local T = require 'pl.tablex'
 
-local pc = false
+local pc = true
 
 function merge_tables(t1, t2) 
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
@@ -34,7 +34,7 @@ personal_mp = {
 openmind_mp = {
     batch_size = 100,
     seq_length = 10,  -- equals windowsize/2
-    max_epochs = 5, 
+    max_epochs = 10, 
     dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
     num_threads = 4,
     cuda       = true,

@@ -363,10 +363,12 @@ function dataloader:next_batch()
 end
 
 
-return dataloader
+-- return dataloader
 
--- -- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
--- d = dataloader.create('trainset','hey',train_mp, true)
+-- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
+d = dataloader.create('trainset','hey', 3, true)
+print(d.configs)
+
 -- -- for i=1,20 do
 -- -- print(d:next_batch()) end
 -- -- print(d:next_batch())

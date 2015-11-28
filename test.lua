@@ -73,7 +73,7 @@ function Tester:forward_pass_test(params_, x, y)
     local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
 
     ------------------- forward pass -------------------
-    local loss = torch.zeros(self.mp.seq_length)
+    local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), common_mp.cuda)
     local predictions = {}
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
