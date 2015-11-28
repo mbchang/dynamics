@@ -38,24 +38,10 @@ for index, learning_rate in pairs(learning_rates) do
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
         local train_loss, model = trainer:train(trainer.train_loader.num_batches , i)  -- trainer.train_loader.num_batches  
-        -- local p, gp = model:parameters()
-        -- local paramNorm, gpNorm = p:norm(), gp:norm()
-        -- if oldp and oldgp then 
-        --     print('p:norm() ~= oldp:norm()', p:norm() ~= oldp:norm(), p:norm())
-        --     print('gp:norm() ~= gp:norm()', gp:norm() ~= gp:norm(), gp:norm())
-        --     assert(p:norm() ~= oldp:norm())
-        --     assert(gp:norm() ~= gp:norm())
-        -- end
-        -- oldp = p
-        -- oldgp = gp
-
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
         local dev_loss = tester:test(model, p, tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
-        -- local p, gp = model:getParameters()
-        -- assert(p:norm() == paramNorm)
-        -- assert(gp:norm() == gpNorm) -- this fails
 
         -- Record loss
         train_losses[#train_losses+1] = train_loss
@@ -77,6 +63,5 @@ for index, learning_rate in pairs(learning_rates) do
     end
 end
 
--- Save plots
 
 

@@ -81,7 +81,6 @@ function Tester:forward_pass_test(params_, x, y)
     end 
 
     collectgarbage()
-    -- print('test_loss: ' ..loss:sum())
     return loss:sum()
 end
 

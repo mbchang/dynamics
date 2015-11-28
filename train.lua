@@ -113,8 +113,6 @@ function Trainer:forward_pass_train(params_, x, y)
     local predictions = {}
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
-        -- print('sim1', type(sim1))
-        -- print(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
     end 
 
@@ -186,25 +184,14 @@ function Trainer:train(num_iters, epoch_num)
                          updateDecay = 0.01}
 
     for i = 1,num_iters do 
-        -- epoch_num = math.floor(i/self.train_loader.num_batches)  -- so epoch_num as a parameter might be irrelevant, but we hope that the parent function knows num_batches
-        -- local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
         self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()
-        -- print('params:norm', self.theta.params:norm())
-        -- print('grad_params:norm', self.theta.grad_params:norm())
 
-        -- NEEDED TO UPDATE THE PARAMETERS MANUALLY (How do i get around this?)
+        -- Update Parameters
         local p, gp = self.network:getParameters()
         p:copy(self.theta.params)
         gp:copy(self.theta.grad_params)
-        -- print('networkp:norm', p:norm())
-        -- print('networkgp:norm', gp:norm())
-
-
-        -- for some reason the network is not updating its parameters!
-
-
 
         if i % self.mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, i, loss[1], self.theta.grad_params:norm()))
