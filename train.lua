@@ -104,16 +104,6 @@ function Trainer:forward_pass_train(params_, x, y)
     local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
 
-
-    -- print(this_past)
-    -- assert(false)
-
-    -- print('this_past', type(this_past))
-    -- print('context', type(context))
-    -- print('this_future', type(this_future))
-    -- assert(false)
-
-
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)

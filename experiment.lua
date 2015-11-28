@@ -9,8 +9,8 @@ if common_mp.cunn then require 'cunn' end
 -- torch.setnumthreads(common_mp.num_threads)
 -- print('<torch> set nb of threads to ' .. torch.getnumthreads())
 
-local Trainer = require 'pe_train'
-local Tester = require 'pe_test'
+local Trainer = require 'train'
+local Tester = require 'test'
 
 local trainer = Trainer.create('trainset', train_mp)  -- need to specify learning rate here
 local tester = Tester.create('testset', test_mp)

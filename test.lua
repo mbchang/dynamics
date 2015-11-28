@@ -1,4 +1,4 @@
--- Train DDCIGN 
+-- Train 
 
 require 'metaparams'
 require 'torch'
@@ -100,5 +100,4 @@ function Tester:test(model, params_, num_iters)
 end
 
 return Tester
-
 

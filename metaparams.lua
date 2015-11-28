@@ -17,14 +17,15 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername..'gpu'
+    return foldername..'debug'
 end
 
 
 personal_mp = {
     batch_size  = 1,
-    seq_length  = 10,
-    max_epochs  = 100, 
+    seq_length  = 10,  -- max other objects
+    winsize     = 5,
+    max_epochs  = 10, 
     dataset_folder = 'hey',
     num_threads = 1,
     cuda        = false,
@@ -34,6 +35,7 @@ personal_mp = {
 openmind_mp = {
     batch_size = 100,
     seq_length = 10,  -- equals windowsize/2
+    winsize    = 10,
     max_epochs = 10, 
     dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
     num_threads = 4,
@@ -55,9 +57,9 @@ else
     common_mp = merge_tables(common_mp, openmind_mp)
 end
 
-common_mp.input_dim = 8*common_mp.seq_length
-common_mp.out_dim = 8*common_mp.seq_length
-common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim'}, common_mp)
+common_mp.input_dim = 8*common_mp.winsize
+common_mp.out_dim = 8*common_mp.winsize
+common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, common_mp)
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
