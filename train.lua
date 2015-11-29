@@ -53,7 +53,6 @@ function Trainer:create_model()
     print('self.theta.params', #self.theta.params)
 
     ------------------------------------ Clone Model -------------------------------------
-    -- self.rnns = g_cloneManyTimes(self.network, self.mp.seq_length, not self.network.parameters)
     self.rnns = model_utils.clone_many_times(self.network, self.mp.seq_length, not self.network.parameters)
 
     -------------------------------- Initialize LSTM State -------------------------------

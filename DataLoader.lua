@@ -90,6 +90,7 @@ function dataloader.create(dataset_name, dataset_folder, batch_size, shuffle)
     self.dataset_name = dataset_name  -- string
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
+    if not shuffle then topo_order(self.configs) end
     self.num_configs = #self.configs 
     self.config_idxs = torch.range(1,self.num_configs)
     self.total_examples, self.num_batches, self.config_sizes = self:count_examples()
@@ -339,10 +340,10 @@ function dataloader:get_batch_info()
         assert(self.current_batch_in_config == self.batch_size)
     end
 
-    -- print('config: '.. self.configs[self.config_idxs[self.current_config]] .. 
-    --         ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
-    --         ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 .. 
-    --         ',' .. self.current_batch_in_config .. ']')
+    print('config: '.. self.configs[self.config_idxs[self.current_config]] .. 
+            ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
+            ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 .. 
+            ',' .. self.current_batch_in_config .. ']')
 
     return {self.configs[self.config_idxs[self.current_config]],  -- config name 
             -- self.config_sizes[self.config_idxs[self.current_config]],  -- config capacity
@@ -355,27 +356,42 @@ function dataloader:next_batch()
     if self.current_batch > self.num_batches then self.current_batch = 1 end
 
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
-    -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
-    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    -- print(config_name, start, finish)
+    print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+            ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+    print(config_name, start, finish)
     local nextbatch = self:next_config(config_name, start, finish)
     return nextbatch
 end
 
 
-return dataloader
+-- orders the configs in topo order
+-- there can be two equally valid topo sorts: 
+--      first: all particles, then all goos
+--      second: diagonal
+function topo_order(configs)
+    table.sort(configs)
+end
 
--- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
--- d = dataloader.create('trainset','hey', 3, true)
--- print(d.configs)
+-- return dataloader
+
+-- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
+d = dataloader.create('trainset','hey', 3, false)
+-- print(d.dataset)
+print(d.configs)
+topo_order(d.configs)
+print(d.configs)
+print(d.config_idxs)
+-- print(d.batchlist)
+
 
 -- -- for i=1,20 do
 -- -- print(d:next_batch()) end
 -- -- print(d:next_batch())
 -- print(d.batchlist)
 -- print('num_batches:', d.num_batches)
--- -- for i=1,d.num_batches do 
--- -- end
+-- for i=1,d.num_batches do 
+--     d:next_batch()
+-- end
 -- -- print(d:count_examples(d.config_idxs))
 -- -- d:compute_batches()
 
