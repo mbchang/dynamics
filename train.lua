@@ -24,7 +24,7 @@ function Trainer.create(dataset, mp)
     setmetatable(self, Trainer)
     self.mp = mp
     self.dataset = dataset  -- string name of folder containing trainig examples
-    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, self.mp.shuffle)
+    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, self.mp.curriculum, self.mp.shuffle)
     collectgarbage()
     return self
 end
@@ -33,8 +33,7 @@ function Trainer:prepare_logs(learning_rate)
     self.mp.learning_rate = learning_rate
     self.logs = {}
     self.cmd = torch.CmdLine()
-    self.logs.savefile = common_mp.results_folder .. '/saved_model,lr=' .. self.mp.learning_rate
-    self.logs.savefile = self.logs.savefile .. '.t7'
+    self.logs.savefile = common_mp.results_folder .. '/saved_model,lr=' .. self.mp.learning_rate .. '.t7'
     self.logs.lossesfile = common_mp.results_folder .. '/losses,lr=' .. self.mp.learning_rate .. '_results.t7'
     self.logs.train_losses = {losses={}, grad_norms={}}
 
@@ -206,20 +205,77 @@ function Trainer:train(num_iters, epoch_num)
     torch.save(self.logs.savefile, self.network)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
-    -- the BUG is that self.network's params are not getting updated!
     return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
 end    
 
--- train_mp.learning_rate = 5e-2
--- torch.manualSeed(123)
--- -- print(train_mp)
--- -- assert(false)
--- trainer = Trainer.create('trainset', train_mp)
--- trainer:reset(5e-2)
+
+function Trainer:curriculum_train(num_subepochs, epoch_num)
+    -- to change: have another loop inside i=1,num_iters
+    for config_id=1,self.train_loader.num_configs do
+        print('Config:', self.train_loader.configs[config_id]..'-------------------------------------------------')
+        local config_this, config_context, config_y, config_mask = unpack(self.train_loader:next_config(self.train_loader.configs[config_id], 1, self.train_loader.config_sizes[config_id]))
+        
+        for i=1,num_subepochs do -- go through the entire config here
+            assert(self.train_loader.config_sizes[config_id]%self.train_loader.batch_size==0)
+            local _, loss
+            for b=1,self.train_loader.config_sizes[config_id]/self.train_loader.batch_size do
+                local finish = b*self.train_loader.batch_size
+                local start = finish - self.train_loader.batch_size + 1
+
+                -- get a batch sized chunk
+                local this, context, y = unpack(DataLoader.slice_batch({config_this, config_context, config_y}, start, finish))
+                local mask = config_mask
+
+                function feval_train(params_)
+                    -- feval MUST return loss, grad_loss in order to get fed into the optimizer!
+                    -- local this, context, y, mask = unpack(self.train_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
+                    local train_loss, state, predictions = self:forward_pass_train(params_, {this=this,context=context}, y)
+                    local loss, grad_loss = self:backward_pass_train({this=this,context=context}, y, mask, train_loss, state, predictions)
+                    assert(loss == train_loss)
+                    collectgarbage()
+                    return loss, grad_loss
+                end
+
+                local optim_state = {learningRate = self.mp.learning_rate,
+                     momentumDecay = 0.1, 
+                     updateDecay = 0.01} 
+
+                _, loss = rmsprop(feval_train, self.theta.params, optim_state)
+                self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
+                self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()
+
+                -- Update Parameters
+                local p, gp = self.network:getParameters()
+                p:copy(self.theta.params)
+                gp:copy(self.theta.grad_params)
+                -- print(string.format("epoch %2d\tconfig_id %2d\tsubepoch %2d\tbatch %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, config_id, i, b, loss[1], self.theta.grad_params:norm()))
+            end
+            print(string.format("epoch %2d\tconfig_id %2d\tsubepoch %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, config_id, i, loss[1], self.theta.grad_params:norm()))
+        end 
+        torch.save(self.logs.savefile, self.network)
+        torch.save(self.logs.lossesfile, self.logs.train_losses)
+        print('saved model')
+    end
+
+    torch.save(self.logs.savefile, self.network)
+    torch.save(self.logs.lossesfile, self.logs.train_losses)
+
+    return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
+end
+
+
+train_mp.batch_size = 3
+torch.manualSeed(123)
+trainer = Trainer.create('trainset', train_mp)
+trainer:reset(5e-5)
+for i=0,5 do
+    trainer:curriculum_train(5, i)
+end
+
 -- final_loss = trainer:train(1000, 0)
 -- print(final_loss)
 
-return Trainer
+-- return Trainer
 
 
 

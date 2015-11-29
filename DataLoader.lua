@@ -77,7 +77,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, dataset_folder, batch_size, shuffle)
+function dataloader.create(dataset_name, dataset_folder, batch_size, curriculum, shuffle)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -90,6 +90,7 @@ function dataloader.create(dataset_name, dataset_folder, batch_size, shuffle)
     self.dataset_name = dataset_name  -- string
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
+    if curriculum then assert(not shuffle) end
     if not shuffle then topo_order(self.configs) end
     self.num_configs = #self.configs 
     self.config_idxs = torch.range(1,self.num_configs)
@@ -161,25 +162,33 @@ end
     Each batch is a table of 5 things: {this, others, goos, mask, y}
 
         this: particle of interest, past timesteps
-            (num_samples x windowsize/2 x 8)
+            (num_examples x windowsize/2 x 8)
             last dimension: [px, py, vx, vy, (onehot mass)]
 
         others: other particles, past timesteps
-            (num_samples x (num_particles-1) x windowsize/2 x 8) or {}
+            (num_examples x (num_particles-1) x windowsize/2 x 8) or {}
             last dimension: [px, py, vx, vy, (onehot mass)]
 
         goos: goos, constant across time
-            (num_samples x num_goos x 8) or empty tensor?
+            (num_examples x num_goos x 8) or empty tensor?
             last dimension: [left, top, right, bottom, (onehot gooStrength)]
 
         mask: mask for the number of particles
             tensor of length 10, 0s everywhere except at location (num_particles-1) + num_goos
 
         y: particle of interest, future timesteps
-            (num_samples x windowsize/2 x 8)
+            (num_examples x windowsize/2 x 8)
             last dimension: [px, py, vx, vy, (onehot mass)]
 
     Note that num_samples = num_examples * num_particles
+
+    Output: {this_x, context_x, y, minibatch_m}
+        this_x: (num_samples_slice, windowsize/2 * object_dim)
+        context_x: (num_samples_slice, max_other_objects, windowsize/2 * object_dim)
+        y: (num_samples_slice, windowsize/2 * object_dim)
+        minibatch_m: (max_other_objects)
+
+        num_samples_slice is num_samples[start:finish], inclusive
 --]]
 function dataloader:next_config(current_config, start, finish)
     local minibatch_data = self.dataset[current_config]
@@ -297,6 +306,15 @@ function dataloader:next_config(current_config, start, finish)
     return {this_x, context_x, y, minibatch_m}
 end
 
+-- works
+function dataloader.slice_batch(table_of_data, start, finish)
+    local sliced_table_of_data = {}
+    for i=1,#table_of_data do
+        sliced_table_of_data[i] = table_of_data[i][{{start,finish}}]
+    end
+    return sliced_table_of_data
+end
+
 
 function dataloader:count_examples()
     local total_samples = 0
@@ -363,6 +381,10 @@ function dataloader:next_batch()
     return nextbatch
 end
 
+-- you should have an method that returns the batches for a whole config at once
+-- that is just next_config, but with start and finish as the entire config.
+-- then you'd break that up during training time.
+
 
 -- orders the configs in topo order
 -- there can be two equally valid topo sorts: 
@@ -372,16 +394,17 @@ function topo_order(configs)
     table.sort(configs)
 end
 
--- return dataloader
+return dataloader
 
--- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
-d = dataloader.create('trainset','hey', 3, false)
--- print(d.dataset)
-print(d.configs)
-topo_order(d.configs)
-print(d.configs)
-print(d.config_idxs)
--- print(d.batchlist)
+-- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
+-- d = dataloader.create('trainset','hey', 3, true, false)
+-- -- print(d.dataset)
+-- print(d.configs)
+-- topo_order(d.configs)
+-- print(d.configs)
+-- print(d.config_idxs)
+-- print(d.config_sizes)
+-- -- print(d.batchlist)
 
 
 -- -- for i=1,20 do
