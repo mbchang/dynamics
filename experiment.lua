@@ -13,6 +13,7 @@ local Trainer = require 'train'
 local Tester = require 'test'
 
 local trainer = Trainer.create('trainset', train_mp)  -- need to specify learning rate here
+local trainer_tester = Tester.create('trainset', test_mp)
 local tester = Tester.create('testset', test_mp)
 
 -- local learning_rates = {5e-4, 5e-5, 5e-6}
@@ -38,8 +39,10 @@ for index, learning_rate in pairs(learning_rates) do
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
         -- local train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches  
-        local train_loss, model = trainer:curriculum_train(3, i)  -- trainer.train_loader.num_batches  
+        local _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches  
 
+        -- Get the training loss
+        local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase

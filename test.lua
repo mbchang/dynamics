@@ -7,6 +7,7 @@ require 'nngraph'
 require 'optim'
 require 'model'
 require 'image'
+require 'torchx'
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
@@ -81,7 +82,7 @@ function Tester:forward_pass_test(params_, x, y)
     end 
 
     collectgarbage()
-    return loss:sum()  -- we sum the loss through time
+    return loss:sum(), predictions  -- we sum the loss through time
 end
 
 
@@ -90,8 +91,15 @@ function Tester:test(model, params_, num_iters)
     local sum_loss = 0
     for i = 1, num_iters do 
         local this, context, y, mask = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
-        local test_loss = self:forward_pass_test(params_, {this=this,context=context}, y)
+        local test_loss, all_preds = self:forward_pass_test(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
+
+        -- here you have the option to save predictions into a file
+        local prediction = all_preds[torch.find(mask,1)[1]] -- this would be your 'this', or you could shift over, or do other interesting things
+        -- print(prediction)
+        -- predictions and this should be the same
+        -- Actually you want to return the prediction corresponding to the one in the mask
+        -- assert(false)
     end
     local avg_loss = sum_loss/num_iters  
     collectgarbage()

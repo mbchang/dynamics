@@ -206,6 +206,9 @@ function Trainer:train(num_iters, epoch_num)
     torch.save(self.logs.savefile, self.network)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
+    -- nice to know, but is always larger than the validation loss because the earlier examples had worse performance
+    local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean() 
+
     return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
 end    
 
@@ -262,8 +265,9 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
     torch.save(self.logs.savefile, self.network)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
-    local train_losses_this_epoch = torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]
-    return train_losses_this_epoch:mean(), self.network --self.logs.savefile
+    -- nice to know, but is always larger than the validation loss because the earlier examples had worse performance
+    local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean()  
+    return avg_train_losses_this_epoch, self.network --self.logs.savefile
 end
 
 
