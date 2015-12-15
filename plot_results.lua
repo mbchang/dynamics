@@ -9,7 +9,7 @@ function plot_train_losses(losses_file, plotfolder)
         paths.mkdir(plotfolder)
     end
 
-    local data = torch.load(losses_file)
+    local data = torch.load(losses_file..'.t7')
     local train_losses = torch.log(torch.Tensor(data.losses))
     local grad_norms = torch.Tensor(data.grad_norms)
 
@@ -20,10 +20,10 @@ function plot_train_losses(losses_file, plotfolder)
     end
     skipped_losses = torch.Tensor(skipped_losses)
 
-    gnuplot.pngfigure(plotfolder..'/logskippedlosses.png')
+    gnuplot.pngfigure(plotfolder..'/'..losses_file..'_logskippedlosses.png')
     gnuplot.xlabel('batch')
     gnuplot.ylabel('Log MSE Loss')
-    gnuplot.title('Losses On Training Set (Learning Rate = 0.0005)')  -- change
+    gnuplot.title('Losses On Training Set')  -- change
     gnuplot.plot({x, skipped_losses})
     gnuplot.plotflush()
 end
@@ -67,10 +67,10 @@ function plot_experiment_results(experiment_results_file, plotfolder)
 end
 
 -- assert(false)
-common_mp.results_folder = 'rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100'
-print(common_mp.results_folder)
+-- common_mp.results_folder = 'rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100'
+-- print(common_mp.results_folder)
 
-plot_experiment_results(common_mp.results_folder .. '/experiment_results.t7', 'plots')
--- plot_train_losses(common_mp.results_folder .. '/losses,lr=0.0005_results.t7', 'plots')
+-- plot_experiment_results(common_mp.results_folder .. '/experiment_results.t7', 'plots')
+plot_train_losses(common_mp.results_folder .. '/losses,lr=5e-05_results', '.')
 
 
