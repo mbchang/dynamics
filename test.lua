@@ -97,9 +97,18 @@ function Tester:test(model, params_, num_iters)
         sum_loss = sum_loss + test_loss
 
         -- here you have the option to save predictions into a file
-        local prediction = all_preds[torch.find(mask,1)[1]] -- this would be your 'this', or you could shift over, or do other interesting things
+        local prediction = all_preds[torch.find(mask,1)[1]] -- (1, windowsize/2)
+        -- this would be your 'this', or you could shift over, or do other interesting things
+        -- prediction = prediction:reshape(prediction:size(1)*prediction:size(2)/)
+
+        -- reshape to -- (num_samples x windowsize/2 x 8)
+        prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
+
+
+        print('this size',this:size())
         -- For now, just save it as hdf5. You can feed it back in later if you'd like
         save_to_hdf5('my_pred.h5', 'pred', prediction)  -- works, but you should change the name
+        assert(false)
     end
     local avg_loss = sum_loss/num_iters  
     collectgarbage()
