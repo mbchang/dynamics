@@ -1,6 +1,7 @@
 local T = require 'pl.tablex'
 
 local pc = true
+local SEQ_LENGTH = 10
 
 function merge_tables(t1, t2) 
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
@@ -23,7 +24,7 @@ end
 
 personal_mp = {
     batch_size  = 1,
-    seq_length  = 10,  -- max other objects
+    seq_length  = SEQ_LENGTH,  -- max other objects
     winsize     = 10,
     max_epochs  = 10, 
     dataset_folder = 'hey',
@@ -34,7 +35,7 @@ personal_mp = {
 
 openmind_mp = {
     batch_size = 100,
-    seq_length = 10,  
+    seq_length = SEQ_LENGTH,  
     winsize    = 20,
     max_epochs = 10, 
     dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
@@ -63,8 +64,8 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
-      shuffle               = false,
-      curriculum            = true,
+      shuffle               = true,
+      curriculum            = false,
       max_grad_norm         = 10,
 
       -- Data Logging Parameters

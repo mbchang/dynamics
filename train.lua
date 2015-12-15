@@ -9,6 +9,7 @@ require 'model'
 require 'image'
 require 'rmsprop'
 require 'paths' 
+-- require 'math'
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
@@ -212,7 +213,7 @@ end
 function Trainer:curriculum_train(num_subepochs, epoch_num)
     -- to change: have another loop inside i=1,num_iters
     for config_id=1,self.train_loader.num_configs do
-        print('Config:', self.train_loader.configs[config_id]..'-------------------------------------------------')
+        print('Config:', self.train_loader.configs[config_id]..'--------------------------------------------------------------------')
         local config_this, config_context, config_y, config_mask = unpack(self.train_loader:next_config(self.train_loader.configs[config_id], 1, self.train_loader.config_sizes[config_id]))
         
         for i=1,num_subepochs do -- go through the entire config here
@@ -264,18 +265,21 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
 end
 
 
-train_mp.batch_size = 3
-torch.manualSeed(123)
-trainer = Trainer.create('trainset', train_mp)
-trainer:reset(5e-5)
-for i=0,5 do
-    trainer:curriculum_train(5, i)
-end
+-- train_mp.batch_size = 3
+-- torch.manualSeed(123)
+-- trainer = Trainer.create('trainset', train_mp)
+-- local lr = 5e-3
+-- trainer:reset(lr)
+-- for i=0,10 do
+--     print('Learning rate:', trainer.mp.learning_rate)
+--     trainer:curriculum_train(10, i)
+--     trainer.mp.learning_rate=trainer.mp.learning_rate/math.sqrt(2)
+-- end
 
 -- final_loss = trainer:train(1000, 0)
 -- print(final_loss)
 
--- return Trainer
+return Trainer
 
 
 

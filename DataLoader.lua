@@ -325,7 +325,7 @@ function dataloader:count_examples()
         total_samples = total_samples + num_samples
         config_sizes[i] = num_samples -- each config has an id
     end
-    assert(total_samples % self.batch_size == 0)
+    assert(total_samples % self.batch_size == 0, 'Total Samples: '..total_samples.. ' batch size: '.. self.batch_size)
     local num_batches = total_samples/self.batch_size
     return total_samples, num_batches, config_sizes
 end
