@@ -8,6 +8,8 @@ require 'optim'
 require 'model'
 require 'image'
 require 'torchx'
+require 'hdf5'
+require 'data_utils'
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
@@ -96,10 +98,8 @@ function Tester:test(model, params_, num_iters)
 
         -- here you have the option to save predictions into a file
         local prediction = all_preds[torch.find(mask,1)[1]] -- this would be your 'this', or you could shift over, or do other interesting things
-        -- print(prediction)
-        -- predictions and this should be the same
-        -- Actually you want to return the prediction corresponding to the one in the mask
-        -- assert(false)
+        -- For now, just save it as hdf5. You can feed it back in later if you'd like
+        save_to_hdf5('my_pred.h5', 'pred', prediction)  -- works
     end
     local avg_loss = sum_loss/num_iters  
     collectgarbage()
