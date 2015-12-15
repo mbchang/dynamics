@@ -1,8 +1,22 @@
-import os
+import os, sys, shutil
+import cPickle as pickle
+import time
+import string
+import random
+from numpy import *
 import numpy as np
-import re
 import pprint
+import re
 import h5py
+
+# # PyGame Constants
+# import pygame
+# from pygame.locals import *
+# from pygame.color import THECOLORS
+# import particle
+# import button
+# import slider
+# import cloud
 
 
 # Hardcoded Global Variables
@@ -36,6 +50,15 @@ def convert_file(path):
     observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
 
     return particles, goos, observedPath
+
+def load_hdf5(filename, datapath):
+    """
+        Loads the data stored in the datapath stored in filename as a numpy array
+    """
+    g = h5py.File(filename, 'r')
+    data = g[datapath][:]
+    g.close()
+    return data
 
 def one_hot(array, discrete_values):
     """
@@ -557,6 +580,7 @@ def test_write_data_file():
 
 
 if __name__ == "__main__":
-    save_all_datasets()
+    # save_all_datasets()
+    print load_hdf5('my_pred.h5', 'pred')
 
     
