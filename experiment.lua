@@ -37,7 +37,9 @@ for index, learning_rate in pairs(learning_rates) do
 
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
-        local train_loss, model = trainer:train(trainer.train_loader.num_batches , i)  -- trainer.train_loader.num_batches  
+        -- local train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches  
+        local train_loss, model = trainer:curriculum_train(3, i)  -- trainer.train_loader.num_batches  
+
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase

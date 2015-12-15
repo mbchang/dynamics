@@ -81,7 +81,7 @@ function Tester:forward_pass_test(params_, x, y)
     end 
 
     collectgarbage()
-    return loss:sum()
+    return loss:sum()  -- we sum the loss through time
 end
 
 
@@ -93,7 +93,7 @@ function Tester:test(model, params_, num_iters)
         local test_loss = self:forward_pass_test(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
     end
-    local avg_loss = sum_loss/num_iters
+    local avg_loss = sum_loss/num_iters  
     collectgarbage()
     return avg_loss
 end

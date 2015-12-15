@@ -116,7 +116,7 @@ function Trainer:forward_pass_train(params_, x, y)
     end 
 
     collectgarbage()
-    return loss:sum(), self.s, predictions
+    return loss:sum(), self.s, predictions  -- we sum the losses through time!
 end
 
 
@@ -174,7 +174,7 @@ function Trainer:train(num_iters, epoch_num)
         local loss, grad_loss = self:backward_pass_train({this=this,context=context}, y, mask, train_loss, state, predictions)
         assert(loss == train_loss)
         collectgarbage()
-        return loss, grad_loss
+        return train_loss, grad_loss
     end
 
     -- here do epoch training
@@ -211,7 +211,7 @@ end
 
 
 function Trainer:curriculum_train(num_subepochs, epoch_num)
-    -- to change: have another loop inside i=1,num_iters
+    local c = 0
     for config_id=1,self.train_loader.num_configs do
         print('Config:', self.train_loader.configs[config_id]..'--------------------------------------------------------------------')
         local config_this, config_context, config_y, config_mask = unpack(self.train_loader:next_config(self.train_loader.configs[config_id], 1, self.train_loader.config_sizes[config_id]))
@@ -234,7 +234,7 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
                     local loss, grad_loss = self:backward_pass_train({this=this,context=context}, y, mask, train_loss, state, predictions)
                     assert(loss == train_loss)
                     collectgarbage()
-                    return loss, grad_loss
+                    return train_loss, grad_loss
                 end
 
                 local optim_state = {learningRate = self.mp.learning_rate,
@@ -242,6 +242,7 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
                      updateDecay = 0.01} 
 
                 _, loss = rmsprop(feval_train, self.theta.params, optim_state)
+                c = c + 1
                 self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
                 self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()
 
@@ -261,7 +262,8 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
     torch.save(self.logs.savefile, self.network)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
-    return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
+    local train_losses_this_epoch = torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]
+    return train_losses_this_epoch:mean(), self.network --self.logs.savefile
 end
 
 

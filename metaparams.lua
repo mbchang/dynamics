@@ -64,8 +64,8 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
-      shuffle               = true,
-      curriculum            = false,
+      shuffle               = false,
+      curriculum            = true,
       max_grad_norm         = 10,
 
       -- Data Logging Parameters
