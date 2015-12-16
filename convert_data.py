@@ -438,6 +438,10 @@ def getParticleCoords(observedPath,pindex):
     return observedPath[:,0,pindex,:]
 
 
+def recover_state(this, context, y, goos):
+    pass
+
+
 def pythonToGraphics(path, framerate, movie_folder, movieName):
     """
     Convert data into a numpy array where shape is (numSteps, 2, numObjects, 2)
@@ -600,15 +604,21 @@ def test_write_data_file():
 
 
 if __name__ == "__main__":
-    # print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'pred')  # (num_samples, winsize/2, 8)
-    # print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'this')  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
+    # worldm1_np=1_ng=1_[5,5].h5
+
+
+    print 'pred', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'pred').shape  # (num_samples, winsize/2, 8)
+    print 'this', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'this').shape  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
+    print 'context', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'context').shape  # (num_samples, winsize/2, 8)
+    print 'y', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'y').shape  # (num_samples, winsize/2, 8)
+
 
     # train_data = load_dict_from_hdf5('hey/trainset.h5')
     # this_sample = train_data['worldm1_np=6_ng=5particles']
     # this_sample_transpose = np.transpose(this_sample, (1,0,2,3))
     # this_sample_reshaped = this_sample_transpose.reshape(this_sample_transpose.shape[0]*this_sample_transpose.shape[1], this_sample_transpose.shape[2], this_sample_transpose.shape[3])
     # print this_sample_reshaped[51-1]  # this equals what has been predicted!
-    create_all_videos('/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data', 'movie_root_debug')
+    # create_all_videos('/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data', 'movie_root_debug')
 
 
 

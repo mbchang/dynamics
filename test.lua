@@ -99,15 +99,29 @@ function Tester:test(model, params_, num_iters)
         -- here you have the option to save predictions into a file
         local prediction = all_preds[torch.find(mask,1)[1]] -- (1, windowsize/2)
         -- this would be your 'this', or you could shift over, or do other interesting things
-        -- prediction = prediction:reshape(prediction:size(1)*prediction:size(2)/)
 
         -- reshape to -- (num_samples x windowsize/2 x 8)
+        print('config:'..config)
+        print('prediction size before')
+        print(prediction:size())
         prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
+        print('prediction size after')
+        print(prediction:size())
+
+        print('context size')
+        print(context:size())
+        print('y size')
+        print(y:size())
+        print('this size')
+        print(this:size())
+        -- assert(false)
 
         -- For now, just save it as hdf5. You can feed it back in later if you'd like
         save_to_hdf5(config..'_['..start..','..finish..'].h5', 
             {pred=prediction, 
-            this=this:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)})  -- works, but you should change the name
+            this=this:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim),
+            context=context:reshape(context:size(1), context:size(2), self.mp.winsize/2, self.test_loader.object_dim),
+            y=y:reshape(y:size(1), self.mp.winsize/2, self.test_loader.object_dim)})  -- works, but you should change the name
 
         -- you should also store the world-config name, and the start and end
         assert(false)
