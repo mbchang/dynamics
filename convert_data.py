@@ -9,14 +9,11 @@ import pprint
 import re
 import h5py
 
-# # PyGame Constants
-# import pygame
-# from pygame.locals import *
-# from pygame.color import THECOLORS
-# import particle
-# import button
-# import slider
-# import cloud
+# PyGame Constants
+import pygame
+from pygame.locals import *
+from pygame.color import THECOLORS
+import particle
 
 
 # Hardcoded Global Variables
@@ -242,7 +239,6 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
 
     return config_sample_particles, config_sample_goos 
 
-
 def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize):
     """
         4 worlds * 30 configs * 500 videos * 400 timesteps * 1-6 particles
@@ -340,7 +336,6 @@ def stack(list_of_nparrays):
     assert stacked.shape[1:] == list_of_nparrays[0].shape
     return stacked
 
-
 def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
     print '\nSaving', dataset_name
     h = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'w')
@@ -426,6 +421,23 @@ def fixInputSyntax(l):
     return l
 
 
+def getParticleCoords(observedPath,pindex):
+    # pindex is the index of the particle 
+    # helper function, takes in data and
+    # a particle index, and gets the coords
+    # of that particle.
+    
+    # This is necessary because the data
+    # is an aggregate of particle paths
+    # and sometimes we just want a specific path.
+    # That is, we want to go from:
+    # ((pos0_t1, pos1_t1), (pos0_t2, pos1_t2),...)
+    # to:
+    # ((pos0_t1), (pos0_t2),...)
+    # so here pindex is 0
+    return observedPath[:,0,pindex,:]
+
+
 def pythonToGraphics(path, framerate, movie_folder, movieName):
     """
     Convert data into a numpy array where shape is (numSteps, 2, numObjects, 2)
@@ -476,10 +488,10 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
     obstacleColor = "black"
     obstacleList = [] #fixedInput[3]
 
-    ## Set up clouds, if any
-    pausePoint = 149
-    useCloud = False
-    testCloud = cloud.Cloud([210,170], 350, 350, max(0,pausePoint - 190), pausePoint)
+    # ## Set up clouds, if any
+    # pausePoint = 149
+    # useCloud = False
+    # testCloud = cloud.Cloud([210,170], 350, 350, max(0,pausePoint - 190), pausePoint)
         
     ## Create particle objects using a loop over the particle class
     for particleIndex in range(numberOfParticles):
@@ -498,10 +510,10 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
 
     # when to pause
 
-    if useCloud == False:
-        maxPath = len(observedPath)
-    else:
-        maxPath = pausePoint
+    # if useCloud == False:
+    maxPath = len(observedPath)
+    # else:
+    #     maxPath = pausePoint
     # The Main Event Loop
     done = False    
     while not done:
@@ -530,17 +542,17 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
                 exec('particle' + str(i) + '.frame = ' + str(maxPath-1))
             exec('particle' + str(i) + '.draw()')
             
-            # Cloud handling
-            if useCloud == True:
-                if particle0.frame > testCloud.appearancePoint and particle0.frame < pausePoint:
-                    testCloud.update()
-                    testCloud.render(screen)
-                if particle0.frame == pausePoint:
-                    pygame.draw.rect(screen, (255,0,0), (10,450,40,470))
-                    pygame.draw.rect(screen, (100,100,100), testCloud.orect)
-                    pause = True
-                else:
-                    pygame.draw.polygon(screen, (0,255,0), [(10,470), (40,460), (10,450)])
+            # # Cloud handling
+            # if useCloud == True:
+            #     if particle0.frame > testCloud.appearancePoint and particle0.frame < pausePoint:
+            #         testCloud.update()
+            #         testCloud.render(screen)
+            #     if particle0.frame == pausePoint:
+            #         pygame.draw.rect(screen, (255,0,0), (10,450,40,470))
+            #         pygame.draw.rect(screen, (100,100,100), testCloud.orect)
+            #         pause = True
+            #     else:
+            #         pygame.draw.polygon(screen, (0,255,0), [(10,470), (40,460), (10,450)])
 
         pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
         
@@ -558,9 +570,13 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
             done = True
 
 
-def create_all_videos():
-    root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
-    movie_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/movies'
+def create_all_videos(root, movie_root):
+    """
+        root: something like /om/user/mbchang/physics-data/data
+            or /Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data
+        movei_root: folder you want to save the movies in
+
+    """
     framerate = 100
     for folder in os.listdir(root):
         folder_abs_path = os.path.join(root, folder)  # each folder here is a world configuration
@@ -584,44 +600,16 @@ def test_write_data_file():
 
 
 if __name__ == "__main__":
-    # save_all_datasets()
-    print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'pred')  # (num_samples, winsize/2, 8)
-    print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'this')  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
+    # print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'pred')  # (num_samples, winsize/2, 8)
+    # print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'this')  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
 
-    train_data = load_dict_from_hdf5('hey/trainset.h5')
+    # train_data = load_dict_from_hdf5('hey/trainset.h5')
+    # this_sample = train_data['worldm1_np=6_ng=5particles']
+    # this_sample_transpose = np.transpose(this_sample, (1,0,2,3))
+    # this_sample_reshaped = this_sample_transpose.reshape(this_sample_transpose.shape[0]*this_sample_transpose.shape[1], this_sample_transpose.shape[2], this_sample_transpose.shape[3])
+    # print this_sample_reshaped[51-1]  # this equals what has been predicted!
+    create_all_videos('/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data', 'movie_root_debug')
 
-
-    this_sample = train_data['worldm1_np=6_ng=5particles']
-    # print this_sample 
-    # assert False
-    this_sample_transpose = np.transpose(this_sample, (1,0,2,3))
-    this_sample_reshaped = this_sample_transpose.reshape(this_sample_transpose.shape[0]*this_sample_transpose.shape[1], this_sample_transpose.shape[2], this_sample_transpose.shape[3])
-
-    # try to mimic the code for exapnd_for_each_particle
-
-
-    print this_sample_reshaped[51-1]  # this equals what has been predicted!
-
-    # for i in range(9):
-    #     for j in range(2):
-    #         print i+1,j+1
-    #         print this_sample[i,j,:,:]
-    #         print 'vs'
-    #         print load_hdf5('worldm1_np=2_ng=5_[15,15].h5', 'this')  # (num_samples, winsize/2, 8)
-    #         print "########################################################################"
-    # for i in range(this_sample_reshaped.shape[0]):
-    #     print i+1
-    #     print this_sample_reshaped[i]
-    #     print 'vs'
-    #     print load_hdf5('worldm1_np=2_ng=5_[15,15].h5', 'this')[:,0:2]
-    #     print "########################################################################"
-
-#worldm1_np=6_ng=5_[26,26].h5
-
-
-
-    # print train_data['worldm1_np=6_ng=5particles'].shape
-    # worldm1_np=2_ng=5_[15,15] matches with (4,2) in the range: (9, 2, winsize, 8)
 
 
     
