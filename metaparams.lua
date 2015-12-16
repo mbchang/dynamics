@@ -24,7 +24,7 @@ end
 
 personal_mp = {
     batch_size  = 1,
-    seq_length  = SEQ_LENGTH,  -- max other objects
+    seq_length  = SEQ_LENGTH,  -- max other objects + goos
     winsize     = 10,
     max_epochs  = 10, 
     dataset_folder = 'hey',
@@ -65,7 +65,7 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 -- Training parameters
 train_mp = merge_tables(common_mp, {
       shuffle               = false,
-      curriculum            = true,
+      curriculum            = false,
       max_grad_norm         = 10,
 
       -- Data Logging Parameters

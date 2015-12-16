@@ -92,7 +92,7 @@ function Tester:test(model, params_, num_iters)
     self:load_model(model)
     local sum_loss = 0
     for i = 1, num_iters do 
-        local this, context, y, mask = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
+        local this, context, y, mask, config, start, finish = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
         local test_loss, all_preds = self:forward_pass_test(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
 
@@ -104,10 +104,12 @@ function Tester:test(model, params_, num_iters)
         -- reshape to -- (num_samples x windowsize/2 x 8)
         prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
 
-
-        print('this size',this:size())
         -- For now, just save it as hdf5. You can feed it back in later if you'd like
-        save_to_hdf5('my_pred.h5', 'pred', prediction)  -- works, but you should change the name
+        save_to_hdf5(config..'_['..start..','..finish..'].h5', 
+            {pred=prediction, 
+            this=this:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)})  -- works, but you should change the name
+
+        -- you should also store the world-config name, and the start and end
         assert(false)
     end
     local avg_loss = sum_loss/num_iters  

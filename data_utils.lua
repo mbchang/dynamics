@@ -67,8 +67,39 @@ function find_all_sequences(folders_list, parent_folder_path, seq_length)
     return data_list
 end
 
-function save_to_hdf5(filename, data_path, data)
+-- function save_to_hdf5(filename, data_path, data)
+--     local myFile = hdf5.open(filename, 'w')
+--     myFile:write(data_path, data)  -- I can write many preds in here, indexed by the starting time?
+--     myFile:close()
+-- end
+
+function save_to_hdf5(filename, data)
+    -- filename: name of hdf5 file
+    -- data: dict of {datapath: data}
     local myFile = hdf5.open(filename, 'w')
-    myFile:write(data_path, data)  -- I can write many preds in here, indexed by the starting time?
+    for k,v in pairs(data) do
+        print('writing'..k)
+        myFile:write(k, v)  -- I can write many preds in here, indexed by the starting time?
+    end
     myFile:close()
+end
+
+
+function concatenate_table(table)
+    -- concatenates a table of torch tensors
+    print(table)
+    local num_tensors = #table
+    print('num_tensors')
+    print(num_tensors)
+    local other_dims = table[1]:size()
+    local dims = {num_tensors, unpack(other_dims:totable())}
+    print('dims')
+    print(dims)
+
+    -- construct container
+    local container = torch.zeros(unpack(dims))
+    for i=1,num_tensors do
+        container[{{i}}] = table[i]
+    end
+    return container
 end

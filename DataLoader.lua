@@ -27,16 +27,16 @@ local max_other_objects = 10
         .h5 file data
         The data for each configuration is spread out across 3 keys in the .h5 file
         Let <config> be the configuration name
-            "<config>particles": (num_samples, num_particles, windowsize, [px, py, vx, vy, mass])
-            "<config>goos": (num_samples, num_goos, [left, top, right, bottom, gooStrength])
+            "<config>particles": (num_examples, num_particles, windowsize, [px, py, vx, vy, (onehot mass)])
+            "<config>goos": (num_examples, num_goos, [left, top, right, bottom, (onehot goostrength)])
             "<config>mask": binary vector of length 5, trailing zeros are padding when #particles < 6
 
     Output
     {
         configuration:
             {
-              particles : DoubleTensor - size: (num_samples x num_particles x windowsize x 5)
-              goos : DoubleTensor - size: (num_samples x num_goos x 5)
+              particles : DoubleTensor - size: (num_examples x num_particles x windowsize x 5)
+              goos : DoubleTensor - size: (num_examples x num_goos x 5)
               mask : DoubleTensor - size: 5 
             }
     }
@@ -106,6 +106,9 @@ function dataloader.create(dataset_name, dataset_folder, batch_size, curriculum,
         self.batch_idxs = torch.range(1,self.num_batches)
     end
 
+    -- properties of the dataset
+    self.object_dim = object_dim
+
     collectgarbage()
     return self
 end
@@ -123,12 +126,14 @@ function expand_for_each_particle(batch_particles)
     local num_samples, num_particles, windowsize = unpack(torch.totable(batch_particles:size()))
     local this_particles = {}
     local other_particles = {}
+    local this_idxes = {}
     if num_particles > 1 then 
-        for i=1,num_particles do
+        for i=1,num_particles do  -- this is doing it in transpose order
             local this = batch_particles[{{},{i},{},{}}]
-            -- print('this:size()', this:size())
-            this:resize(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8)
+            this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8)  
+            -- this = this:resize(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8)  -- this is the issue! resize actually gives the wrong answer!
             this_particles[#this_particles+1] = this
+            this_idxes[#this_idxes+1] = i
 
             local other
             if i == 1 then
@@ -144,8 +149,10 @@ function expand_for_each_particle(batch_particles)
         end
     else
         local this = batch_particles[{{},{i},{},{}}]
-        this_particles[#this_particles+1] = this:resize(this:size(1), this:size(3), this:size(4)) -- (num_samples x windowsize x 8)
+        this_idxes[#this_idxes+1] = 1
+        this_particles[#this_particles+1] = torch.squeeze(this,2)--this:resize(this:size(1), this:size(3), this:size(4)) -- (num_samples x windowsize x 8)
     end
+    assert(#this_particles==num_particles)
     this_particles = torch.cat(this_particles,1)  -- concatenate along batch dimension
 
     -- make other_particles into Torch tensor if more than one particle. Otherwise {}
@@ -218,7 +225,7 @@ function dataloader:next_config(current_config, start, finish)
         for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end  -- make num_particles copies of minibatch_g
         m_goos = torch.cat(m_goos,1)
         num_goos = m_goos:size(2)
-        m_goos:resize(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8)
+        m_goos = m_goos:reshape(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8) -- take a look at this! 
         local m_goos_window = {}
         for i=1,windowsize do m_goos_window[#m_goos_window+1] = m_goos end
         m_goos = torch.cat(m_goos_window, 3)
@@ -271,6 +278,15 @@ function dataloader:next_config(current_config, start, finish)
     local context_x = context[{{},{},{1,num_past},{}}]  -- (num_samples x max_other_objects x windowsize/2 x 8)
     local y = this_particles[{{},{num_past+1,-1},{}}]  -- (num_samples x windowsize/2 x 8)
 
+    if current_config == 'worldm1_np=2_ng=5' then
+        -- print(this_particles[{{8,8}}])
+        -- print(this_particles)
+    --     print(minibatch_p:size())
+    --     print(this_particles:size())
+    --     -- print(this_x[{{33,33}}])
+        -- assert(false)
+    end
+
     -- assert num_samples are correct
     assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
     -- assert number of axes of tensors are correct
@@ -291,9 +307,9 @@ function dataloader:next_config(current_config, start, finish)
     end
 
     -- Reshape
-    this_x:resize(num_samples, num_past*object_dim)
-    context_x:resize(num_samples, max_other_objects, num_past*object_dim)
-    y:resize(num_samples, num_past*object_dim)
+    this_x = this_x:reshape(num_samples, num_past*object_dim)
+    context_x = context_x:reshape(num_samples, max_other_objects, num_past*object_dim)
+    y = y:reshape(num_samples, num_past*object_dim)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 
@@ -303,7 +319,7 @@ function dataloader:next_config(current_config, start, finish)
     y = y[{{start,finish}}]
 
     collectgarbage()
-    return {this_x, context_x, y, minibatch_m}
+    return {this_x, context_x, y, minibatch_m, current_config, start, finish}  -- here return start, finish, and configname too
 end
 
 -- works

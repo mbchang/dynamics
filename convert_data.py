@@ -51,15 +51,6 @@ def convert_file(path):
 
     return particles, goos, observedPath
 
-def load_hdf5(filename, datapath):
-    """
-        Loads the data stored in the datapath stored in filename as a numpy array
-    """
-    g = h5py.File(filename, 'r')
-    data = g[datapath][:]
-    g.close()
-    return data
-
 def one_hot(array, discrete_values):
     """
         The values in the array come from the list discrete_values.
@@ -336,7 +327,6 @@ def flatten_dataset(dataset):
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
 
-
 def stack(list_of_nparrays):
     """
         input
@@ -365,6 +355,20 @@ def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
         print k
         print g[k][:].shape
     g.close()
+
+def load_hdf5(filename, datapath):
+    """
+        Loads the data stored in the datapath stored in filename as a numpy array
+    """
+    data = load_dict_from_hdf5(filename)
+    return data[datapath]
+
+def load_dict_from_hdf5(filepath):
+    data = {}
+    g = h5py.File(filepath, 'r')
+    for k in g.keys():
+        data[k] = g[k][:]
+    return data
 
 def save_all_datasets():
     dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
@@ -581,6 +585,43 @@ def test_write_data_file():
 
 if __name__ == "__main__":
     # save_all_datasets()
-    print load_hdf5('my_pred.h5', 'pred')
+    print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'pred')  # (num_samples, winsize/2, 8)
+    print load_hdf5('worldm1_np=6_ng=5_[51,51].h5', 'this')  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
+
+    train_data = load_dict_from_hdf5('hey/trainset.h5')
+
+
+    this_sample = train_data['worldm1_np=6_ng=5particles']
+    # print this_sample 
+    # assert False
+    this_sample_transpose = np.transpose(this_sample, (1,0,2,3))
+    this_sample_reshaped = this_sample_transpose.reshape(this_sample_transpose.shape[0]*this_sample_transpose.shape[1], this_sample_transpose.shape[2], this_sample_transpose.shape[3])
+
+    # try to mimic the code for exapnd_for_each_particle
+
+
+    print this_sample_reshaped[51-1]  # this equals what has been predicted!
+
+    # for i in range(9):
+    #     for j in range(2):
+    #         print i+1,j+1
+    #         print this_sample[i,j,:,:]
+    #         print 'vs'
+    #         print load_hdf5('worldm1_np=2_ng=5_[15,15].h5', 'this')  # (num_samples, winsize/2, 8)
+    #         print "########################################################################"
+    # for i in range(this_sample_reshaped.shape[0]):
+    #     print i+1
+    #     print this_sample_reshaped[i]
+    #     print 'vs'
+    #     print load_hdf5('worldm1_np=2_ng=5_[15,15].h5', 'this')[:,0:2]
+    #     print "########################################################################"
+
+#worldm1_np=6_ng=5_[26,26].h5
+
+
+
+    # print train_data['worldm1_np=6_ng=5particles'].shape
+    # worldm1_np=2_ng=5_[15,15] matches with (4,2) in the range: (9, 2, winsize, 8)
+
 
     

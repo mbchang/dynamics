@@ -166,6 +166,8 @@ end
 
 
 function Trainer:train(num_iters, epoch_num)
+    local c = 0
+
 
     function feval_train(params_)
         -- feval MUST return loss, grad_loss in order to get fed into the optimizer!
@@ -178,12 +180,14 @@ function Trainer:train(num_iters, epoch_num)
     end
 
     -- here do epoch training
-    local optim_state = {learningRate = self.mp.learning_rate,
-                         momentumDecay = 0.1, 
-                         updateDecay = 0.01}
+    local optim_state = {learningRate   = self.mp.learning_rate,
+                         momentumDecay  = 0.1, 
+                         updateDecay    = 0.01}
 
     for i = 1,num_iters do 
         local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
+        c = c + 1
+
         self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
         self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()
 
