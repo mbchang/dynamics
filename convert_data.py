@@ -21,15 +21,16 @@ G_w_width, G_w_height = 640.0,480.0
 G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
 G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
 G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
+G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen"}
 G_num_videos = 500.0
 G_num_timesteps = 400.0
-G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on 
+G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
 
 
 def convert_file(path):
     """
         input
-            :type path: string 
+            :type path: string
             :param path: path of particular instance of a configuration of a world file
         output
             write a hdf5 file of data
@@ -38,9 +39,9 @@ def convert_file(path):
     data = fileobject.readlines()
 
     ## Note that the input file has to be 'comma-ed' and the brackets fixed, since Scheme gives us data without commas.
-    configuration   = eval(fixInputSyntax(data[0])) 
+    configuration   = eval(fixInputSyntax(data[0]))
     forces          = np.array(configuration[0])
-    particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was 
+    particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
     goos            = np.array(configuration[2])
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
@@ -48,15 +49,15 @@ def convert_file(path):
 
     return particles, goos, observedPath
 
-def one_hot(array, discrete_values):
+def num_to_one_hot(array, discrete_values):
     """
         The values in the array come from the list discrete_values.
-        For example, if discrete_values is [0.33, 1.0, 3.0] then all the values in this 
+        For example, if discrete_values is [0.33, 1.0, 3.0] then all the values in this
         array are in [0.33, 1.0, 3.0].
 
         This method adds another axis (last axis) and makes these values into a one-hot
         encoding of those discrete values. For example, if the array was shape (4,10)
-        and len(discrete_values) was 3, then this method will produce an array 
+        and len(discrete_values) was 3, then this method will produce an array
         with shape (4,10,3)
     """
     n_values = len(discrete_values)
@@ -64,6 +65,50 @@ def one_hot(array, discrete_values):
     array = np.tile(np.expand_dims(array,array.ndim+1), broadcast)
     for i in xrange(n_values): array[...,i] = array[...,i] == discrete_values[i]
     return array
+
+def one_hot_to_num(one_hot_vector, discrete_values):
+    """
+        one_hot_vector: (n,) one hot vector
+        discrete_values is a list of values that the onehot represents
+
+        assumes that the one_hot_vector only as one 1
+    """
+    assert sum(one_hot_vector) == 1  # it had better have one 1
+    return int(np.nonzero(one_hot_vector)[0])
+
+def ltrb2xywh(boxes):
+    """
+        boxes: np array of (num_boxes, [left, top, right, bottom])
+        out: np array of (num_boxes, [cx, cy, width, height])
+    """
+    for i in xrange(len(boxes)):
+        box = boxes[i]
+        left, top, right, bottom = box[:]
+        w = right - left  # right > left
+        h = bottom - top  # bottom > top
+        assert w > 0 and h > 0
+        cx = (right + left)/2
+        cy = (bottom + top)/2
+        boxes[i] = np.array([cx, cy, w, h])
+    return boxes
+
+def xywh2ltrb():
+    pass
+
+def crop_to_window(boxes):
+    """
+        boxes: np array of (num_boxes, [left, top, right, bottom])
+        crops these dimensions so that they are inside the window dimensions
+    """
+    for i in xrange(len(boxes)):
+        box = boxes[i]
+        left, top, right, bottom = box[:]
+        new_left = max(0, left)
+        new_top = max(0, top)
+        new_right = min(G_w_width, right)
+        new_bottom = min(G_w_height, bottom)
+        boxes[i] = np.array([new_left, new_top, new_right, new_bottom])
+    return boxes
 
 def construct_example(particles, goos, observedPath, starttime, windowsize):
     """
@@ -104,7 +149,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     # get masses
     masses = tuple(np.array([p['mass'] for p in particles]) for i in xrange(num_steps))
     masses = np.column_stack(masses)  # (numObjects, numSteps)
-    masses = one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)
+    masses = num_to_one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)
 
     # turn it into (numObjects, numSteps, [px, py, vx, vy, [one-hot-mass]]) = (numObjects, numSteps, 7)
     path_slice = np.dstack((path_slice, masses))
@@ -114,44 +159,12 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
     assert path_slice.shape == (num_objects, num_steps, 8)
 
-    # get goos
-    def ltrb2xywh(boxes):
-        """
-            boxes: np array of (num_boxes, [left, top, right, bottom])
-            out: np array of (num_boxes, [cx, cy, width, height])
-        """
-        for i in xrange(len(boxes)):
-            box = boxes[i]
-            left, top, right, bottom = box[:]
-            w = right - left  # right > left
-            h = bottom - top  # bottom > top
-            assert w > 0 and h > 0
-            cx = (right + left)/2
-            cy = (bottom + top)/2
-            boxes[i] = np.array([cx, cy, w, h])
-        return boxes
-
-    def crop_to_window(boxes):
-        """
-            boxes: np array of (num_boxes, [left, top, right, bottom])
-            crops these dimensions so that they are inside the window dimensions
-        """
-        for i in xrange(len(boxes)):
-            box = boxes[i]
-            left, top, right, bottom = box[:]
-            new_left = max(0, left)
-            new_top = max(0, top)
-            new_right = min(G_w_width, right)
-            new_bottom = min(G_w_height, bottom)
-            boxes[i] = np.array([new_left, new_top, new_right, new_bottom])
-        return boxes
-
     goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
     num_goos = goos.shape[0]
 
     if num_goos > 0:
-        goo_strengths = goos[:,-1]  
-        goo_strengths = one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
+        goo_strengths = goos[:,-1]
+        goo_strengths = num_to_one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
         goos = np.concatenate((goos[:,:-1], goo_strengths), 1)  # (num_goos, 7)  one hot
         goos = np.concatenate((goos, np.zeros((num_goos,1))), 1)  # (num_goos, 8)  object ids: goo = 0
         goos[:,:4] = crop_to_window(goos[:,:4])  # crop so that dimensions are inside window
@@ -169,7 +182,7 @@ def get_examples_for_video(video_path, num_samples, windowsize):
     """
         Returns a list of examples for this particular video
 
-        input 
+        input
             :video_path: str, full path to the "video"file
             :num_samples: int, number of samples from this video to get
             :windowsize: k-in-m-out means the windowsize is k+m
@@ -200,13 +213,13 @@ def get_examples_for_video(video_path, num_samples, windowsize):
     # stack(video_sample_particles): (num_samples_in_video, num_objects, windowsize, 5)
     # stack(video_sample_goos): (num_samples_in_video, num_goos, 5)
 
-    return stack(video_sample_particles), stack(video_sample_goos) 
+    return stack(video_sample_particles), stack(video_sample_goos)
 
 def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_video, windowsize):
     """
         Returns a list of examples for this particular config
 
-        input 
+        input
             :config_path: str, full path to the folder for this configuration
                 a configuration will be something like world_m1_np=2_ng=3
             :config_sample_idxs: np array of indices of videos in the folder config_path
@@ -237,7 +250,7 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
     # config_sample_particles: (num_samples_in_config, num_objects, windowsize, 5)
     # config_sample_goos: (num_samples_in_config, num_goos, 5)
 
-    return config_sample_particles, config_sample_goos 
+    return config_sample_particles, config_sample_goos
 
 def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize):
     """
@@ -247,8 +260,8 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
         # Val: 10 10 = 10^2
         # Test: 10 10 = 10^2
 
-        # the directory hierarchy is 
-            root 
+        # the directory hierarchy is
+            root
                 configs
                     videofiles
 
@@ -282,7 +295,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
         sampled_videos_idxs = np.random.choice(range(num_videos_per_config), num_sample_videos_per_config, replace=False)
 
         # split into train and val and test. This is where we split train, val, set: on the video level
-        train_sample_idxs   = sampled_videos_idxs[:num_train_samples_per]  # first part  
+        train_sample_idxs   = sampled_videos_idxs[:num_train_samples_per]  # first part
         val_sample_idxs     = sampled_videos_idxs[num_train_samples_per:num_train_samples_per+num_val_samples_per]  # middle part
         test_sample_idxs    = sampled_videos_idxs[num_train_samples_per+num_val_samples_per:]  # last part
 
@@ -381,7 +394,7 @@ def save_all_datasets():
     # num_test_samples_per = 1  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
-    
+
     # save
     print '\n########################################################################'
     print 'SAVING'
@@ -389,7 +402,6 @@ def save_all_datasets():
     save_dict_to_hdf5(valset, 'valset', dataset_files_folder)
     save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
 
-    
 def fixInputSyntax(l):
     """
     # helper function for putting commas in the
@@ -399,7 +411,7 @@ def fixInputSyntax(l):
     # important for indexing and other handling
     """
     # remove multiple contiguous whitespaces
-    l = re.sub( '\s+', ' ', l ).strip()  
+    l = re.sub( '\s+', ' ', l ).strip()
 
     l = re.sub(r'([a-z])(\))', r'\1"\2', l)  # put a quotation after a word before parentheses
     l = re.sub(r'([a-z])(\s)', r'\1"\2', l)  # put a quotation after a word before space
@@ -420,13 +432,12 @@ def fixInputSyntax(l):
 
     return l
 
-
 def getParticleCoords(observedPath,pindex):
-    # pindex is the index of the particle 
+    # pindex is the index of the particle
     # helper function, takes in data and
     # a particle index, and gets the coords
     # of that particle.
-    
+
     # This is necessary because the data
     # is an aggregate of particle paths
     # and sometimes we just want a specific path.
@@ -436,11 +447,6 @@ def getParticleCoords(observedPath,pindex):
     # ((pos0_t1), (pos0_t2),...)
     # so here pindex is 0
     return observedPath[:,0,pindex,:]
-
-
-def recover_state(this, context, y, goos):
-    pass
-
 
 def pythonToGraphics(path, framerate, movie_folder, movieName):
     """
@@ -463,15 +469,17 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
     clock = pygame.time.Clock()
     screen.fill(THECOLORS["white"])
     pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)
-        
+
     fileobject = open(path)
     data = fileobject.readlines()
 
     ## Note that the input file has to be 'comma-ed' and the brackets fixed, since Scheme gives us data without commas.
-    configuration   = eval(fixInputSyntax(data[0])) 
+    configuration   = eval(fixInputSyntax(data[0]))
     forces          = np.array(configuration[0])
-    particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was 
+    particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
     goos            = np.array(configuration[2])
+    print goos
+    assert(False)
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
     observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
@@ -492,34 +500,22 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
     obstacleColor = "black"
     obstacleList = [] #fixedInput[3]
 
-    # ## Set up clouds, if any
-    # pausePoint = 149
-    # useCloud = False
-    # testCloud = cloud.Cloud([210,170], 350, 350, max(0,pausePoint - 190), pausePoint)
-        
     ## Create particle objects using a loop over the particle class
     for particleIndex in range(numberOfParticles):
         pcolor = THECOLORS[particleColors[particleIndex]]
         fcolor = THECOLORS[fieldColors[particleIndex]]
         exec('particle' + str(particleIndex) + \
              ' = particle.Particle( screen, (sizes[' + str(particleIndex) + '],sizes[' + str(particleIndex) + ']), getParticleCoords(observedPath,' + \
-             str(particleIndex) + '), THECOLORS["white"],' + str(pcolor)+ ',' + str(fcolor) + ')') 
+             str(particleIndex) + '), THECOLORS["white"],' + str(pcolor)+ ',' + str(fcolor) + ')')
 
     movieFrame = 0
     madeMovie = False
     frameAllocation = 4
     basicString = '0'*frameAllocation
-    # if not os.path.isdir("movies/" + movieName):
-    #     os.mkdir("movies/" + movieName)
 
-    # when to pause
-
-    # if useCloud == False:
     maxPath = len(observedPath)
-    # else:
-    #     maxPath = pausePoint
-    # The Main Event Loop
-    done = False    
+
+    done = False
     while not done:
         clock.tick(float(framerate))
         screen.fill(THECOLORS["white"])
@@ -539,27 +535,15 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
                 pygame.draw.rect(screen, THECOLORS[obstacle[2]], \
                                  Rect(obstacle[0][0], obstacle[0][1], \
                                       abs(obstacle[1][0]-obstacle[0][0]), abs(obstacle[1][1]-obstacle[0][1])))
-                 
+
         # Drawing handled with exec since we don't know the number of particles in advance:
         for i in range(numberOfParticles):
             if (eval('particle' + str(i) + '.frame >=' + str(maxPath-1))):
                 exec('particle' + str(i) + '.frame = ' + str(maxPath-1))
             exec('particle' + str(i) + '.draw()')
-            
-            # # Cloud handling
-            # if useCloud == True:
-            #     if particle0.frame > testCloud.appearancePoint and particle0.frame < pausePoint:
-            #         testCloud.update()
-            #         testCloud.render(screen)
-            #     if particle0.frame == pausePoint:
-            #         pygame.draw.rect(screen, (255,0,0), (10,450,40,470))
-            #         pygame.draw.rect(screen, (100,100,100), testCloud.orect)
-            #         pause = True
-            #     else:
-            #         pygame.draw.polygon(screen, (0,255,0), [(10,470), (40,460), (10,450)])
 
         pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
-        
+
         # Drawing finished this iteration?  Update the screen
         pygame.display.flip()
 
@@ -573,7 +557,6 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
         elif movieFrame > (len(observedPath)-1):
             done = True
 
-
 def create_all_videos(root, movie_root):
     """
         root: something like /om/user/mbchang/physics-data/data
@@ -583,16 +566,16 @@ def create_all_videos(root, movie_root):
     """
     framerate = 100
     for folder in os.listdir(root):
-        folder_abs_path = os.path.join(root, folder)  # each folder here is a world configuration
-        world_config_folder = os.path.join(movie_root, folder)
-        if not os.path.isdir(world_config_folder): os.mkdir(world_config_folder)
-        for worldfile in os.listdir(folder_abs_path):  # each worldfile is an instance of the world configuration = movie
-            path = os.path.join(folder_abs_path, worldfile)
-            movieName = worldfile[:worldfile.rfind('.ss')]  # each world file is a particular movie
-            movie_folder = os.path.join(world_config_folder, movieName)
-            if not os.path.isdir(movie_folder): os.mkdir(movie_folder)
-            pythonToGraphics(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
-
+        if folder[0] != '.':
+            folder_abs_path = os.path.join(root, folder)  # each folder here is a world configuration
+            world_config_folder = os.path.join(movie_root, folder)
+            if not os.path.isdir(world_config_folder): os.mkdir(world_config_folder)
+            for worldfile in os.listdir(folder_abs_path):  # each worldfile is an instance of the world configuration = movie
+                path = os.path.join(folder_abs_path, worldfile)
+                movieName = worldfile[:worldfile.rfind('.ss')]  # each world file is a particular movie
+                movie_folder = os.path.join(world_config_folder, movieName)
+                if not os.path.isdir(movie_folder): os.mkdir(movie_folder)
+                pythonToGraphics(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
 
 def test_write_data_file():
     data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
@@ -602,24 +585,180 @@ def test_write_data_file():
     num_test_samples_per = 1  # 10
     create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
 
+def separate_context(context, config):
+    """
+    context:    (num_samples, G_num_objects, winsize/2, 8)
+        8: [[4 number description], [3 number type], [1 number id]]
+    config: something like: worldm1_np=1_ng=1
+
+    Return
+        other: (num_samples, num_other_particles, winsize/2, 8)
+        goos: (num_samples, num_goos, winsize/2, 8)
+
+        Note that num_other_particles and num_goos could be 0
+    """
+    # find number of particles
+    start = config.find('_np=')+len('_np=')
+    end = start + config[start:].find('_ng=')
+    num_particles = int(config[start:end])
+    num_other = num_particles - 1
+
+    # find number of goos
+    start = config.find('_ng=')+len('_ng=')
+    num_goos = int(config[start:])
+
+    print 'num_particles', num_particles
+    print 'num_goos', num_goos
+
+    # Thus, the RNN should only run for num_particles + num_goos iterations
+    if num_particles + num_goos != G_num_objects:
+        begin_zeros_here = num_other + num_goos
+        assert(not np.any(context[:, begin_zeros_here:,:,:]))  # everything after
+
+    begin_goos_here = begin_zeros_here - num_goos
+    assert num_other == begin_goos_here
+
+    # other_particles should be: (num_samples, num_other, winsize/2, 8)
+    other = context[:, :begin_goos_here, :, :]  # take care of the case when other is nothing
+
+    # goos should be: (num_samples, num_goos, winsize/2, 8)
+    goos = context[:,begin_goos_here:begin_zeros_here,:,:]
+
+    # as a check, the object ids for goos should be 0 and for other should be 1
+    # works as well if there are no other or no goos
+    assert np.all(other[:,:,:,-1]== 1)  # all other should have id of 1
+    assert np.all(goos[:,:,:,-1] == 0)  # all goos should have id of 0
+
+    return other, goos
+
+def subtensor_equal(subtensor, tensor, dim):
+    """
+        Return if subtensor, when broaadcasted along dim
+    """
+    num_copies = tensor.shape[dim]
+
+    subtensor_stack = np.concatenate([subtensor for s in num_copies], dim=dim)
+
+    return subtensor_stack == tensor
+
+
+def recover_goos(goos):
+    """
+        goos: (num_samples, num_goos, winsize/2, 8)
+
+        Want something like:
+
+        a list of num_samples of:
+
+        [[[511, 289] [674, 422] 0 'darkmagenta']
+         [[217, 352] [327, 561] 0 'darkmagenta']
+         [[80, 155] [205, 299] 0 'darkmagenta']
+         [[530, 393] [617, 598] 0 'darkmagenta']
+         [[171, 36] [389, 149] 0 'darkmagenta']]
+
+         the length of the list is the number of goos
+    """
+    recovered_goos = []  # (num_samples)
+    # pprint.pprint(goos)
+    # print goos.shape
+    # print goos[:,:,0,:].shape
+    # rep_goo = goos[:,:,0,:].reshape(goos.shape[0], goos[:,:,0,:].shape[1], 1, goos[:,:,0,:].shape[2])
+    # print rep_goo.shape
+    # print rep_goo
+
+    # TODO: use subtensor_equal here
+    # assert (goos == goos[:,0,:,:].reshape(goos.shape[0], goos[:,0,:,:].shape[1], 1, goos[:,0,:,:].shape[2])).all() # that all winsize/2 of them are the same
+
+
+    for s in xrange(len(goos)):
+        sample_goos = []
+        for g in xrange(goos.shape[1]):
+            goo = goos[s, g, :, :]  # (winsize/2, 8)  # in fact all of these are the same
+            first_goo = goo[0,:]  # (8,)
+            print 'first_goo', first_goo
+
+            # take care of coords
+            coords = first_goo[:4]
+            # unnormmalize
+            # reformat
+
+            # take care of one hot
+            strength_one_hot = first_goo[4:7]  # object id is the last
+            goo_strength = one_hot_to_num(strength_one_hot, G_goo_strength_values) # convert to strength
+            goo_color = G_goo_strength2color(goo_strength)  # convert to color
+
+
+            # TODO: add to this list
+        recovered_goos.append(sample_goos)
+    goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
+
+
+    # unnormalize!
+
+    pass
+
+
+def recover_state(this, context, y, pred, config):
+    """
+        this:       (num_samples, winsize/2, 8)
+        context:    (num_samples, G_num_objects, winsize/2, 8)
+        y:          (num_samples, winsize/2, 8)
+        pred:       (num_samples, winsize/2, 8)
+
+        observedPath    = (winsize, [pos, vel], numObjects, [x, y])
+        particles
+        goos
+    """
+    # First separate out context
+
+
+    # Next
+
+
+
+    pass
+
+
+def test_recover_state():
+    this    = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'this')
+    context = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'context')
+    y       = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'y')
+    pred    = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'pred')
+
+    recover_state(this, context, y, pred, config)
 
 if __name__ == "__main__":
     # worldm1_np=1_ng=1_[5,5].h5
 
 
-    print 'pred', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'pred').shape  # (num_samples, winsize/2, 8)
-    print 'this', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'this').shape  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
-    print 'context', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'context').shape  # (num_samples, winsize/2, 8)
-    print 'y', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'y').shape  # (num_samples, winsize/2, 8)
+    # # print 'pred', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'pred')  # (num_samples, winsize/2, 8)
+    # print 'this', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'this')  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
+    # # print 'context', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'context').shape  # (num_samples, winsize/2, 8)
+    # print 'y', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'y')  # (num_samples, winsize/2, 8)
 
 
     # train_data = load_dict_from_hdf5('hey/trainset.h5')
-    # this_sample = train_data['worldm1_np=6_ng=5particles']
+    # this_sample = train_data['worldm1_np=1_ng=1particles']
     # this_sample_transpose = np.transpose(this_sample, (1,0,2,3))
     # this_sample_reshaped = this_sample_transpose.reshape(this_sample_transpose.shape[0]*this_sample_transpose.shape[1], this_sample_transpose.shape[2], this_sample_transpose.shape[3])
-    # print this_sample_reshaped[51-1]  # this equals what has been predicted!
+    # print this_sample_reshaped[5-1]  # this equals what has been predicted!
+
+
+
     # create_all_videos('/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data', 'movie_root_debug')
 
 
+    # note this and y match the train data.
+    # now to separate out the context
+    context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
+    o, g = separate_context(context, 'worldm1_np=2_ng=4')
 
-    
+    print 'objects',
+    print o
+    print o.shape
+    print 'goos'
+    print g
+    print g.shape
+    assert False
+
+    recover_goos(g)

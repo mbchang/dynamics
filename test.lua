@@ -1,4 +1,4 @@
--- Train 
+-- Train
 
 require 'metaparams'
 require 'torch'
@@ -50,7 +50,7 @@ function Tester:load_model(model)
     for j = 0, self.mp.seq_length do
         self.s[j] = {}
         for d = 1, 2 * self.mp.layers do
-            self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda) 
+            self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda)
         end
     end
     collectgarbage()
@@ -81,7 +81,7 @@ function Tester:forward_pass_test(params_, x, y)
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
-    end 
+    end
 
     collectgarbage()
     return loss:sum(), predictions  -- we sum the loss through time
@@ -91,7 +91,7 @@ end
 function Tester:test(model, params_, num_iters)
     self:load_model(model)
     local sum_loss = 0
-    for i = 1, num_iters do 
+    for i = 1, num_iters do
         local this, context, y, mask, config, start, finish = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
         local test_loss, all_preds = self:forward_pass_test(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
@@ -100,7 +100,7 @@ function Tester:test(model, params_, num_iters)
         local prediction = all_preds[torch.find(mask,1)[1]] -- (1, windowsize/2)
         -- this would be your 'this', or you could shift over, or do other interesting things
 
-        -- reshape to -- (num_samples x windowsize/2 x 8)
+        -- reshape to -- (num_samples x windowsize/2 x 8)   Why is num_samples always one?  --> That's because batch size is always 1
         print('config:'..config)
         print('prediction size before')
         print(prediction:size())
@@ -117,8 +117,8 @@ function Tester:test(model, params_, num_iters)
         -- assert(false)
 
         -- For now, just save it as hdf5. You can feed it back in later if you'd like
-        save_to_hdf5(config..'_['..start..','..finish..'].h5', 
-            {pred=prediction, 
+        save_to_hdf5(config..'_['..start..','..finish..'].h5',
+            {pred=prediction,
             this=this:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim),
             context=context:reshape(context:size(1), context:size(2), self.mp.winsize/2, self.test_loader.object_dim),
             y=y:reshape(y:size(1), self.mp.winsize/2, self.test_loader.object_dim)})  -- works, but you should change the name
@@ -126,10 +126,9 @@ function Tester:test(model, params_, num_iters)
         -- you should also store the world-config name, and the start and end
         assert(false)
     end
-    local avg_loss = sum_loss/num_iters  
+    local avg_loss = sum_loss/num_iters
     collectgarbage()
     return avg_loss
 end
 
 return Tester
-
