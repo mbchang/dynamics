@@ -15,13 +15,17 @@ from pygame.locals import *
 from pygame.color import THECOLORS
 import particle
 
+# Local imports
+from context_particles import *
+from utils import *
+
 
 # Hardcoded Global Variables
 G_w_width, G_w_height = 640.0,480.0
 G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
 G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
-G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
-G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen"}
+# G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
+# G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen"}
 G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
@@ -49,33 +53,6 @@ def convert_file(path):
 
     return particles, goos, observedPath
 
-def num_to_one_hot(array, discrete_values):
-    """
-        The values in the array come from the list discrete_values.
-        For example, if discrete_values is [0.33, 1.0, 3.0] then all the values in this
-        array are in [0.33, 1.0, 3.0].
-
-        This method adds another axis (last axis) and makes these values into a one-hot
-        encoding of those discrete values. For example, if the array was shape (4,10)
-        and len(discrete_values) was 3, then this method will produce an array
-        with shape (4,10,3)
-    """
-    n_values = len(discrete_values)
-    broadcast = tuple([1 for i in xrange(array.ndim)] + [n_values])
-    array = np.tile(np.expand_dims(array,array.ndim+1), broadcast)
-    for i in xrange(n_values): array[...,i] = array[...,i] == discrete_values[i]
-    return array
-
-def one_hot_to_num(one_hot_vector, discrete_values):
-    """
-        one_hot_vector: (n,) one hot vector
-        discrete_values is a list of values that the onehot represents
-
-        assumes that the one_hot_vector only as one 1
-    """
-    assert sum(one_hot_vector) == 1  # it had better have one 1
-    return int(np.nonzero(one_hot_vector)[0])
-
 def ltrb2xywh(boxes):
     """
         boxes: np array of (num_boxes, [left, top, right, bottom])
@@ -91,9 +68,6 @@ def ltrb2xywh(boxes):
         cy = (bottom + top)/2
         boxes[i] = np.array([cx, cy, w, h])
     return boxes
-
-def xywh2ltrb():
-    pass
 
 def crop_to_window(boxes):
     """
@@ -133,6 +107,9 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         gooStrength: [0, -5, -20]
 
         object id: 1 if particle, 0 if goo
+
+        For goos:  crop --> ltrb2xywh --> normalize
+        For particles:
     """
     assert starttime + windowsize < len(observedPath)  # 400 is the total length of the video
 
@@ -163,6 +140,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     num_goos = goos.shape[0]
 
     if num_goos > 0:
+        # crop --> ltrb2xywh --> normalize
         goo_strengths = goos[:,-1]
         goo_strengths = num_to_one_hot(goo_strengths, G_goo_strength_values)  # (numGoos, 3)
         goos = np.concatenate((goos[:,:-1], goo_strengths), 1)  # (num_goos, 7)  one hot
@@ -172,6 +150,8 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
         assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
         assert goos.shape == (num_goos, 8)
+
+
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
     goos = np.asarray(goos, dtype=np.float64)
@@ -336,19 +316,6 @@ def flatten_dataset(dataset):
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
 
-def stack(list_of_nparrays):
-    """
-        input
-            :nparray: list of numpy arrays
-        output
-            :stack each numpy array along a new dimension: axis=0
-    """
-    st = lambda a: np.vstack(([np.expand_dims(x,axis=0) for x in a]))
-    stacked = np.vstack(([np.expand_dims(x,axis=0) for x in list_of_nparrays]))
-    assert stacked.shape[0] == len(list_of_nparrays)
-    assert stacked.shape[1:] == list_of_nparrays[0].shape
-    return stacked
-
 def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
     print '\nSaving', dataset_name
     h = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'w')
@@ -363,20 +330,6 @@ def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
         print k
         print g[k][:].shape
     g.close()
-
-def load_hdf5(filename, datapath):
-    """
-        Loads the data stored in the datapath stored in filename as a numpy array
-    """
-    data = load_dict_from_hdf5(filename)
-    return data[datapath]
-
-def load_dict_from_hdf5(filepath):
-    data = {}
-    g = h5py.File(filepath, 'r')
-    for k in g.keys():
-        data[k] = g[k][:]
-    return data
 
 def save_all_datasets():
     dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
@@ -477,9 +430,9 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
     configuration   = eval(fixInputSyntax(data[0]))
     forces          = np.array(configuration[0])
     particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
+    pprint.pprint(particles)
+    assert False
     goos            = np.array(configuration[2])
-    print goos
-    assert(False)
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
     observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
@@ -492,7 +445,7 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
     fieldColors         = [p['field-color'] for p in particles]
 
     ## Set up the goo patches, if any
-    ## (a goo is list of [ul-corner, br-corner, resistence, color])
+    ## (a goo is list of [[left top], [right bottom], resistence, color])
     gooList = goos
 
     ## Set up obstacles, if any
@@ -631,90 +584,100 @@ def separate_context(context, config):
 
     return other, goos
 
-def subtensor_equal(subtensor, tensor, dim):
-    """
-        Return if subtensor, when broaadcasted along dim
-    """
-    num_copies = tensor.shape[dim]
-
-    subtensor_stack = np.concatenate([subtensor for s in num_copies], dim=dim)
-
-    return subtensor_stack == tensor
-
-
 def recover_goos(goos):
     """
         goos: (num_samples, num_goos, winsize/2, 8)
 
-        Want something like:
+        The winsize/2 dimension doesn't matter, so goos[:,:,0,:] should
+        equal goos[:,:,1,:], etc
 
-        a list of num_samples of:
+        To render one example, look at one sample in all_sample_goos
 
-        [[[511, 289] [674, 422] 0 'darkmagenta']
-         [[217, 352] [327, 561] 0 'darkmagenta']
-         [[80, 155] [205, 299] 0 'darkmagenta']
-         [[530, 393] [617, 598] 0 'darkmagenta']
-         [[171, 36] [389, 149] 0 'darkmagenta']]
+        all_sample_goos:
+            list over samples of something like the following list,
+                which is named goos_in_this_sample
 
-         the length of the list is the number of goos
+                [[[511, 289] [674, 422] 0 'darkmagenta']
+                 [[217, 352] [327, 561] 0 'darkmagenta']
+                 [[80, 155] [205, 299] 0 'darkmagenta']
+                 [[530, 393] [617, 598] 0 'darkmagenta']
+                 [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    recovered_goos = []  # (num_samples)
-    # pprint.pprint(goos)
-    # print goos.shape
-    # print goos[:,:,0,:].shape
-    # rep_goo = goos[:,:,0,:].reshape(goos.shape[0], goos[:,:,0,:].shape[1], 1, goos[:,:,0,:].shape[2])
-    # print rep_goo.shape
-    # print rep_goo
+    unduplicated_goos = goos[:,:,0,:]  # (num_samples, num_goos, 8)
 
-    # TODO: use subtensor_equal here
-    # assert (goos == goos[:,0,:,:].reshape(goos.shape[0], goos[:,0,:,:].shape[1], 1, goos[:,0,:,:].shape[2])).all() # that all winsize/2 of them are the same
+    # Double check that the winsize/2 dimension doesn't matter
+    for i in range(1, goos.shape[2]):
+        assert np.allclose(unduplicated_goos, goos[:,:,i,:])
 
+    all_sample_goos = []
+    for s in xrange(unduplicated_goos.shape[0]):  # iterate over samples
+        goos_in_this_sample = []
+        for g in xrange(unduplicated_goos.shape[1]):  # iterate over goos
+            goo = Context_Goo(unduplicated_goos[s,g,:]).format()
+            goos_in_this_sample.append(goo)
+        all_sample_goos.append(goos_in_this_sample)
 
-    for s in xrange(len(goos)):
-        sample_goos = []
-        for g in xrange(goos.shape[1]):
-            goo = goos[s, g, :, :]  # (winsize/2, 8)  # in fact all of these are the same
-            first_goo = goo[0,:]  # (8,)
-            print 'first_goo', first_goo
+    return all_sample_goos
 
-            # take care of coords
-            coords = first_goo[:4]
-            # unnormmalize
-            # reformat
+def recover_particles(this, other):
+    """
+        Just recovers the particle attributes not the paths
 
-            # take care of one hot
-            strength_one_hot = first_goo[4:7]  # object id is the last
-            goo_strength = one_hot_to_num(strength_one_hot, G_goo_strength_values) # convert to strength
-            goo_color = G_goo_strength2color(goo_strength)  # convert to color
+        this:     (num_samples, winsize/2, 8)
+        other:    (num_samples, num_other_particles, winsize/2, 8)
+    """
+    samples = []
+    for s in xrange(this.shape[0]): # iterate over samples
+        this_particle = Particle(this[s,:,:])
 
+        other_particles = []
+        for o in xrange(other.shape[1])  # iterate through other particles
+            other_particle = Particle(other[s,o,:,:])
+            other_particles.append(other_particles)
 
-            # TODO: add to this list
-        recovered_goos.append(sample_goos)
-    goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
-
-
-    # unnormalize!
-
+    print 'this'
+    print this.shape
+    print 'other'
+    print other.shape
     pass
-
 
 def recover_state(this, context, y, pred, config):
     """
-        this:       (num_samples, winsize/2, 8)
-        context:    (num_samples, G_num_objects, winsize/2, 8)
-        y:          (num_samples, winsize/2, 8)
-        pred:       (num_samples, winsize/2, 8)
+        input
+            this:       (num_samples, winsize/2, 8)
+            context:    (num_samples, G_num_objects, winsize/2, 8)
+            y:          (num_samples, winsize/2, 8)
+            pred:       (num_samples, winsize/2, 8)
+            config:     something like: worldm1_np=1_ng=1
 
-        observedPath    = (winsize, [pos, vel], numObjects, [x, y])
-        particles
-        goos
+        output
+            observedPath    = (winsize, [pos, vel], numObjects, [x, y])
+
+            particles
+                list of something like
+                {'color': 'red',
+                  'field-color': 'black',  # we hardcode this
+                  'mass': 1.0,
+                  'size': 40.0},  # we hardcode this
+
+            goos
+                something like
+                [[[511, 289] [674, 422] 0 'darkmagenta']
+                 [[217, 352] [327, 561] 0 'darkmagenta']
+                 [[80, 155] [205, 299] 0 'darkmagenta']
+                 [[530, 393] [617, 598] 0 'darkmagenta']
+                 [[171, 36] [389, 149] 0 'darkmagenta']]
     """
     # First separate out context
+    # other: (num_samples, num_other_particles, winsize/2, 8)
+    # goos: (num_samples, num_goos, winsize/2, 8)
+    other, goos =  separate_context(context, config)
 
+    # Next recover goos
+    recovered_goos = recover_goos(goos)
 
-    # Next
-
-
+    # Next recover particles
+    recover_particles(this, other)
 
     pass
 
@@ -745,20 +708,15 @@ if __name__ == "__main__":
 
 
 
-    # create_all_videos('/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data', 'movie_root_debug')
+    # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
 
 
     # note this and y match the train data.
     # now to separate out the context
-    context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
-    o, g = separate_context(context, 'worldm1_np=2_ng=4')
+    # context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
 
-    print 'objects',
-    print o
-    print o.shape
-    print 'goos'
-    print g
-    print g.shape
-    assert False
+    d = load_dict_from_hdf5('worldm1_np=2_ng=4_[18,18].h5')
+    recover_state(d['this'], d['context'], d['y'], d['pred'], 'worldm1_np=2_ng=4')
+    # o, g = separate_context(context, 'worldm1_np=2_ng=4')
 
-    recover_goos(g)
+    # pprint.pprint(recover_goos(g))
