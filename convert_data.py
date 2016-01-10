@@ -401,6 +401,127 @@ def getParticleCoords(observedPath,pindex):
     # so here pindex is 0
     return observedPath[:,0,pindex,:]
 
+
+def render_from_scheme_output(path, framerate, movie_folder, movieName):
+    fileobject = open(path)
+    data = fileobject.readlines()
+
+    ## Note that the input file has to be 'comma-ed' and the brackets fixed, since Scheme gives us data without commas.
+    configuration   = eval(fixInputSyntax(data[0]))
+    forces          = np.array(configuration[0])
+    particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
+    goos            = np.array(configuration[2])
+    initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
+    initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
+    observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
+
+    render(goos, particles, observedPath, framerate, movie_folder, movieName)
+
+
+def render(goos, particles, observed_path, framerate, movie_folder, movieName):
+    """
+
+    """
+    ## Get the data.
+    ## data is the x-y coordinates of the particles over times, organized as (STEP0, STEP1, STEP2...)
+    ## Where each 'Step' consists of (PARTICLE0, PARTICLE1...)
+    ## and each PARTICLE consists of (x, y).
+    ## So, for example, in order to get the x-coordinates of particle 1 in time-step 3, we would do data[3][1][0]
+
+    WINSIZE = 640,480
+    pygame.init()
+    screen = pygame.display.set_mode(WINSIZE)
+    clock = pygame.time.Clock()
+    screen.fill(THECOLORS["white"])
+    pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)
+
+    # fileobject = open(path)
+    # data = fileobject.readlines()
+    #
+    # ## Note that the input file has to be 'comma-ed' and the brackets fixed, since Scheme gives us data without commas.
+    # configuration   = eval(fixInputSyntax(data[0]))
+    # forces          = np.array(configuration[0])
+    # particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
+    # goos            = np.array(configuration[2])
+    # initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
+    # initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
+    # observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
+
+
+    # Set up masses, their number, color, and size
+    numberOfParticles   = len(particles)
+    sizes               = [p['size'] for p in particles]
+    particleColors      = [p['color'] for p in particles]
+    fieldColors         = [p['field-color'] for p in particles]
+
+    ## Set up the goo patches, if any
+    ## (a goo is list of [[left top], [right bottom], resistence, color])
+    gooList = goos
+
+    ## Set up obstacles, if any
+    ## (an obstacle is list of [ul-corner, br-corner, color])
+    obstacleColor = "black"
+    obstacleList = [] #fixedInput[3]
+
+    ## Create particle objects using a loop over the particle class
+    for particleIndex in range(numberOfParticles):
+        pcolor = THECOLORS[particleColors[particleIndex]]
+        fcolor = THECOLORS[fieldColors[particleIndex]]
+        exec('particle' + str(particleIndex) + \
+             ' = particle.Particle( screen, (sizes[' + str(particleIndex) + '],sizes[' + str(particleIndex) + ']), getParticleCoords(observed_path,' + \
+             str(particleIndex) + '), THECOLORS["white"],' + str(pcolor)+ ',' + str(fcolor) + ')')
+
+    movieFrame = 0
+    madeMovie = False
+    frameAllocation = 4
+    basicString = '0'*frameAllocation
+
+    maxPath = len(observed_path)
+
+    done = False
+    while not done:
+        clock.tick(float(framerate))
+        screen.fill(THECOLORS["white"])
+        pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
+
+
+        # fill the background with goo, if there is any
+        if len(gooList) > 0:
+            for goo in gooList:
+                pygame.draw.rect(screen, THECOLORS[goo[3]], \
+                                 Rect(goo[0][0], goo[0][1], abs(goo[1][0]-goo[0][0]), abs(goo[1][1]-goo[0][1])))
+
+
+        # fill in the obstacles, if there is any
+        if len(obstacleList) > 0:
+            for obstacle in obstacleList:
+                pygame.draw.rect(screen, THECOLORS[obstacle[2]], \
+                                 Rect(obstacle[0][0], obstacle[0][1], \
+                                      abs(obstacle[1][0]-obstacle[0][0]), abs(obstacle[1][1]-obstacle[0][1])))
+
+        # Drawing handled with exec since we don't know the number of particles in advance:
+        for i in range(numberOfParticles):
+            if (eval('particle' + str(i) + '.frame >=' + str(maxPath-1))):
+                exec('particle' + str(i) + '.frame = ' + str(maxPath-1))
+            exec('particle' + str(i) + '.draw()')
+
+        pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
+
+        # Drawing finished this iteration?  Update the screen
+        pygame.display.flip()
+
+        # make movie
+        if movieFrame <= (len(observed_path)-1):
+            imageName = basicString[0:len(basicString) - len(str(movieFrame))] + str(movieFrame)
+            imagefile = movie_folder + "/" + movieName + '-' + imageName + ".png"
+            print imagefile
+            pygame.image.save(screen, imagefile)
+            movieFrame += 1
+        elif movieFrame > (len(observed_path)-1):
+            done = True
+
+
+
 def pythonToGraphics(path, framerate, movie_folder, movieName):
     """
     Convert data into a numpy array where shape is (numSteps, 2, numObjects, 2)
@@ -430,8 +551,6 @@ def pythonToGraphics(path, framerate, movie_folder, movieName):
     configuration   = eval(fixInputSyntax(data[0]))
     forces          = np.array(configuration[0])
     particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
-    pprint.pprint(particles)
-    assert False
     goos            = np.array(configuration[2])
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
@@ -528,7 +647,8 @@ def create_all_videos(root, movie_root):
                 movieName = worldfile[:worldfile.rfind('.ss')]  # each world file is a particular movie
                 movie_folder = os.path.join(world_config_folder, movieName)
                 if not os.path.isdir(movie_folder): os.mkdir(movie_folder)
-                pythonToGraphics(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
+                render_from_scheme_output(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
+                # pythonToGraphics(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
 
 def test_write_data_file():
     data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
@@ -685,8 +805,6 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-
-
 def recover_state(this, context, y, pred, config):
     """
         input
@@ -717,6 +835,8 @@ def recover_state(this, context, y, pred, config):
     # TODO: this will later be used for the predictions and ground truth other
     # but for now we will try to render the past
 
+    num_samples = len(this)
+
     # First separate out context
     # other: (num_samples, num_other_particles, winsize/2, 8)
     # goos: (num_samples, num_goos, winsize/2, 8)
@@ -729,9 +849,56 @@ def recover_state(this, context, y, pred, config):
     recovered_particles_all_samples = recover_particles(this, other)
 
     # Next recover path
-    recover_path(this, other)
+    recoverd_path_all_samples = recover_path(this, other)
 
-    pass
+    assert len(recovered_goos_all_samples) \
+            == len(recovered_particles_all_samples) \
+            == len(recoverd_path_all_samples) \
+            == num_samples
+
+    samples = []
+    for sample_num in xrange(num_samples):
+        # a tuple of (goos, particles, path) for that particular sample
+        samples.append((recovered_goos_all_samples[sample_num],
+                        recovered_particles_all_samples[sample_num],
+                        recoverd_path_all_samples[sample_num]))
+    return samples
+
+def render_prediction(ground_truth_samples, predicted_samples, sample_num):
+    """
+        ground_truth_samples and predicted_samples: list of tuples
+            tuple: (goo, particles, path)
+
+            path    = (winsize, [pos, vel], numObjects, [x, y])
+
+            particles
+                list of something like
+                {'color': 'red',
+                  'field-color': 'black',  # we hardcode this
+                  'mass': 1.0,
+                  'size': 40.0},  # we hardcode this
+
+            goos
+                something like
+                [[[511, 289] [674, 422] 0 'darkmagenta']
+                 [[217, 352] [327, 561] 0 'darkmagenta']
+                 [[80, 155] [205, 299] 0 'darkmagenta']
+                 [[530, 393] [617, 598] 0 'darkmagenta']
+                 [[171, 36] [389, 149] 0 'darkmagenta']]
+    """
+    gt_sample = ground_truth_samples[sample_num]
+    pred_sample = predicted_samples[sample_num]
+
+    # How to compare gt and pred? That is a pygame thing. Maybe put side by side
+
+    # render ground truth
+    render(*gt_sample[:])
+    assert False
+
+    # render pred_sample
+    render(*pred_sample[:])
+
+    # possibly do some saving here
 
 
 def test_recover_state():
@@ -760,8 +927,8 @@ if __name__ == "__main__":
 
 
 
-    # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
-
+    create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
+    assert False
 
     # note this and y match the train data.
     # now to separate out the context
