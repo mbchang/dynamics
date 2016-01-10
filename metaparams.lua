@@ -3,15 +3,15 @@ local T = require 'pl.tablex'
 local pc = true
 local SEQ_LENGTH = 10
 
-function merge_tables(t1, t2) 
+function merge_tables(t1, t2)
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
     merged_table = T.deepcopy(t1)
-    for k,v in pairs(t2) do 
+    for k,v in pairs(t2) do
         -- if merged_table[k] then
         --     error('t1 and t2 both contain the key: ' .. k)
         -- end
-        merged_table[k]  = v 
-    end 
+        merged_table[k]  = v
+    end
     return merged_table
 end
 
@@ -26,7 +26,7 @@ personal_mp = {
     batch_size  = 1,
     seq_length  = SEQ_LENGTH,  -- max other objects + goos
     winsize     = 10,
-    max_epochs  = 10, 
+    max_epochs  = 10,
     dataset_folder = 'hey',
     num_threads = 1,
     cuda        = false,
@@ -35,9 +35,9 @@ personal_mp = {
 
 openmind_mp = {
     batch_size = 100,
-    seq_length = SEQ_LENGTH,  
+    seq_length = SEQ_LENGTH,
     winsize    = 20,
-    max_epochs = 10, 
+    max_epochs = 10,
     dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
     num_threads = 4,
     cuda       = true,
@@ -52,7 +52,7 @@ common_mp = {
     seed          = 123
 }
 
-if pc then 
+if pc then
     common_mp = merge_tables(common_mp, personal_mp)
 else
     common_mp = merge_tables(common_mp, openmind_mp)
@@ -65,7 +65,7 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 -- Training parameters
 train_mp = merge_tables(common_mp, {
       shuffle               = false,
-      curriculum            = false,
+      curriculum            = true,
       max_grad_norm         = 10,
 
       -- Data Logging Parameters
@@ -75,8 +75,6 @@ train_mp = merge_tables(common_mp, {
 
 
 -- Testing parameters
-test_mp = merge_tables(common_mp, {      
+test_mp = merge_tables(common_mp, {
       shuffle               = true,
 })
-
-

@@ -92,7 +92,7 @@ function Tester:test(model, params_, num_iters)
     self:load_model(model)
     local sum_loss = 0
     for i = 1, num_iters do
-        local this, context, y, mask, config, start, finish = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
+        local this, context, y, mask, config, start, finish, context_future = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
         local test_loss, all_preds = self:forward_pass_test(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
 
@@ -101,27 +101,40 @@ function Tester:test(model, params_, num_iters)
         -- this would be your 'this', or you could shift over, or do other interesting things
 
         -- reshape to -- (num_samples x windowsize/2 x 8)   Why is num_samples always one?  --> That's because batch size is always 1
-        print('config:'..config)
-        print('prediction size before')
-        print(prediction:size())
+        -- print('config:'..config)
+        -- print('prediction size before')
+        -- print(prediction:size())
         prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
-        print('prediction size after')
-        print(prediction:size())
-
-        print('context size')
-        print(context:size())
-        print('y size')
-        print(y:size())
-        print('this size')
-        print(this:size())
-        -- assert(false)
+        -- print('prediction size after')
+        -- print(prediction:size())
+        --
+        -- print('context size')
+        -- print(context:size())
+        -- print('y size')
+        -- print(y:size())
+        -- print('this size')
+        -- print(this:size())
+        print('context future')
+        print(context_future:size())
+        print(context_future)
 
         -- For now, just save it as hdf5. You can feed it back in later if you'd like
         save_to_hdf5(config..'_['..start..','..finish..'].h5',
             {pred=prediction,
-            this=this:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim),
-            context=context:reshape(context:size(1), context:size(2), self.mp.winsize/2, self.test_loader.object_dim),
-            y=y:reshape(y:size(1), self.mp.winsize/2, self.test_loader.object_dim)})  -- works, but you should change the name
+            this=this:reshape(this:size(1),
+                        math.floor(self.mp.winsize/2),
+                        self.test_loader.object_dim),
+            context=context:reshape(context:size(1),
+                        context:size(2),
+                        math.floor(self.mp.winsize/2),
+                        self.test_loader.object_dim),
+            y=y:reshape(y:size(1),
+                        math.floor(self.mp.winsize/2),
+                        self.test_loader.object_dim),
+            context_future=context_future:reshape(context_future:size(1),
+                        context_future:size(2),
+                        self.mp.winsize-math.floor(self.mp.winsize/2),
+                        self.test_loader.object_dim)})  -- works, but you should change the name
 
         -- you should also store the world-config name, and the start and end
         assert(false)

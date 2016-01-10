@@ -42,6 +42,21 @@ def stack(list_of_nparrays):
     assert stacked.shape[1:] == list_of_nparrays[0].shape
     return stacked
 
+def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
+    print '\nSaving', dataset_name
+    h = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'w')
+    print dataset.keys()
+    for k, v in dataset.items():
+        print 'Saving', k
+        h.create_dataset(k, data=v, dtype='float64')
+    h.close()
+    print 'Reading saved file'
+    g = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'r')
+    for k in g.keys():
+        print k
+        print g[k][:].shape
+    g.close()
+
 def load_hdf5(filename, datapath):
     """
         Loads the data stored in the datapath stored in filename as a numpy array

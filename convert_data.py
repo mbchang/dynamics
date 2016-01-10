@@ -316,20 +316,20 @@ def flatten_dataset(dataset):
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
 
-def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
-    print '\nSaving', dataset_name
-    h = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'w')
-    print dataset.keys()
-    for k, v in dataset.items():
-        print 'Saving', k
-        h.create_dataset(k, data=v, dtype='float64')
-    h.close()
-    print 'Reading saved file'
-    g = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'r')
-    for k in g.keys():
-        print k
-        print g[k][:].shape
-    g.close()
+# def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
+#     print '\nSaving', dataset_name
+#     h = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'w')
+#     print dataset.keys()
+#     for k, v in dataset.items():
+#         print 'Saving', k
+#         h.create_dataset(k, data=v, dtype='float64')
+#     h.close()
+#     print 'Reading saved file'
+#     g = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'r')
+#     for k in g.keys():
+#         print k
+#         print g[k][:].shape
+#     g.close()
 
 def save_all_datasets():
     dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
@@ -443,19 +443,6 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName):
     clock = pygame.time.Clock()
     screen.fill(THECOLORS["white"])
     pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)
-
-    # fileobject = open(path)
-    # data = fileobject.readlines()
-    #
-    # ## Note that the input file has to be 'comma-ed' and the brackets fixed, since Scheme gives us data without commas.
-    # configuration   = eval(fixInputSyntax(data[0]))
-    # forces          = np.array(configuration[0])
-    # particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
-    # goos            = np.array(configuration[2])
-    # initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
-    # initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
-    # observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
-
 
     # Set up masses, their number, color, and size
     numberOfParticles   = len(particles)
@@ -787,7 +774,7 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    framerate = 10
+    framerate = 1
     movie_folder = 'rendertestfolder'
     movieName = 'rendertest'
 
@@ -797,7 +784,7 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
     # How to compare gt and pred? That is a pygame thing. Maybe put side by side
 
     # render ground truth
-    render(*gt_sample[:],
+    render(*gt_sample[:],  # (goos, particles, obs_path)
             framerate=framerate,
             movie_folder=movie_folder,
             movieName=movieName)
@@ -809,29 +796,7 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
     # possibly do some saving here
 
 
-def test_recover_state():
-    this    = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'this')
-    context = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'context')
-    y       = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'y')
-    pred    = load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'pred')
-
-    recover_state(this, context, y, pred, config)
-
 if __name__ == "__main__":
-    # worldm1_np=1_ng=1_[5,5].h5
-
-
-    # # print 'pred', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'pred')  # (num_samples, winsize/2, 8)
-    # print 'this', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'this')  # (num_samples, winsize/2, 8)  -- hmmm, this is in  train_data['worldm1_np=6_ng=5particles'][2,3,6:10,:] (second half)
-    # # print 'context', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'context').shape  # (num_samples, winsize/2, 8)
-    # print 'y', load_hdf5('worldm1_np=1_ng=1_[5,5].h5', 'y')  # (num_samples, winsize/2, 8)
-
-
-    # train_data = load_dict_from_hdf5('hey/trainset.h5')
-    # this_sample = train_data['worldm1_np=1_ng=1particles']
-    # this_sample_transpose = np.transpose(this_sample, (1,0,2,3))
-    # this_sample_reshaped = this_sample_transpose.reshape(this_sample_transpose.shape[0]*this_sample_transpose.shape[1], this_sample_transpose.shape[2], this_sample_transpose.shape[3])
-    # print this_sample_reshaped[5-1]  # this equals what has been predicted!
 
 
 
@@ -842,7 +807,10 @@ if __name__ == "__main__":
     # now to separate out the context
     # context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
 
-    d = load_dict_from_hdf5('worldm1_np=2_ng=4_[18,18].h5')
+    d = load_dict_from_hdf5('worldm1_np=6_ng=5_[15,15].h5')
+    print d['context_future']
+    print d['context_future'].shape
+    assert False
     samples = recover_state(d['this'], d['context'], d['y'], d['pred'], 'worldm1_np=2_ng=4')
 
     pprint.pprint(samples[0])
