@@ -539,7 +539,6 @@ def create_all_videos(root, movie_root):
                 movie_folder = os.path.join(world_config_folder, movieName)
                 if not os.path.isdir(movie_folder): os.mkdir(movie_folder)
                 render_from_scheme_output(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
-                # pythonToGraphics(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
 
 def test_write_data_file():
     data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
@@ -657,14 +656,14 @@ def recover_particles(this, other):
 
     samples = []  # each element is a list of particles for that sample
     for s in xrange(this.shape[0]): # iterate over samples
+        sample_particles = []
         this_particle = hardcode_attributes(Context_Particle(this[s,:,:]).to_dict(), True)
+        sample_particles.append(this_particle)
 
-        other_particles = []
         for o in xrange(other.shape[1]):  # iterate through other particles
             other_particle = hardcode_attributes(Context_Particle(other[s,o,:,:]).to_dict(), False)
-            other_particles.append(other_particles)
-
-        samples.append(other_particles + [this_particle])
+            sample_particles.append(other_particle)
+        samples.append(sample_particles)
     return samples
 
 def recover_path(this, other):
@@ -676,6 +675,7 @@ def recover_path(this, other):
             a list of paths, each like
                 (winsize, [pos, vel], numObjects, [x, y])
     """
+    num_samples = this.shape[0]
     samples = []
     for s in xrange(this.shape[0]):
         # get it to (numObjects, winsize, [pos vel] [x y])
@@ -818,15 +818,14 @@ if __name__ == "__main__":
 
 
 
-    create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
-    assert False
+    # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
+    # assert False
 
     # note this and y match the train data.
     # now to separate out the context
     # context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
 
     d = load_dict_from_hdf5('worldm1_np=2_ng=4_[18,18].h5')
-    recover_state(d['this'], d['context'], d['y'], d['pred'], 'worldm1_np=2_ng=4')
-    # o, g = separate_context(context, 'worldm1_np=2_ng=4')
+    samples = recover_state(d['this'], d['context'], d['y'], d['pred'], 'worldm1_np=2_ng=4')
 
-    # pprint.pprint(recover_goos(g))
+    pprint.pprint(samples[0])
