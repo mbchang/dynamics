@@ -25,6 +25,7 @@ def one_hot_to_num(one_hot_vector, discrete_values):
 
         assumes that the one_hot_vector only as one 1
     """
+    # print one_hot_vector
     assert sum(one_hot_vector) == 1  # it had better have one 1
     return int(np.nonzero(one_hot_vector)[0])
 

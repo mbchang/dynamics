@@ -21,9 +21,9 @@ from utils import *
 
 
 # Hardcoded Global Variables
-G_w_width, G_w_height = 640.0,480.0
-G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
-G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
+# G_w_width, G_w_height = 640.0,480.0
+# G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
+# G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
 # G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
 # G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen"}
 G_num_videos = 500.0
@@ -625,21 +625,67 @@ def recover_particles(this, other):
 
         this:     (num_samples, winsize/2, 8)
         other:    (num_samples, num_other_particles, winsize/2, 8)
+
+        this:
+                {'color': 'red',
+                  'field-color': 'black',  # we hardcode this
+                  'mass': 1.0,
+                  'size': 40.0}
+        other:
+            list of
+                {'color': 'red',
+                  'field-color': 'black',  # we hardcode this
+                  'mass': 1.0,
+                  'size': 40.0}
     """
-    samples = []
+
+    def hardcode_attributes(particle_dict, pred=False):
+        particle_dict['field-color'] = 'green' if pred else 'black'
+        particle_dict['size'] = 40.0
+        return particle_dict
+
+    samples = []  # each element is a list of particles for that sample
     for s in xrange(this.shape[0]): # iterate over samples
-        this_particle = Particle(this[s,:,:])
+        this_particle = hardcode_attributes(Context_Particle(this[s,:,:]).to_dict(), True)
 
         other_particles = []
-        for o in xrange(other.shape[1])  # iterate through other particles
-            other_particle = Particle(other[s,o,:,:])
+        for o in xrange(other.shape[1]):  # iterate through other particles
+            other_particle = hardcode_attributes(Context_Particle(other[s,o,:,:]).to_dict(), False)
             other_particles.append(other_particles)
 
-    print 'this'
-    print this.shape
-    print 'other'
-    print other.shape
-    pass
+        samples.append(other_particles + [this_particle])
+    return samples
+
+def recover_path(this, other):
+    """
+            this:     (num_samples, winsize/2, 8)
+            other:    (num_samples, num_other_particles, winsize/2, 8)
+
+        output
+            a list of paths, each like
+                (winsize, [pos, vel], numObjects, [x, y])
+    """
+    samples = []
+    for s in xrange(this.shape[0]):
+        # get it to (numObjects, winsize, [pos vel] [x y])
+        sample_particles = []
+        this_particle = Context_Particle(this[s,:,:])
+        this_particle_reshaped_path = this_particle.reshape_path(this_particle.path)
+        assert this_particle_reshaped_path.shape == (this.shape[1],2,2)
+        sample_particles.append(this_particle_reshaped_path)
+
+        for o in xrange(other.shape[1]):
+            other_particle = Context_Particle(other[s,o,:,:])
+            sample_particles.append(other_particle.reshape_path(other_particle.path))
+
+        sample_particles = stack(sample_particles)  # (numObjects, winsize, [pos vel] [x y])
+
+        # Now transpose to (winsize, [pos, vel], numObjects, [x, y])
+        sample_particles = np.transpose(sample_particles, (1, 2, 0, 3))  # works
+        samples.append(sample_particles)
+    return samples
+
+
 
 def recover_state(this, context, y, pred, config):
     """
@@ -668,16 +714,22 @@ def recover_state(this, context, y, pred, config):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
+    # TODO: this will later be used for the predictions and ground truth other
+    # but for now we will try to render the past
+
     # First separate out context
     # other: (num_samples, num_other_particles, winsize/2, 8)
     # goos: (num_samples, num_goos, winsize/2, 8)
     other, goos =  separate_context(context, config)
 
     # Next recover goos
-    recovered_goos = recover_goos(goos)
+    recovered_goos_all_samples = recover_goos(goos)
 
     # Next recover particles
-    recover_particles(this, other)
+    recovered_particles_all_samples = recover_particles(this, other)
+
+    # Next recover path
+    recover_path(this, other)
 
     pass
 
