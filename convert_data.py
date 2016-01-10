@@ -693,7 +693,7 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-def recover_state(this, context, y, pred, config):
+def recover_state(this, context, config):
     """
         input
             this:       (num_samples, winsize/2, 8)
@@ -798,8 +798,6 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
 
 if __name__ == "__main__":
 
-
-
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
 
@@ -808,11 +806,17 @@ if __name__ == "__main__":
     # context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
 
     d = load_dict_from_hdf5('worldm1_np=6_ng=5_[15,15].h5')
-    print d['context_future']
-    print d['context_future'].shape
-    assert False
-    samples = recover_state(d['this'], d['context'], d['y'], d['pred'], 'worldm1_np=2_ng=4')
+    # print d['context_future']
+    # print d['context_future'].shape
+    # assert False
+    samples_past = recover_state(d['this'], d['context'], 'worldm1_np=6_ng=5')
+    samples_future = recover_state(d['y'], d['context_future'], 'worldm1_np=6_ng=5')
+    print 'samples past'
+    pprint.pprint(samples_past[0][2])
+    print samples_past[0][2].shape
+    print 'samples future'
+    pprint.pprint(samples_future[0][2])
+    print samples_future[0][2].shape
 
-    pprint.pprint(samples[0])
-
-    render_prediction(samples, samples, 0)
+    # render_prediction(samples_past, samples_past, 0)
+    render_prediction(samples_future, samples_future, 0)
