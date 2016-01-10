@@ -19,17 +19,9 @@ import particle
 from context_particles import *
 from utils import *
 
-
-# Hardcoded Global Variables
-# G_w_width, G_w_height = 640.0,480.0
-# G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
-# G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
-# G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
-# G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen"}
 G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
-
 
 def convert_file(path):
     """
@@ -415,15 +407,6 @@ def render_from_scheme_output(path, framerate, movie_folder, movieName):
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
     observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
 
-    print 'goos', type(goos)
-    print goos
-    print 'particles', type(particles)
-    print particles
-    print 'observedPath', type(observedPath)
-    print observedPath
-    print observedPath.shape
-    assert False
-
     render(goos, particles, observedPath, framerate, movie_folder, movieName)
 
 
@@ -515,7 +498,6 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName):
             movieFrame += 1
         elif movieFrame > (len(observed_path)-1):
             done = True
-    assert False
 
 def create_all_videos(root, movie_root):
     """
@@ -693,7 +675,7 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-def recover_state(this, context, config):
+def recover_state(this, context, this_pred, config):
     """
         input
             this:       (num_samples, winsize/2, 8)
@@ -737,7 +719,7 @@ def recover_state(this, context, config):
     recovered_particles_all_samples = recover_particles(this, other)
 
     # Next recover path
-    recoverd_path_all_samples = recover_path(this, other)
+    recoverd_path_all_samples = recover_path(this_pred, other)
 
     assert len(recovered_goos_all_samples) \
             == len(recovered_particles_all_samples) \
@@ -774,7 +756,7 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    framerate = 1
+    framerate = 10
     movie_folder = 'rendertestfolder'
     movieName = 'rendertest'
 
@@ -788,10 +770,10 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
             framerate=framerate,
             movie_folder=movie_folder,
             movieName=movieName)
-    assert False
-
-    # render pred_sample
-    render(*pred_sample[:])
+    # assert False
+    #
+    # # render pred_sample
+    # render(*pred_sample[:])
 
     # possibly do some saving here
 
@@ -809,8 +791,8 @@ if __name__ == "__main__":
     # print d['context_future']
     # print d['context_future'].shape
     # assert False
-    samples_past = recover_state(d['this'], d['context'], 'worldm1_np=6_ng=5')
-    samples_future = recover_state(d['y'], d['context_future'], 'worldm1_np=6_ng=5')
+    samples_past = recover_state(d['this'], d['context'], d['this'], 'worldm1_np=6_ng=5')
+    samples_future = recover_state(d['this'], d['context_future'], d['pred'], 'worldm1_np=6_ng=5')
     print 'samples past'
     pprint.pprint(samples_past[0][2])
     print samples_past[0][2].shape
@@ -818,5 +800,7 @@ if __name__ == "__main__":
     pprint.pprint(samples_future[0][2])
     print samples_future[0][2].shape
 
-    # render_prediction(samples_past, samples_past, 0)
+    print 'render past'
+    render_prediction(samples_past, samples_past, 0)
+    print 'render future'
     render_prediction(samples_future, samples_future, 0)

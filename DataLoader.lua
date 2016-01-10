@@ -273,10 +273,6 @@ function dataloader:next_config(current_config, start, finish)
         context:size(4) == object_dim)
 
     -- split into x and y
-
-    -- TODO: you should pass the future into to python to, to compare with ground truth!
-
-
     local num_past = math.floor(windowsize/2)
     local this_x = this_particles[{{},{1,num_past},{}}]  -- (num_samples x windowsize/2 x 8)
     local context_x = context[{{},{},{1,num_past},{}}]  -- (num_samples x max_other_objects x windowsize/2 x 8)
@@ -303,11 +299,11 @@ function dataloader:next_config(current_config, start, finish)
         context_future  = context_future:cuda()  -- TODO: note that you have to update this everywhere!
     end
 
-    if current_config == 'worldm1_np=6_ng=5' then
-        print(context_future[{{15,15}}])  -- because batch size is 1
-        print(context_future[{{15,15}}]:size())
-        assert(false)
-    end
+    -- if current_config == 'worldm1_np=6_ng=5' then
+    --     print(context_future[{{15,15}}])  -- because batch size is 1
+    --     print(context_future[{{15,15}}]:size())
+    --     assert(false)
+    -- end
 
     -- Reshape
     this_x          = this_x:reshape(num_samples, num_past*object_dim)

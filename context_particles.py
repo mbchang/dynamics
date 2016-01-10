@@ -75,21 +75,22 @@ class Context_Particle():
         """
             particle_path: np array (winsize/2, 8)
         """
+        self.particle_path = particle_path
+
         # Get path
         self.path = np.copy(particle_path[:, :4])  # (winsize, [px, py, vx, vy])
         self.path[:,:2] = self.path[:,:2]*G_w_width  # unnormalize position
         self.path[:,2:] = self.path[:,2:]*G_max_velocity  # unnormalize velocity
 
-        # Get mass
-        one_hot = particle_path[0, 4:7]  # should be the same for all timesteps, so we just use the first one
-        self.mass = one_hot_to_num(one_hot, G_mass_values)
-        assert np.allclose(particle_path[:, 7], 1)  # object id
-        self.color = G_particle_mass2color[self.mass]
-
     def __str__(self):
         return "Particle: color: %s" %(self.color)
 
     def to_dict(self):
+        # Get mass
+        one_hot = self.particle_path[0, 4:7]  # should be the same for all timesteps, so we just use the first one
+        self.mass = one_hot_to_num(one_hot, G_mass_values)
+        assert np.allclose(self.particle_path[:, 7], 1)  # object id
+        self.color = G_particle_mass2color[self.mass]
         return {'color': self.color, 'mass': self.mass}
 
     def reshape_path(self, path):
