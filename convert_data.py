@@ -393,7 +393,6 @@ def getParticleCoords(observedPath,pindex):
     # so here pindex is 0
     return observedPath[:,0,pindex,:]
 
-
 def render_from_scheme_output(path, framerate, movie_folder, movieName):
     fileobject = open(path)
     data = fileobject.readlines()
@@ -412,7 +411,30 @@ def render_from_scheme_output(path, framerate, movie_folder, movieName):
 
 def render(goos, particles, observed_path, framerate, movie_folder, movieName):
     """
+        input
 
+            goos
+                something like
+                [[[511, 289] [674, 422] 0 'darkmagenta']
+                 [[217, 352] [327, 561] 0 'darkmagenta']
+                 [[80, 155] [205, 299] 0 'darkmagenta']
+                 [[530, 393] [617, 598] 0 'darkmagenta']
+                 [[171, 36] [389, 149] 0 'darkmagenta']]
+
+            particles
+                list of something like
+                {'color': 'red',
+                  'field-color': 'black',  # we hardcode this
+                  'mass': 1.0,
+                  'size': 40.0},  # we hardcode this
+
+            observedPath    = (winsize, [pos, vel], numObjects, [x, y])
+
+            framerate: frames per second
+
+            movie_folder: folder to save movie in
+
+            movieName: name of the movie
     """
     ## Get the data.
     ## data is the x-y coordinates of the particles over times, organized as (STEP0, STEP1, STEP2...)
@@ -679,9 +701,13 @@ def recover_state(this, context, this_pred, config):
     """
         input
             this:       (num_samples, winsize/2, 8)
+                past
             context:    (num_samples, G_num_objects, winsize/2, 8)
-            y:          (num_samples, winsize/2, 8)
-            pred:       (num_samples, winsize/2, 8)
+                may be future or past
+            this_pred:       (num_samples, winsize/2, 8)
+                must match the time of context
+                    can be ground truth if you want to render ground truth
+                    or prediction if you want to render prediction
             config:     something like: worldm1_np=1_ng=1
 
         output
@@ -734,7 +760,7 @@ def recover_state(this, context, this_pred, config):
                         recoverd_path_all_samples[sample_num]))
     return samples
 
-def render_prediction(ground_truth_samples, predicted_samples, sample_num):
+def render_output(samples, sample_num, framerate, movie_folder, movieName):
     """
         ground_truth_samples and predicted_samples: list of tuples
             tuple: (goo, particles, path)
@@ -756,26 +782,38 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    framerate = 10
-    movie_folder = 'rendertestfolder'
-    movieName = 'rendertest'
-
-    gt_sample = ground_truth_samples[sample_num]
-    pred_sample = predicted_samples[sample_num]
-
-    # How to compare gt and pred? That is a pygame thing. Maybe put side by side
+    sample = samples[sample_num]
 
     # render ground truth
-    render(*gt_sample[:],  # (goos, particles, obs_path)
+    render(*sample[:],  # (goos, particles, obs_path)
             framerate=framerate,
             movie_folder=movie_folder,
             movieName=movieName)
-    # assert False
-    #
-    # # render pred_sample
-    # render(*pred_sample[:])
 
-    # possibly do some saving here
+def visualize_results(training_samples_hdf5, sample_num):
+    """
+        input
+            training_samples_hdf5: something like 'worldm1_np=6_ng=5_[15,15].h5'
+
+        Visualizes past as well as ground truth future and predicted future
+    """
+    framerate = 10
+    movie_folder = 'rendertestfolder'
+    movieName = 'rendertest'  # TODO should depend on training_samples_hdf5
+
+    d = load_dict_from_hdf5(training_samples_hdf5)
+    config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
+
+    samples_past = recover_state(d['this'], d['context'], d['this'], config_name)
+    samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name)
+    samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name)
+
+    print 'render past'
+    render_output(samples_past, sample_num, framerate, movie_folder, movieName)
+    print 'render future gt'
+    render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName)
+    print 'render future pred'
+    render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName)
 
 
 if __name__ == "__main__":
@@ -783,24 +821,4 @@ if __name__ == "__main__":
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
 
-    # note this and y match the train data.
-    # now to separate out the context
-    # context = load_hdf5('worldm1_np=2_ng=4_[18,18].h5', 'context')
-
-    d = load_dict_from_hdf5('worldm1_np=6_ng=5_[15,15].h5')
-    # print d['context_future']
-    # print d['context_future'].shape
-    # assert False
-    samples_past = recover_state(d['this'], d['context'], d['this'], 'worldm1_np=6_ng=5')
-    samples_future = recover_state(d['this'], d['context_future'], d['pred'], 'worldm1_np=6_ng=5')
-    print 'samples past'
-    pprint.pprint(samples_past[0][2])
-    print samples_past[0][2].shape
-    print 'samples future'
-    pprint.pprint(samples_future[0][2])
-    print samples_future[0][2].shape
-
-    print 'render past'
-    render_prediction(samples_past, samples_past, 0)
-    print 'render future'
-    render_prediction(samples_future, samples_future, 0)
+    visualize_results('worldm1_np=6_ng=5_[15,15].h5', 0)
