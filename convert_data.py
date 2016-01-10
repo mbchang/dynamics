@@ -415,6 +415,15 @@ def render_from_scheme_output(path, framerate, movie_folder, movieName):
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
     observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
 
+    print 'goos', type(goos)
+    print goos
+    print 'particles', type(particles)
+    print particles
+    print 'observedPath', type(observedPath)
+    print observedPath
+    print observedPath.shape
+    assert False
+
     render(goos, particles, observedPath, framerate, movie_folder, movieName)
 
 
@@ -519,6 +528,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName):
             movieFrame += 1
         elif movieFrame > (len(observed_path)-1):
             done = True
+    assert False
 
 def create_all_videos(root, movie_root):
     """
@@ -777,13 +787,20 @@ def render_prediction(ground_truth_samples, predicted_samples, sample_num):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
+    framerate = 10
+    movie_folder = 'rendertestfolder'
+    movieName = 'rendertest'
+
     gt_sample = ground_truth_samples[sample_num]
     pred_sample = predicted_samples[sample_num]
 
     # How to compare gt and pred? That is a pygame thing. Maybe put side by side
 
     # render ground truth
-    render(*gt_sample[:])
+    render(*gt_sample[:],
+            framerate=framerate,
+            movie_folder=movie_folder,
+            movieName=movieName)
     assert False
 
     # render pred_sample
@@ -829,3 +846,5 @@ if __name__ == "__main__":
     samples = recover_state(d['this'], d['context'], d['y'], d['pred'], 'worldm1_np=2_ng=4')
 
     pprint.pprint(samples[0])
+
+    render_prediction(samples, samples, 0)
