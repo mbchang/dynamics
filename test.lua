@@ -9,7 +9,9 @@ require 'model'
 require 'image'
 require 'torchx'
 require 'hdf5'
+require 'paths'
 require 'data_utils'
+
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
@@ -30,11 +32,27 @@ function Tester.create(dataset, mp)
     collectgarbage()
     return self
 end
+--
+--
+-- function Tester:load_model_from_file(modelfile)
+--     print(type(modelfile))
+--     print(type(modelfile)=='string')
+--     self.network = torch.load(modelfile)
+--     print(self.network)
+--     self.rnns = model_utils.clone_many_times(self.network, self.mp.seq_length, not self.network.parameters)
+--     -- print(self.rnns)
+-- end
 
 
 function Tester:load_model(model)
     ------------------------------------ Create Model ------------------------------------
-    self.network                 = model -- torch.load(modelfile)
+    if type(modelfile)=='string' then
+        self.network = torch.load(model) -- loaded from file
+    else
+        assert(type(model) == 'table') -- passed from trainer
+        self.network = model
+    end
+
     if common_mp.cuda then self.network:cuda() end
 
     ------------------------------------- Parameters -------------------------------------
@@ -100,48 +118,53 @@ function Tester:test(model, params_, num_iters)
         local prediction = all_preds[torch.find(mask,1)[1]] -- (1, windowsize/2)
         -- this would be your 'this', or you could shift over, or do other interesting things
 
-        -- reshape to -- (num_samples x windowsize/2 x 8)   Why is num_samples always one?  --> That's because batch size is always 1
-        -- print('config:'..config)
-        -- print('prediction size before')
-        -- print(prediction:size())
+        -- reshape to -- (num_samples x windowsize/2 x 8)
         prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
-        -- print('prediction size after')
-        -- print(prediction:size())
-        --
-        -- print('context size')
-        -- print(context:size())
-        -- print('y size')
-        -- print(y:size())
-        -- print('this size')
-        -- print(this:size())
-        print('context future')
-        print(context_future:size())
-        print(context_future)
 
-        -- For now, just save it as hdf5. You can feed it back in later if you'd like
-        save_to_hdf5(config..'_['..start..','..finish..'].h5',
-            {pred=prediction,
-            this=this:reshape(this:size(1),
-                        math.floor(self.mp.winsize/2),
-                        self.test_loader.object_dim),
-            context=context:reshape(context:size(1),
-                        context:size(2),
-                        math.floor(self.mp.winsize/2),
-                        self.test_loader.object_dim),
-            y=y:reshape(y:size(1),
-                        math.floor(self.mp.winsize/2),
-                        self.test_loader.object_dim),
-            context_future=context_future:reshape(context_future:size(1),
-                        context_future:size(2),
-                        self.mp.winsize-math.floor(self.mp.winsize/2),
-                        self.test_loader.object_dim)})  -- works, but you should change the name
-
-        -- you should also store the world-config name, and the start and end
-        assert(false)
+        self:save_example_prediction({this, context, y, prediction, context_future},
+                                {config, start, finish},
+                                'model_predictions')
     end
     local avg_loss = sum_loss/num_iters
     collectgarbage()
     return avg_loss
 end
 
-return Tester
+function Tester:save_example_prediction(example, description, folder)
+    --[[
+        example: {this, context, y, prediction, context_future}
+        description: {config, start, finish}
+    --]]
+
+    if not paths.dirp(folder) then paths.mkdir(folder) end
+
+    --unpack
+    local this, context, y, prediction, context_future = unpack(example)
+    local config, start, finish = unpack(description)
+
+    local num_past = math.floor(self.mp.winsize/2)
+    local num_future = self.mp.winsize-math.floor(self.mp.winsize/2)
+
+    -- For now, just save it as hdf5. You can feed it back in later if you'd like
+    save_to_hdf5(folder..'/'..config..'_['..start..','..finish..'].h5',
+        {pred=prediction,
+        this=this:reshape(this:size(1),
+                    num_past,
+                    self.test_loader.object_dim),
+        context=context:reshape(context:size(1),
+                    context:size(2),
+                    num_past,
+                    self.test_loader.object_dim),
+        y=y:reshape(y:size(1),
+                    num_past,
+                    self.test_loader.object_dim),
+        context_future=context_future:reshape(context_future:size(1),
+                    context_future:size(2),
+                    num_future,
+                    self.test_loader.object_dim)})
+end
+
+local t =  Tester.create('testset', test_mp)  -- will choose an example based on random shuffle or not
+t:load_model_from_file('results_batch_size=1_seq_length=10_layers=4_rnn_dim=100_max_epochs=10debug_curriculum/saved_model,lr=0.00025.t7')
+
+-- return Tester

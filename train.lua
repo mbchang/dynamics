@@ -1,4 +1,4 @@
--- Train DDCIGN 
+-- Train DDCIGN
 
 require 'metaparams'
 require 'torch'
@@ -8,7 +8,7 @@ require 'optim'
 require 'model'
 require 'image'
 require 'rmsprop'
-require 'paths' 
+require 'paths'
 -- require 'math'
 
 if common_mp.cuda then require 'cutorch' end
@@ -61,10 +61,10 @@ function Trainer:create_model()
     for j = 0, self.mp.seq_length do
         self.s[j] = {}
         for d = 1, 2 * self.mp.layers do
-            self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda) 
+            self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda)
         end
     end
-    -- This will cache the values of the grad of the s 
+    -- This will cache the values of the grad of the s
     self.ds = {}
     for d = 1, 2 * self.mp.layers do
         self.ds[d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), common_mp.cuda)
@@ -113,7 +113,7 @@ function Trainer:forward_pass_train(params_, x, y)
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
-    end 
+    end
 
     collectgarbage()
     return loss:sum(), self.s, predictions  -- we sum the losses through time!
@@ -128,7 +128,7 @@ function Trainer:backward_pass_train(x, y, mask, loss, state, predictions)
         for d = 1, 2 * self.mp.layers do
             assert(torch.sum(state[j][d]:eq(self.s[j][d])) == torch.numel(self.s[j][d]))
         end
-    end 
+    end
 
     self.theta.grad_params:zero()
     self:reset_ds()
@@ -141,7 +141,7 @@ function Trainer:backward_pass_train(x, y, mask, loss, state, predictions)
     for i = self.mp.seq_length, 1, -1 do
         local sim1 = state[i - 1]
         local derr
-        if mask:clone()[i] == 1 then 
+        if mask:clone()[i] == 1 then
             derr = model_utils.transfer_data(torch.ones(1), common_mp.cuda)
         elseif mask:clone()[i] == 0 then
             derr = model_utils.transfer_data(torch.zeros(1), common_mp.cuda)
@@ -181,10 +181,10 @@ function Trainer:train(num_iters, epoch_num)
 
     -- here do epoch training
     local optim_state = {learningRate   = self.mp.learning_rate,
-                         momentumDecay  = 0.1, 
+                         momentumDecay  = 0.1,
                          updateDecay    = 0.01}
 
-    for i = 1,num_iters do 
+    for i = 1,num_iters do
         local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         c = c + 1
 
@@ -200,7 +200,7 @@ function Trainer:train(num_iters, epoch_num)
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, i, loss[1], self.theta.grad_params:norm()))
         end
 
-        if i % self.mp.save_every == 0 then 
+        if i % self.mp.save_every == 0 then
             torch.save(self.logs.savefile, self.network)
             torch.save(self.logs.lossesfile, self.logs.train_losses)
             print('saved model')
@@ -211,10 +211,10 @@ function Trainer:train(num_iters, epoch_num)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
     -- nice to know, but is always larger than the validation loss because the earlier examples had worse performance
-    local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean() 
+    local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean()
 
     return self.logs.train_losses.losses[#self.logs.train_losses.losses], self.network --self.logs.savefile
-end    
+end
 
 
 function Trainer:curriculum_train(num_subepochs, epoch_num)
@@ -222,7 +222,7 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
     for config_id=1,self.train_loader.num_configs do
         print('Config:', self.train_loader.configs[config_id]..'--------------------------------------------------------------------')
         local config_this, config_context, config_y, config_mask = unpack(self.train_loader:next_config(self.train_loader.configs[config_id], 1, self.train_loader.config_sizes[config_id]))
-        
+
         for i=1,num_subepochs do -- go through the entire config here
             assert(self.train_loader.config_sizes[config_id]%self.train_loader.batch_size==0)
             local _, loss
@@ -245,8 +245,8 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
                 end
 
                 local optim_state = {learningRate = self.mp.learning_rate,
-                     momentumDecay = 0.1, 
-                     updateDecay = 0.01} 
+                     momentumDecay = 0.1,
+                     updateDecay = 0.01}
 
                 _, loss = rmsprop(feval_train, self.theta.params, optim_state)
                 c = c + 1
@@ -260,7 +260,7 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
                 -- print(string.format("epoch %2d\tconfig_id %2d\tsubepoch %2d\tbatch %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, config_id, i, b, loss[1], self.theta.grad_params:norm()))
             end
             print(string.format("epoch %2d\tconfig_id %2d\tsubepoch %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, config_id, i, loss[1], self.theta.grad_params:norm()))
-        end 
+        end
         torch.save(self.logs.savefile, self.network)
         torch.save(self.logs.lossesfile, self.logs.train_losses)
         print('saved model')
@@ -270,7 +270,7 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
     -- nice to know, but is always larger than the validation loss because the earlier examples had worse performance
-    local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean()  
+    local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean()
     return avg_train_losses_this_epoch, self.network --self.logs.savefile
 end
 
@@ -290,6 +290,3 @@ end
 -- print(final_loss)
 
 return Trainer
-
-
-

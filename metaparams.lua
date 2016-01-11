@@ -1,6 +1,6 @@
 local T = require 'pl.tablex'
 
-local pc = true
+local pc = false
 local SEQ_LENGTH = 10
 
 function merge_tables(t1, t2)
@@ -18,7 +18,7 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername..'debug_curriculum'
+    return foldername
 end
 
 

@@ -26,20 +26,20 @@ if common_mp.rand_init_wts then torch.manualSeed(123) end
 
 local all_results = {}
 
-for index, learning_rate in pairs(learning_rates) do 
+for index, learning_rate in pairs(learning_rates) do
     print('Learning rate:', learning_rate)
     trainer:reset(learning_rate)
     local train_losses = {}
     local dev_losses = {}
 
-    local oldp, oldgp 
+    local oldp, oldgp
 
     for i = 1, trainer.mp.max_epochs do
 
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
-        local train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches  
-        -- local _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches  
+        local train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
+        -- local _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches
 
         -- Get the training loss
         local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
@@ -67,6 +67,3 @@ for index, learning_rate in pairs(learning_rates) do
         collectgarbage()
     end
 end
-
-
-
