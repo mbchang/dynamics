@@ -1,3 +1,5 @@
 results*
 demo_results*
 *.pyc
+*.svg
+*.dot
