@@ -12,7 +12,6 @@ require 'hdf5'
 require 'paths'
 require 'data_utils'
 
-
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
 
@@ -104,7 +103,6 @@ function Tester:test(model, num_iters, saveoutput)
     for i = 1, num_iters do
         local this, context, y, mask, config, start, finish, context_future = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
         local test_loss, all_preds = self:forward_pass_test(params_, {this=this,context=context}, y)
-        -- print('test_loss', test_loss)
         sum_loss = sum_loss + test_loss
 
         -- here you have the option to save predictions into a file
@@ -115,9 +113,10 @@ function Tester:test(model, num_iters, saveoutput)
         prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
 
         if saveoutput then
+            assert(torch.type(model)=='string')
             self:save_example_prediction({this, context, y, prediction, context_future},
                                 {config, start, finish},
-                                'model_predictions')
+                                {'model_predictions', model})
         end
     end
     local avg_loss = sum_loss/num_iters
@@ -125,23 +124,28 @@ function Tester:test(model, num_iters, saveoutput)
     return avg_loss
 end
 
-function Tester:save_example_prediction(example, description, folder)
+function Tester:save_example_prediction(example, description, folders)
     --[[
         example: {this, context, y, prediction, context_future}
         description: {config, start, finish}
+        folders: {folder, modelfile}
+            modelfile: like rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7
     --]]
-
-    if not paths.dirp(folder) then paths.mkdir(folder) end
 
     --unpack
     local this, context, y, prediction, context_future = unpack(example)
     local config, start, finish = unpack(description)
+    local folder, modelfile = unpack(folders)
+    local subfolder = string.gsub(modelfile, "/saved_model,", "_"):sub(1, -4)
+
+    if not paths.dirp(folder) then paths.mkdir(folder) end
+    if not paths.dirp(folder..'/'..subfolder) then paths.mkdir(folder..'/'..subfolder) end
 
     local num_past = math.floor(self.mp.winsize/2)
     local num_future = self.mp.winsize-math.floor(self.mp.winsize/2)
 
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
-    save_to_hdf5(folder..'/'..config..'_['..start..','..finish..'].h5',
+    save_to_hdf5(folder..'/'..subfolder..'/'..config..'_['..start..','..finish..'].h5',
         {pred=prediction,
         this=this:reshape(this:size(1),
                     num_past,
