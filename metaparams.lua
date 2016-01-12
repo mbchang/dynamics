@@ -1,6 +1,6 @@
 local T = require 'pl.tablex'
 
-local pc = true
+local pc = false
 local SEQ_LENGTH = 10
 
 function merge_tables(t1, t2)
@@ -18,7 +18,7 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername..'testtest'
+    return foldername..'floatnetworkcurriculum'
 end
 
 
@@ -37,7 +37,7 @@ openmind_mp = {
     batch_size = 100,
     seq_length = SEQ_LENGTH,
     winsize    = 20,
-    max_epochs = 10,
+    max_epochs = 20,
     dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
     num_threads = 4,
     cuda       = true,
@@ -46,7 +46,7 @@ openmind_mp = {
 
 -- Common parameters
 common_mp = {
-    layers        = 4,
+    layers        = 2,
     rnn_dim       = 100,
     rand_init_wts = false,
     seed          = 123

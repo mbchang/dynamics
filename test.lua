@@ -36,6 +36,10 @@ end
 function Tester:load_model(model)
     ------------------------------------ Create Model ------------------------------------
     if torch.type(model)=='string' then
+        -- require 'cunn'
+        -- self.network = cunn.load(model):clone() -- loaded from file
+        -- self.network:float()
+
         self.network = torch.load(model):clone() -- loaded from file
     else
         -- print(torch.type(model))
@@ -82,6 +86,10 @@ function Tester:forward_pass_test(params_, x, y)
     local this_past     = model_utils.transfer_data(x.this:clone(), common_mp.cuda)
     local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
+
+    -- this_past = this_past:float()
+    -- context = context:float()
+    -- this_future = this_future:float()
 
     ------------------- forward pass -------------------
     local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), common_mp.cuda)

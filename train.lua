@@ -203,13 +203,33 @@ function Trainer:train(num_iters, epoch_num)
         end
 
         if i % self.mp.save_every == 0 then
-            torch.save(self.logs.savefile, self.network)
-            torch.save(self.logs.lossesfile, self.logs.train_losses)
+            -- convert from cuda to float before saving
+            -- print('common_mp.cuda', common_mp.cuda)
+            if common_mp.cuda then
+                -- print('Converting to float before saving')
+                self.network:float()
+                torch.save(self.logs.savefile, self.network)
+                self.network:cuda()
+            else
+                torch.save(self.logs.savefile, self.network)
+            end
             print('saved model')
+            torch.save(self.logs.lossesfile, self.logs.train_losses)
         end
         collectgarbage()
     end
-    torch.save(self.logs.savefile, self.network)
+
+    -- convert from cuda to float before saving
+    -- print('common_mp.cuda', common_mp.cuda)
+    if common_mp.cuda then
+        -- print('Converting to float before saving')
+        self.network:float()
+        torch.save(self.logs.savefile, self.network)
+        self.network:cuda()
+    else
+        torch.save(self.logs.savefile, self.network)
+    end
+    print('saved model')
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
     -- nice to know, but is always larger than the validation loss because the earlier examples had worse performance
@@ -224,7 +244,6 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
     for config_id=1,self.train_loader.num_configs do
         print('Config:', self.train_loader.configs[config_id]..'--------------------------------------------------------------------')
         local config_this, config_context, config_y, config_mask = unpack(self.train_loader:next_config(self.train_loader.configs[config_id], 1, self.train_loader.config_sizes[config_id]))
-
         for i=1,num_subepochs do -- go through the entire config here
             assert(self.train_loader.config_sizes[config_id]%self.train_loader.batch_size==0)
             local _, loss
@@ -263,16 +282,39 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
             end
             print(string.format("epoch %2d\tconfig_id %2d\tsubepoch %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, config_id, i, loss[1], self.theta.grad_params:norm()))
         end
-        torch.save(self.logs.savefile, self.network)
         torch.save(self.logs.lossesfile, self.logs.train_losses)
+
+        -- convert from cuda to float before saving
+        -- print('common_mp.cuda', common_mp.cuda)
+        if common_mp.cuda then
+            -- print('Converting to float before saving')
+            self.network:float()
+            torch.save(self.logs.savefile, self.network)
+            self.network:cuda()
+        else
+            torch.save(self.logs.savefile, self.network)
+        end
         print('saved model')
     end
 
-    torch.save(self.logs.savefile, self.network)
+    -- convert from cuda to float before saving
+    -- print('common_mp.cuda', common_mp.cuda)
+    if common_mp.cuda then
+        -- print('Converting to float before saving')
+        self.network:float()
+        torch.save(self.logs.savefile, self.network)
+        self.network:cuda()
+    else
+        torch.save(self.logs.savefile, self.network)
+    end
+    -- print('saved model')
     torch.save(self.logs.lossesfile, self.logs.train_losses)
 
     -- nice to know, but is always larger than the validation loss because the earlier examples had worse performance
     local avg_train_losses_this_epoch = (torch.Tensor(self.logs.train_losses.losses)[{{-c,-1}}]):mean()
+
+    -- print('in train')
+    -- print(self.network)
     return avg_train_losses_this_epoch, self.network --self.logs.savefile
 end
 
