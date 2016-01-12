@@ -16,13 +16,11 @@ local trainer = Trainer.create('trainset', train_mp)  -- need to specify learnin
 local trainer_tester = Tester.create('trainset', test_mp)
 local tester = Tester.create('testset', test_mp)
 
--- local learning_rates = {5e-4, 5e-5, 5e-6}
--- local learning_rates = {5e-4, 5e-5, 5e-6}
 local learning_rates = {5e-4, 5e-5, 5e-6}
 
 local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
 
-if common_mp.rand_init_wts then torch.manualSeed(123) end
+if not common_mp.rand_init_wts then torch.manualSeed(123) end
 
 local all_results = {}
 
@@ -38,15 +36,23 @@ for index, learning_rate in pairs(learning_rates) do
 
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
-        local train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
+        local _, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
         -- local _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches
 
         -- Get the training loss
-        local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        -- local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        print('avg train loss\t', train_loss)
+
+        -- local test_p, test_gp = model:parameters()
+        -- print(test_p)
+        -- assert(test_p:norm() == train_p:norm())
+        -- assert(test_gp:norm() == train_gp:norm())
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
-        local dev_loss = tester:test(model, p, tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        -- local dev_loss = tester:test(model, p, tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        local dev_loss = tester:test(model, tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
 
         -- Record loss
         train_losses[#train_losses+1] = train_loss

@@ -375,10 +375,10 @@ function dataloader:get_batch_info()
         assert(self.current_batch_in_config == self.batch_size)
     end
 
-    print('config: '.. self.configs[self.config_idxs[self.current_config]] ..
-            ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
-            ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 ..
-            ',' .. self.current_batch_in_config .. ']')
+    -- print('config: '.. self.configs[self.config_idxs[self.current_config]] ..
+    --         ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
+    --         ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 ..
+    --         ',' .. self.current_batch_in_config .. ']')
 
     return {self.configs[self.config_idxs[self.current_config]],  -- config name
             -- self.config_sizes[self.config_idxs[self.current_config]],  -- config capacity
@@ -391,9 +391,9 @@ function dataloader:next_batch()
     if self.current_batch > self.num_batches then self.current_batch = 1 end
 
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
-    print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
-            ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    print(config_name, start, finish)
+    -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+    -- print(config_name, start, finish)
     local nextbatch = self:next_config(config_name, start, finish)
     return nextbatch
 end

@@ -1,6 +1,6 @@
 local T = require 'pl.tablex'
 
-local pc = false
+local pc = true
 local SEQ_LENGTH = 10
 
 function merge_tables(t1, t2)
@@ -18,7 +18,7 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername
+    return foldername..'testtest'
 end
 
 
@@ -26,7 +26,7 @@ personal_mp = {
     batch_size  = 1,
     seq_length  = SEQ_LENGTH,  -- max other objects + goos
     winsize     = 10,
-    max_epochs  = 10,
+    max_epochs  = 50,
     dataset_folder = 'hey',
     num_threads = 1,
     cuda        = false,
@@ -76,5 +76,5 @@ train_mp = merge_tables(common_mp, {
 
 -- Testing parameters
 test_mp = merge_tables(common_mp, {
-      shuffle               = true,
+      shuffle               = false,
 })

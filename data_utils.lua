@@ -16,7 +16,7 @@ function split_table(table, num_chunks)
         input
             :type table: table
             :param table: table of elements
-            
+
             :type num_chunks: int
             :param num_chunks: number of chunks you want to split the table into
         output
@@ -78,7 +78,7 @@ function save_to_hdf5(filename, data)
     -- data: dict of {datapath: data}
     local myFile = hdf5.open(filename, 'w')
     for k,v in pairs(data) do
-        print('writing'..k)
+        -- print('writing'..k)
         myFile:write(k, v)  -- I can write many preds in here, indexed by the starting time?
     end
     myFile:close()

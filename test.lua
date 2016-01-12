@@ -46,11 +46,12 @@ end
 
 function Tester:load_model(model)
     ------------------------------------ Create Model ------------------------------------
-    if type(modelfile)=='string' then
-        self.network = torch.load(model) -- loaded from file
+    if torch.type(modelfile)=='string' then
+        self.network = torch.load(model):clone() -- loaded from file
     else
-        assert(type(model) == 'table') -- passed from trainer
-        self.network = model
+        -- print(torch.type(model))
+        assert(torch.type(model) == 'nn.gModule') -- passed from trainer
+        self.network = model:clone()
     end
 
     if common_mp.cuda then self.network:cuda() end
@@ -86,6 +87,8 @@ end
 function Tester:forward_pass_test(params_, x, y)
     -- if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     -- self.theta.grad_params:zero()  -- reset gradient
+    -- print(self.network:getParameters())
+    -- assert(false)
     self:reset_state()  -- reset s
 
     ------------------ get minibatch -------------------
@@ -106,12 +109,14 @@ function Tester:forward_pass_test(params_, x, y)
 end
 
 
-function Tester:test(model, params_, num_iters)
+-- function Tester:test(model, params_, num_iters)
+function Tester:test(model, num_iters)
     self:load_model(model)
     local sum_loss = 0
     for i = 1, num_iters do
         local this, context, y, mask, config, start, finish, context_future = unpack(self.test_loader:next_batch())  -- the way it is defined in loader is to just keep cycling through the same dataset
         local test_loss, all_preds = self:forward_pass_test(params_, {this=this,context=context}, y)
+        -- print('test_loss', test_loss)
         sum_loss = sum_loss + test_loss
 
         -- here you have the option to save predictions into a file
@@ -164,7 +169,11 @@ function Tester:save_example_prediction(example, description, folder)
                     self.test_loader.object_dim)})
 end
 
-local t =  Tester.create('testset', test_mp)  -- will choose an example based on random shuffle or not
-t:load_model_from_file('results_batch_size=1_seq_length=10_layers=4_rnn_dim=100_max_epochs=10debug_curriculum/saved_model,lr=0.00025.t7')
+-- local t =  Tester.create('testset', test_mp)  -- will choose an example based on random shuffle or not
+-- local model = 'rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7'
+-- t:test()
+-- t:load_model_from_file('results_batch_size=1_seq_length=10_layers=4_rnn_dim=100_max_epochs=10debug_curriculum/saved_model,lr=0.00025.t7')
+-- local tmodel = t:load_model('rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7')
+ -- Tester:test(model, params_, num_iters)
 
--- return Tester
+return Tester

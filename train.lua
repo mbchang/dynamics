@@ -160,6 +160,9 @@ end
 
 
 function Trainer:reset(learning_rate)
+    --[[
+        Creates a new Trainer
+    --]]
     self:prepare_logs(learning_rate)
     self:create_model()  -- maybe put this into constructor
 end
@@ -167,7 +170,6 @@ end
 
 function Trainer:train(num_iters, epoch_num)
     local c = 0
-
 
     function feval_train(params_)
         -- feval MUST return loss, grad_loss in order to get fed into the optimizer!
