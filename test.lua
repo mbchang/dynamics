@@ -32,21 +32,11 @@ function Tester.create(dataset, mp)
     collectgarbage()
     return self
 end
---
---
--- function Tester:load_model_from_file(modelfile)
---     print(type(modelfile))
---     print(type(modelfile)=='string')
---     self.network = torch.load(modelfile)
---     print(self.network)
---     self.rnns = model_utils.clone_many_times(self.network, self.mp.seq_length, not self.network.parameters)
---     -- print(self.rnns)
--- end
 
 
 function Tester:load_model(model)
     ------------------------------------ Create Model ------------------------------------
-    if torch.type(modelfile)=='string' then
+    if torch.type(model)=='string' then
         self.network = torch.load(model):clone() -- loaded from file
     else
         -- print(torch.type(model))
@@ -87,8 +77,6 @@ end
 function Tester:forward_pass_test(params_, x, y)
     -- if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     -- self.theta.grad_params:zero()  -- reset gradient
-    -- print(self.network:getParameters())
-    -- assert(false)
     self:reset_state()  -- reset s
 
     ------------------ get minibatch -------------------
@@ -109,8 +97,8 @@ function Tester:forward_pass_test(params_, x, y)
 end
 
 
--- function Tester:test(model, params_, num_iters)
-function Tester:test(model, num_iters)
+-- save is a boolean of whether you want to save output
+function Tester:test(model, num_iters, saveoutput)
     self:load_model(model)
     local sum_loss = 0
     for i = 1, num_iters do
@@ -126,9 +114,11 @@ function Tester:test(model, num_iters)
         -- reshape to -- (num_samples x windowsize/2 x 8)
         prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
 
-        self:save_example_prediction({this, context, y, prediction, context_future},
+        if saveoutput then
+            self:save_example_prediction({this, context, y, prediction, context_future},
                                 {config, start, finish},
                                 'model_predictions')
+        end
     end
     local avg_loss = sum_loss/num_iters
     collectgarbage()
@@ -168,12 +158,5 @@ function Tester:save_example_prediction(example, description, folder)
                     num_future,
                     self.test_loader.object_dim)})
 end
-
--- local t =  Tester.create('testset', test_mp)  -- will choose an example based on random shuffle or not
--- local model = 'rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7'
--- t:test()
--- t:load_model_from_file('results_batch_size=1_seq_length=10_layers=4_rnn_dim=100_max_epochs=10debug_curriculum/saved_model,lr=0.00025.t7')
--- local tmodel = t:load_model('rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7')
- -- Tester:test(model, params_, num_iters)
 
 return Tester

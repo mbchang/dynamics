@@ -56,7 +56,7 @@ function init_object_decoder(rnn_hid_dim, out_dim)
     local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
     local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
 
-    return nn.gModule({rnn_out}, {decoder_out}) 
+    return nn.gModule({rnn_out}, {decoder_out})
 end
 
 
@@ -133,7 +133,7 @@ function test_model()
     for j = 0, seq_length do
         s[j] = {}
         for d = 1, 2 * params.layers do
-            s[j][d] = torch.zeros(batch_size, params.rnn_dim) 
+            s[j][d] = torch.zeros(batch_size, params.rnn_dim)
         end
     end
 
@@ -148,7 +148,7 @@ function test_model()
     for i = 1, seq_length do
         local sim1 = s[i-1]
         loss[i], s[i], predictions[i] = unpack(rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
-    end 
+    end
     print('total loss', loss:sum())
     -- print('accum_loss', accum_loss)
 
@@ -156,10 +156,10 @@ function test_model()
     for i = seq_length, 1, -1 do
         local sim1 = s[i - 1]
         local derr
-        if mask:clone()[i] == 1 then 
+        if mask:clone()[i] == 1 then
             derr = torch.ones(1)
         elseif mask:clone()[i] == 0 then
-            derr = torch.zeros(1) 
+            derr = torch.zeros(1)
         else
             error('invalid mask')
         end
@@ -216,7 +216,7 @@ end
 
 
 
--- -- nn.gModule({thisp_past,contextp, thisp_future}, {err, nn.Identity()(next_s), prediction}) 
+-- -- nn.gModule({thisp_past,contextp, thisp_future}, {err, nn.Identity()(next_s), prediction})
 
 
 --     local x          = torch.random(torch.Tensor(torch.LongStorage{mp.batch_size, mp.seq_length, mp.color_channels, mp.frame_height, mp.frame_width}))
@@ -239,7 +239,7 @@ end
 --     local loss = 0
 --     for t = 1,mp.seq_length do
 --         embeddings[t] = encoder:forward(torch.squeeze(x[{{},{t}}]))
-        
+
 --         lstm_c[t], lstm_h[t] = unpack(self.clones.lstm[t]:forward{embeddings[t], lstm_c[t-1], lstm_h[t-1]})
 --         predictions[t] = self.clones.decoder[t]:forward(lstm_h[t])
 --         loss = loss + self.clones.criterion[t]:forward(predictions[t], torch.squeeze(y[{{},{t}}]))
@@ -249,7 +249,7 @@ end
 --     end
 --     collectgarbage()
 --     return loss, embeddings, lstm_c, lstm_h, predictions
--- end 
+-- end
 
 
 
@@ -257,5 +257,3 @@ end
 
 -- test_model()
 -- test_encoder()
-
-

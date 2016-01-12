@@ -44,11 +44,6 @@ for index, learning_rate in pairs(learning_rates) do
         local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
         print('avg train loss\t', train_loss)
 
-        -- local test_p, test_gp = model:parameters()
-        -- print(test_p)
-        -- assert(test_p:norm() == train_p:norm())
-        -- assert(test_gp:norm() == train_gp:norm())
-
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
         -- local dev_loss = tester:test(model, p, tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!

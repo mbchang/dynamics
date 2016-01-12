@@ -76,5 +76,5 @@ train_mp = merge_tables(common_mp, {
 
 -- Testing parameters
 test_mp = merge_tables(common_mp, {
-      shuffle               = false,
+      shuffle               = true,
 })

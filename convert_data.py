@@ -821,4 +821,5 @@ if __name__ == "__main__":
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
 
-    visualize_results('worldm1_np=6_ng=5_[15,15].h5', 0)
+    # visualize_results('worldm1_np=6_ng=5_[15,15].h5', 0)
+    visualize_results('model_predictions/worldm1_np=6_ng=5_[3,3].h5', 0)

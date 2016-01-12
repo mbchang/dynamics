@@ -67,12 +67,6 @@ function find_all_sequences(folders_list, parent_folder_path, seq_length)
     return data_list
 end
 
--- function save_to_hdf5(filename, data_path, data)
---     local myFile = hdf5.open(filename, 'w')
---     myFile:write(data_path, data)  -- I can write many preds in here, indexed by the starting time?
---     myFile:close()
--- end
-
 function save_to_hdf5(filename, data)
     -- filename: name of hdf5 file
     -- data: dict of {datapath: data}
