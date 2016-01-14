@@ -24,10 +24,13 @@ def one_hot_to_num(one_hot_vector, discrete_values):
         discrete_values is a list of values that the onehot represents
 
         assumes that the one_hot_vector only as one 1
+
+        return the VALUE in discrete_values that the one_hot_vector refers to
     """
     # print one_hot_vector
+    # TODO: this should return the actual value, not the index!
     assert sum(one_hot_vector) == 1  # it had better have one 1
-    return int(np.nonzero(one_hot_vector)[0])
+    return discrete_values[int(np.nonzero(one_hot_vector)[0])]
 
 def stack(list_of_nparrays):
     """
