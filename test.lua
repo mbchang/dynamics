@@ -27,7 +27,7 @@ function Tester.create(dataset, mp)
     setmetatable(self, Tester)
     self.mp = mp
     self.dataset = dataset  -- string for the dataset folder
-    self.test_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, self.mp.curriculum, self.mp.shuffle)
+    self.test_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, false, self.mp.shuffle)
     collectgarbage()
     return self
 end
@@ -156,6 +156,15 @@ function Tester:save_example_prediction(example, description, modelfile)
     local num_future = self.mp.winsize-math.floor(self.mp.winsize/2)
 
     local save_path = experiment..subfolder..lr_file..'_'..config..'_['..start..','..finish..'].h5'
+
+
+    if common_mp.cuda then
+        prediction = prediction:float()
+        this = this:float()
+        context = context:float()
+        y = y:float()
+        context_future = context_future:float()
+    end
 
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
     save_to_hdf5(save_path,
