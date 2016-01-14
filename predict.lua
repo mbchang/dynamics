@@ -13,17 +13,18 @@ local Tester = require 'test'
 -- t:test(model, 1, true)
 
 function predict(parent_folder, experiment_folder, logfile)
-    local t = Tester.create('testset', test_mp)
-
     -- hacky
     local start = experiment_folder:find('layers=') + #'layers='
     local finish = experiment_folder:find('_rnn_dim=') - 1
     local num_layers = tonumber(experiment_folder:sub(start, finish))
+    -- cannot do common_mp.layers! because test_mp has already been constructed
+    -- when you required 'test'
     if num_layers == 4 then
-        common_mp.layers = 4
+        test_mp.layers = 4
     else
-        common_mp.layers = 2
+        test_mp.layers = 2
     end
+    local t = Tester.create('testset', test_mp)
 
     local model = parent_folder..'/'..experiment_folder..'/'..logfile
     t:test(model,1,true)
