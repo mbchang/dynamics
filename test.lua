@@ -124,7 +124,7 @@ function Tester:test(model, num_iters, saveoutput)
             assert(torch.type(model)=='string')
             self:save_example_prediction({this, context, y, prediction, context_future},
                                 {config, start, finish},
-                                {'model_predictions', model})
+                                model)
         end
     end
     local avg_loss = sum_loss/num_iters
@@ -132,28 +132,33 @@ function Tester:test(model, num_iters, saveoutput)
     return avg_loss
 end
 
-function Tester:save_example_prediction(example, description, folders)
+
+function Tester:save_example_prediction(example, description, modelfile)
     --[[
         example: {this, context, y, prediction, context_future}
         description: {config, start, finish}
-        folders: {folder, modelfile}
-            modelfile: like rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7
+        modelfile: like pc/rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100/saved_model,lr=0.0005.t7
+
+        will save to something like:
+            modelfile/predictions/lr=0.0005_worldm1_np=6_ng=5_[1,1].h5
     --]]
 
     --unpack
     local this, context, y, prediction, context_future = unpack(example)
     local config, start, finish = unpack(description)
-    local folder, modelfile = unpack(folders)
-    local subfolder = string.gsub(modelfile, "/saved_model,", "_"):sub(1, -4)
 
-    if not paths.dirp(folder) then paths.mkdir(folder) end
-    if not paths.dirp(folder..'/'..subfolder) then paths.mkdir(folder..'/'..subfolder) end
+    local experiment, lr_file = modelfile:match'(.*/)(.*)'
+    lr_file = lr_file:sub(#'saved_model,'+1):sub(1,-(#'.t7'+1))
+    local subfolder = 'predictions/'
+    if not paths.dirp(experiment..'/'..subfolder) then paths.mkdir(experiment..'/'..subfolder) end
 
     local num_past = math.floor(self.mp.winsize/2)
     local num_future = self.mp.winsize-math.floor(self.mp.winsize/2)
 
+    local save_path = experiment..subfolder..lr_file..'_'..config..'_['..start..','..finish..'].h5'
+
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
-    save_to_hdf5(folder..'/'..subfolder..'/'..config..'_['..start..','..finish..'].h5',
+    save_to_hdf5(save_path,
         {pred=prediction,
         this=this:reshape(this:size(1),
                     num_past,
