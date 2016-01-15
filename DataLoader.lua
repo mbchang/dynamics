@@ -10,6 +10,7 @@ require 'paths'
 require 'hdf5'
 require 'data_utils'
 require 'torchx'
+require 'utils'
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
@@ -19,6 +20,7 @@ dataloader.__index = dataloader
 
 local object_dim = 8
 local max_other_objects = 10
+local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}
 
 
 --[[ Loads the dataset as a table of configurations
@@ -77,27 +79,55 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, dataset_folder, batch_size, curriculum, shuffle)
+function dataloader.create(dataset_name, dataset_folder, specified_configs, batch_size, curriculum, shuffle)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
             dataset_folder: folder containing the .h5 files
             shuffle: boolean
+
+
+            What I want to be able to is to have a dataloader, that takes in parameters:
+                - dataset_name?
+                - shuffle
+                - a table of configs (indexed by number, in order)
+                - batch size
+
+            Then when I do next_batch, it will go through appropriately.
+
+            specified_configs = table of worlds or configs
     --]]
+    assert(all_args_exist{dataset_name, dataset_folder, specified_configs,batch_size,curriculum,shuffle})
+
     local self = {}
     setmetatable(self, dataloader)
-    self.batch_size = batch_size
+
+    -- Givens
     self.dataset_name = dataset_name  -- string
+    self.batch_size = batch_size
+    self.object_dim = object_dim
+    if curriculum then assert(not shuffle) end
+
+    -- Get Dataset
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
-    if curriculum then assert(not shuffle) end
-    if not shuffle then topo_order(self.configs) end
-    self.num_configs = #self.configs
+
+    -- Focus Dataset to Specification
+    if is_empty(specified_configs) then
+        self.specified_configs = self.configs
+    elseif contains_world(specified_configs) then
+        self.specified_configs = get_all_specified_configs(specified_configs, all_configs)
+    else
+        self.specified_configs = specified_configs
+    end
+    assert(is_subset(specified_configs, self.configs))
+    if not shuffle then topo_order(self.specified_configs) end
+    self.num_configs = #self.specified_configs
     self.config_idxs = torch.range(1,self.num_configs)
-    self.total_examples, self.num_batches, self.config_sizes = self:count_examples()
-    self.current_config = 1  -- only used in compute_batches()
-    self.current_batch_in_config = 0  -- only used in compute_batches()
-    self.batchlist = self:compute_batches()
+    self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)  -- TODO count_examples will take in argument
+
+    -- Initial values for iterators
+    self.batchlist = self:compute_batches()  -- TODO
     self.current_batch = 0
 
     if shuffle then
@@ -106,12 +136,10 @@ function dataloader.create(dataset_name, dataset_folder, batch_size, curriculum,
         self.batch_idxs = torch.range(1,self.num_batches)
     end
 
-    -- properties of the dataset
-    self.object_dim = object_dim
-
     collectgarbage()
     return self
 end
+
 
 
 --[[ Expands the number of examples per batch to have an example per particle
@@ -299,12 +327,6 @@ function dataloader:next_config(current_config, start, finish)
         context_future  = context_future:cuda()  -- TODO: note that you have to update this everywhere!
     end
 
-    -- if current_config == 'worldm1_np=6_ng=5' then
-    --     print(context_future[{{15,15}}])  -- because batch size is 1
-    --     print(context_future[{{15,15}}]:size())
-    --     assert(false)
-    -- end
-
     -- Reshape
     this_x          = this_x:reshape(num_samples, num_past*object_dim)
     context_x       = context_x:reshape(num_samples, max_other_objects, num_past*object_dim)
@@ -323,6 +345,7 @@ function dataloader:next_config(current_config, start, finish)
     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
 end
 
+
 -- works
 function dataloader.slice_batch(table_of_data, start, finish)
     local sliced_table_of_data = {}
@@ -333,10 +356,10 @@ function dataloader.slice_batch(table_of_data, start, finish)
 end
 
 
-function dataloader:count_examples()
+function dataloader:count_examples(configs)
     local total_samples = 0
     local config_sizes = {}
-    for i, config in pairs(self.configs) do
+    for i, config in pairs(configs) do
         local config_examples = self.dataset[config]
         local num_samples = config_examples.particles:size(1)*config_examples.particles:size(2)
         total_samples = total_samples + num_samples
@@ -359,31 +382,33 @@ end
 
 
 function dataloader:get_batch_info()
+    local current_config = 1
+    local current_batch_in_config = 0
     -- assumption that a config contains more than one batch
-    self.current_batch_in_config = self.current_batch_in_config + self.batch_size
-    -- current batch is the range: [self.current_batch_in_config - self.batch_size + 1, self.current_batch_in_config]
+    current_batch_in_config = current_batch_in_config + self.batch_size
+    -- current batch is the range: [current_batch_in_config - self.batch_size + 1, current_batch_in_config]
 
-    if self.current_batch_in_config > self.config_sizes[self.config_idxs[self.current_config]] then
-        self.current_config = self.current_config + 1
-        self.current_batch_in_config = self.batch_size -- reset current_batch_in_config
+    if current_batch_in_config > self.config_sizes[self.config_idxs[current_config]] then
+        current_config = current_config + 1
+        current_batch_in_config = self.batch_size -- reset current_batch_in_config
     end
 
-    if self.current_config > self.num_configs then
+    if current_config > self.num_configs then
         -- assert(self.current_batch == self.num_batches+1)
-        self.current_config = 1
+        current_config = 1
         -- self.current_batch = 0
-        assert(self.current_batch_in_config == self.batch_size)
+        assert(current_batch_in_config == self.batch_size)
     end
 
-    -- print('config: '.. self.configs[self.config_idxs[self.current_config]] ..
-    --         ' capacity: '.. self.config_sizes[self.config_idxs[self.current_config]] ..
-    --         ' current batch: ' .. '[' .. self.current_batch_in_config - self.batch_size + 1 ..
-    --         ',' .. self.current_batch_in_config .. ']')
-
-    return {self.configs[self.config_idxs[self.current_config]],  -- config name
-            -- self.config_sizes[self.config_idxs[self.current_config]],  -- config capacity
-            self.current_batch_in_config - self.batch_size + 1,  -- start index in config
-            self.current_batch_in_config}  -- end index in config
+    -- print('config: '.. self.configs[self.config_idxs[current_config]] ..
+    --         ' capacity: '.. self.config_sizes[self.config_idxs[current_config]] ..
+    --         ' current batch: ' .. '[' .. current_batch_in_config - self.batch_size + 1 ..
+    --         ',' .. current_batch_in_config .. ']')
+    -- TODO self.configs
+    return {self.specified_configs[self.config_idxs[current_config]],  -- config name
+            -- self.config_sizes[self.config_idxs[current_config]],  -- config capacity
+            current_batch_in_config - self.batch_size + 1,  -- start index in config
+            current_batch_in_config}  -- end index in config
 end
 
 function dataloader:next_batch()
@@ -411,17 +436,53 @@ function topo_order(configs)
     table.sort(configs)
 end
 
-return dataloader
+-- worlds is a table of worlds
+function get_all_configs_for_worlds(worlds, all_configs)
+    assert(is_subset(worlds, all_worlds))
+    local world_configs = {}
+    for i,config in pairs(all_configs) do
+        for j,world in pairs(worlds) do
+            if is_substring(world, config) then
+                world_configs[#world_configs+1] = config
+            end
+        end
+    end
+    return world_configs
+end
+
+
+
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+function get_all_specified_configs(worldconfigtable, all_configs)
+    local all_specified_configs = {}
+    for i, element in pairs(worldconfigtable) do
+        if is_substring('np', element) then
+            all_specified_configs[#all_specified_configs+1] = element
+        else
+            assert(#element == #'worldm1') -- check that it is a world
+            all_specified_configs = merge_tables_by_value(all_specified_configs, get_all_configs_for_worlds({element}, all_configs))
+        end
+    end
+    return all_specified_configs
+end
+-- return dataloader
 
 -- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
--- d = dataloader.create('trainset','hey', 3, true, false)
--- -- print(d.dataset)
--- print(d.configs)
--- topo_order(d.configs)
--- print(d.configs)
--- print(d.config_idxs)
--- print(d.config_sizes)
--- -- print(d.batchlist)
+d = dataloader.create('trainset','hey', {'worldm1_np=6_ng=5', 'worldm2'}, 3, true, false)
+-- d.configs[#d.configs+1] = 'worldm2_np=6_ng=5'
+-- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'
+-- d.configs[#d.configs+1] = 'worldm3dfdf'
+-- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
+-- print(d)
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+-- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
+-- TODO test the above
+
+
 
 
 -- -- for i=1,20 do
@@ -436,3 +497,19 @@ return dataloader
 -- -- d:compute_batches()
 
 -- d:next_batch()
+
+
+
+--[[
+What I want to be able to is to have a dataloader, that takes in parameters:
+    - shuffle
+    - a table of configs (indexed by number, in order)
+
+Then when I do next_batch, it will go through appropriately.
+
+
+    You should have a function that returns all configs in sorted order
+    as well as function that returns all configs of a certain world
+
+
+]]
