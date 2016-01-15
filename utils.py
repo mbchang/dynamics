@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import os
 
 def num_to_one_hot(array, discrete_values):
     """

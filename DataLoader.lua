@@ -374,18 +374,24 @@ end
 
 
 function dataloader:compute_batches()
+    local current_config = 1
+    local current_batch_in_config = 0
     local batchlist = {}
     for i=1,self.num_batches do
-        batchlist[#batchlist+1] = self:get_batch_info()
+
+        -- todo: update current_config and current_batch_in_config here
+        local batch_info = self:get_batch_info(current_config, current_batch_in_config)
+        current_config = unpack(subrange(batch_info, 5,5))
+        current_batch_in_config = unpack(subrange(batch_info, 4,4))
+        batchlist[#batchlist+1] = subrange(batch_info, 1,4)
     end
     assert(self.num_batches == #batchlist)
     return batchlist
 end
 
 
-function dataloader:get_batch_info()
-    local current_config = 1
-    local current_batch_in_config = 0
+function dataloader:get_batch_info(current_config, current_batch_in_config)
+
     -- assumption that a config contains more than one batch
     current_batch_in_config = current_batch_in_config + self.batch_size
     -- current batch is the range: [current_batch_in_config - self.batch_size + 1, current_batch_in_config]
@@ -408,9 +414,10 @@ function dataloader:get_batch_info()
     --         ',' .. current_batch_in_config .. ']')
     -- TODO self.configs
     return {self.specified_configs[self.config_idxs[current_config]],  -- config name
-            -- self.config_sizes[self.config_idxs[current_config]],  -- config capacity
+            self.config_sizes[self.config_idxs[current_config]],  -- config capacity
             current_batch_in_config - self.batch_size + 1,  -- start index in config
-            current_batch_in_config}  -- end index in config
+            current_batch_in_config, -- for next update
+            current_config}  -- end index in config
 end
 
 function dataloader:next_batch()
@@ -468,7 +475,6 @@ function get_all_configs_for_worlds(worlds, all_configs)
 end
 
 
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
 function get_all_specified_configs(worldconfigtable, all_configs)
     local all_specified_configs = {}
     for i, element in pairs(worldconfigtable) do
@@ -481,23 +487,20 @@ function get_all_specified_configs(worldconfigtable, all_configs)
     end
     return all_specified_configs
 end
+
 -- return dataloader
 
 -- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
-d = dataloader.create('trainset','hey', {'worldm1_np=6_ng=5', 'worldm2'}, 3, true, false)
+d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
+print(d)
+
 -- d.configs[#d.configs+1] = 'worldm2_np=6_ng=5'
 -- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'
 -- d.configs[#d.configs+1] = 'worldm3dfdf'
 -- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
--- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
--- TODO test the above
 
 
+-- TODO: compute_batches is wrong; the start and finish are wrong?
 
 
 -- -- for i=1,20 do

@@ -23,7 +23,7 @@ G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
 
-def convert_file(path):
+def convert_file(path, subsample=3):
     """
         input
             :type path: string
@@ -42,6 +42,9 @@ def convert_file(path):
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
     observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
+
+    # subsample
+    observedPathsub = observedPath[::subsample,:,:,:]
 
     return particles, goos, observedPath
 
@@ -233,7 +236,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
         # Test: 10 10 = 10^2
 
         # the directory hierarchy is
-            root
+            data_root
                 configs
                     videofiles
 
@@ -242,7 +245,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
 
     # Number of Examples
     num_world_configs = len(os.listdir(data_root))  # assume the first world in data_root is representative
-
+    print "Number of world configs", num_world_configs
     print 'Number of train examples:', num_world_configs * (num_train_samples_per ** 2)
     print 'Number of validation examples:', num_world_configs * (num_val_samples_per ** 2)
     print 'Number of test examples:', num_world_configs * (num_test_samples_per ** 2)
@@ -324,28 +327,28 @@ def flatten_dataset(dataset):
 #     g.close()
 
 def save_all_datasets():
-    dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
-    data_root = '/om/user/mbchang/physics-data/data'
-    windowsize = 20  # 2
-    num_train_samples_per = 30  # 3
-    num_val_samples_per = 10  # 1
-    num_test_samples_per = 10  # 1
+    # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
+    # data_root = '/om/user/mbchang/physics-data/data'
+    # windowsize = 20  # 2
+    # num_train_samples_per = 30  # 3
+    # num_val_samples_per = 10  # 1
+    # num_test_samples_per = 10  # 1
 
-    # dataset_files_folder = 'hey'
-    # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/data/physics-data'
-    # windowsize = 10  # 20
-    # num_train_samples_per = 3  # 30
-    # num_val_samples_per = 1  # 10
-    # num_test_samples_per = 1  # 10
+    dataset_files_folder = 'haha'
+    data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
+    windowsize = 10  # 20
+    num_train_samples_per = 8  # 30
+    num_val_samples_per = 4  # 10
+    num_test_samples_per = 4  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
 
-    # save
-    print '\n########################################################################'
-    print 'SAVING'
-    save_dict_to_hdf5(trainset, 'trainset', dataset_files_folder)
-    save_dict_to_hdf5(valset, 'valset', dataset_files_folder)
-    save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
+    # # save
+    # print '\n########################################################################'
+    # print 'SAVING'
+    # save_dict_to_hdf5(trainset, 'trainset', dataset_files_folder)
+    # save_dict_to_hdf5(valset, 'valset', dataset_files_folder)
+    # save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
 
 def fixInputSyntax(l):
     """
@@ -817,6 +820,7 @@ def visualize_results(training_samples_hdf5, sample_num):
 
 
 if __name__ == "__main__":
+    save_all_datasets()
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -826,7 +830,7 @@ if __name__ == "__main__":
 
 
     # FOR THIS EXAMPLE:
-    h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetwork/predictions/lr=0.0005_worldm3_np=3_ng=1_[101,200].h5'
+    # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetwork/predictions/lr=0.0005_worldm3_np=3_ng=1_[101,200].h5'
 
     # visualize_results(h5_file, 2)  # fail
     # visualize_results(h5_file, 99)  # okay
@@ -837,11 +841,7 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS! (predicted after bounce though)
     # visualize_results(h5_file, 65)  # KNOWS HOW TO BOUNCE OFF WALLS! (almost)
     # visualize_results(h5_file, 55)  # particle-particle fail
-    visualize_results(h5_file, 4)  # particle-particle fail
-
-
-
-
+    # visualize_results(h5_file, 4)  # particle-particle fail
 
     # # FOR THIS EXAMPLE:
     # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetworkcurriculum/predictions/lr=0.0005_worldm3_np=2_ng=2_[101,200].h5'

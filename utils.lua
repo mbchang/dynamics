@@ -14,6 +14,14 @@ function try(what)
    return result
 end
 
+function subrange(t, first, last)
+  local sub = {}
+  for i=first,last do
+    sub[#sub + 1] = t[i]
+  end
+  return sub
+end
+
 -- merge t2 into t1
 function merge_tables(t1, t2)
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
