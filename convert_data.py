@@ -22,8 +22,9 @@ from utils import *
 G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
+G_SUBSAMPLE = 1
 
-def convert_file(path, subsample=3):
+def convert_file(path, subsample):
     """
         input
             :type path: string
@@ -153,7 +154,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
 
     return (path_slice, goos)
 
-def get_examples_for_video(video_path, num_samples, windowsize):
+def get_examples_for_video(video_path, num_samples, windowsize, subsample):
     """
         Returns a list of examples for this particular video
 
@@ -170,7 +171,7 @@ def get_examples_for_video(video_path, num_samples, windowsize):
             # stack(video_sample_particles): (num_samples_in_video, num_objects, windowsize, 5)
             # stack(video_sample_goos): (num_samples_in_video, num_goos, 5)
     """
-    particles, goos, observedPath = convert_file(video_path)
+    particles, goos, observedPath = convert_file(video_path, G_SUBSAMPLE)
 
     # sample randomly
     samples_idxs = np.random.choice(range(len(observedPath)-windowsize), num_samples, replace=False)  # indices
@@ -310,21 +311,6 @@ def flatten_dataset(dataset):
             mask[num_particles + num_goos - 1 - 1] = 1  # first -1 for 0-indexing, second -1 because we condition on one particle
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
-
-# def save_dict_to_hdf5(dataset, dataset_name, dataset_folder):
-#     print '\nSaving', dataset_name
-#     h = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'w')
-#     print dataset.keys()
-#     for k, v in dataset.items():
-#         print 'Saving', k
-#         h.create_dataset(k, data=v, dtype='float64')
-#     h.close()
-#     print 'Reading saved file'
-#     g = h5py.File(os.path.join(dataset_folder, dataset_name + '.h5'), 'r')
-#     for k in g.keys():
-#         print k
-#         print g[k][:].shape
-#     g.close()
 
 def save_all_datasets():
     # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
