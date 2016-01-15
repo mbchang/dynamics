@@ -810,8 +810,8 @@ def visualize_results(training_samples_hdf5, sample_num):
 
     print 'render past'
     render_output(samples_past, sample_num, framerate, movie_folder, movieName)
-    print 'render future gt'
-    render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName)
+    # print 'render future gt'
+    # render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName)
     print 'render future pred'
     render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName)
 
@@ -822,4 +822,34 @@ if __name__ == "__main__":
     # assert False
 
     # visualize_results('worldm1_np=6_ng=5_[15,15].h5', 0)
-    visualize_results('model_predictions/worldm1_np=6_ng=5_[3,3].h5', 0)
+    # visualize_results('model_predictions/worldm1_np=6_ng=5_[3,3].h5', 0)
+
+
+    # FOR THIS EXAMPLE:
+    h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetwork/predictions/lr=0.0005_worldm3_np=3_ng=1_[101,200].h5'
+
+    # visualize_results(h5_file, 2)  # fail
+    # visualize_results(h5_file, 99)  # okay
+    # visualize_results(h5_file, 98)  # bounce off wall: knows boundaries
+    # visualize_results(h5_file, 96)  # moves in space, but noisily: it'd be nice to have crisp movement
+    # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
+    # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
+    # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS! (predicted after bounce though)
+    # visualize_results(h5_file, 65)  # KNOWS HOW TO BOUNCE OFF WALLS! (almost)
+    # visualize_results(h5_file, 55)  # particle-particle fail
+    visualize_results(h5_file, 4)  # particle-particle fail
+
+
+
+
+
+    # # FOR THIS EXAMPLE:
+    # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetworkcurriculum/predictions/lr=0.0005_worldm3_np=2_ng=2_[101,200].h5'
+    #
+    # # visualize_results(h5_file, 2)  # fail
+    # # visualize_results(h5_file, 99)  # okay
+    # # visualize_results(h5_file, 98)  # bounce off wall: knows boundaries
+    # visualize_results(h5_file, 96)  # moves in space, but noisily: it'd be nice to have crisp movement
+    # # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
+    # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
+    # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!

@@ -1,6 +1,6 @@
 local T = require 'pl.tablex'
 
-local pc = false
+local pc = true
 local SEQ_LENGTH = 10
 
 function merge_tables(t1, t2)
@@ -18,7 +18,7 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername..'floatnetworkcurriculum'
+    return foldername..'trainloss_gt_devloss_subset_noseed'
 end
 
 
@@ -46,7 +46,7 @@ openmind_mp = {
 
 -- Common parameters
 common_mp = {
-    layers        = 2,
+    layers        = 4,
     rnn_dim       = 100,
     rand_init_wts = false,
     seed          = 123
@@ -64,8 +64,8 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
-      shuffle               = false,
-      curriculum            = true,
+      shuffle               = true,
+      curriculum            = false,
       max_grad_norm         = 10,
 
       -- Data Logging Parameters

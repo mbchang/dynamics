@@ -31,7 +31,12 @@ class Context_Goo():
         [self.left, self.top, self.right, self.bottom] = self.xywh2ltrb_one_box(cx_cy_w_h)
 
         # onehot
+        # print one_hot
         self.strength = one_hot_to_num(one_hot, G_goo_strength_values) # convert to strength
+        # print self.strength
+        # print(one_hot_to_num(np.array([0,1,0]), G_goo_strength_values))
+        # print(one_hot_to_num(np.array([1,0,0]), G_goo_strength_values))
+        # assert False
         self.color = G_goo_strength2color[self.strength]  # convert to color
 
     def __str__(self):

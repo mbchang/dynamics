@@ -125,6 +125,7 @@ function Tester:test(model, num_iters, saveoutput)
             self:save_example_prediction({this, context, y, prediction, context_future},
                                 {config, start, finish},
                                 model)
+            print('save'..i)
         end
     end
     local avg_loss = sum_loss/num_iters

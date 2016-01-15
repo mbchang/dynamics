@@ -22,13 +22,14 @@ function plot_train_losses(losses_file, plotfolder)
     skipped_losses = torch.Tensor(skipped_losses)
 
     -- local plotfile =plotfolder..'/'..losses_file..'_logskippedlosses.png'
-    local plotfile = losses_file..'_logskippedtrainlosses.png'
+    local plotfile = losses_file..'_logtrainlosses.png'
 
     gnuplot.pngfigure(plotfile)
     gnuplot.xlabel('batch')
     gnuplot.ylabel('Log MSE Loss')
     gnuplot.title('Losses On Training Set')  -- change
-    gnuplot.plot({x, skipped_losses})
+    -- gnuplot.plot({x, skipped_losses})
+    gnuplot.plot(train_losses)
     gnuplot.plotflush()
 end
 
@@ -110,4 +111,4 @@ end
 
 
 plot_all_training('openmind')
--- plot_all_experiments('openmind', plot_experiment_results, 'experiment_results.t7')
+-- plot_all_experiments('pc', plot_experiment_results, 'experiment_results.t7')

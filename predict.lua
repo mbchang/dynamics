@@ -13,6 +13,12 @@ local Tester = require 'test'
 -- t:test(model, 1, true)
 
 function predict(parent_folder, experiment_folder, logfile)
+--[[
+    parent_folder: like '/om/user/mbchang/physics_engine/logs'
+    experiment_folder: like 'results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetwork'
+    logfile: like 'saved_model,lr=0.0005.t7'
+]]
+
     -- hacky
     local start = experiment_folder:find('layers=') + #'layers='
     local finish = experiment_folder:find('_rnn_dim=') - 1
@@ -56,4 +62,4 @@ function predict_all_models(parent_folder)
     end
 end
 
-predict_all_models('logs')
+predict_all_models('/om/user/mbchang/physics_engine/logs')

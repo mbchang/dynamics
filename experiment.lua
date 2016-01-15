@@ -37,17 +37,18 @@ for index, learning_rate in pairs(learning_rates) do
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
         local model
+        local train_loss
         if train_mp.curriculum then
-            _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches
+            _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches  TODO: don't make it avg train loss in curriculum!
         else
-            _, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
+            train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
         end
         -- local _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches
 
         -- Get the training loss
         -- local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
-        local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
-        print('avg train loss\t', train_loss)
+        -- local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+        print('train loss\t', train_loss)
 
         -- Test
         -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
