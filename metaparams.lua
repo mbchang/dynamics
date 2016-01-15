@@ -18,16 +18,16 @@ end
 function create_experiment_string(keys, params)
     local foldername = 'results'
     for i=1,#keys do foldername = foldername .. '_'..keys[i]..'='..params[keys[i]] end
-    return foldername..'trainloss_gt_devloss_subset_noseed'
+    return foldername..'trainloss_gt_devloss_testdata'
 end
 
 
 personal_mp = {
-    batch_size  = 1,
+    batch_size  = 1,--4,
     seq_length  = SEQ_LENGTH,  -- max other objects + goos
     winsize     = 10,
     max_epochs  = 50,
-    dataset_folder = 'hey',
+    dataset_folder = 'hey',  -- 'hey'
     num_threads = 1,
     cuda        = false,
     cunn        = false
@@ -38,7 +38,7 @@ openmind_mp = {
     seq_length = SEQ_LENGTH,
     winsize    = 20,
     max_epochs = 20,
-    dataset_folder = '/om/user/mbchang/physics-data/dataset_files',
+    dataset_folder = '/om/user/mbchang/physics-data/dataset_files_full',
     num_threads = 4,
     cuda       = true,
     cunn       = true
@@ -64,7 +64,7 @@ common_mp.results_folder = create_experiment_string({'batch_size', 'seq_length',
 
 -- Training parameters
 train_mp = merge_tables(common_mp, {
-      shuffle               = true,
+      shuffle               = false,
       curriculum            = false,
       max_grad_norm         = 10,
 

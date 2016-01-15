@@ -228,6 +228,8 @@ end
         num_samples_slice is num_samples[start:finish], inclusive
 --]]
 function dataloader:next_config(current_config, start, finish)
+    -- print('current_config', current_config)
+    -- print('start', start, 'finish', finish)
     local minibatch_data = self.dataset[current_config]
     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
     local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
@@ -381,9 +383,9 @@ function dataloader:compute_batches()
 
         -- todo: update current_config and current_batch_in_config here
         local batch_info = self:get_batch_info(current_config, current_batch_in_config)
-        current_config = unpack(subrange(batch_info, 5,5))
-        current_batch_in_config = unpack(subrange(batch_info, 4,4))
-        batchlist[#batchlist+1] = subrange(batch_info, 1,4)
+        current_config = unpack(subrange(batch_info, 4,4))
+        current_batch_in_config = unpack(subrange(batch_info, 3,3))
+        batchlist[#batchlist+1] = subrange(batch_info, 1,3)
     end
     assert(self.num_batches == #batchlist)
     return batchlist
@@ -411,10 +413,8 @@ function dataloader:get_batch_info(current_config, current_batch_in_config)
     -- print('config: '.. self.configs[self.config_idxs[current_config]] ..
     --         ' capacity: '.. self.config_sizes[self.config_idxs[current_config]] ..
     --         ' current batch: ' .. '[' .. current_batch_in_config - self.batch_size + 1 ..
-    --         ',' .. current_batch_in_config .. ']')
-    -- TODO self.configs
+            -- ',' .. current_batch_in_config .. ']')
     return {self.specified_configs[self.config_idxs[current_config]],  -- config name
-            self.config_sizes[self.config_idxs[current_config]],  -- config capacity
             current_batch_in_config - self.batch_size + 1,  -- start index in config
             current_batch_in_config, -- for next update
             current_config}  -- end index in config
@@ -427,7 +427,6 @@ function dataloader:next_batch()
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    -- print(config_name, start, finish)
     local nextbatch = self:next_config(config_name, start, finish)
     return nextbatch
 end
@@ -488,11 +487,11 @@ function get_all_specified_configs(worldconfigtable, all_configs)
     return all_specified_configs
 end
 
--- return dataloader
+return dataloader
 
 -- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
-d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
-print(d)
+-- d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
+-- print(d)
 
 -- d.configs[#d.configs+1] = 'worldm2_np=6_ng=5'
 -- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'

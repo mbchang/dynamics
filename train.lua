@@ -25,7 +25,7 @@ function Trainer.create(dataset, mp)
     setmetatable(self, Trainer)
     self.mp = mp
     self.dataset = dataset  -- string name of folder containing trainig examples
-    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, self.mp.batch_size, self.mp.curriculum, self.mp.shuffle)
+    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, {}, self.mp.batch_size, self.mp.curriculum, self.mp.shuffle)
     collectgarbage()
     return self
 end
@@ -319,17 +319,17 @@ function Trainer:curriculum_train(num_subepochs, epoch_num)
 end
 
 
--- train_mp.batch_size = 3
+-- train_mp.batch_size = 1
 -- torch.manualSeed(123)
 -- trainer = Trainer.create('trainset', train_mp)
--- local lr = 5e-3
+-- local lr = 5e-4
 -- trainer:reset(lr)
--- for i=0,10 do
+-- -- for i=0,10 do
 --     print('Learning rate:', trainer.mp.learning_rate)
---     trainer:curriculum_train(10, i)
---     trainer.mp.learning_rate=trainer.mp.learning_rate/math.sqrt(2)
--- end
-
+-- --     trainer:train(10, i)
+-- --     trainer.mp.learning_rate=trainer.mp.learning_rate/math.sqrt(2)
+-- -- end
+--
 -- final_loss = trainer:train(1000, 0)
 -- print(final_loss)
 

@@ -9,11 +9,11 @@ import pprint
 import re
 import h5py
 
-# PyGame Constants
-import pygame
-from pygame.locals import *
-from pygame.color import THECOLORS
-import particle
+# PyGame Constants Comment out for openmind
+# import pygame
+# from pygame.locals import *
+# from pygame.color import THECOLORS
+# import particle
 
 # Local imports
 from context_particles import *
@@ -235,13 +235,22 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
 
 def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize):
     """
-        4 worlds * 30 configs * 500 videos * 400 timesteps * 1-6 particles
+        orig: 4 worlds * 30 configs * 500 videos * 400 timesteps * 1-6 particles
+
+        subsampled: 4 worlds * 30 configs * 500 videos * 80 timesteps * 1-6 particles = 28,800,000
+            let's say on average there are 3 particles
+
+        computation: 4 worlds * 30 configs * 3 particles * (x per config * y per video)
+
+        Note that you have 339,380 parameters with 4 layers, so you need about 60,000 training, 10,000 validation, 10,000 test
+
+        TODO: make more flexible
 
         samples_per: (per_config, per_video)
 
-        # Train: 30 30 = 30^2
-        # Val: 10 10 = 10^2
-        # Test: 10 10 = 10^2
+        # Train: 50 5 = 250 --> 4 worlds * 30 configs * 3 particles * 50 videos * 5 timesteps = 90,000
+        # Val: 10 5 = 50 --> 4 worlds * 30 configs * 3 particles * 10 videos * 5 timesteps = 18,000
+        # Test: 10 5 = 50 --> 4 worlds * 30 configs * 3 particles * 10 videos * 5 timesteps = 18,000
 
         # the directory hierarchy is
             data_root
@@ -328,21 +337,19 @@ def flatten_dataset(dataset):
     return flattened_dataset
 
 def save_all_datasets(dryrun):
-    # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
-    # data_root = '/om/user/mbchang/physics-data/data'
-    # windowsize = 20  # 2
-    # num_train_samples_per = 30  # 3 TODO: this could be asymmetric, more examples, less per video
-    # num_val_samples_per = 10  # 1
-    # num_test_samples_per = 10  # 1
+    dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files_subsampled'
+    data_root = '/om/user/mbchang/physics-data/data'
+    windowsize = 20  # 2
+    num_train_samples_per = (50, 5)  # 3
+    num_val_samples_per = (10, 5)  # 1
+    num_test_samples_per = (10, 5)  # 1
 
-    # TODO samples_per should be a tuple ( , )
-
-    dataset_files_folder = 'haha'
-    data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
-    windowsize = 10  # 20
-    num_train_samples_per = (8, 8)  # 30
-    num_val_samples_per = (4, 4)  # 10
-    num_test_samples_per = (4, 4)  # 10
+    # dataset_files_folder = 'haha'
+    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
+    # windowsize = 10  # 20
+    # num_train_samples_per = (8, 8)  # 30
+    # num_val_samples_per = (4, 4)  # 10
+    # num_test_samples_per = (4, 4)  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
 

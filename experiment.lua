@@ -21,6 +21,7 @@ local learning_rates = {5e-4, 5e-5, 5e-6}
 local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
 
 if not common_mp.rand_init_wts then torch.manualSeed(123) end
+torch.manualSeed(123)
 
 local all_results = {}
 
