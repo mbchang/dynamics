@@ -22,7 +22,7 @@ from utils import *
 G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
-G_SUBSAMPLE = 1
+G_SUBSAMPLE = 5  # 5 is a good rate
 
 def convert_file(path, subsample):
     """
@@ -46,8 +46,9 @@ def convert_file(path, subsample):
 
     # subsample
     observedPathsub = observedPath[::subsample,:,:,:]
+    print 'Total timesteps:', observedPath.shape[0], 'After subsampling', G_SUBSAMPLE, ':', observedPathsub.shape[0]
 
-    return particles, goos, observedPath
+    return particles, goos, observedPathsub
 
 def ltrb2xywh(boxes):
     """
@@ -154,7 +155,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
 
     return (path_slice, goos)
 
-def get_examples_for_video(video_path, num_samples, windowsize, subsample):
+def get_examples_for_video(video_path, num_samples, windowsize):
     """
         Returns a list of examples for this particular video
 
@@ -211,6 +212,10 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
             # config_sample_particles: (num_samples_in_config, num_objects, windowsize, 5)
             # config_sample_goos: (num_samples_in_config, num_goos, 5)
     """
+    # assert(len(config_sample_idxs)==num_samples_per_video)
+    for v in os.listdir(config_path):
+        assert '.ss' in v # make sure videos are valid
+
     config_sample_particles = []
     config_sample_goos = []
     print 'config samples idxes:', np.array(os.listdir(config_path))[config_sample_idxs]
@@ -232,6 +237,8 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     """
         4 worlds * 30 configs * 500 videos * 400 timesteps * 1-6 particles
 
+        samples_per: (per_config, per_video)
+
         # Train: 30 30 = 30^2
         # Val: 10 10 = 10^2
         # Test: 10 10 = 10^2
@@ -243,16 +250,22 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
 
         Train, val, test are split on the video level, not within the video
     """
+    def get_samples_per(samples_per_tuple):
+        return {'per_config': samples_per_tuple[0], 'per_video': samples_per_tuple[1]}
+
+    sp = {'train': get_samples_per(num_train_samples_per),
+          'val': get_samples_per(num_val_samples_per),
+          'test': get_samples_per(num_test_samples_per)}
 
     # Number of Examples
     num_world_configs = len(os.listdir(data_root))  # assume the first world in data_root is representative
     print "Number of world configs", num_world_configs
-    print 'Number of train examples:', num_world_configs * (num_train_samples_per ** 2)
-    print 'Number of validation examples:', num_world_configs * (num_val_samples_per ** 2)
-    print 'Number of test examples:', num_world_configs * (num_test_samples_per ** 2)
+    print 'Number of train examples:', num_world_configs * (sp['train']['per_config'] * sp['train']['per_video'])# ** 2)
+    print 'Number of validation examples:', num_world_configs * (sp['val']['per_config'] * sp['val']['per_video'])# ** 2)
+    print 'Number of test examples:', num_world_configs * (sp['test']['per_config'] * sp['test']['per_video'])# ** 2)
 
     # Number of total videos to sample per config
-    num_sample_videos_per_config = num_train_samples_per + num_test_samples_per + num_test_samples_per  # 30 + 10 + 10
+    num_sample_videos_per_config = sp['train']['per_config'] + sp['val']['per_config'] + sp['test']['per_config']  # 30 + 10 + 10
 
     # Containers
     trainset    = {}  # a dictionary of train examples, with 120 keys for world-config
@@ -260,6 +273,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     testset     = {}  # a dictionary of test examples, with 120 keys for world-config
 
     # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
+    # TODO: where do we sample from each config?
     for world_config in os.listdir(data_root):
         # if 'np=2_ng=0' in world_config:  # TAKEOUT
         print '\n########################################################################'
@@ -267,28 +281,29 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
         config_path = os.path.join(data_root, world_config)
         num_videos_per_config = len(os.listdir(config_path))
 
-        # sample random videos
+        # sample random videos in the config. Here is where we sample number of videos per config. Don't care if in train, val, or test
         sampled_videos_idxs = np.random.choice(range(num_videos_per_config), num_sample_videos_per_config, replace=False)
 
-        # split into train and val and test. This is where we split train, val, set: on the video level
-        train_sample_idxs   = sampled_videos_idxs[:num_train_samples_per]  # first part
-        val_sample_idxs     = sampled_videos_idxs[num_train_samples_per:num_train_samples_per+num_val_samples_per]  # middle part
-        test_sample_idxs    = sampled_videos_idxs[num_train_samples_per+num_val_samples_per:]  # last part
+        # split into train and val and test. This is where we split train, val, set within the config
+        train_sample_idxs   = sampled_videos_idxs[:sp['train']['per_config']]  # first part
+        val_sample_idxs     = sampled_videos_idxs[sp['train']['per_config']:sp['train']['per_config']+sp['val']['per_config']]  # middle part
+        test_sample_idxs    = sampled_videos_idxs[sp['train']['per_config']+sp['val']['per_config']:]  # last part
 
         # check sizes. We defined the number of videos sampled will also be the number of samples in that video
-        assert len(train_sample_idxs) == num_train_samples_per
-        assert len(val_sample_idxs) == num_test_samples_per
-        assert len(test_sample_idxs) == num_test_samples_per
+        assert len(train_sample_idxs) == sp['train']['per_config']
+        assert len(val_sample_idxs) == sp['val']['per_config']
+        assert len(test_sample_idxs) == sp['test']['per_config']
 
         # add to dictionary. The values returned by get_examples_for_config are tuples!
+        # Here sample within config, but pass num_samples_within_video here for use that will be used get_examples_for_video
         print '\nTRAINSET'
-        trainset[world_config]    = get_examples_for_config(config_path, train_sample_idxs, num_train_samples_per, windowsize)
+        trainset[world_config]    = get_examples_for_config(config_path, train_sample_idxs, sp['train']['per_video'], windowsize)
         print '\nVALSET'
-        valset[world_config]      = get_examples_for_config(config_path, val_sample_idxs, num_val_samples_per, windowsize)
+        valset[world_config]      = get_examples_for_config(config_path, val_sample_idxs, sp['val']['per_video'], windowsize)
         print '\nTESTSET'
-        testset[world_config]     = get_examples_for_config(config_path, test_sample_idxs, num_test_samples_per, windowsize)
+        testset[world_config]     = get_examples_for_config(config_path, test_sample_idxs, sp['test']['per_video'], windowsize)
 
-    # flatten the datasets and add masks
+    # flatten the datasets
     trainset = flatten_dataset(trainset)
     valset = flatten_dataset(valset)
     testset = flatten_dataset(testset)
@@ -312,29 +327,32 @@ def flatten_dataset(dataset):
         flattened_dataset[k+'mask'] = mask
     return flattened_dataset
 
-def save_all_datasets():
+def save_all_datasets(dryrun):
     # dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files'
     # data_root = '/om/user/mbchang/physics-data/data'
     # windowsize = 20  # 2
-    # num_train_samples_per = 30  # 3
+    # num_train_samples_per = 30  # 3 TODO: this could be asymmetric, more examples, less per video
     # num_val_samples_per = 10  # 1
     # num_test_samples_per = 10  # 1
+
+    # TODO samples_per should be a tuple ( , )
 
     dataset_files_folder = 'haha'
     data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
     windowsize = 10  # 20
-    num_train_samples_per = 8  # 30
-    num_val_samples_per = 4  # 10
-    num_test_samples_per = 4  # 10
+    num_train_samples_per = (8, 8)  # 30
+    num_val_samples_per = (4, 4)  # 10
+    num_test_samples_per = (4, 4)  # 10
 
     trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
 
     # # save
-    # print '\n########################################################################'
-    # print 'SAVING'
-    # save_dict_to_hdf5(trainset, 'trainset', dataset_files_folder)
-    # save_dict_to_hdf5(valset, 'valset', dataset_files_folder)
-    # save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
+    if not dryrun:
+        print '\n########################################################################'
+        print 'SAVING'
+        save_dict_to_hdf5(trainset, 'trainset', dataset_files_folder)
+        save_dict_to_hdf5(valset, 'valset', dataset_files_folder)
+        save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
 
 def fixInputSyntax(l):
     """
@@ -383,20 +401,9 @@ def getParticleCoords(observedPath,pindex):
     return observedPath[:,0,pindex,:]
 
 def render_from_scheme_output(path, framerate, movie_folder, movieName):
-    fileobject = open(path)
-    data = fileobject.readlines()
-
-    ## Note that the input file has to be 'comma-ed' and the brackets fixed, since Scheme gives us data without commas.
-    configuration   = eval(fixInputSyntax(data[0]))
-    forces          = np.array(configuration[0])
-    particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
-    goos            = np.array(configuration[2])
-    initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
-    initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
-    observedPath    = np.array(eval(fixInputSyntax(data[3])))  # (numSteps, [pos, vel], numObjects, [x, y])
-
+    particles, goos, observedPath = convert_file(path, G_SUBSAMPLE)
+    print(observedPath.shape)
     render(goos, particles, observedPath, framerate, movie_folder, movieName)
-
 
 def render(goos, particles, observed_path, framerate, movie_folder, movieName):
     """
@@ -517,7 +524,7 @@ def create_all_videos(root, movie_root):
         movei_root: folder you want to save the movies in
 
     """
-    framerate = 100
+    framerate = 10
     for folder in os.listdir(root):
         if folder[0] != '.':
             folder_abs_path = os.path.join(root, folder)  # each folder here is a world configuration
@@ -806,7 +813,7 @@ def visualize_results(training_samples_hdf5, sample_num):
 
 
 if __name__ == "__main__":
-    save_all_datasets()
+    save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
