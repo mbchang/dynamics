@@ -11,6 +11,7 @@ require 'hdf5'
 require 'data_utils'
 require 'torchx'
 require 'utils'
+local T = require 'pl.tablex'
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
@@ -102,34 +103,35 @@ function dataloader.create(dataset_name, dataset_folder, specified_configs, batc
     local self = {}
     setmetatable(self, dataloader)
 
-    -- Givens
+    ---------------------------------- Givens ----------------------------------
     self.dataset_name = dataset_name  -- string
     self.batch_size = batch_size
     self.object_dim = object_dim
     if curriculum then assert(not shuffle) end
 
-    -- Get Dataset
+    -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
 
-    -- Focus Dataset to Specification
+    ---------------------- Focus Dataset to Specification ----------------------
     if is_empty(specified_configs) then
         self.specified_configs = self.configs
     elseif contains_world(specified_configs) then
-        self.specified_configs = get_all_specified_configs(specified_configs, all_configs)
+        self.specified_configs = get_all_specified_configs(specified_configs, T.deepcopy(self.configs))
     else
         self.specified_configs = specified_configs
     end
-    assert(is_subset(specified_configs, self.configs))
+    assert(is_subset(self.specified_configs, self.configs))
     if not shuffle then topo_order(self.specified_configs) end
     self.num_configs = #self.specified_configs
     self.config_idxs = torch.range(1,self.num_configs)
     self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)  -- TODO count_examples will take in argument
 
-    -- Initial values for iterators
+    ----------------------- Initial values for iterator ------------------------
     self.batchlist = self:compute_batches()  -- TODO
     self.current_batch = 0
 
+    ---------------------------------- Shuffle ---------------------------------
     if shuffle then
         self.batch_idxs = torch.randperm(self.num_batches)
     else
@@ -436,7 +438,22 @@ function topo_order(configs)
     table.sort(configs)
 end
 
+
+function contains_world(worldconfigtable)
+    for _,v in pairs(worldconfigtable) do
+        if #v >= #'worldm1' then
+            local prefix = v:sub(1,#'worldm')
+            local suffix = v:sub(#'worldm'+1)
+            if (prefix == 'worldm') and (tonumber(suffix) ~= nil) then -- assert that it is a number
+                return true
+            end
+        end
+    end
+    return false
+end
+
 -- worlds is a table of worlds
+-- all_configs is a table of configs
 function get_all_configs_for_worlds(worlds, all_configs)
     assert(is_subset(worlds, all_worlds))
     local world_configs = {}
@@ -449,7 +466,6 @@ function get_all_configs_for_worlds(worlds, all_configs)
     end
     return world_configs
 end
-
 
 
 -- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
@@ -473,7 +489,6 @@ d = dataloader.create('trainset','hey', {'worldm1_np=6_ng=5', 'worldm2'}, 3, tru
 -- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'
 -- d.configs[#d.configs+1] = 'worldm3dfdf'
 -- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
--- print(d)
 -- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
 -- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
 -- TODO write a function that takes in a table of configs and worlds and calls get_all_configs_for_world
