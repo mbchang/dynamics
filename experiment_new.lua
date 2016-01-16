@@ -188,6 +188,8 @@ end
 
 
 function test()
+    -- print(model.theta.params)
+    -- assert(false)
     local sum_loss = 0
     for i = 1,test_loader.num_batches do
         -- xlua.progress(t, test_loader.num_batches)
@@ -208,15 +210,13 @@ function test()
         --                         {config, start, finish},
         --                         {'model_predictions', model})
         -- end
-        local avg_loss = sum_loss/test_loader.num_batches
-        collectgarbage()
-        return avg_loss
     end
+    local avg_loss = sum_loss/test_loader.num_batches
+    collectgarbage()
+    return avg_loss
 end
 
 init(false)
-
-
 
 local all_results = {}
 
@@ -233,7 +233,7 @@ for i = 1, mp.max_epochs do
 
     -- Train
     -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
-    local model
+    -- local model
     local train_loss
     -- print(optim_state)
     train_loss = train(i)  -- trainer.train_loader.num_batches
@@ -241,6 +241,8 @@ for i = 1, mp.max_epochs do
     -- local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
     -- local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
     print('train loss\t', train_loss)
+    -- print(model.theta.params)
+    -- assert(false)
 
     -- Test
     -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
