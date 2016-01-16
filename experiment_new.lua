@@ -27,7 +27,7 @@ mp = lapp[[
    -c,--server		  (default "pc")			pc=personal | op = openmind
    -s,--shuffle  	  (default false)
    -r,--lr            (default 0.0005)      	learning rate
-   -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
+   -i,--max_epochs    (default 5)           	maximum nb of iterations per batch, for LBFGS
    --batch_size       (default 1)           	1 pc, 100 op
    --rnn_dim          (default 100)
    --seq_length       (default 10)				10 pc, 20 op
@@ -183,7 +183,7 @@ function train(epoch_num)
         if common_mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
-    return train_loss
+    return train_loss[1]  -- because train_loss is returned as a table
 end
 
 
@@ -263,7 +263,7 @@ for i = 1, mp.max_epochs do
     all_results[learning_rate] = {results_train_losses  = torch.Tensor(train_losses),
                                   results_dev_losses    = torch.Tensor(dev_losses)}
     print('all_results', all_results)
-    torch.save(experiment_results, all_results)
+    -- torch.save(experiment_results, all_results)
 
     if common_mp.cuda then cutorch.synchronize() end
     collectgarbage()

@@ -13,11 +13,8 @@ function merge_tables(t1, t2)
 end
 
 function create_experiment_string(keys, params)
-    print(keys)
-    print(params)
     local foldername = 'results'
     for i=1,#keys do
-        print(params[keys[i]])
         foldername = foldername .. '_'..keys[i]..'='..params[keys[i]]
     end
     return foldername

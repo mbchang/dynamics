@@ -80,6 +80,9 @@ end
 function Tester:forward_pass_test(params_, x, y)
     -- if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     -- self.theta.grad_params:zero()  -- reset gradient
+    -- local p, gp = self.network:getParameters()
+    -- print(p)
+    -- assert(false)
     self:reset_state()  -- reset s
 
     ------------------ get minibatch -------------------

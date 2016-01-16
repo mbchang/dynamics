@@ -24,7 +24,6 @@ RETURN:
 
 function rmsprop(opfunc, x, config, state)
 
-
    -- get parameters
    local config = config or {}
    local state = state or config
@@ -37,11 +36,11 @@ function rmsprop(opfunc, x, config, state)
    state.evalCounter = state.evalCounter or 0
    state.m = state.m or torch.Tensor():typeAs(dfdx):resizeAs(dfdx):fill(0)
    state.v = state.v or torch.Tensor():typeAs(dfdx):resizeAs(dfdx):fill(0)
-   
+
    -- Decay term
    state.m:mul(1 - b1)
 
-   -- New term 
+   -- New term
    state.momentum_dfdx = state.momentum_dfdx or torch.Tensor():typeAs(dfdx):resizeAs(dfdx)
    state.momentum_dfdx:copy(dfdx)
 
@@ -83,7 +82,7 @@ end
 -- 	meta_learning_alpha = 0.005--1e-3
 
 -- 	gradAverageArr=torch.zeros(3)
--- 	gamma = {math.exp(1), math.exp(3),math.exp(6)} 
+-- 	gamma = {math.exp(1), math.exp(3),math.exp(6)}
 -- 	for i=1,3 do
 --     	gradAverageArr[i] = 1/gamma[i] * torch.pow(dfdx:norm(), 2) + (1-(1/gamma[i]))*gradAverage
 --     end
@@ -99,7 +98,7 @@ end
 -- 	-- config.evalCounter = config.evalCounter or 0
 -- 	-- config.m = config.m or torch.Tensor():typeAs(dfdx):resizeAs(dfdx):fill(0)
 -- 	-- config.v = config.v or torch.Tensor():typeAs(dfdx):resizeAs(dfdx):fill(0)
-	
+
 -- 	-- -- Decay term
 -- 	-- config.m:mul(1 - b1)
 
@@ -125,7 +124,7 @@ end
 -- 	-- config.update = config.update or torch.Tensor():typeAs(config.v):resizeAs(config.v)
 -- 	-- config.update:copy(config.v)
 -- 	-- config.momentum_update:cdiv(config.update:add(1e-8):sqrt())
-	
+
 -- 	-- local gamma = (math.sqrt(1 - math.pow(1 - b2,config.evalCounter))/(1 - math.pow(1 - b1, config.evalCounter)))
 -- 	-- config.momentum_update:mul(gamma)
 -- 	-- x:add(-lr, config.momentum_update)

@@ -26,7 +26,7 @@ personal_mp = {
     batch_size  = 1,--4,
     seq_length  = SEQ_LENGTH,  -- max other objects + goos
     winsize     = 10,
-    max_epochs  = 50,
+    max_epochs  = 5,
     dataset_folder = 'hey',  -- 'hey'
     num_threads = 1,
     cuda        = false,
@@ -79,4 +79,4 @@ test_mp = merge_tables(common_mp, {
       shuffle               = true,
 })
 
-print(train_mp)
+-- print(train_mp)
