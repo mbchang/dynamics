@@ -11,7 +11,6 @@ require 'xlua'
 require 'Base'
 require 'sys'
 require 'pl'
--- local T = require 'pl.tablex'
 
 
 -- TODO: Have a shell script for openmind and for pc
@@ -42,8 +41,11 @@ params = lapp[[
 ]]
 
 
+-- torch.manualSeed(123)
+-- if params.rand_init_wts then torch.manualSeed(123) end
+if params.shuffle == 'false' then params.shuffle = false end
+if params.rand_init_wts == 'false' then params.rand_init_wts = false end
 
-if params.rand_init_wts then torch.manualSeed(123) end
 if params.server == 'pc' then
 	params.winsize = 10
 	params.dataset_folder = 'hey'
@@ -68,26 +70,38 @@ params.out_dim = 8.0*params.winsize/2
 params.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, params) .. 'new_test'
 
 
-common_mp = tablex.deepcopy(params)
-train_mp = tablex.deepcopy(params)
-test_mp = tablex.deepcopy(params)
-
-
-if common_mp.cuda then require 'cutorch' end
-if common_mp.cunn then require 'cunn' end
-
 -- threads
 -- torch.setnumthreads(common_mp.num_threads)
 -- print('<torch> set nb of threads to ' .. torch.getnumthreads())
 
-local Trainer = require 'train'
 local Tester = require 'test'
+local Trainer = require 'train'
+
+-- print('common_mp')
+-- print(common_mp)
+-- print('train_mp')
+-- print(train_mp)
+
+common_mp = tablex.deepcopy(params)
+train_mp = tablex.deepcopy(params)  -- problem: something in train_mp got mutated in Trainer
+test_mp = tablex.deepcopy(params)
+--
+-- print('common_mp')
+-- print(common_mp)
+-- print('train_mp')
+-- print(train_mp)
+
+
+-- assert(false)
+
+if common_mp.cuda then require 'cutorch' end
+if common_mp.cunn then require 'cunn' end
 
 local trainer = Trainer.create('trainset', train_mp)  -- need to specify learning rate here
 local trainer_tester = Tester.create('trainset', test_mp)
 local tester = Tester.create('testset', test_mp)
 
-local learning_rates = {5e-4, 5e-5, 5e-6}
+-- local learning_rates = {5e-4, 5e-5, 5e-6}
 
 local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
 
