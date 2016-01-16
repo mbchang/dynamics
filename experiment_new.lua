@@ -70,7 +70,6 @@ local optim_state = {learningRate   = mp.lr,
                      momentumDecay  = 0.1,
                      updateDecay    = 0.01}
 
-
 local D = require 'DataLoader'
 local M = require 'model_new'
 local model, train_loader, test_loader
@@ -147,8 +146,8 @@ function train(epoch_num)
         -- local optim_state = {learningRate   = mp.lr,
         --                      momentumDecay  = 0.1,
         --                      updateDecay    = 0.01}
-        print('optim_state before', optim_state)
-        assert(false)
+        -- print('optim_state before', optim_state)
+        -- assert(false)
 
         --   xlua.progress(t, dataloader.num_batches)
         new_params, train_loss = rmsprop(feval_train, model.theta.params, optim_state)  -- next batch
@@ -216,6 +215,7 @@ function test()
 end
 
 init(false)
+
 
 
 local all_results = {}
