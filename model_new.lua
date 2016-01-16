@@ -163,12 +163,13 @@ end
 
 function model:fp(params_, x, y)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+    self.theta.grad_params:zero()  -- reset gradient
     self:reset_state() -- because we are doing a fresh new forward pass
 
     -- unpack inputs TODO: add context_future here too for rendering like in test.lua!
-    local this_past     = model_utils.transfer_data(x.this:clone(), common_mp.cuda)
-    local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
-    local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
+    local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
+    local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
+    local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
 
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
@@ -176,14 +177,14 @@ function model:fp(params_, x, y)
     assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.input_dim)
 
     -- it makes sense to zero the loss here
-    local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), common_mp.cuda)
+    local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), self.mp.cuda)
     local predictions = {}
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
     end
 
-    self.loss = loss  -- TODO decide whether you want this or not, or you could just reset the state
+    -- self.loss = loss  -- TODO decide whether you want this or not, or you could just reset the state
     collectgarbage()
     return loss:sum(), self.s, predictions  -- we sum the losses through time!
 end
@@ -205,21 +206,21 @@ function model:bp(x, y, mask, state)
     self:reset_ds()  -- the d_outputs of the states
 
     -- unpack inputs. All of these have been CUDAed already if need be
-    local this_past     = model_utils.transfer_data(x.this:clone(), common_mp.cuda)
-    local context       = model_utils.transfer_data(x.context:clone(), common_mp.cuda)
-    local this_future   = model_utils.transfer_data(y:clone(), common_mp.cuda)
+    local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
+    local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
+    local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
 
     for i = self.mp.seq_length, 1, -1 do  -- go backwards in time
         local sim1 = state[i - 1]
         local derr
         if mask:clone()[i] == 1 then
-            derr = model_utils.transfer_data(torch.ones(1), common_mp.cuda)
+            derr = model_utils.transfer_data(torch.ones(1), self.mp.cuda)
         elseif mask:clone()[i] == 0 then
-            derr = model_utils.transfer_data(torch.zeros(1), common_mp.cuda)
+            derr = model_utils.transfer_data(torch.zeros(1), self.mp.cuda)
         else
             error('invalid mask')
         end
-        local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), common_mp.cuda)
+        local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), self.mp.cuda)
         local dtp, dc, dsim1, dtf = unpack(self.rnns[i]:backward({this_past, context[{{},i}], sim1, this_future}, {derr, self.ds, dpred}))
         g_replace_table(self.ds, dsim1)
         -- cutorch.synchronize()

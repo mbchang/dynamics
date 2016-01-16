@@ -28,12 +28,17 @@ local all_results = {}
 for index, learning_rate in pairs(learning_rates) do
     print('Learning rate:', learning_rate)
     trainer:reset(learning_rate)
+    optim_state = {learningRate   = learning_rate,
+                         momentumDecay  = 0.1,
+                         updateDecay    = 0.01}
+
     local train_losses = {}
     local dev_losses = {}
 
     local oldp, oldgp
 
     for i = 1, trainer.mp.max_epochs do
+        if i == 3 then assert(false) end
 
         -- Train
         -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase

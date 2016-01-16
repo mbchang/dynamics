@@ -182,13 +182,24 @@ function Trainer:train(num_iters, epoch_num)
     end
 
     -- here do epoch training
-    local optim_state = {learningRate   = self.mp.learning_rate,
-                         momentumDecay  = 0.1,
-                         updateDecay    = 0.01}
+    -- local optim_state = {learningRate   = self.mp.learning_rate,
+    --                      momentumDecay  = 0.1,
+    --                      updateDecay    = 0.01}
+    -- print(optim_state)
 
     for i = 1,num_iters do
+        -- if i == 2 then
+        --     print('params', self.theta.params)
+        --     assert(false)
+        -- end
+        -- print('optim_state before', optim_state)
+        -- assert(false)
+
         local _, loss = rmsprop(feval_train, self.theta.params, optim_state)  -- this is where the training actually happens
         c = c + 1
+
+        -- print('params', self.theta.params)
+        -- assert(false)
 
         self.logs.train_losses.losses[#self.logs.train_losses.losses+1] = loss[1]
         self.logs.train_losses.grad_norms[#self.logs.train_losses.grad_norms+1] = self.theta.grad_params:norm()

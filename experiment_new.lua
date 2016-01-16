@@ -192,15 +192,15 @@ function test()
     for i = 1,test_loader.num_batches do
         -- xlua.progress(t, test_loader.num_batches)
         local this, context, y, mask = unpack(test_loader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
-        local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+        local test_loss, state, predictions = model:fp(model.theta.params, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
 
         -- here you have the option to save predictions into a file
-        local prediction = all_preds[torch.find(mask,1)[1]] -- (1, windowsize/2)
+        local prediction = predictions[torch.find(mask,1)[1]] -- (1, windowsize/2)
         -- this would be your 'this', or you could shift over, or do other interesting things
 
         -- reshape to -- (num_samples x windowsize/2 x 8)
-        prediction = prediction:reshape(this:size(1), self.mp.winsize/2, self.test_loader.object_dim)
+        prediction = prediction:reshape(this:size(1), mp.winsize/2, test_loader.object_dim)
 
         -- if saveoutput then
         --     assert(torch.type(model)=='string')
@@ -208,7 +208,7 @@ function test()
         --                         {config, start, finish},
         --                         {'model_predictions', model})
         -- end
-        local avg_loss = sum_loss/num_iters
+        local avg_loss = sum_loss/test_loader.num_batches
         collectgarbage()
         return avg_loss
     end
@@ -235,6 +235,7 @@ for i = 1, mp.max_epochs do
     -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
     local model
     local train_loss
+    -- print(optim_state)
     train_loss = train(i)  -- trainer.train_loader.num_batches
     -- Get the training loss
     -- local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
