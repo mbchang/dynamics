@@ -424,6 +424,7 @@ function dataloader:next_batch()
     self.current_batch = self.current_batch + 1
     if self.current_batch > self.num_batches then self.current_batch = 1 end
 
+    print('Batch:', self.current_batch)
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')

@@ -15,7 +15,7 @@ require 'pl'
 
 -- missing params: seed, experiment_string
 -- also booleans are strings somehow
--- you can
+-- Note that the dataloaders will reset their current_batch after they've gone through all their batches.
 ------------------------------------- Init -------------------------------------
 require 'logging_utils'
 
@@ -171,35 +171,22 @@ local learning_rate = mp.lr
 print('Learning rate:', learning_rate)
 local train_losses = {}
 local dev_losses = {}
-local oldp, oldgp
 
 init(false)
 
-
 for i = 1, mp.max_epochs do
     if i == 3 then assert(false) end
-
-    -- Train
-    -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
-    -- local model
     local train_loss
-    train_loss = train(i)  -- trainer.train_loader.num_batches
-    -- Get the training loss
-    -- local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
-    -- local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
+    train_loss = train(i)
+    -- train_loss = test(train_test_loader)
     print('train loss\t', train_loss)
 
-    -- Test
-    -- this train_loss is the final loss after one epoch. We expect to see this go in a parabola as epochs increase
     local dev_loss = test(test_loader)
-
-    -- here reset the test_loader (make current_batch = 0)
+    print('avg dev loss\t', dev_loss)
 
     -- Record loss
     train_losses[#train_losses+1] = train_loss
     dev_losses[#dev_losses+1] = dev_loss
-    print('avg dev loss\t', dev_loss)
-    -- When we save results, for this learning rate, this is the curve of train_loss and dev_loss as we go through epochs
 
     print('train_losses:', train_losses)
     print('dev_losses:', dev_losses)
