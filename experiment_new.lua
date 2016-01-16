@@ -2,11 +2,8 @@ require 'torch'
 local model_utils = require 'model_utils'
 
 require 'nn'
--- require 'randomkit'
 require 'optim'
 require 'image'
--- require 'dataset-mnist'
--- require 'cutorch'
 require 'xlua'
 require 'Base'
 require 'sys'
@@ -22,7 +19,7 @@ require 'pl'
 require 'logging_utils'
 
 
-params = lapp[[
+mp = lapp[[
    -d,--savedir       (default "logs")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -p,--plot                                	plot while training
@@ -43,32 +40,35 @@ params = lapp[[
 
 -- torch.manualSeed(123)
 -- if params.rand_init_wts then torch.manualSeed(123) end
-if params.shuffle == 'false' then params.shuffle = false end
-if params.rand_init_wts == 'false' then params.rand_init_wts = false end
+if mp.shuffle == 'false' then mp.shuffle = false end
+if mp.rand_init_wts == 'false' then mp.rand_init_wts = false end
 
-if params.server == 'pc' then
-	params.winsize = 10
-	params.dataset_folder = 'hey'
-	params.batch_size = 1
-	params.seq_length = 10
-	params.num_threads = 1
-	params.cuda = false
-	params.cunn = false
+if mp.server == 'pc' then
+	mp.winsize = 10
+	mp.dataset_folder = 'hey'
+	mp.batch_size = 1
+	mp.seq_length = 10
+	mp.num_threads = 1
+	mp.cuda = false
+	mp.cunn = false
 else
-	params.winsize = 20
-	params.dataset_folder = '/om/user/mbchang/physics-data/dataset_files'
-	params.batch_size = 100
-	params.seq_length = 20
-	params.num_threads = 4
-	params.cuda = true
-	params.cunn = true
+	mp.winsize = 20
+	mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files'
+	mp.batch_size = 100
+	mp.seq_length = 20
+	mp.num_threads = 4
+	mp.cuda = true
+	mp.cunn = true
 end
 
+mp.input_dim = 8.0*mp.winsize/2
+mp.out_dim = 8.0*mp.winsize/2
+mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp) .. 'new_test'
 
-params.input_dim = 8.0*params.winsize/2
-params.out_dim = 8.0*params.winsize/2
-params.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, params) .. 'new_test'
 
+local D = require 'DataLoader'
+local M = require 'model_new'
+local model, train_loader, test_loader
 
 -- threads
 -- torch.setnumthreads(common_mp.num_threads)
@@ -77,25 +77,14 @@ params.results_folder = create_experiment_string({'batch_size', 'seq_length', 'l
 local Tester = require 'test'
 local Trainer = require 'train'
 
--- print('common_mp')
--- print(common_mp)
--- print('train_mp')
--- print(train_mp)
 
-common_mp = tablex.deepcopy(params)
-train_mp = tablex.deepcopy(params)  -- problem: something in train_mp got mutated in Trainer
-test_mp = tablex.deepcopy(params)
---
--- print('common_mp')
--- print(common_mp)
--- print('train_mp')
--- print(train_mp)
-
-
--- assert(false)
+common_mp = tablex.deepcopy(mp)
+train_mp = tablex.deepcopy(mp)  -- problem: something in train_mp got mutated in Trainer
+test_mp = tablex.deepcopy(mp)
 
 if common_mp.cuda then require 'cutorch' end
 if common_mp.cunn then require 'cunn' end
+
 
 local trainer = Trainer.create('trainset', train_mp)  -- need to specify learning rate here
 local trainer_tester = Tester.create('trainset', test_mp)
@@ -108,10 +97,86 @@ local experiment_results = common_mp.results_folder .. '/experiment_results.t7'
 if not common_mp.rand_init_wts then torch.manualSeed(123) end
 torch.manualSeed(123)
 
+-- initialize
+function init(preload, model_path)
+  print("Network parameters:")
+  print(mp)
+  train_loader = D.create('trainset', mp.dataset_folder, {}, mp.batch_size, mp.curriculum, mp.shuffle)  -- TODO: take care of all curriculum here
+  test_loader = D.create('testset', mp.dataset_folder, {}, mp.batch_size, mp.curriculum, mp.shuffle)  -- TODO: take care of all curriculum here
+  model = M.create(mp, preload, model_path)
+  local epoch = 0  -- TODO Not sure if this is necessary
+  local beginning_time = torch.tic() -- TODO not sure if this is necessary
+  local start_time = torch.tic()  -- TODO not sure if this is necessary
+  print("Initialized Network")
+end
+
+-- closure
+-- returns loss, grad_params
+function feval_train(params_)  -- params_ should be first argument
+    local this, context, y, mask = unpack(train_loader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
+    local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+    local grad = model:bp({this=this,context=context}, y, mask, state)
+    collectgarbage()
+    return loss, grad -- f(x), df/dx
+end
+
+-- closure
+-- returns loss, grad_params
+function feval_test(params_)  -- params_ should be first argument
+    local this, context, y, mask = unpack(test_loader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
+    local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+    local grad = model:bp({this=this,context=context}, y, mask, state)
+    collectgarbage()
+    return loss, grad -- f(x), df/dx
+end
+
+
+function train(epoch_num)
+    local cntr = 0, new_params, train_loss
+    for t = 1,train_loader.num_batches do  -- TODO
+        --   xlua.progress(t, dataloader.num_batches)
+          new_params, train_loss = optim.rmsprop(feval_train, model.theta.params, optim_state)  -- next batch
+          assert(new_params == model.theta.params)  -- TODO remove later
+        --   if params.plot and math.fmod(cntr, 20) == 0 then test() end
+
+            if t % mp.print_every == 0 then
+                print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
+            end
+
+
+
+
+            if t % mp.save_every == 0 then
+                -- convert from cuda to float before saving
+                -- print('common_mp.cuda', common_mp.cuda)
+                -- if mp.cuda then
+                --     -- print('Converting to float before saving')
+                --     model.network:float()
+                --     torch.save(self.logs.savefile, self.network)
+                --     self.network:cuda()
+                -- else
+                --     torch.save(self.logs.savefile, self.network)
+                -- end
+                print('saved model')
+                -- torch.save(self.logs.lossesfile, self.logs.train_losses)
+            end
+
+
+          cntr = cntr + 1
+          -- trainLogger:plot()
+          if common_mp.cuda then cutorch.synchronize() end
+          collectgarbage()
+    end
+    return train_loss
+end
+
+init(false)
+
+
 local all_results = {}
 
 -- for index, learning_rate in pairs(learning_rates) do
-local learning_rate = params.lr
+local learning_rate = mp.lr
 print('Learning rate:', learning_rate)
 trainer:reset(learning_rate)
 local train_losses = {}
@@ -125,13 +190,9 @@ for i = 1, trainer.mp.max_epochs do
     -- this train_loss is the final loss after one epoch. We expect to see this go down as epochs increase
     local model
     local train_loss
-    if train_mp.curriculum then
-        _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches  TODO: don't make it avg train loss in curriculum!
-    else
-        train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
-    end
-    -- local _, model = trainer:curriculum_train(1, i)  -- trainer.train_loader.num_batches
-
+    train_loss = train(i)  -- trainer.train_loader.num_batches
+    -- train_loss, model = trainer:train(trainer.train_loader.num_batches, i)  -- trainer.train_loader.num_batches
+    assert(false)
     -- Get the training loss
     -- local train_loss = trainer_tester:test(model, p, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!
     -- local train_loss = trainer_tester:test(model, trainer_tester.test_loader.num_batches)  -- tester.test_loader.nbatches  -- creating new copy of model when I load into Tester!

@@ -21,7 +21,7 @@ function create_experiment_string(keys, params)
     return foldername..'trainloss_gt_devloss_testdata'
 end
 
-
+-- use 'hey' for dataset_folder and '1' for batch_size for quick testing
 personal_mp = {
     batch_size  = 1,--4,
     seq_length  = SEQ_LENGTH,  -- max other objects + goos
@@ -78,3 +78,5 @@ train_mp = merge_tables(common_mp, {
 test_mp = merge_tables(common_mp, {
       shuffle               = true,
 })
+
+print(train_mp)
