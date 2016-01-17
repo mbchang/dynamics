@@ -50,6 +50,7 @@ if mp.server == 'pc' then
 	mp.batch_size = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
+    mp.plot = false
 	mp.cuda = false
 	mp.cunn = false
 else
@@ -58,6 +59,7 @@ else
 	mp.batch_size = 100
 	mp.seq_length = 20
 	mp.num_threads = 4
+    mp.plot = false
 	mp.cuda = true
 	mp.cunn = true
 end
@@ -69,6 +71,7 @@ mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rn
 if mp.rand_init_wts then torch.manualSeed(123) end
 if mp.shuffle == 'false' then mp.shuffle = false end
 if mp.rand_init_wts == 'false' then mp.rand_init_wts = false end
+if mp.plot == 'false' then mp.plot = false end
 if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
 
@@ -80,6 +83,10 @@ local model, train_loader, test_loader
 
 trainLogger = optim.Logger(paths.concat(mp.savedir .. '/'..mp.descrip ..'/', 'train.log'))
 experimentLogger = optim.Logger(paths.concat(mp.savedir .. '/' .. mp.descrip ..'/', 'experiment.log'))
+if mp.plot == false then
+    trainLogger.showPlot = false
+    experimentLogger.showPlot = false
+end
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -164,12 +171,6 @@ end
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
-
-    local experiment_results = mp.descrip .. '/experiment_results.t7'
-    local all_results = {}
-    local train_losses = {}
-    local dev_losses = {}
-
     for i = 1, mp.max_epochs do
         if i == 10 then assert(false) end
         local train_loss
@@ -179,20 +180,7 @@ function experiment()
 
         local dev_loss = test(test_loader)
         -- print('avg dev loss\t', dev_loss)
-
-        -- Record loss
-        train_losses[#train_losses+1] = train_loss
-        dev_losses[#dev_losses+1] = dev_loss
-
-        -- print('train_losses:', train_losses)
-        -- print('dev_losses:', dev_losses)
-
-        -- Can save here actually, so that you constantly save stuff. Basically you rewrite all_results[learning_rate] each time
-        all_results[mp.lr] = {results_train_losses  = torch.Tensor(train_losses),
-                                      results_dev_losses    = torch.Tensor(dev_losses)}
-        print('all_results', all_results)
-        -- torch.save(experiment_results, all_results)
-
+    
         experimentLogger:add{['MSE loss (train set)'] =  train_loss,
                              ['MSE loss (test set)'] =  dev_loss}
         experimentLogger:style{['MSE loss (train set)'] = '-',
