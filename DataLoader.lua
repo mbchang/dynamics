@@ -12,9 +12,6 @@ require 'torchx'
 require 'utils'
 local T = require 'pl.tablex'
 
--- if common_mp.cuda then require 'cutorch' end
--- if common_mp.cunn then require 'cunn' end
-
 local dataloader = {}
 dataloader.__index = dataloader
 

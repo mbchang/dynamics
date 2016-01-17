@@ -27,30 +27,30 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 
 mp = lapp[[
-   -d,--root          (default "logs")      	subdirectory to save logs
+   -d,--root          (default "logslink")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
-   -p,--plot                                	plot while training
-   -c,--server		  (default "pc")			pc=personal | op = openmind
+   -n,--name          (default "")
+   -p,--plot          (default false)                    	plot while training
+   -o,--opt           (default "rmsprop")       rmsprop | adam | optimrmsprop
+   -c,--server		  (default "op")			pc=personal | op = openmind
    -s,--shuffle  	  (default false)
    -r,--lr            (default 0.0005)      	learning rate
-   -i,--max_epochs    (default 5)           	maximum nb of iterations per batch, for LBFGS
-   --batch_size       (default 1)           	1 pc, 100 op
+   -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 100)
-   --seq_length       (default 10)				10 pc, 20 op
    --layers           (default 4)
-   --rand_init_wts    (default false)
+   --seed             (default false)
    --max_grad_norm    (default 10)
-   --save_every		  (default 50)
-   --print_every	  (default 10)
+   --save_output	  (default false)
+   --print_every      (default 10)
 ]]
 
 if mp.server == 'pc' then
+    mp.root = 'logs'
 	mp.winsize = 10
 	mp.dataset_folder = 'hey'
 	mp.batch_size = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.plot = false
 	mp.cuda = false
 	mp.cunn = false
 else
@@ -59,28 +59,40 @@ else
 	mp.batch_size = 100
 	mp.seq_length = 20
 	mp.num_threads = 4
-    mp.plot = false
+    -- mp.plot = false
 	mp.cuda = true
 	mp.cunn = true
 end
 
 mp.input_dim = 8.0*mp.winsize/2
 mp.out_dim = 8.0*mp.winsize/2
-mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp) .. 'main_test'
-mp.savedir = mp.root .. '/' .. mp.descrip
+-- mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp)
+mp.savedir = mp.root .. '/' .. mp.name
 
-if mp.rand_init_wts then torch.manualSeed(123) end
+-- TODO: write a function to convert "false" to false
+if mp.seed then torch.manualSeed(123) end
 if mp.shuffle == 'false' then mp.shuffle = false end
 if mp.rand_init_wts == 'false' then mp.rand_init_wts = false end
+if mp.save_output == 'false' then mp.save_output = false end
 if mp.plot == 'false' then mp.plot = false end
 if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
 
-local optim_state = {learningRate   = mp.lr,
-                     momentumDecay  = 0.1,
-                     updateDecay    = 0.01}
 
-local model, train_loader, test_loader
+local optimizer, optim_state
+if mp.opt == 'rmsprop' then
+    optimizer = rmsprop
+    optim_state = {learningRate   = mp.lr,
+                   momentumDecay  = 0.1,
+                   updateDecay    = 0.01}
+elseif mp.opt == 'optimrmsprop' then
+    optimizer = optim.rmsprop
+    optim_state = {learningRate   = mp.lr}
+elseif mp.opt == 'adam' then
+    optimizer = optim.adam
+    optim_state = {learningRate   = mp.lr}
+end
+
 
 trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
 experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
@@ -88,6 +100,9 @@ if mp.plot == false then
     trainLogger.showPlot = false
     experimentLogger.showPlot = false
 end
+
+
+local model, train_loader, test_loader
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -121,15 +136,16 @@ end
 function train(epoch_num)
     local cntr = 0, new_params, train_loss
     for t = 1,train_loader.num_batches do
-        xlua.progress(t, train_loader.num_batches)
+        -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = rmsprop(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
-        -- if t % mp.print_every == 0 then
-        --     print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
-        -- end
+        if t % mp.print_every == 0 then
+            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e",
+                    epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
+        end
 
-        trainLogger:add{['MSE loss (train set)'] =  train_loss[1]}
-        trainLogger:style{['MSE loss (train set)'] = '-'}
+        trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
+        trainLogger:style{['log MSE loss (train set)'] = '-'}
         trainLogger:plot()
 
         cntr = cntr + 1
@@ -143,7 +159,7 @@ end
 function test(dataloader)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
-        xlua.progress(i, dataloader.num_batches)
+        -- xlua.progress(i, dataloader.num_batches)
         local this, context, y, mask = unpack(dataloader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
         local test_loss, state, predictions = model:fp(model.theta.params, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
@@ -183,15 +199,15 @@ function experiment()
         -- print('avg dev loss\t', dev_loss)
 
         -- Save logs
-        experimentLogger:add{['MSE loss (train set)'] =  train_loss,
-                             ['MSE loss (test set)'] =  dev_loss}
-        experimentLogger:style{['MSE loss (train set)'] = '-',
-                               ['MSE loss (test set)'] = '-'}
+        experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
+                             ['log MSE loss (test set)'] =  torch.log(dev_loss)}
+        experimentLogger:style{['log MSE loss (train set)'] = '-',
+                               ['log MSE loss (test set)'] = '-'}
         experimentLogger:plot()
 
         -- Save network
-        torch.save(model.savedir .. '/network.t7', model.network)
-        torch.save(model.savedir .. '/params.t7', model.theta.params)
+        torch.save(mp.savedir .. '/network.t7', model.network)
+        torch.save(mp.savedir .. '/params.t7', model.theta.params)
 
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()

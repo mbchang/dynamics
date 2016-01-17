@@ -3,7 +3,7 @@ require 'torch'
 local model_utils = {}
 
 function model_utils.transfer_data(x, should_cuda)
-    if should_cuda then 
+    if should_cuda then
         return x:cuda()
     else
         return x
