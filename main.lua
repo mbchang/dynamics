@@ -27,7 +27,7 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 
 mp = lapp[[
-   -d,--savedir       (default "logs")      	subdirectory to save logs
+   -d,--root          (default "logs")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -p,--plot                                	plot while training
    -c,--server		  (default "pc")			pc=personal | op = openmind
@@ -67,6 +67,7 @@ end
 mp.input_dim = 8.0*mp.winsize/2
 mp.out_dim = 8.0*mp.winsize/2
 mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp) .. 'main_test'
+mp.savedir = mp.root .. '/' .. mp.descrip
 
 if mp.rand_init_wts then torch.manualSeed(123) end
 if mp.shuffle == 'false' then mp.shuffle = false end
@@ -81,8 +82,8 @@ local optim_state = {learningRate   = mp.lr,
 
 local model, train_loader, test_loader
 
-trainLogger = optim.Logger(paths.concat(mp.savedir .. '/'..mp.descrip ..'/', 'train.log'))
-experimentLogger = optim.Logger(paths.concat(mp.savedir .. '/' .. mp.descrip ..'/', 'experiment.log'))
+trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
+experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
 if mp.plot == false then
     trainLogger.showPlot = false
     experimentLogger.showPlot = false
@@ -180,34 +181,22 @@ function experiment()
 
         local dev_loss = test(test_loader)
         -- print('avg dev loss\t', dev_loss)
-    
+
+        -- Save logs
         experimentLogger:add{['MSE loss (train set)'] =  train_loss,
                              ['MSE loss (test set)'] =  dev_loss}
         experimentLogger:style{['MSE loss (train set)'] = '-',
                                ['MSE loss (test set)'] = '-'}
         experimentLogger:plot()
 
-        -- just save the network here
+        -- Save network
+        torch.save(model.savedir .. '/network.t7', model.network)
+        torch.save(model.savedir .. '/params.t7', model.theta.params)
 
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
 end
-
--- if t % mp.save_every == 0 then
---     -- convert from cuda to float before saving
---     -- print('common_mp.cuda', common_mp.cuda)
---     -- if mp.cuda then
---     --     -- print('Converting to float before saving')
---     --     model.network:float()
---     --     torch.save(self.logs.savefile, self.network)
---     --     self.network:cuda()
---     -- else
---     --     torch.save(self.logs.savefile, self.network)
---     -- end
---     -- print('saved model')
---     -- torch.save(self.logs.lossesfile, self.logs.train_losses)
--- end
 
 ------------------------------------- Main -------------------------------------
 init(false)
