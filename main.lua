@@ -64,7 +64,7 @@ end
 
 mp.input_dim = 8.0*mp.winsize/2
 mp.out_dim = 8.0*mp.winsize/2
-mp.results_folder = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp) .. 'new_test'
+mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp) .. 'main_test'
 
 if mp.rand_init_wts then torch.manualSeed(123) end
 if mp.shuffle == 'false' then mp.shuffle = false end
@@ -77,6 +77,9 @@ local optim_state = {learningRate   = mp.lr,
                      updateDecay    = 0.01}
 
 local model, train_loader, test_loader
+
+trainLogger = optim.Logger(paths.concat(mp.savedir .. '/'..mp.descrip ..'/', 'train.log'))
+experimentLogger = optim.Logger(paths.concat(mp.savedir .. '/' .. mp.descrip ..'/', 'experiment.log'))
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -110,30 +113,18 @@ end
 function train(epoch_num)
     local cntr = 0, new_params, train_loss
     for t = 1,train_loader.num_batches do
-        --   xlua.progress(t, dataloader.num_batches)
+        xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = rmsprop(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
-        if t % mp.print_every == 0 then
-            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
-        end
+        -- if t % mp.print_every == 0 then
+        --     print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e", epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
+        -- end
 
-        if t % mp.save_every == 0 then
-            -- convert from cuda to float before saving
-            -- print('common_mp.cuda', common_mp.cuda)
-            -- if mp.cuda then
-            --     -- print('Converting to float before saving')
-            --     model.network:float()
-            --     torch.save(self.logs.savefile, self.network)
-            --     self.network:cuda()
-            -- else
-            --     torch.save(self.logs.savefile, self.network)
-            -- end
-            print('saved model')
-            -- torch.save(self.logs.lossesfile, self.logs.train_losses)
-        end
+        trainLogger:add{['MSE loss (train set)'] =  train_loss[1]}
+        trainLogger:style{['MSE loss (train set)'] = '-'}
+        trainLogger:plot()
 
         cntr = cntr + 1
-        -- trainLogger:plot()
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
@@ -144,7 +135,7 @@ end
 function test(dataloader)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
-        -- xlua.progress(t, test_loader.num_batches)
+        xlua.progress(i, dataloader.num_batches)
         local this, context, y, mask = unpack(dataloader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
         local test_loss, state, predictions = model:fp(model.theta.params, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
@@ -153,7 +144,9 @@ function test(dataloader)
         local prediction = predictions[torch.find(mask,1)[1]] -- (1, windowsize/2)
 
         -- reshape to -- (num_samples x windowsize/2 x 8)
-        prediction = prediction:reshape(this:size(1), mp.winsize/2, dataloader.object_dim)
+        prediction = prediction:reshape(this:size(1),
+                                        mp.winsize/2,
+                                        dataloader.object_dim)
 
         -- if saveoutput then
         --     assert(torch.type(model)=='string')
@@ -172,27 +165,27 @@ function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
 
-    local experiment_results = mp.results_folder .. '/experiment_results.t7'
+    local experiment_results = mp.descrip .. '/experiment_results.t7'
     local all_results = {}
     local train_losses = {}
     local dev_losses = {}
 
     for i = 1, mp.max_epochs do
-        if i == 3 then assert(false) end
+        if i == 10 then assert(false) end
         local train_loss
         train_loss = train(i)
         -- train_loss = test(train_test_loader)
-        print('train loss\t', train_loss)
+        -- print('train loss\t', train_loss)
 
         local dev_loss = test(test_loader)
-        print('avg dev loss\t', dev_loss)
+        -- print('avg dev loss\t', dev_loss)
 
         -- Record loss
         train_losses[#train_losses+1] = train_loss
         dev_losses[#dev_losses+1] = dev_loss
 
-        print('train_losses:', train_losses)
-        print('dev_losses:', dev_losses)
+        -- print('train_losses:', train_losses)
+        -- print('dev_losses:', dev_losses)
 
         -- Can save here actually, so that you constantly save stuff. Basically you rewrite all_results[learning_rate] each time
         all_results[mp.lr] = {results_train_losses  = torch.Tensor(train_losses),
@@ -200,10 +193,33 @@ function experiment()
         print('all_results', all_results)
         -- torch.save(experiment_results, all_results)
 
+        experimentLogger:add{['MSE loss (train set)'] =  train_loss,
+                             ['MSE loss (test set)'] =  dev_loss}
+        experimentLogger:style{['MSE loss (train set)'] = '-',
+                               ['MSE loss (test set)'] = '-'}
+        experimentLogger:plot()
+
+        -- just save the network here
+
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
 end
+
+-- if t % mp.save_every == 0 then
+--     -- convert from cuda to float before saving
+--     -- print('common_mp.cuda', common_mp.cuda)
+--     -- if mp.cuda then
+--     --     -- print('Converting to float before saving')
+--     --     model.network:float()
+--     --     torch.save(self.logs.savefile, self.network)
+--     --     self.network:cuda()
+--     -- else
+--     --     torch.save(self.logs.savefile, self.network)
+--     -- end
+--     -- print('saved model')
+--     -- torch.save(self.logs.lossesfile, self.logs.train_losses)
+-- end
 
 ------------------------------------- Main -------------------------------------
 init(false)
