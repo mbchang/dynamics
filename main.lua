@@ -30,8 +30,8 @@ mp = lapp[[
    -d,--root          (default "logslink")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -n,--name          (default "")
-   -p,--plot          (default false)                    	plot while training
-   -o,--opt           (default "rmsprop")       rmsprop | adam | optimrmsprop
+   -p,--plot          (default true)                    	plot while training
+   -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -s,--shuffle  	  (default false)
    -r,--lr            (default 0.0005)      	learning rate
@@ -137,7 +137,7 @@ function train(epoch_num)
     local cntr = 0, new_params, train_loss
     for t = 1,train_loader.num_batches do
         -- xlua.progress(t, train_loader.num_batches)
-        new_params, train_loss = rmsprop(feval_train, model.theta.params, optim_state)  -- next batch
+        new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
         if t % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e",
