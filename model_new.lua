@@ -4,9 +4,6 @@ require 'nngraph'
 require 'Base'
 local model_utils = require 'model_utils'
 
--- if common_mp.cuda then require 'cutorch' end
--- if common_mp.cunn then require 'cunn' end
-
 nngraph.setDebug(true)
 
 function lstm(x, prev_c, prev_h, params)
@@ -230,34 +227,6 @@ function model:bp(x, y, mask, state)
 end
 
 
--- function bp(data)
---   paramdx:zero() -- these are the d_parameters
---   reset_ds()  -- these are the d_outputs
---   for i = params.seq_length, 1, -1 do
---     local x = data:clone()  -- so the reason why you do model.err:mean() at the end is because you just repeatedly do try to solve the same prob at each timestep
---     local s = model.s[i - 1]
---     local derr = transfer_data(torch.ones(1))
---     local dnewx = transfer_data(torch.zeros(params.bsize, 32, 32))   -- not sure why this is just zeros
---     local tmp = model.rnns[i]:backward({x, s},
---                                        {derr, model.ds, dnewx})
---     g_replace_table(model.ds, tmp[2])
-
---     cutorch.synchronize()
---   end
-
---   -- model.norm_dw = paramdx:norm()
---   -- if model.norm_dw > params.max_grad_norm then
---   --   local shrink_factor = params.max_grad_norm / model.norm_dw
---   --   paramdx:mul(shrink_factor)
---   -- end
-
---   paramx = rmsprop(paramdx, paramx, config, state)
-
---   -- paramx:add(paramdx:mul(-params.lr))  -- this just does the weight update
--- end
-
-
-
 -- Create Model
 function test_model()
     local params = {
@@ -326,8 +295,6 @@ function test_model()
         g_replace_table(ds, dsim1)
     end
 
-
-
     -- config = {
     --     learningRate = 0.0001,
     --     momentumDecay = 0.1,
@@ -335,14 +302,11 @@ function test_model()
     -- }
     -- p = rmsprop(gp, p, config, state)
 
-
     -- network:updateParameters(0.00001)
     -- gp:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
     -- collectgarbage()
     -- return loss, self.theta.grad_params
-
-
-end
+    end
 end
 
 
@@ -370,50 +334,5 @@ function test_encoder()
 
     print(encoder_out:size())
 end
-
-
-
-
--- -- nn.gModule({thisp_past,contextp, thisp_future}, {err, nn.Identity()(next_s), prediction})
-
-
---     local x          = torch.random(torch.Tensor(torch.LongStorage{mp.batch_size, mp.seq_length, mp.color_channels, mp.frame_height, mp.frame_width}))
---     local prev_c     = torch.ones(mp.batch_size, mp.LSTM_hidden_dim)
---     local prev_h     = torch.ones(mp.batch_size, mp.LSTM_hidden_dim)
-
---     -- Model
---     local encoder = init_baseline_encoder(mp, mp.LSTM_input_dim)
---     local lstm = nn.SteppableLSTM(mp.LSTM_input_dim, mp.LSTM_hidden_dim, mp.LSTM_hidden_dim, 1, false)  -- TODO: consider the hidden-output connection of LSTM!
---     local decoder = init_baseline_decoder(mp, mp.LSTM_input_dim, mp.LSTM_hidden_dim)
---     local criterion = nn.BCECriterion()
-
---     -- Initial conditions
---     local embeddings = {}
---     local lstm_c = {[0]=self.lstm_init_state.initstate_c} -- internal cell states of LSTM
---     local lstm_h = {[0]=self.lstm_init_state.initstate_h} -- output values of LSTM
---     local predictions = {}
-
---     -- Forward pass
---     local loss = 0
---     for t = 1,mp.seq_length do
---         embeddings[t] = encoder:forward(torch.squeeze(x[{{},{t}}]))
-
---         lstm_c[t], lstm_h[t] = unpack(self.clones.lstm[t]:forward{embeddings[t], lstm_c[t-1], lstm_h[t-1]})
---         predictions[t] = self.clones.decoder[t]:forward(lstm_h[t])
---         loss = loss + self.clones.criterion[t]:forward(predictions[t], torch.squeeze(y[{{},{t}}]))
-
---         -- DEBUGGING
---         --image.display(predictions[t])  -- here you can also save the image
---     end
---     collectgarbage()
---     return loss, embeddings, lstm_c, lstm_h, predictions
--- end
-
-
-
-
-
--- test_model()
--- test_encoder()
 
 return model -- might be unnecessary
