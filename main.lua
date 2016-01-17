@@ -1,3 +1,6 @@
+-- Michael B Chang
+
+-- Third Party Imports
 require 'torch'
 require 'nn'
 require 'optim'
@@ -8,9 +11,12 @@ require 'sys'
 require 'rmsprop'
 require 'pl'
 
+-- Local Imports
 local model_utils = require 'model_utils'
 local D = require 'DataLoader'
 local M = require 'model_new'
+require 'logging_utils'
+
 
 -- TODO: Have a shell script for openmind and for pc
 
@@ -19,7 +25,6 @@ local M = require 'model_new'
 -- Note that the dataloaders will reset their current_batch after they've gone through all their batches.
 --TODO what? optim.rmsprop is different from rmsprop?
 ------------------------------------- Init -------------------------------------
-require 'logging_utils'
 
 mp = lapp[[
    -d,--savedir       (default "logs")      	subdirectory to save logs
@@ -92,8 +97,7 @@ function init(preload, model_path)
     print("Initialized Network")
 end
 
--- closure
--- returns loss, grad_params
+-- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
     local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
@@ -102,6 +106,7 @@ function feval_train(params_)  -- params_ should be first argument
     return loss, grad -- f(x), df/dx
 end
 
+-- trains for one epoch
 function train(epoch_num)
     local cntr = 0, new_params, train_loss
     for t = 1,train_loader.num_batches do
@@ -135,7 +140,7 @@ function train(epoch_num)
     return train_loss[1]  -- because train_loss is returned as a table
 end
 
-
+-- test on dataset
 function test(dataloader)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
@@ -162,6 +167,7 @@ function test(dataloader)
     return avg_loss
 end
 
+-- runs experiment
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
