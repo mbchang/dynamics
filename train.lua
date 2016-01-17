@@ -25,7 +25,7 @@ function Trainer.create(dataset, mp)
     setmetatable(self, Trainer)
     self.mp = mp
     self.dataset = dataset  -- string name of folder containing trainig examples
-    self.train_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, {}, self.mp.batch_size, self.mp.curriculum, self.mp.shuffle)
+    self.train_loader = DataLoader.create(self.dataset, {}, self.mp.dataset_folder, self.mp.batch_size, self.mp.shuffle, self.mp.cuda)
     collectgarbage()
     return self
 end

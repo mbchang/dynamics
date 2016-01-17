@@ -72,13 +72,16 @@ function is_empty(table)
     if next(table) == nil then return true end
 end
 
-function all_args_exist(args_table)
+-- BUG! If the arg is nil, then it won't get passed into args_table!
+function all_args_exist(args_table, num_args)
+    if not(#args_table == num_args) then return false end
     local exist = true
     for _,a in pairs(args_table) do
         if a == nil then
             exist = false
         end
     end
+    -- assert(false)
     return exist
 end
 

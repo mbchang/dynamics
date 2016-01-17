@@ -1,12 +1,11 @@
-require 'metaparams'
 require 'nn'
 require 'torch'
 require 'nngraph'
 require 'Base'
 local model_utils = require 'model_utils'
 
-if common_mp.cuda then require 'cutorch' end
-if common_mp.cunn then require 'cunn' end
+-- if common_mp.cuda then require 'cutorch' end
+-- if common_mp.cunn then require 'cunn' end
 
 nngraph.setDebug(true)
 

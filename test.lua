@@ -27,7 +27,7 @@ function Tester.create(dataset, mp)
     setmetatable(self, Tester)
     self.mp = mp
     self.dataset = dataset  -- string for the dataset folder
-    self.test_loader = DataLoader.create(self.dataset, self.mp.dataset_folder, {}, self.mp.batch_size, false, self.mp.shuffle)
+    self.test_loader = DataLoader.create(self.dataset, {}, self.mp.dataset_folder, self.mp.batch_size, self.mp.shuffle, self.mp.cuda)
     collectgarbage()
     return self
 end

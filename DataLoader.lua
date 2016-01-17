@@ -1,6 +1,5 @@
 -- data loader for object model
 
-require 'metaparams'
 require 'torch'
 require 'math'
 require 'image'
@@ -13,8 +12,8 @@ require 'torchx'
 require 'utils'
 local T = require 'pl.tablex'
 
-if common_mp.cuda then require 'cutorch' end
-if common_mp.cunn then require 'cunn' end
+-- if common_mp.cuda then require 'cutorch' end
+-- if common_mp.cunn then require 'cunn' end
 
 local dataloader = {}
 dataloader.__index = dataloader
@@ -80,7 +79,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, dataset_folder, specified_configs, batch_size, curriculum, shuffle)
+function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -98,7 +97,7 @@ function dataloader.create(dataset_name, dataset_folder, specified_configs, batc
 
             specified_configs = table of worlds or configs
     --]]
-    assert(all_args_exist{dataset_name, dataset_folder, specified_configs,batch_size,curriculum,shuffle})
+    assert(all_args_exist({dataset_name, dataset_folder, specified_configs,batch_size,shuffle,cuda},6))
 
     local self = {}
     setmetatable(self, dataloader)
@@ -107,8 +106,7 @@ function dataloader.create(dataset_name, dataset_folder, specified_configs, batc
     self.dataset_name = dataset_name  -- string
     self.batch_size = batch_size
     self.object_dim = object_dim
-    if curriculum then assert(not shuffle) end
-
+    self.cuda = cuda
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
@@ -323,7 +321,7 @@ function dataloader:next_config(current_config, start, finish)
     assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
 
     -- cuda
-    if common_mp.cuda then
+    if self.cuda then
         this_x          = this_x:cuda()
         context_x       = context_x:cuda()
         minibatch_m     = minibatch_m:cuda()
@@ -424,7 +422,6 @@ function dataloader:next_batch()
     self.current_batch = self.current_batch + 1
     if self.current_batch > self.num_batches then self.current_batch = 1 end
 
-    print('Batch:', self.current_batch)
     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')

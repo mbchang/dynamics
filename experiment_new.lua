@@ -1,6 +1,4 @@
 require 'torch'
-local model_utils = require 'model_utils'
-
 require 'nn'
 require 'optim'
 require 'image'
@@ -10,12 +8,16 @@ require 'sys'
 require 'rmsprop'
 require 'pl'
 
+local model_utils = require 'model_utils'
+local D = require 'DataLoader'
+local M = require 'model_new'
 
 -- TODO: Have a shell script for openmind and for pc
 
 -- missing params: seed, experiment_string
 -- also booleans are strings somehow
 -- Note that the dataloaders will reset their current_batch after they've gone through all their batches.
+--TODO what? optim.rmsprop is different from rmsprop?
 ------------------------------------- Init -------------------------------------
 require 'logging_utils'
 
@@ -69,8 +71,6 @@ local optim_state = {learningRate   = mp.lr,
                      momentumDecay  = 0.1,
                      updateDecay    = 0.01}
 
-local D = require 'DataLoader'
-local M = require 'model_new'
 local model, train_loader, test_loader
 
 ------------------------------- Helper Functions -------------------------------
@@ -79,8 +79,12 @@ local model, train_loader, test_loader
 function init(preload, model_path)
     print("Network parameters:")
     print(mp)
-    train_loader = D.create('trainset', mp.dataset_folder, {}, mp.batch_size, mp.curriculum, mp.shuffle)  -- TODO: take care of all curriculum here
-    test_loader = D.create('testset', mp.dataset_folder, {}, mp.batch_size, mp.curriculum, mp.shuffle)  -- TODO: take care of all curriculum here
+    local data_loader_args = {mp.dataset_folder,
+                              mp.batch_size,
+                              mp.shuffle,
+                              mp.cuda}
+    train_loader = D.create('trainset', {}, unpack(data_loader_args))
+    test_loader = D.create('testset', {}, unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
     local epoch = 0  -- TODO Not sure if this is necessary
     local beginning_time = torch.tic() -- TODO not sure if this is necessary
@@ -97,8 +101,6 @@ function feval_train(params_)  -- params_ should be first argument
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
-
---TODO what? optim.rmsprop is different from rmsprop?
 
 function train(epoch_num)
     local cntr = 0, new_params, train_loss
@@ -160,43 +162,44 @@ function test(dataloader)
     return avg_loss
 end
 
-------------------------------------- Main -------------------------------------
+function experiment()
+    torch.setnumthreads(mp.num_threads)
+    print('<torch> set nb of threads to ' .. torch.getnumthreads())
 
-torch.setnumthreads(mp.num_threads)
-print('<torch> set nb of threads to ' .. torch.getnumthreads())
+    local experiment_results = mp.results_folder .. '/experiment_results.t7'
+    local all_results = {}
+    local train_losses = {}
+    local dev_losses = {}
 
-local experiment_results = mp.results_folder .. '/experiment_results.t7'
-local all_results = {}
-local learning_rate = mp.lr
-print('Learning rate:', learning_rate)
-local train_losses = {}
-local dev_losses = {}
 
-init(false)
+    for i = 1, mp.max_epochs do
+        if i == 3 then assert(false) end
+        local train_loss
+        train_loss = train(i)
+        -- train_loss = test(train_test_loader)
+        print('train loss\t', train_loss)
 
-for i = 1, mp.max_epochs do
-    if i == 3 then assert(false) end
-    local train_loss
-    train_loss = train(i)
-    -- train_loss = test(train_test_loader)
-    print('train loss\t', train_loss)
+        local dev_loss = test(test_loader)
+        print('avg dev loss\t', dev_loss)
 
-    local dev_loss = test(test_loader)
-    print('avg dev loss\t', dev_loss)
+        -- Record loss
+        train_losses[#train_losses+1] = train_loss
+        dev_losses[#dev_losses+1] = dev_loss
 
-    -- Record loss
-    train_losses[#train_losses+1] = train_loss
-    dev_losses[#dev_losses+1] = dev_loss
+        print('train_losses:', train_losses)
+        print('dev_losses:', dev_losses)
 
-    print('train_losses:', train_losses)
-    print('dev_losses:', dev_losses)
+        -- Can save here actually, so that you constantly save stuff. Basically you rewrite all_results[learning_rate] each time
+        all_results[mp.lr] = {results_train_losses  = torch.Tensor(train_losses),
+                                      results_dev_losses    = torch.Tensor(dev_losses)}
+        print('all_results', all_results)
+        -- torch.save(experiment_results, all_results)
 
-    -- Can save here actually, so that you constantly save stuff. Basically you rewrite all_results[learning_rate] each time
-    all_results[learning_rate] = {results_train_losses  = torch.Tensor(train_losses),
-                                  results_dev_losses    = torch.Tensor(dev_losses)}
-    print('all_results', all_results)
-    -- torch.save(experiment_results, all_results)
-
-    if mp.cuda then cutorch.synchronize() end
-    collectgarbage()
+        if mp.cuda then cutorch.synchronize() end
+        collectgarbage()
+    end
 end
+
+------------------------------------- Main -------------------------------------
+init(false)
+experiment()
