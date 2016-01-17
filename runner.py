@@ -6,7 +6,7 @@ dry_run = '--dry-run' in sys.argv
 local   = '--local' in sys.argv
 detach  = '--detach' in sys.argv
 
-dry_run = True
+dry_run = False
 local = False
 detach = True
 
@@ -37,8 +37,10 @@ if dry_run:
 else:
     print "Starting jobs:"
 
+jobs = [jobs[0]]
+
 for job in jobs:
-    jobname = "baseline2"
+    jobname = "baselinesubsampled"
     flagstring = ""
     for flag in job:
         if isinstance(job[flag], bool):
@@ -82,4 +84,5 @@ for job in jobs:
             # if 'gpuid' in job and job['gpuid'] >= 0:
             #     os.system("sbatch -N 1 -c 1 --gres=gpu:1 -p gpu --mem=10000 slurm_scripts/" + jobname + ".slurm &")
             # else:
+            # print('RUNNING')
             os.system("sbatch -N 1 -c 1 --gres=gpu:1 -p gpu --mem=10000 slurm_scripts/" + jobname + ".slurm &")

@@ -38,7 +38,7 @@ mp = lapp[[
    -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 100)
    --layers           (default 4)
-   --seed             (default false)
+   --seed             (default true)
    --max_grad_norm    (default 10)
    --save_output	  (default false)
    --print_every      (default 10)
@@ -46,7 +46,7 @@ mp = lapp[[
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-	mp.winsize = 10
+	mp.winsize = 10  --10
 	mp.dataset_folder = 'hey'
 	mp.batch_size = 1
 	mp.seq_length = 10
@@ -55,9 +55,9 @@ if mp.server == 'pc' then
 	mp.cunn = false
 else
 	mp.winsize = 20
-	mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files'
+	mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files_subsampled'
 	mp.batch_size = 100
-	mp.seq_length = 20
+	mp.seq_length = 10
 	mp.num_threads = 4
     -- mp.plot = false
 	mp.cuda = true
