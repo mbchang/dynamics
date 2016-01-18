@@ -29,7 +29,7 @@ require 'logging_utils'
 mp = lapp[[
    -d,--root          (default "logslink")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
-   -n,--name          (default "")
+   -n,--name          (default "lalala")
    -p,--plot          (default true)                    	plot while training
    -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
@@ -47,7 +47,7 @@ mp = lapp[[
 if mp.server == 'pc' then
     mp.root = 'logs'
 	mp.winsize = 10  --10
-	mp.dataset_folder = 'hey'
+	mp.dataset_folder = 'haha'
 	mp.batch_size = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -146,7 +146,7 @@ function train(epoch_num)
 
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '-'}
-        trainLogger:plot()
+        -- trainLogger:plot()
 
         cntr = cntr + 1
         if mp.cuda then cutorch.synchronize() end
@@ -203,7 +203,7 @@ function experiment()
                              ['log MSE loss (test set)'] =  torch.log(dev_loss)}
         experimentLogger:style{['log MSE loss (train set)'] = '-',
                                ['log MSE loss (test set)'] = '-'}
-        experimentLogger:plot()
+        -- experimentLogger:plot()
 
         -- Save network
         torch.save(mp.savedir .. '/network.t7', model.network)

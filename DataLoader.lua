@@ -483,8 +483,8 @@ function get_all_specified_configs(worldconfigtable, all_configs)
 end
 
 return dataloader
-
--- -- d = dataloader.create('trainset','/om/user/mbchang/physics-data/dataset_files',false)
+--
+-- d = dataloader.create('trainset', {}, '/om/user/mbchang/physics-data/dataset_files_subsampled', 100, false, false)
 -- d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
 -- print(d)
 

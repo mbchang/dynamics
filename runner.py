@@ -37,7 +37,7 @@ if dry_run:
 else:
     print "Starting jobs:"
 
-jobs = [jobs[0]]
+jobs = [jobs[0], jobs[1], jobs[2]]
 
 for job in jobs:
     jobname = "baselinesubsampled"
@@ -78,6 +78,11 @@ for job in jobs:
             slurmfile.write("#SBATCH --job-name"+"=" + jobname + "\n")
             slurmfile.write("#SBATCH --output=slurm_logs/" + jobname + ".out\n")
             slurmfile.write("#SBATCH --error=slurm_logs/" + jobname + ".err\n")
+            slurmfile.write("#SBATCH -N 1\n")
+            slurmfile.write("#SBATCH -c 1\n")
+            slurmfile.write("#SBATCH -p gpu\n")
+            slurmfile.write("#SBATCH --gres=gpu:1\n")
+            slurmfile.write("#SBATCH --mem=30000\n")
             slurmfile.write(jobcommand)
 
         if not dry_run:
@@ -85,4 +90,5 @@ for job in jobs:
             #     os.system("sbatch -N 1 -c 1 --gres=gpu:1 -p gpu --mem=10000 slurm_scripts/" + jobname + ".slurm &")
             # else:
             # print('RUNNING')
-            os.system("sbatch -N 1 -c 1 --gres=gpu:1 -p gpu --mem=10000 slurm_scripts/" + jobname + ".slurm &")
+            # os.system("sbatch -N 1 -c 1 --gres=gpu:1 -p gpu --mem=10000 slurm_scripts/" + jobname + ".slurm &")
+            os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
