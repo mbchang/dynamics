@@ -510,7 +510,7 @@ function convert2allconfigs(config_abbrev_table)
     return all
 end
 
--- return dataloader
+return dataloader
 --
 -- d = dataloader.create('trainset', {}, '/om/user/mbchang/physics-data/dataset_files_subsampled', 100, false, false)
 -- d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
@@ -523,7 +523,7 @@ end
 
 -- print(convert2config('[1--]'))
 -- print(convert2config('[1-2-3]'))
-print(map(convert2config, {'[4--]', '[1-2-3]', '[3--]', '[2-1-5]'}))
+-- print(map(convert2config, {'[4--]', '[1-2-3]', '[3--]', '[2-1-5]'}))
 
 
 -- TODO: compute_batches is wrong; the start and finish are wrong?
