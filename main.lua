@@ -27,10 +27,12 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 
 mp = lapp[[
-   -d,--root          (default "logslink")      	subdirectory to save logs
+   -d,--root          (default "logs")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -n,--name          (default "lalala")
    -p,--plot          (default true)                    	plot while training
+   -j,--traincfgs     (default "")
+   -k,--testcfgs      (default "")
    -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -s,--shuffle  	  (default false)
@@ -48,9 +50,12 @@ if mp.server == 'pc' then
     mp.root = 'logs'
 	mp.winsize = 10  --10
 	mp.dataset_folder = 'haha'
+    mp.traincfgs = ''--[1-1-0]'
+    mp.testcfgs = ''--[1-1-0]'
 	mp.batch_size = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
+    mp.plot = true
 	mp.cuda = false
 	mp.cunn = false
 else
@@ -59,7 +64,7 @@ else
 	mp.batch_size = 50  -- this is decided by looking at the dataset
 	mp.seq_length = 10
 	mp.num_threads = 4
-    -- mp.plot = false
+    mp.plot = false
 	mp.cuda = true
 	mp.cunn = true
 end
@@ -114,8 +119,8 @@ function init(preload, model_path)
                               mp.batch_size,
                               mp.shuffle,
                               mp.cuda}
-    train_loader = D.create('trainset', {}, unpack(data_loader_args))
-    test_loader = D.create('testset', {}, unpack(data_loader_args))
+    train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
+    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
     -- test_loader.batch_size = 50 -- hacky, figure out better way
     model = M.create(mp, preload, model_path)
     local epoch = 0  -- TODO Not sure if this is necessary
@@ -146,8 +151,8 @@ function train(epoch_num)
         end
 
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
-        trainLogger:style{['log MSE loss (train set)'] = '-'}
-        -- trainLogger:plot()
+        trainLogger:style{['log MSE loss (train set)'] = '~'}
+        if mp.plot then trainLogger:plot() end
 
         cntr = cntr + 1
         if mp.cuda then cutorch.synchronize() end
@@ -190,32 +195,24 @@ function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
     for i = 1, mp.max_epochs do
-        -- if i == 5 then assert(false) end
         checkpoint(mp.savedir .. '/network.t7', model.network, mp)
         -- checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
         print('Saved model')
 
         local train_loss
-        -- print(train_loader.config_sizes)
         train_loss = train(i)
         -- train_loss = test(train_test_loader)
         -- print('train loss\t', train_loss)
 
-        -- print(test_loader.config_sizes)
         local dev_loss = test(test_loader)
         -- print('avg dev loss\t', dev_loss)
 
         -- Save logs
         experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
                              ['log MSE loss (test set)'] =  torch.log(dev_loss)}
-        experimentLogger:style{['log MSE loss (train set)'] = '-',
-                               ['log MSE loss (test set)'] = '-'}
-        -- experimentLogger:plot()
-
-        -- Save network
-        -- torch.save(mp.savedir .. '/network.t7', model.network)
-        -- torch.save(mp.savedir .. '/params.t7', model.theta.params)
-
+        experimentLogger:style{['log MSE loss (train set)'] = '~',
+                               ['log MSE loss (test set)'] = '~'}
+        if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
@@ -230,10 +227,6 @@ function checkpoint(savefile, data, mp_)
     else
         torch.save(savefile, data)
     end
-    -- local a = torch.load(savefile) -- the params don't get saved to float for some reason?
-    -- print(type(a))
-    -- print('Data saved')
-    -- print(a)
     collectgarbage()
 end
 

@@ -119,7 +119,7 @@ function plot_tensor(tensor, info, subsamplerate)
     gnuplot.xlabel(info[2])
     gnuplot.ylabel(info[3])
     gnuplot.title(info[4])  -- change
-    gnuplot.plot(toplot, '~')
+    gnuplot.plot(torch.exp(toplot), '~')
     gnuplot.plotflush()
 end
 
@@ -136,7 +136,7 @@ end
 -- for main.lua
 function plot_training_losses(logfile)
     local data = read_log_file(logfile)
-    local subsamplerate = 100
+    local subsamplerate = 300
     plot_tensor(data,
                 {'hihhihhihih',
                  'batch (every '..subsamplerate..')',
@@ -161,4 +161,4 @@ end
 -- plot_all_training('openmind')
 -- plot_all_experiments('pc', plot_experiment_results, 'experiment_results.t7')
 -- read_log_file('openmind/baselinesubsampled_opt_adam_lr_0.0005')
-plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/train.log')
+plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.0005/train.log')

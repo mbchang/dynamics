@@ -502,12 +502,13 @@ function convert2config(config_abbrev)
     end
 end
 
-function convert2allconfigs(config_abbrev_table)
-    local all = {}
-    for _, config_abbrev in pairs(config_abbrev_table) do
-        all[#all+1] = convert2config(config_abbrev)
-    end
-    return all
+-- "[4--],[1-2-3],[3--],[2-1-5]"
+-- notice that is surrounded by brackets
+--TODO should I look up how to serialize table
+function dataloader.convert2allconfigs(config_abbrev_table_string)
+    assert(stringx.lfind(config_abbrev_table_string, ' ') == nil)
+    local x = stringx.split(config_abbrev_table_string,',')  -- get rid of brackets; x is a table
+    return map(convert2config,x)
 end
 
 return dataloader
@@ -521,9 +522,10 @@ return dataloader
 -- d.configs[#d.configs+1] = 'worldm3dfdf'
 -- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
 
--- print(convert2config('[1--]'))
+-- print(convert2config('[]'))
 -- print(convert2config('[1-2-3]'))
 -- print(map(convert2config, {'[4--]', '[1-2-3]', '[3--]', '[2-1-5]'}))
+-- print(convert2allconfigs("[4--],[1-2-3],[3--],[2-1-5]"))
 
 
 -- TODO: compute_batches is wrong; the start and finish are wrong?

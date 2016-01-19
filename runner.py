@@ -37,7 +37,7 @@ if dry_run:
 else:
     print "Starting jobs:"
 
-# jobs = [jobs[0], jobs[1], jobs[2]]
+jobs = [jobs[0], jobs[1], jobs[2]]
 
 for job in jobs:
     jobname = "baselinesubsampled"
