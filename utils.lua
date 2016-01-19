@@ -89,4 +89,32 @@ function is_substring(substring, string)
     return not (string:find(substring) == nil)
 end
 
+function notnil(x)
+    return not(x == nil)
+end
+
+-- from http://lua-users.org/wiki/FunctionalLibrary
+-- map(function, table)
+-- e.g: map(double, {1,2,3})    -> {2,4,6}
+function map(func, tbl)
+    local newtbl = {}
+    for i,v in pairs(tbl) do
+        newtbl[i] = func(v)
+    end
+    return newtbl
+end
+
+-- from http://lua-users.org/wiki/FunctionalLibrary
+-- filter(function, table)
+-- e.g: filter(is_even, {1,2,3,4}) -> {2,4}
+function filter(func, tbl)
+    local newtbl= {}
+    for i,v in pairs(tbl) do
+        if func(v) then
+        newtbl[i]=v
+        end
+    end
+    return newtbl
+end
+
 -- print(merge_tables_by_value({['a']=1}, {['b'] = 2, ['c'] = 5}))

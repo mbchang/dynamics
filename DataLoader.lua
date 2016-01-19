@@ -10,6 +10,7 @@ require 'hdf5'
 require 'data_utils'
 require 'torchx'
 require 'utils'
+require 'pl.stringx'
 local T = require 'pl.tablex'
 
 local dataloader = {}
@@ -17,7 +18,9 @@ dataloader.__index = dataloader
 
 local object_dim = 8
 local max_other_objects = 10
-local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}
+local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}  -- all_worlds[1] should correspond to worldm1
+local particle_range = {1,6}
+local goo_range = {0,5}
 
 
 --[[ Loads the dataset as a table of configurations
@@ -335,6 +338,8 @@ function dataloader:next_config(current_config, start, finish)
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 
     -- here only get the batch you need. There is a lot of redundant computation here
+    -- print('start', start)
+    -- print('finish', finish)
     this_x          = this_x[{{start,finish}}]
     context_x       = context_x[{{start,finish}}]
     y               = y[{{start,finish}}]
@@ -482,7 +487,30 @@ function get_all_specified_configs(worldconfigtable, all_configs)
     return all_specified_configs
 end
 
-return dataloader
+
+-- [1-1-1] for worldm1, np 1 ng 1
+-- implementation so far: either world or entire config
+function convert2config(config_abbrev)
+    local world, np, ng = string.match(config_abbrev, "%[(%d*)-(%d*)-(%d*)%]")
+    if not(world == '') and np == '' and ng == '' then -- world only
+        local config = all_worlds[tonumber(world)]
+        assert(config:sub(stringx.lfind(config,'m')+1) == tostring(world))
+        return config
+    else
+        assert(not(world == '' or np == '' or ng == ''))
+        return 'worldm'..world..'_np='..np..'_ng='..ng
+    end
+end
+
+function convert2allconfigs(config_abbrev_table)
+    local all = {}
+    for _, config_abbrev in pairs(config_abbrev_table) do
+        all[#all+1] = convert2config(config_abbrev)
+    end
+    return all
+end
+
+-- return dataloader
 --
 -- d = dataloader.create('trainset', {}, '/om/user/mbchang/physics-data/dataset_files_subsampled', 100, false, false)
 -- d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
@@ -492,6 +520,10 @@ return dataloader
 -- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'
 -- d.configs[#d.configs+1] = 'worldm3dfdf'
 -- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
+
+-- print(convert2config('[1--]'))
+-- print(convert2config('[1-2-3]'))
+print(map(convert2config, {'[4--]', '[1-2-3]', '[3--]', '[2-1-5]'}))
 
 
 -- TODO: compute_batches is wrong; the start and finish are wrong?

@@ -29,7 +29,7 @@ base_networks = {
 #         },
 #     ]
 
-jobs = [{'lr': r, 'opt': o, } for r in [5e-4, 5e-5, 5e-6] for o in ['rmsprop', 'optimrmsprop', 'adam']]
+jobs = [{'lr': r, 'opt': o} for r in [5e-4, 5e-5, 5e-6] for o in ['rmsprop', 'optimrmsprop', 'adam']]
 
 
 if dry_run:
@@ -37,7 +37,7 @@ if dry_run:
 else:
     print "Starting jobs:"
 
-jobs = [jobs[0], jobs[1], jobs[2]]
+# jobs = [jobs[0], jobs[1], jobs[2]]
 
 for job in jobs:
     jobname = "baselinesubsampled"

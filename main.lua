@@ -56,7 +56,7 @@ if mp.server == 'pc' then
 else
 	mp.winsize = 20
 	mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files_subsampled'
-	mp.batch_size = 100
+	mp.batch_size = 50  -- this is decided by looking at the dataset
 	mp.seq_length = 10
 	mp.num_threads = 4
     -- mp.plot = false
@@ -116,6 +116,7 @@ function init(preload, model_path)
                               mp.cuda}
     train_loader = D.create('trainset', {}, unpack(data_loader_args))
     test_loader = D.create('testset', {}, unpack(data_loader_args))
+    -- test_loader.batch_size = 50 -- hacky, figure out better way
     model = M.create(mp, preload, model_path)
     local epoch = 0  -- TODO Not sure if this is necessary
     local beginning_time = torch.tic() -- TODO not sure if this is necessary
@@ -189,12 +190,18 @@ function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
     for i = 1, mp.max_epochs do
-        if i == 10 then assert(false) end
+        -- if i == 5 then assert(false) end
+        checkpoint(mp.savedir .. '/network.t7', model.network, mp)
+        -- checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
+        print('Saved model')
+
         local train_loss
+        -- print(train_loader.config_sizes)
         train_loss = train(i)
         -- train_loss = test(train_test_loader)
         -- print('train loss\t', train_loss)
 
+        -- print(test_loader.config_sizes)
         local dev_loss = test(test_loader)
         -- print('avg dev loss\t', dev_loss)
 
@@ -206,12 +213,28 @@ function experiment()
         -- experimentLogger:plot()
 
         -- Save network
-        torch.save(mp.savedir .. '/network.t7', model.network)
-        torch.save(mp.savedir .. '/params.t7', model.theta.params)
+        -- torch.save(mp.savedir .. '/network.t7', model.network)
+        -- torch.save(mp.savedir .. '/params.t7', model.theta.params)
 
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
+end
+
+function checkpoint(savefile, data, mp_)
+    if mp_.cuda then
+        print('converting to float')
+        data = data:float()
+        torch.save(savefile, data)
+        data = data:cuda()
+    else
+        torch.save(savefile, data)
+    end
+    -- local a = torch.load(savefile) -- the params don't get saved to float for some reason?
+    -- print(type(a))
+    -- print('Data saved')
+    -- print(a)
+    collectgarbage()
 end
 
 ------------------------------------- Main -------------------------------------

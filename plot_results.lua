@@ -97,6 +97,54 @@ function plot_all_training(parent_folder)
     end
 end
 
+function read_log_file(logfile)
+    -- local f = io.open(logfile, "r")
+    -- -- print(f)
+    -- local strdata = f:read('*all')  -- string, need to convert to torch Tensor
+    -- print(#strdata)
+    -- -- print(type(data))
+    local data = {}
+    for line in io.lines(logfile) do
+        data[#data+1] = tonumber(line) --ignores the string at the top
+    end
+    data = torch.Tensor(data)
+    return data
+end
+
+-- info{outfilename, xlabel, ylabel, title}, all strings
+-- like{outfilename, 'batch', 'Log MSE Loss', 'Losses On Training Set'}
+function plot_tensor(tensor, info, subsamplerate)
+    local toplot = subsample(tensor, subsamplerate)
+    gnuplot.pngfigure(info[1])
+    gnuplot.xlabel(info[2])
+    gnuplot.ylabel(info[3])
+    gnuplot.title(info[4])  -- change
+    gnuplot.plot(toplot, '~')
+    gnuplot.plotflush()
+end
+
+function subsample(tensor, rate)
+    local subsampled = {}
+    local x = torch.range(1, tensor:size(1), rate)
+    for i=1,tensor:size(1),rate do
+        subsampled[#subsampled+1] = tensor[i]
+    end
+    subsampled = torch.Tensor(subsampled)
+    return subsampled
+end
+
+-- for main.lua
+function plot_training_losses(logfile)
+    local data = read_log_file(logfile)
+    local subsamplerate = 100
+    plot_tensor(data,
+                {'hihhihhihih',
+                 'batch (every '..subsamplerate..')',
+                 'Log MSE Loss',
+                 'Losses On Training Set'},
+                 subsamplerate)
+end
+
 
 
 -- losses,lr=0.0005_results.t7  losses,lr=5e-06_results.t7   saved_model,lr=5e-05.t7
@@ -110,5 +158,7 @@ end
 -- plot_train_losses(common_mp.results_folder .. '/losses,lr=5e-05_results', '.')
 
 
-plot_all_training('openmind')
+-- plot_all_training('openmind')
 -- plot_all_experiments('pc', plot_experiment_results, 'experiment_results.t7')
+-- read_log_file('openmind/baselinesubsampled_opt_adam_lr_0.0005')
+plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/train.log')
