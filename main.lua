@@ -290,8 +290,10 @@ function checkpoint(savefile, data, mp_)
 end
 
 ------------------------------------- Main -------------------------------------
-inittrain(false)
-experiment()
--- inittest(true, '/home/mbchang/code/physics_engine/logs/baselinesubsampled_opt_adam_lr_0.001/network.t7')
--- inittest(true, '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/network.t7')
--- print(test(test_loader, true))
+-- inittrain(false)
+-- experiment()
+
+local exp_folder = '/home/mbchang/code/physics_engine/logs2/baselinesubsampled_opt_adam_lr_0.001'
+-- local exp_folder = ''/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala'
+inittest(true, exp_folder ..'/'..'network.t7')
+print(test(test_loader, torch.load(exp_folder..'/'..'params.t7'), false))
