@@ -153,6 +153,8 @@ function Tester:save_example_prediction(example, description, modelfile)
 
     local experiment, lr_file = modelfile:match'(.*/)(.*)'
     lr_file = lr_file:sub(#'saved_model,'+1):sub(1,-(#'.t7'+1))
+    -- TODO get the name right: use the name here
+
     local subfolder = 'predictions/'
     if not paths.dirp(experiment..'/'..subfolder) then paths.mkdir(experiment..'/'..subfolder) end
 
@@ -160,7 +162,6 @@ function Tester:save_example_prediction(example, description, modelfile)
     local num_future = self.mp.winsize-math.floor(self.mp.winsize/2)
 
     local save_path = experiment..subfolder..lr_file..'_'..config..'_['..start..','..finish..'].h5'
-
 
     if common_mp.cuda then
         prediction = prediction:float()

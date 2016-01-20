@@ -108,7 +108,8 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         For goos:  crop --> ltrb2xywh --> normalize
         For particles:
     """
-    assert starttime + windowsize < len(observedPath)  # 400 is the total length of the video
+    # print starttime, windowsize, len(observedPath)
+    assert starttime + windowsize <= len(observedPath)  # 400 is the total length of the video
 
 
     path_slice = observedPath[starttime:starttime+windowsize]  # (windowsize, [pos, vel], numObjects, [x,y])
@@ -155,7 +156,17 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
 
     return (path_slice, goos)
 
-def get_examples_for_video(video_path, num_samples, windowsize):
+def subsample_range(range_length, windowsize, num_samples):
+    """
+        range_length: int, from 0 to this number
+        rate:
+
+    """
+    last_possible_index = range_length - windowsize
+    rate = int((last_possible_index)/(num_samples-1))
+    return np.arange(last_possible_index+1)[0::rate]
+
+def get_examples_for_video(video_path, num_samples, windowsize, contiguous):
     """
         Returns a list of examples for this particular video
 
@@ -175,9 +186,13 @@ def get_examples_for_video(video_path, num_samples, windowsize):
     particles, goos, observedPath = convert_file(video_path, G_SUBSAMPLE)
 
     # sample randomly
-    samples_idxs = np.random.choice(range(len(observedPath)-windowsize), num_samples, replace=False)  # indices
+    # TODO
+    if contiguous:
+        samples_idxs = subsample_range(len(observedPath), windowsize, num_samples)
+    else:
+        samples_idxs = np.random.choice(range(len(observedPath)-windowsize), num_samples, replace=False)  # indices
     print 'video', video_path[video_path.rfind('/')+1:]
-    print 'video samples:', samples_idxs
+    print 'video samples:', samples_idxs, type(samples_idxs)
 
     # separate here!
     video_sample_particles = []
@@ -192,7 +207,7 @@ def get_examples_for_video(video_path, num_samples, windowsize):
 
     return stack(video_sample_particles), stack(video_sample_goos)
 
-def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_video, windowsize):
+def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_video, windowsize, contiguous):
     """
         Returns a list of examples for this particular config
 
@@ -220,7 +235,7 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
     config_sample_goos = []
     print 'config samples idxes:', np.array(os.listdir(config_path))[config_sample_idxs]
     for video in np.array(os.listdir(config_path))[config_sample_idxs]:
-        video_sample_particles, video_sample_goos = get_examples_for_video(os.path.join(config_path, video), num_samples_per_video, windowsize)
+        video_sample_particles, video_sample_goos = get_examples_for_video(os.path.join(config_path, video), num_samples_per_video, windowsize, contiguous)
         config_sample_particles.append(video_sample_particles)
         config_sample_goos.append(video_sample_goos)
 
@@ -233,7 +248,7 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
 
     return config_sample_particles, config_sample_goos
 
-def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize):
+def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous):
     """
         orig: 4 worlds * 30 configs * 500 videos * 400 timesteps * 1-6 particles
 
@@ -306,11 +321,11 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
         # add to dictionary. The values returned by get_examples_for_config are tuples!
         # Here sample within config, but pass num_samples_within_video here for use that will be used get_examples_for_video
         print '\nTRAINSET'
-        trainset[world_config]    = get_examples_for_config(config_path, train_sample_idxs, sp['train']['per_video'], windowsize)
+        trainset[world_config]    = get_examples_for_config(config_path, train_sample_idxs, sp['train']['per_video'], windowsize, contiguous)
         print '\nVALSET'
-        valset[world_config]      = get_examples_for_config(config_path, val_sample_idxs, sp['val']['per_video'], windowsize)
+        valset[world_config]      = get_examples_for_config(config_path, val_sample_idxs, sp['val']['per_video'], windowsize, contiguous)
         print '\nTESTSET'
-        testset[world_config]     = get_examples_for_config(config_path, test_sample_idxs, sp['test']['per_video'], windowsize)
+        testset[world_config]     = get_examples_for_config(config_path, test_sample_idxs, sp['test']['per_video'], windowsize, contiguous)
 
     # flatten the datasets
     trainset = flatten_dataset(trainset)
@@ -337,12 +352,13 @@ def flatten_dataset(dataset):
     return flattened_dataset
 
 def save_all_datasets(dryrun):
-    dataset_files_folder = '/om/user/mbchang/physics-data/dataset_files_subsampled'
-    data_root = '/om/user/mbchang/physics-data/data'
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_contig'
+    data_root = '/om/data/public/mbchang/physics-data/data'
     windowsize = 20  # 2
     num_train_samples_per = (50, 5)  # 3
     num_val_samples_per = (10, 5)  # 1
     num_test_samples_per = (10, 5)  # 1
+    contiguous = True
 
     # dataset_files_folder = 'haha'
     # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
@@ -350,8 +366,9 @@ def save_all_datasets(dryrun):
     # num_train_samples_per = (8, 8)  # 30
     # num_val_samples_per = (4, 4)  # 10
     # num_test_samples_per = (4, 4)  # 10
+    # contiguous = True
 
-    trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
+    trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous)
 
     # # save
     if not dryrun:
@@ -576,9 +593,10 @@ def separate_context(context, config):
 
     print 'num_particles', num_particles
     print 'num_goos', num_goos
+    print 'num_other', num_other
 
     # Thus, the RNN should only run for num_particles + num_goos iterations
-    if num_particles + num_goos != G_num_objects:
+    if num_particles + num_goos != G_num_objects+1:  # TODO: shouldn't this be G_num_objects + 1?
         begin_zeros_here = num_other + num_goos
         assert(not np.any(context[:, begin_zeros_here:,:,:]))  # everything after
 
@@ -800,7 +818,7 @@ def visualize_results(training_samples_hdf5, sample_num):
 
         Visualizes past as well as ground truth future and predicted future
     """
-    framerate = 10
+    framerate = 1
     movie_folder = 'rendertestfolder'
     movieName = 'rendertest'  # TODO should depend on training_samples_hdf5
 
@@ -853,3 +871,7 @@ if __name__ == "__main__":
     # # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
     # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
     # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
+
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/predictions/worldm1_np=1_ng=1_[1,50].h5'
+    # visualize_results(h5_file, 0)

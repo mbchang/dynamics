@@ -111,13 +111,15 @@ end
 function read_log_file_2vals(logfile)
     local data1 = {}
     local data2 = {}
+    local data3 = {}
     for line in io.lines(logfile) do
         local x = filter(function(x) return not(x=='') end,
                             stringx.split(line:gsub("%s+", ","),','))
         data1[#data1+1] = tonumber(x[1]) --ignores the string at the top
         data2[#data2+1] = tonumber(x[2]) --ignores the string at the top
+        data3[#data3+1] = tonumber(x[3]) --ignores the string at the top
     end
-    local data = torch.cat(torch.Tensor(data1), torch.Tensor(data2), 2)
+    local data = torch.cat(torch.Tensor(data1), torch.Tensor(data2), torch.Tensor(data3), 2)
     return data
 end
 
@@ -149,7 +151,7 @@ function subsample(tensor, rate)
     else  -- more than one variable
         local y = map(function (x) return subsample1(torch.Tensor(x), rate) end,
                       torch.totable(tensor:t()))
-        return {{'train', y[1],'~'},{'val', y[2],'~'}}  -- hardcoded
+        return {{'train', y[1],'~'},{'val', y[2],'~'}, {'test', y[3],'~'}}  -- hardcoded
     end
 end
 
@@ -199,5 +201,5 @@ end
 -- -- read_log_file('openmind/baselinesubsampled_opt_adam_lr_0.0005')
 -- plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.001/train.log',
 --                      'hihhihhihih')
--- plot_experiment('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.001/experiment.log',
---                         'hihhihhihih')
+plot_experiment('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/experiment.log',
+                        'hihhihhihih')

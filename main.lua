@@ -27,13 +27,13 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 
 mp = lapp[[
-   -d,--root          (default "logs")      	subdirectory to save logs
+   -d,--root          (default "logs2")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -n,--name          (default "lalala")
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "")
    -k,--testcfgs      (default "")
-   -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
+   -o,--opt           (default "rmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -s,--shuffle  	  (default false)
    -r,--lr            (default 0.0005)      	learning rate
@@ -49,7 +49,7 @@ mp = lapp[[
 if mp.server == 'pc' then
     mp.root = 'logs'
 	mp.winsize = 10  --10
-	mp.dataset_folder = 'haha'
+	mp.dataset_folder = 'hey'
     mp.traincfgs = ''--[1-1-0]'
     mp.testcfgs = ''--[1-1-0]'
 	mp.batch_size = 1
@@ -60,7 +60,7 @@ if mp.server == 'pc' then
 	mp.cunn = false
 else
 	mp.winsize = 20
-	mp.dataset_folder = '/om/user/mbchang/physics-data/dataset_files_subsampled'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled'
 	mp.batch_size = 50  -- this is decided by looking at the dataset
 	mp.seq_length = 10
 	mp.num_threads = 4
@@ -99,20 +99,12 @@ elseif mp.opt == 'adam' then
 end
 
 
-trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
-experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
-if mp.plot == false then
-    trainLogger.showPlot = false
-    experimentLogger.showPlot = false
-end
-
-
-local model, train_loader, test_loader
+local model, train_loader, test_loader, modelfile
 
 ------------------------------- Helper Functions -------------------------------
 
 -- initialize
-function init(preload, model_path)
+function inittrain(preload, model_path)
     print("Network parameters:")
     print(mp)
     local data_loader_args = {mp.dataset_folder,
@@ -120,14 +112,32 @@ function init(preload, model_path)
                               mp.shuffle,
                               mp.cuda}
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
+    val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
-    -- test_loader.batch_size = 50 -- hacky, figure out better way
     model = M.create(mp, preload, model_path)
-    local epoch = 0  -- TODO Not sure if this is necessary
-    local beginning_time = torch.tic() -- TODO not sure if this is necessary
-    local start_time = torch.tic()  -- TODO not sure if this is necessary
+
+    trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
+    experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
+    if mp.plot == false then
+        trainLogger.showPlot = false
+        experimentLogger.showPlot = false
+    end
     print("Initialized Network")
 end
+
+function inittest(preload, model_path)
+    print("Network parameters:")
+    print(mp)
+    local data_loader_args = {mp.dataset_folder,
+                              mp.batch_size,
+                              mp.shuffle,
+                              mp.cuda}
+    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+    model = M.create(mp, preload, model_path)
+    modelfile = model_path
+    print("Initialized Network")
+end
+
 
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
@@ -162,12 +172,12 @@ function train(epoch_num)
 end
 
 -- test on dataset
-function test(dataloader)
+function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
-        -- xlua.progress(i, dataloader.num_batches)
-        local this, context, y, mask = unpack(dataloader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
-        local test_loss, state, predictions = model:fp(model.theta.params, {this=this,context=context}, y)
+        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
+        local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
 
         -- here you have the option to save predictions into a file
@@ -178,16 +188,64 @@ function test(dataloader)
                                         mp.winsize/2,
                                         dataloader.object_dim)
 
-        -- if saveoutput then
-        --     assert(torch.type(model)=='string')
-        --     self:save_example_prediction({this, context, y, prediction, context_future},
-        --                         {config, start, finish},
-        --                         {'model_predictions', model})
-        -- end
+        if saveoutput then
+            save_example_prediction({this, context, y, prediction, context_future},
+                                    {config, start, finish},
+                                    modelfile,
+                                    dataloader)
+        end
     end
     local avg_loss = sum_loss/dataloader.num_batches
     collectgarbage()
     return avg_loss
+end
+
+function save_example_prediction(example, description, modelfile_, dataloader)
+    --[[
+        example: {this, context, y, prediction, context_future}
+        description: {config, start, finish}
+        modelfile_: like '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/network.t7'
+
+        will save to something like:
+            logs/<experiment-name>/predictions/<config.h5>
+    --]]
+
+    --unpack
+    local this, context, y, prediction, context_future = unpack(example)
+    local config, start, finish = unpack(description)
+
+    local subfolder = mp.savedir .. '/' .. 'predictions/'
+    if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
+    local save_path = mp.savedir .. '/' .. 'predictions/' .. config..'_['..start..','..finish..'].h5'
+
+    if mp.cuda then
+        prediction = prediction:float()
+        this = this:float()
+        context = context:float()
+        y = y:float()
+        context_future = context_future:float()
+    end
+
+    local num_past = math.floor(mp.winsize/2)
+    local num_future = mp.winsize-math.floor(mp.winsize/2)
+
+    -- For now, just save it as hdf5. You can feed it back in later if you'd like
+    save_to_hdf5(save_path,
+        {pred=prediction,
+        this=this:reshape(this:size(1),
+                    num_past,
+                    dataloader.object_dim),
+        context=context:reshape(context:size(1),
+                    context:size(2),
+                    num_past,
+                    dataloader.object_dim),
+        y=y:reshape(y:size(1),
+                    num_past,
+                    dataloader.object_dim),
+        context_future=context_future:reshape(context_future:size(1),
+                    context_future:size(2),
+                    num_future,
+                    dataloader.object_dim)})
 end
 
 -- runs experiment
@@ -195,22 +253,23 @@ function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
     for i = 1, mp.max_epochs do
-        checkpoint(mp.savedir .. '/network.t7', model.network, mp)
-        -- checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
+        checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
+        -- checkpoint(mp.savedir .. '/rnn1.t7', model.rnns[1], mp) -- model.rnns[1]?
+        checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
         print('Saved model')
 
         local train_loss
         train_loss = train(i)
         -- train_loss = test(train_test_loader)
-        -- print('train loss\t', train_loss)
-
-        local dev_loss = test(test_loader)
-        -- print('avg dev loss\t', dev_loss)
+        local val_loss = test(val_loader, model.theta.params, false)
+        local test_loss = test(test_loader, model.theta.params, false)
 
         -- Save logs
         experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
-                             ['log MSE loss (test set)'] =  torch.log(dev_loss)}
+                             ['log MSE loss (val set)'] =  torch.log(val_loss),
+                             ['log MSE loss (test set)'] =  torch.log(test_loss)}
         experimentLogger:style{['log MSE loss (train set)'] = '~',
+                               ['log MSE loss (val set)'] = '~',
                                ['log MSE loss (test set)'] = '~'}
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
@@ -231,5 +290,8 @@ function checkpoint(savefile, data, mp_)
 end
 
 ------------------------------------- Main -------------------------------------
-init(false)
+inittrain(false)
 experiment()
+-- inittest(true, '/home/mbchang/code/physics_engine/logs/baselinesubsampled_opt_adam_lr_0.001/network.t7')
+-- inittest(true, '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/network.t7')
+-- print(test(test_loader, true))

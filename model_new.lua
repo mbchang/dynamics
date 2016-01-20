@@ -106,6 +106,7 @@ function model.create(mp_, preload, model_path)
     setmetatable(self, model)
     self.mp = mp_
     if preload then
+        print('Loading saved model.')
         self.network = torch.load(model_path):clone()
     else
         self.network = init_network(self.mp)
