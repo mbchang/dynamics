@@ -355,7 +355,7 @@ def save_all_datasets(dryrun):
     dataset_files_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_contig'
     data_root = '/om/data/public/mbchang/physics-data/data'
     windowsize = 20  # 2
-    num_train_samples_per = (50, 5)  # 3
+    num_train_samples_per = (100, 5)  # 3
     num_val_samples_per = (10, 5)  # 1
     num_test_samples_per = (10, 5)  # 1
     contiguous = True
@@ -838,7 +838,7 @@ def visualize_results(training_samples_hdf5, sample_num):
 
 
 if __name__ == "__main__":
-    # save_all_datasets(True)
+    save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -873,7 +873,7 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
 
     # 1/20/16: in summary: it can handle going straight, but it cannot bounce off objects
-    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
     # visualize_results(h5_file, 1)  # can bounce off walls
     # visualize_results(h5_file, 2)  # does not learn to bounce off other objects
     # visualize_results(h5_file, 3)  # does not learn to bounce off other objects Need a crisper way to model collisions

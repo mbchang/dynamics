@@ -61,7 +61,7 @@ if mp.server == 'pc' then
 	mp.cunn = false
 else
 	mp.winsize = 20
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_contig'
 	mp.batch_size = 50  -- this is decided by looking at the dataset
 	mp.seq_length = 10
 	mp.num_threads = 4
@@ -264,6 +264,7 @@ function experiment()
         -- train_loss = test(train_test_loader)
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
+        print('val loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 
         -- Save logs
         experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
@@ -296,16 +297,11 @@ function run_experiment()
 end
 
 function predict()
-    local exp_folder = mp.savedir
-    inittest(true, exp_folder ..'/'..'network.t7')
-    print(test(test_loader, torch.load(exp_folder..'/'..'params.t7'), true))
+    inittest(true, mp.savedir ..'/'..'network.t7')
+    print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
 end
 
 ------------------------------------- Main -------------------------------------
--- inittrain(false)
--- experiment()
-
--- local exp_folder = '/home/mbchang/code/physics_engine/logs2/baselinesubsampled_opt_adam_lr_0.001'
 if mp.mode == 'exp' then
     run_experiment()
 else
