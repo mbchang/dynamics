@@ -65,7 +65,7 @@ for job in jobs:
         else:
             jobname = jobname + "_" + flag + "_" + str(job[flag])
             flagstring = flagstring + " -" + flag + " " + str(job[flag])
-    flagstring = flagstring + " -name " + jobname
+    flagstring = flagstring + " -name " + jobname + " -mode exp"
 
     jobcommand = "th main.lua" + flagstring
 

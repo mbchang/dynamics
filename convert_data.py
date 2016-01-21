@@ -10,10 +10,10 @@ import re
 import h5py
 
 # PyGame Constants Comment out for openmind
-# import pygame
-# from pygame.locals import *
-# from pygame.color import THECOLORS
-# import particle
+import pygame
+from pygame.locals import *
+from pygame.color import THECOLORS
+import particle
 
 # Local imports
 from context_particles import *
@@ -838,7 +838,7 @@ def visualize_results(training_samples_hdf5, sample_num):
 
 
 if __name__ == "__main__":
-    save_all_datasets(True)
+    # save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -872,6 +872,25 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
     # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
 
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/predictions/worldm1_np=1_ng=1_[1,50].h5'
-    # visualize_results(h5_file, 0)
+    # 1/20/16: in summary: it can handle going straight, but it cannot bounce off objects
+    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
+    # visualize_results(h5_file, 1)  # can bounce off walls
+    # visualize_results(h5_file, 2)  # does not learn to bounce off other objects
+    # visualize_results(h5_file, 3)  # does not learn to bounce off other objects Need a crisper way to model collisions
+    # visualize_results(h5_file, 4)  # can definitely bounce off walls. I think we just need more training examples of particle collisions
+    # visualize_results(h5_file, 5)    # soft "bounce"
+    # visualize_results(h5_file, 6)    # reproduces linear motion very nicely
+    # visualize_results(h5_file, 7)    # bounces off imaginary wall, soft bounce. Note though that a lot of the ground truth also have soft bounces
+    # visualize_results(h5_file, 8)    # instead of bouncing, it slows down
+    # visualize_results(h5_file, 9)    # no obj-obj bouncing interaction
+    # visualize_results(h5_file, 10)    # bounces off imaginary wall
+    # visualize_results(h5_file, 11)     # bounces off imaginary wall. How do something that is crisp?
+    # visualize_results(h5_file, 12)     # bounces off imaginary wall. How do something that is crisp?
+    # visualize_results(h5_file, 13)     #  did not bounce against other object
+    # visualize_results(h5_file, 15)     #  GREAT EXAMPLE OF BOUNCING OFF WALL
+    # visualize_results(h5_file, 16)     #  did not bounce against other object; good example
+    # visualize_results(h5_file, 18)     #  definitive example of NOT BOUNCING OFF OBJECTS
+    # visualize_results(h5_file, 19)     # GREAT EXAMPLE OF BOUNCING OFF WALL
+    # visualize_results(h5_file, 26)     # DOES NOT BOUNCE OFF OTHER OBJECTS
+    # visualize_results(h5_file, 27)     # Bounces off corner
+    # visualize_results(h5_file, 34)     # Example of a bad ground truth rendering

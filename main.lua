@@ -27,6 +27,7 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 
 mp = lapp[[
+   -e,--mode          (default "exp")           exp | pred
    -d,--root          (default "logs2")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -n,--name          (default "lalala")
@@ -289,11 +290,24 @@ function checkpoint(savefile, data, mp_)
     collectgarbage()
 end
 
+function run_experiment()
+    inittrain(false)
+    experiment()
+end
+
+function predict()
+    local exp_folder = mp.savedir
+    inittest(true, exp_folder ..'/'..'network.t7')
+    print(test(test_loader, torch.load(exp_folder..'/'..'params.t7'), true))
+end
+
 ------------------------------------- Main -------------------------------------
 -- inittrain(false)
 -- experiment()
 
-local exp_folder = '/home/mbchang/code/physics_engine/logs2/baselinesubsampled_opt_adam_lr_0.001'
--- local exp_folder = ''/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala'
-inittest(true, exp_folder ..'/'..'network.t7')
-print(test(test_loader, torch.load(exp_folder..'/'..'params.t7'), false))
+-- local exp_folder = '/home/mbchang/code/physics_engine/logs2/baselinesubsampled_opt_adam_lr_0.001'
+if mp.mode == 'exp' then
+    run_experiment()
+else
+    predict()
+end
