@@ -42,10 +42,9 @@ function merge_tables_by_value(t1, t2)
     for k,v in pairs(t1) do assert(type(k) == 'number') end
     merged_table = T.deepcopy(t1)
     for _,v in pairs(t2) do
-        if isin(v, merged_table) then
-            error('t1 and t2 both contain the value: ' .. v)
+        if not isin(v, merged_table) then
+            merged_table[#merged_table+1] = v  -- just append
         end
-        merged_table[#merged_table+1] = v  -- just append
     end
     return merged_table
 end
@@ -115,6 +114,73 @@ function filter(func, tbl)
         end
     end
     return newtbl
+end
+
+-- from http://lua-users.org/wiki/FunctionalLibrary
+-- head(table)
+-- e.g: head({1,2,3}) -> 1
+function head(tbl)
+    return tbl[1]
+end
+
+-- from http://lua-users.org/wiki/FunctionalLibrary
+-- tail(table)
+-- e.g: tail({1,2,3}) -> {2,3}
+--
+-- XXX This is a BAD and ugly implementation.
+-- should return the address to next porinter, like in C (arr+1)
+function tail(tbl)
+    if table.getn(tbl) < 1 then
+        return nil
+    else
+        local newtbl = {}
+        local tblsize = table.getn(tbl)
+        local i = 2
+        while (i <= tblsize) do
+            table.insert(newtbl, i-1, tbl[i])
+            i = i + 1
+        end
+       return newtbl
+    end
+end
+
+-- from http://lua-users.org/wiki/FunctionalLibrary
+-- foldr(function, default_value, table)
+-- e.g: foldr(operator.mul, 1, {1,2,3,4,5}) -> 120
+function foldr(func, val, tbl)
+    for i,v in pairs(tbl) do
+        val = func(val, v)
+    end
+    return val
+end
+
+-- from http://lua-users.org/wiki/FunctionalLibrary
+-- reduce(function, table)
+-- e.g: reduce(operator.add, {1,2,3,4}) -> 10
+function reduce(func, tbl)
+    return foldr(func, head(tbl), tail(tbl))
+end
+
+-- range(start)             returns an iterator from 1 to a (step = 1)
+-- range(start, stop)       returns an iterator from a to b (step = 1)
+-- range(start, stop, step) returns an iterator from a to b, counting by step.
+-- from http://lua-users.org/wiki/RangeIterator
+function range (i, to, inc)
+     if i == nil then return end -- range(--[[ no args ]]) -> return "nothing" to fail the loop in the caller
+
+    if not to then
+        to = i
+        i  = to == 0 and 0 or (to > 0 and 1 or -1)
+    end
+
+    -- we don't have to do the to == 0 check
+    -- 0 -> 0 with any inc would never iterate
+    inc = inc or (i < to and 1 or -1)
+
+    -- step back (once) before we start
+    i = i - inc
+
+    return function () if i == to then return nil end i = i + inc return i, i end
 end
 
 -- print(merge_tables_by_value({['a']=1}, {['b'] = 2, ['c'] = 5}))

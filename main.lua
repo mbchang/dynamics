@@ -301,6 +301,18 @@ function predict()
     print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
 end
 
+-- function curriculum()
+--     local cur = {}
+--     for _,problem in cur do
+--         mp.traincfgs = problem
+--         mp.testcfgs = problem
+--         reset optim state -- TODO
+--         reset folder to save
+--         run_experiment()
+--         -- make sure that things get reset correctly.
+--     end
+-- end
+
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
     run_experiment()

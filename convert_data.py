@@ -493,7 +493,8 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
         pcolor = THECOLORS[particleColors[particleIndex]]
         fcolor = THECOLORS[fieldColors[particleIndex]]
         exec('particle' + str(particleIndex) + \
-             ' = particle.Particle( screen, (sizes[' + str(particleIndex) + '],sizes[' + str(particleIndex) + ']), getParticleCoords(observed_path,' + \
+             ' = particle.Particle( screen, (sizes[' + str(particleIndex) + \
+             '],sizes[' + str(particleIndex) + ']), getParticleCoords(observed_path,' + \
              str(particleIndex) + '), THECOLORS["white"],' + str(pcolor)+ ',' + str(fcolor) + ')')
 
     movieFrame = 0
@@ -521,15 +522,15 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
         if len(gooList) > 0:
             for goo in gooList:
                 pygame.draw.rect(screen, THECOLORS[goo[3]], \
-                                 Rect(goo[0][0], goo[0][1], abs(goo[1][0]-goo[0][0]), abs(goo[1][1]-goo[0][1])))
+                     Rect(goo[0][0], goo[0][1], abs(goo[1][0]-goo[0][0]), abs(goo[1][1]-goo[0][1])))
 
 
         # fill in the obstacles, if there is any
         if len(obstacleList) > 0:
             for obstacle in obstacleList:
                 pygame.draw.rect(screen, THECOLORS[obstacle[2]], \
-                                 Rect(obstacle[0][0], obstacle[0][1], \
-                                      abs(obstacle[1][0]-obstacle[0][0]), abs(obstacle[1][1]-obstacle[0][1])))
+                     Rect(obstacle[0][0], obstacle[0][1], \
+                      abs(obstacle[1][0]-obstacle[0][0]), abs(obstacle[1][1]-obstacle[0][1])))
 
         # Drawing handled with exec since we don't know the number of particles in advance:
         for i in range(numberOfParticles):
@@ -544,7 +545,9 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
 
         # make movie
         if movieFrame <= (len(observed_path)-1):
-            imageName = basicString[0:len(basicString) - len(str(movieFrame+start_frame))] + str(movieFrame+start_frame)
+            imageName = basicString[0:len(basicString) - \
+                            len(str(movieFrame+start_frame))] + \
+                            str(movieFrame+start_frame)
             imagefile = movie_folder + "/" + movieName + '-' + imageName + ".png"
             print imagefile
             pygame.image.save(screen, imagefile)
@@ -869,7 +872,9 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
     """
     if savevid:
         print 'Converting images in', images_root, 'to video'
-        os.system('ffmpeg -r ' + str(framerate) +' -i '+ images_root + '-%4d.png -vb 20M -vf fps='+str(framerate)+' -pix_fmt yuv420p ' + images_root+'_' + mode +'.mp4')
+        os.system('ffmpeg -r ' + str(framerate) +' -i '+ images_root + \
+                    '-%4d.png -vb 20M -vf fps='+str(framerate)+ \
+                    ' -pix_fmt yuv420p ' + images_root+'_' + mode +'.mp4')
 
     if not saveimgs:
         print 'Removing images from', images_root

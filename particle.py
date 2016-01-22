@@ -48,8 +48,6 @@ class Particle:
         pygame.draw.circle( self.screen, self.pcolor, (int(nx),int(ny)), self.width , 0 )
         if self.pcolor != THECOLORS["white"]:
              # pygame.draw.circle( self.screen, (0,0,0), (int(nx),int(ny)), self.width , 8 )
-            # print self.fieldcolor
-            # print THECOLORS
 
             gfx.aacircle(self.screen, int(nx),int(ny), self.fieldwidth , (0,0,0))
             gfx.aacircle(self.screen, int(nx),int(ny), self.fieldwidth+1 , (0,0,0))

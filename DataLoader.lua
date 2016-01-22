@@ -11,6 +11,7 @@ require 'data_utils'
 require 'torchx'
 require 'utils'
 require 'pl.stringx'
+require 'pl.Set'
 local T = require 'pl.tablex'
 
 local dataloader = {}
@@ -19,6 +20,7 @@ dataloader.__index = dataloader
 local object_dim = 8
 local max_other_objects = 10
 local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}  -- all_worlds[1] should correspond to worldm1
+local world_range = {1,4}
 local particle_range = {1,6}
 local goo_range = {0,5}
 
@@ -447,6 +449,8 @@ end
 
 function contains_world(worldconfigtable)
     for _,v in pairs(worldconfigtable) do
+        print(worldconfigtable)
+        print(v)
         if #v >= #'worldm1' then
             local prefix = v:sub(1,#'worldm')
             local suffix = v:sub(#'worldm'+1)
@@ -487,45 +491,77 @@ function get_all_specified_configs(worldconfigtable, all_configs)
     return all_specified_configs
 end
 
-
 -- [1-1-1] for worldm1, np 1 ng 1
 -- implementation so far: either world or entire config
+-- basically this implements slicing
 function convert2config(config_abbrev)
-    local world, np, ng = string.match(config_abbrev, "%[(%d*)-(%d*)-(%d*)%]")
-    if not(world == '') and np == '' and ng == '' then -- world only
-        local config = all_worlds[tonumber(world)]
-        assert(config:sub(stringx.lfind(config,'m')+1) == tostring(world))
-        return config
-    else
-        assert(not(world == '' or np == '' or ng == ''))
-        return 'worldm'..world..'_np='..np..'_ng='..ng
+    local wlow, whigh, nplow, nphigh, nglow, nghigh = string.match(config_abbrev, "%[(%d*):(%d*)-(%d*):(%d*)-(%d*):(%d*)%]")
+
+    -- can't figure out how to do this with functional programming, because
+    -- you can't pass nil arguments into function
+    if not wlow or wlow == '' then wlow = -1 end
+    if not nplow or nplow == '' then nplow = -1 end
+    if not nglow or nglow == '' then nglow = -1 end
+    if not whigh or whigh == '' then whigh = math.huge end
+    if not nphigh or nphigh == '' then nphigh = math.huge end
+    if not nghigh or nghigh == '' then nghigh = math.huge end
+
+    wlow, nplow, nglow = math.max(world_range[1],wlow),
+                         math.max(particle_range[1],nplow),
+                         math.max(goo_range[1],nglow)  -- 0 because there can 0 goos
+    whigh, nphigh, nghigh = math.min(world_range[2],whigh),
+                            math.min(particle_range[2],nphigh),
+                            math.min(goo_range[2],nghigh)  -- 0 because there can 0 goos
+
+    local all_configs = {}
+    for w in range(wlow, whigh) do
+        for np in range(nplow, nphigh) do
+            for ng in range(nglow, nghigh) do
+                all_configs[#all_configs+1] = all_worlds[w] .. '_np=' .. np .. '_ng=' .. ng
+            end
+        end
     end
+    return all_configs
 end
 
 -- "[4--],[1-2-3],[3--],[2-1-5]"
 -- notice that is surrounded by brackets
 --TODO should I look up how to serialize table
-function dataloader.convert2allconfigs(config_abbrev_table_string)
+function convert2allconfigs(config_abbrev_table_string)
     assert(stringx.lfind(config_abbrev_table_string, ' ') == nil)
     local x = stringx.split(config_abbrev_table_string,',')  -- get rid of brackets; x is a table
-    return map(convert2config,x)
+
+    -- you want to merge into a set
+    local y = map(convert2config,x)
+    local z = {}
+    for _, table in pairs(y) do
+        z = merge_tables_by_value(z,table)
+    end
+    return z
 end
 
 return dataloader
+
 --
 -- d = dataloader.create('trainset', {}, '/om/user/mbchang/physics-data/dataset_files_subsampled', 100, false, false)
--- d = dataloader.create('trainset','haha', {'worldm1', 'worldm2_np=3_ng=3'}, 4, true, false)
--- print(d)
+-- d = dataloader.create('trainset', {'worldm1', 'worldm2_np=3_ng=3'}, 'haha', 4, true, false)
+-- print(d.specified_configs)
 
 -- d.configs[#d.configs+1] = 'worldm2_np=6_ng=5'
 -- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'
 -- d.configs[#d.configs+1] = 'worldm3dfdf'
 -- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
-
+--
 -- print(convert2config('[]'))
--- print(convert2config('[1-2-3]'))
--- print(map(convert2config, {'[4--]', '[1-2-3]', '[3--]', '[2-1-5]'}))
--- print(convert2allconfigs("[4--],[1-2-3],[3--],[2-1-5]"))
+-- print(convert2config('[2:-:-:3]'))
+-- print(map(convert2config, {'[4:-:-:]', '[1:1-2:2-3:3]', '[3:3-:-:]', '[2:2-1:1-5:5]'}))
+-- local x = T.merge(unpack(map(convert2config, {'[4:-:-:]', '[1:1-2:2-3:3]', '[3:3-:-:]', '[2:2-1:1-5:5]'})))
+-- print(x)
+-- print(convert2allconfigs('[1:1-1:1-1:4],[1:1-1:1-3:5],[2:2-4:5-:]'))
+-- print(convert2allconfigs('[:-1:2-:],[:-4:4-:]'))
+
+-- d = dataloader.create('trainset', convert2allconfigs("[4:-:-:],[1-2-3]"), 'haha', 4, true, false)
+-- print(d.specified_configs)
 
 
 -- TODO: compute_batches is wrong; the start and finish are wrong?
