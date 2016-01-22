@@ -429,7 +429,7 @@ def render_from_scheme_output(path, framerate, movie_folder, movieName):
     print(observedPath.shape)
     render(goos, particles, observedPath, framerate, movie_folder, movieName)
 
-def render(goos, particles, observed_path, framerate, movie_folder, movieName):
+def render(goos, particles, observed_path, framerate, movie_folder, movieName, save, start_frame):
     """
         input
 
@@ -455,6 +455,10 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName):
             movie_folder: folder to save movie in
 
             movieName: name of the movie
+
+            save: True if want to save pngs
+
+            startFrame: int, framenumber you want to start on
     """
     ## Get the data.
     ## data is the x-y coordinates of the particles over times, organized as (STEP0, STEP1, STEP2...)
@@ -501,6 +505,13 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName):
 
     done = False
     while not done:
+        # change the object of interest to pink if we are predicting
+        if start_frame > 0:
+            for i in range(numberOfParticles):
+                if (eval('particle' + str(i) + ".fieldcolor == THECOLORS['green']")):
+                    exec('particle' + str(i) + ".fieldcolor = THECOLORS['hotpink1']")
+
+
         clock.tick(float(framerate))
         screen.fill(THECOLORS["white"])
         pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
@@ -533,7 +544,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName):
 
         # make movie
         if movieFrame <= (len(observed_path)-1):
-            imageName = basicString[0:len(basicString) - len(str(movieFrame))] + str(movieFrame)
+            imageName = basicString[0:len(basicString) - len(str(movieFrame+start_frame))] + str(movieFrame+start_frame)
             imagefile = movie_folder + "/" + movieName + '-' + imageName + ".png"
             print imagefile
             pygame.image.save(screen, imagefile)
@@ -781,7 +792,7 @@ def recover_state(this, context, this_pred, config):
                         recoverd_path_all_samples[sample_num]))
     return samples
 
-def render_output(samples, sample_num, framerate, movie_folder, movieName):
+def render_output(samples, sample_num, framerate, movie_folder, movieName, save, start_frame):
     """
         ground_truth_samples and predicted_samples: list of tuples
             tuple: (goo, particles, path)
@@ -802,6 +813,8 @@ def render_output(samples, sample_num, framerate, movie_folder, movieName):
                  [[80, 155] [205, 299] 0 'darkmagenta']
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
+
+            save: True if want to save pngs
     """
     sample = samples[sample_num]
 
@@ -809,18 +822,27 @@ def render_output(samples, sample_num, framerate, movie_folder, movieName):
     render(*sample[:],  # (goos, particles, obs_path)
             framerate=framerate,
             movie_folder=movie_folder,
-            movieName=movieName)
+            movieName=movieName,
+            save=save,
+            start_frame=start_frame)
 
-def visualize_results(training_samples_hdf5, sample_num):
+def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     """
         input
             training_samples_hdf5: something like 'worldm1_np=6_ng=5_[15,15].h5'
 
         Visualizes past as well as ground truth future and predicted future
+
+        save: true if want to save vid
     """
-    framerate = 1
-    movie_folder = 'rendertestfolder'
-    movieName = 'rendertest'  # TODO should depend on training_samples_hdf5
+    framerate = 5
+    windowsize = 10
+    exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
+    movie_folder = os.path.join(exp_root, 'videos')
+    if not os.path.exists(movie_folder): os.mkdir(movie_folder)
+    config_name = os.path.basename(training_samples_hdf5)
+    movieName = config_name[:config_name.rfind('_')]+'_ex='+str(sample_num)
+    images_root = movie_folder + "/" + movieName
 
     d = load_dict_from_hdf5(training_samples_hdf5)
     config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
@@ -830,15 +852,33 @@ def visualize_results(training_samples_hdf5, sample_num):
     samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name)
 
     print 'render past'
-    render_output(samples_past, sample_num, framerate, movie_folder, movieName)
-    # print 'render future gt'
-    # render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName)
+    render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
+    print 'render future gt'
+    render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
+    make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
+
+    print 'render past'
+    render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
     print 'render future pred'
-    render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName)
+    render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName, save, windowsize)
+    make_video(images_root, framerate, 'pred', vidsave, imgsave)
+
+def make_video(images_root, framerate, mode, savevid, saveimgs):
+    """
+        mode: gndtruth | pred
+    """
+    if savevid:
+        print 'Converting images in', images_root, 'to video'
+        os.system('ffmpeg -r ' + str(framerate) +' -i '+ images_root + '-%4d.png -vb 20M -vf fps='+str(framerate)+' -pix_fmt yuv420p ' + images_root+'_' + mode +'.mp4')
+
+    if not saveimgs:
+        print 'Removing images from', images_root
+        command =  'rm ' + images_root + '*.png'
+        os.system(command)
 
 
 if __name__ == "__main__":
-    save_all_datasets(True)
+    # save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -873,7 +913,7 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
 
     # 1/20/16: in summary: it can handle going straight, but it cannot bounce off objects
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
+    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
     # visualize_results(h5_file, 1)  # can bounce off walls
     # visualize_results(h5_file, 2)  # does not learn to bounce off other objects
     # visualize_results(h5_file, 3)  # does not learn to bounce off other objects Need a crisper way to model collisions
@@ -886,9 +926,8 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 10)    # bounces off imaginary wall
     # visualize_results(h5_file, 11)     # bounces off imaginary wall. How do something that is crisp?
     # visualize_results(h5_file, 12)     # bounces off imaginary wall. How do something that is crisp?
-    # visualize_results(h5_file, 13)     #  did not bounce against other object
     # visualize_results(h5_file, 15)     #  GREAT EXAMPLE OF BOUNCING OFF WALL
-    # visualize_results(h5_file, 16)     #  did not bounce against other object; good example
+    visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=True, imgsave=False)     #  did not bounce against other object; good example
     # visualize_results(h5_file, 18)     #  definitive example of NOT BOUNCING OFF OBJECTS
     # visualize_results(h5_file, 19)     # GREAT EXAMPLE OF BOUNCING OFF WALL
     # visualize_results(h5_file, 26)     # DOES NOT BOUNCE OFF OTHER OBJECTS

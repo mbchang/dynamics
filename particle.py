@@ -23,7 +23,7 @@ class Particle:
         self.fieldwidth = int(size[0])
         self.width = self.fieldwidth - 5
         self.height = int(size[1])
-        
+
         self.bgcolor = background
         self.pcolor = pcolor
         self.fieldcolor = fieldcolor
@@ -31,13 +31,13 @@ class Particle:
 
     def draw(self):
         # Erase the previous particle
-        
+
         # Update frame number or loop back to first
 
         if self.frame >= len(self.path):
             self.frame = 0
-        
-        # Update position 
+
+        # Update position
         # Check for collision with the sides:
 
         nx, ny = self.path[self.frame][0], self.path[self.frame][1]
@@ -48,16 +48,17 @@ class Particle:
         pygame.draw.circle( self.screen, self.pcolor, (int(nx),int(ny)), self.width , 0 )
         if self.pcolor != THECOLORS["white"]:
              # pygame.draw.circle( self.screen, (0,0,0), (int(nx),int(ny)), self.width , 8 )
+            # print self.fieldcolor
+            # print THECOLORS
 
-            
             gfx.aacircle(self.screen, int(nx),int(ny), self.fieldwidth , (0,0,0))
             gfx.aacircle(self.screen, int(nx),int(ny), self.fieldwidth+1 , (0,0,0))
             gfx.aacircle(self.screen, int(nx),int(ny), self.width , (0,0,0))
-##            pygame.draw.circle(self.screen, THECOLORS["black"], (int(nx),int(ny)), self.fieldwidth, 1) 
+            ##            pygame.draw.circle(self.screen, THECOLORS["black"], (int(nx),int(ny)), self.fieldwidth, 1)
             pygame.draw.circle(self.screen, self.fieldcolor, (int(nx),int(ny)), self.fieldwidth, 5)
-            
+
 ##            for a_radius in arange(1,self.fieldwidth-self.width+1):
-##                
+##
 ##                gfx.aacircle(self.screen, int(nx),int(ny), self.fieldwidth-a_radius , (255,255,255))
 
     def setBackgroundColor(self, color):
