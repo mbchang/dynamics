@@ -4,6 +4,11 @@ require 'gnuplot'
 require 'paths'
 require 'utils'
 
+pp = lapp[[
+   -i,--infolder           (default "in")           folder to read
+]]
+
+
 function plot_train_losses(losses_file, plotfolder)
     -- NOTE THAT THIS IS ACROSS ALL EPOCHS
     if not paths.dirp(plotfolder) then
@@ -119,7 +124,7 @@ function read_log_file_2vals(logfile)
         data2[#data2+1] = tonumber(x[2]) --ignores the string at the top
         data3[#data3+1] = tonumber(x[3]) --ignores the string at the top
     end
-    local data = torch.cat(torch.Tensor(data1), torch.Tensor(data2), torch.Tensor(data3), 2)
+    local data = torch.cat({torch.Tensor(data1), torch.Tensor(data2), torch.Tensor(data3)}, 2)
     return data
 end
 
@@ -158,7 +163,7 @@ end
 -- for main.lua
 function plot_training_losses(logfile, savefile)
     local data = read_log_file(logfile)
-    local subsamplerate = 1000
+    local subsamplerate = 10
     plot_tensor(data,
                 {savefile,
                  'batch (every '..subsamplerate..')',
@@ -200,6 +205,15 @@ end
 
 -- -- read_log_file('openmind/baselinesubsampled_opt_adam_lr_0.0005')
 -- plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.001/train.log',
---                      'hihhihhihih')
-plot_experiment('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/experiment.log',
-                        'hihhihhihih')
+-- --                      'hihhihhihih')
+-- plot_experiment('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/'..
+--                 'dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_'..
+--                 'testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/experiment.log',
+--                 'hihhihhihih')
+
+-- plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.001/train.log',
+-- --                      'hihhihhihih')
+
+-- print(pp.infolder)
+plot_experiment(pp.infolder..'/experiment.log', pp.infolder..'/experiment.png')
+plot_training_losses(pp.infolder..'/train.log',pp.infolder..'/train.png')

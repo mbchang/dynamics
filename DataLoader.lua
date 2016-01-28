@@ -121,6 +121,7 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     else
         self.specified_configs = specified_configs
     end
+    self.specified_configs = intersect(self.specified_configs, self.configs) -- TODO hacky
     assert(is_subset(self.specified_configs, self.configs))
     if not shuffle then topo_order(self.specified_configs) end
     self.num_configs = #self.specified_configs
@@ -340,8 +341,6 @@ function dataloader:next_config(current_config, start, finish)
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 
     -- here only get the batch you need. There is a lot of redundant computation here
-    -- print('start', start)
-    -- print('finish', finish)
     this_x          = this_x[{{start,finish}}]
     context_x       = context_x[{{start,finish}}]
     y               = y[{{start,finish}}]
@@ -415,7 +414,7 @@ function dataloader:get_batch_info(current_config, current_batch_in_config)
     -- print('config: '.. self.configs[self.config_idxs[current_config]] ..
     --         ' capacity: '.. self.config_sizes[self.config_idxs[current_config]] ..
     --         ' current batch: ' .. '[' .. current_batch_in_config - self.batch_size + 1 ..
-            -- ',' .. current_batch_in_config .. ']')
+    --         ',' .. current_batch_in_config .. ']')
     return {self.specified_configs[self.config_idxs[current_config]],  -- config name
             current_batch_in_config - self.batch_size + 1,  -- start index in config
             current_batch_in_config, -- for next update
@@ -449,8 +448,8 @@ end
 
 function contains_world(worldconfigtable)
     for _,v in pairs(worldconfigtable) do
-        print(worldconfigtable)
-        print(v)
+        -- print(worldconfigtable)
+        -- print(v)
         if #v >= #'worldm1' then
             local prefix = v:sub(1,#'worldm')
             local suffix = v:sub(#'worldm'+1)
@@ -527,7 +526,7 @@ end
 -- "[4--],[1-2-3],[3--],[2-1-5]"
 -- notice that is surrounded by brackets
 --TODO should I look up how to serialize table
-function convert2allconfigs(config_abbrev_table_string)
+function dataloader.convert2allconfigs(config_abbrev_table_string)
     assert(stringx.lfind(config_abbrev_table_string, ' ') == nil)
     local x = stringx.split(config_abbrev_table_string,',')  -- get rid of brackets; x is a table
 
@@ -547,21 +546,20 @@ return dataloader
 -- d = dataloader.create('trainset', {'worldm1', 'worldm2_np=3_ng=3'}, 'haha', 4, true, false)
 -- print(d.specified_configs)
 
--- d.configs[#d.configs+1] = 'worldm2_np=6_ng=5'
--- d.configs[#d.configs+1] = 'worldm2_np=5_ng=3'
--- d.configs[#d.configs+1] = 'worldm3dfdf'
--- x = get_all_specified_configs({'worldm1_np=6_ng=5', 'worldm2'}, d.configs)
---
--- print(convert2config('[]'))
--- print(convert2config('[2:-:-:3]'))
--- print(map(convert2config, {'[4:-:-:]', '[1:1-2:2-3:3]', '[3:3-:-:]', '[2:2-1:1-5:5]'}))
--- local x = T.merge(unpack(map(convert2config, {'[4:-:-:]', '[1:1-2:2-3:3]', '[3:3-:-:]', '[2:2-1:1-5:5]'})))
--- print(x)
--- print(convert2allconfigs('[1:1-1:1-1:4],[1:1-1:1-3:5],[2:2-4:5-:]'))
--- print(convert2allconfigs('[:-1:2-:],[:-4:4-:]'))
 
 -- d = dataloader.create('trainset', convert2allconfigs("[4:-:-:],[1-2-3]"), 'haha', 4, true, false)
 -- print(d.specified_configs)
+
+
+
+-- local cur = {'[:-1:1-:]','[:-2:2-:]','[:-3:3-:]','[:-4:4-:]','[:-5:5-:]','[:-6:6-:]'}
+-- for _,c in pairs(cur) do
+--     print(c)
+--     print(convert2allconfigs(c))
+--     print('################################################################')
+-- end
+
+
 
 
 -- TODO: compute_batches is wrong; the start and finish are wrong?
@@ -579,19 +577,3 @@ return dataloader
 -- -- d:compute_batches()
 
 -- d:next_batch()
-
-
-
---[[
-What I want to be able to is to have a dataloader, that takes in parameters:
-    - shuffle
-    - a table of configs (indexed by number, in order)
-
-Then when I do next_batch, it will go through appropriately.
-
-
-    You should have a function that returns all configs in sorted order
-    as well as function that returns all configs of a certain world
-
-
-]]

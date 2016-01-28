@@ -49,6 +49,16 @@ function merge_tables_by_value(t1, t2)
     return merged_table
 end
 
+function intersect(t1, t2)
+    local intersect_table = {}
+    for k,v1 in pairs(t1) do
+        if isin(v1, t2) then
+            intersect_table[#intersect_table+1] = v1
+        end
+    end
+    return intersect_table
+end
+
 function is_subset(small_table, big_table)
     for _, el in pairs(small_table) do
         if not isin(el, big_table) then
@@ -184,3 +194,5 @@ function range (i, to, inc)
 end
 
 -- print(merge_tables_by_value({['a']=1}, {['b'] = 2, ['c'] = 5}))
+
+-- print(intersect({'a','b','c'}, {'d','b','c'}))

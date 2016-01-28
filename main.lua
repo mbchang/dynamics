@@ -17,31 +17,26 @@ local D = require 'DataLoader'
 local M = require 'model_new'
 require 'logging_utils'
 
-
--- TODO: Have a shell script for openmind and for pc
-
--- missing params: seed, experiment_string
--- also booleans are strings somehow
--- Note that the dataloaders will reset their current_batch after they've gone through all their batches.
---TODO what? optim.rmsprop is different from rmsprop?
 ------------------------------------- Init -------------------------------------
 
 mp = lapp[[
    -e,--mode          (default "exp")           exp | pred
-   -d,--root          (default "logs2")      	subdirectory to save logs
+   -d,--root          (default "logslink")      	subdirectory to save logs
    -m,--model         (default "lstm")   		type of model tor train: lstm |
-   -n,--name          (default "lalala")
+   -n,--name          (default "densenp2shuffle")
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "")
    -k,--testcfgs      (default "")
-   -o,--opt           (default "rmsprop")       rmsprop | adam | optimrmsprop
+   -b,--batch_size    (default 260)
+   -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -s,--shuffle  	  (default false)
-   -r,--lr            (default 0.0005)      	learning rate
+   -r,--lr            (default 0.005)      	   learning rate
+   -a,--lrdecay       (default 0.99)            annealing rate
    -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 100)
    --layers           (default 4)
-   --seed             (default true)
+   --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
    --print_every      (default 10)
@@ -49,20 +44,22 @@ mp = lapp[[
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-	mp.winsize = 10  --10
-	mp.dataset_folder = 'hey'
-    mp.traincfgs = ''--[1-1-0]'
-    mp.testcfgs = ''--[1-1-0]'
-	mp.batch_size = 1
+	mp.winsize = 20  --10
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/dataset_files_subsampled_dense_np2' --'hoho'
+    mp.traincfgs = '[:-2:2-:]'
+    mp.testcfgs = '[:-2:2-:]'
+	mp.batch_size = 260 --1
+    mp.lrdecay = 0.95
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.plot = true
 	mp.cuda = false
 	mp.cunn = false
+    mp.max_epochs = 50
 else
 	mp.winsize = 20
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_contig'
-	mp.batch_size = 50  -- this is decided by looking at the dataset
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'
+	-- mp.batch_size = 260--50  -- this is decided by looking at the dataset
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -75,7 +72,6 @@ mp.out_dim = 8.0*mp.winsize/2
 -- mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp)
 mp.savedir = mp.root .. '/' .. mp.name
 
--- TODO: write a function to convert "false" to false
 if mp.seed then torch.manualSeed(123) end
 if mp.shuffle == 'false' then mp.shuffle = false end
 if mp.rand_init_wts == 'false' then mp.rand_init_wts = false end
@@ -83,7 +79,6 @@ if mp.save_output == 'false' then mp.save_output = false end
 if mp.plot == 'false' then mp.plot = false end
 if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
-
 
 local optimizer, optim_state
 if mp.opt == 'rmsprop' then
@@ -98,7 +93,6 @@ elseif mp.opt == 'adam' then
     optimizer = optim.adam
     optim_state = {learningRate   = mp.lr}
 end
-
 
 local model, train_loader, test_loader, modelfile
 
@@ -159,6 +153,10 @@ function train(epoch_num)
         if t % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e",
                     epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
+
+            -- trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
+            -- trainLogger:style{['log MSE loss (train set)'] = '~'}
+            -- if mp.plot then trainLogger:plot() end
         end
 
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
@@ -250,16 +248,19 @@ function save_example_prediction(example, description, modelfile_, dataloader)
 end
 
 -- runs experiment
+-- TODO have anneal rate
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
     for i = 1, mp.max_epochs do
+        print('Learning rate is now '..optim_state.learningRate)
         checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
-        -- checkpoint(mp.savedir .. '/rnn1.t7', model.rnns[1], mp) -- model.rnns[1]?
         checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
         print('Saved model')
 
         local train_loss
+        -- print(train_loader)
+        -- assert(false)
         train_loss = train(i)
         -- train_loss = test(train_test_loader)
         local val_loss = test(val_loader, model.theta.params, false)
@@ -275,13 +276,16 @@ function experiment()
                                ['log MSE loss (test set)'] = '~'}
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
+
+        -- here you can adjust the learning rate based on val loss
+        optim_state.learningRate =optim_state.learningRate*mp.lrdecay
         collectgarbage()
     end
 end
 
 function checkpoint(savefile, data, mp_)
     if mp_.cuda then
-        print('converting to float')
+        -- print('converting to float')
         data = data:float()
         torch.save(savefile, data)
         data = data:cuda()
@@ -302,11 +306,13 @@ function predict()
 end
 
 -- function curriculum()
---     local cur = {}
+--     local cur = cur = {'[:-1:1-:]','[:-2:2-:]','[:-3:3-:]',
+--                         '[:-4:4-:]','[:-5:5-:]','[:-6:6-:]'}
 --     for _,problem in cur do
 --         mp.traincfgs = problem
 --         mp.testcfgs = problem
---         reset optim state -- TODO
+--         print('traincfgs', mp.traincfgs)
+--         print('testcfgs', mp.testcfgs)
 --         reset folder to save
 --         run_experiment()
 --         -- make sure that things get reset correctly.
@@ -319,3 +325,4 @@ if mp.mode == 'exp' then
 else
     predict()
 end
+-- curriculum()

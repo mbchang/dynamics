@@ -4,8 +4,11 @@ import os
 import sys
 import pprint
 
-
 def run_experiment(dry_run):
+    create_jobs(dry_run=dry_run, mode='exp', ext='')
+
+
+def create_jobs(dry_run, mode, ext):
     # dry_run = '--dry-run' in sys.argv
     # local   = '--local' in sys.argv
     # detach  = '--detach' in sys.argv
@@ -33,20 +36,26 @@ def run_experiment(dry_run):
     #         },
     #     ]
 
-    jobs = [{'lr': r, 'opt': o}
-                for r in [5e-4, 5e-5, 1e-3]
-                    for o in ['rmsprop', 'optimrmsprop', 'adam']]
-
+    jobs = [{'lr': r, 'opt': o, 'batch_size': b, 'shuffle': s, 'lrdecay': d}
+                for r in [5e-3, 1e-3]
+                    for o in ['optimrmsprop', 'adam']
+                        for b in [65, 260]
+                            for s in ['true', 'false']
+                                for d in [0.95, 0.99, 1]]
+    for job in jobs:
+        job['traincfgs'] = '[:-2:2-:]'
+        job['testcfgs'] = '[:-2:2-:]'
+        # job['lrdecay'] = 1
 
     if dry_run:
         print "NOT starting jobs:"
     else:
         print "Starting jobs:"
 
-    jobs = [jobs[6], jobs[7], jobs[8]]
+    # jobs = [jobs[6], jobs[7], jobs[8]]
 
     for job in jobs:
-        jobname = "baselinesubsampled"
+        jobname = "baselinesubsampledcontigdense3"
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):
@@ -67,9 +76,9 @@ def run_experiment(dry_run):
             else:
                 jobname = jobname + "_" + flag + "_" + str(job[flag])
                 flagstring = flagstring + " -" + flag + " " + str(job[flag])
-        flagstring = flagstring + " -name " + jobname + " -mode exp"
+        flagstring = flagstring + " -name " + jobname + " -mode " + mode
 
-        jobcommand = "th main.lua" + flagstring
+        jobcommand = "th main.lua" + flagstring #+ '-traincfgs [:-2:2-:] -testcfgs [:-2:2-:]'  # TODO put it in slurm script?
 
         print(jobcommand)
         if local and not dry_run:
@@ -79,7 +88,7 @@ def run_experiment(dry_run):
                 os.system(jobcommand)
 
         else:
-            to_slurm(jobname, jobcommand, dry_run)
+            to_slurm(jobname + ext, jobcommand, dry_run)
             # with open('slurm_scripts/' + jobname + '.slurm', 'w') as slurmfile:
             #     slurmfile.write("#!/bin/bash\n")
             #     slurmfile.write("#SBATCH --job-name"+"=" + jobname + "\n")
@@ -101,10 +110,14 @@ def run_experiment(dry_run):
             #     os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 def predict(dry_run):
-    folder = 'logs2'
-    for exp in os.listdir(folder):
-        command = 'th main.lua -name ' + exp +  " -mode exp"
-        to_slurm(exp + '_predict', command, dryrun)
+    # folder = 'logslink'
+    # for exp in os.listdir(folder):
+    #     if 'contig' in exp:
+    #         # parse the name
+    #
+    #         command = 'th main.lua -name ' + exp +  " -mode pred"
+    #         to_slurm(exp + '_predict', command, dryrun)
+    create_jobs(dry_run=dry_run, mode='pred', ext='_predict')
 
 
 def to_slurm(jobname, jobcommand, dry_run):
@@ -112,7 +125,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#!/bin/bash\n")
         slurmfile.write("#SBATCH --job-name"+"=" + jobname + "\n")
         slurmfile.write("#SBATCH --output=slurm_logs/" + jobname + ".out\n")
-        slurmfile.write("#SBATCH --error=slurm_logs/" + jobname + ".err\n")
+        # slurmfile.write("#SBATCH --error=slurm_logs/" + jobname + ".err\n")
         slurmfile.write("#SBATCH -N 1\n")
         slurmfile.write("#SBATCH -c 1\n")
         slurmfile.write("#SBATCH -p gpu\n")
@@ -128,6 +141,6 @@ def to_slurm(jobname, jobcommand, dry_run):
         # os.system("sbatch -N 1 -c 1 --gres=gpu:1 -p gpu --mem=10000 slurm_scripts/" + jobname + ".slurm &")
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
-dryrun = True
-# run_experiment(dryrun)
+dryrun = False
+run_experiment(dryrun)
 # predict(dryrun)
