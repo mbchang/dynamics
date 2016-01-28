@@ -3,6 +3,8 @@ require 'torch'
 require 'nngraph'
 require 'Base'
 local model_utils = require 'model_utils'
+local LSTM = require 'lstm'
+print(LSTM)
 
 nngraph.setDebug(true)
 
@@ -55,6 +57,13 @@ function init_object_decoder(rnn_hid_dim, out_dim)
     return nn.gModule({rnn_out}, {decoder_out})
 end
 
+-- note that input_dim for this is a timestep
+-- input: (batch_size, input_dim) = (batch_size, obj_dim) = (batch_size, 8)
+-- output: (batch_size, rnn_dim) = (batch_size, obj_rnn_dim)
+-- so the time-rnn has rnn_dim and the object-rnn has rnn_dim
+function init_encoder_lstm(input_dim, rnn_inp_dim)
+
+end
 
 -- do not need the mask
 -- params: layers, input_dim, goo_dim, rnn_inp_dim, rnn_hid_dim, out_dim
@@ -142,26 +151,28 @@ function model.create(mp_, preload, model_path)
 end
 
 
-function model:reset_state()
-    for j = 0, self.mp.seq_length do
-        for d = 1, 2 * self.mp.layers do
-            self.s[j][d]:zero()
+function model:reset_state(s, seq_len, num_layers)
+    for j = 0, seq_len do
+        for d = 1, 2 * num_layers do
+            s[j][d]:zero()
         end
     end
+    return s
 end
 
 
-function model:reset_ds()
+function model:reset_ds(ds)
     for d = 1, #self.ds do
-        self.ds[d]:zero()
+        ds[d]:zero()
     end
+    return ds
 end
 
 
 function model:fp(params_, x, y)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
-    self:reset_state() -- because we are doing a fresh new forward pass
+    self.s = self:reset_state(self.s, self.mp.seq_length, self.mp.layers) -- because we are doing a fresh new forward pass
 
     -- unpack inputs TODO: add context_future here too for rendering like in test.lua!
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
@@ -200,7 +211,7 @@ function model:bp(x, y, mask, state)
     end
 
     self.theta.grad_params:zero() -- the d_parameters
-    self:reset_ds()  -- the d_outputs of the states
+    self.ds = self:reset_ds(self.ds)  -- the d_outputs of the states
 
     -- unpack inputs. All of these have been CUDAed already if need be
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
