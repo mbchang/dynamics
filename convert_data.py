@@ -227,7 +227,6 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
             # config_sample_particles: (num_samples_in_config, num_objects, windowsize, 5)
             # config_sample_goos: (num_samples_in_config, num_goos, 5)
     """
-    # assert(len(config_sample_idxs)==num_samples_per_video)
     for v in os.listdir(config_path):
         assert '.ss' in v # make sure videos are valid
 
@@ -302,7 +301,6 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     testset     = {}  # a dictionary of test examples, with 120 keys for world-config
 
     # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
-    # TODO: where do we sample from each config?
     for world_config in os.listdir(data_root):
         if filterconfig in world_config:  # TAKEOUT
             print '\n########################################################################'
@@ -442,19 +440,21 @@ def fixInputSyntax(l):
     return l
 
 def getParticleCoords(observedPath,pindex):
-    # pindex is the index of the particle
-    # helper function, takes in data and
-    # a particle index, and gets the coords
-    # of that particle.
+    """
+        pindex is the index of the particle
+        helper function, takes in data and
+        a particle index, and gets the coords
+        of that particle.
 
-    # This is necessary because the data
-    # is an aggregate of particle paths
-    # and sometimes we just want a specific path.
-    # That is, we want to go from:
-    # ((pos0_t1, pos1_t1), (pos0_t2, pos1_t2),...)
-    # to:
-    # ((pos0_t1), (pos0_t2),...)
-    # so here pindex is 0
+        This is necessary because the data
+        is an aggregate of particle paths
+        and sometimes we just want a specific path.
+        That is, we want to go from:
+        ((pos0_t1, pos1_t1), (pos0_t2, pos1_t2),...)
+        to:
+        ((pos0_t1), (pos0_t2),...)
+        so here pindex is 0
+    """
     return observedPath[:,0,pindex,:]
 
 def render_from_scheme_output(path, framerate, movie_folder, movieName):
@@ -1034,5 +1034,5 @@ if __name__ == "__main__":
     # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
 
 
-    h5_file ='/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense3_opt_adam_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_260_testcfgs_[:-2:2-:]_lr_0.005/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)
+    # h5_file ='/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense3_opt_adam_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_260_testcfgs_[:-2:2-:]_lr_0.005/predictions/worldm1_np=2_ng=0_[1,260].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)

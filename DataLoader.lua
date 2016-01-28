@@ -405,9 +405,7 @@ function dataloader:get_batch_info(current_config, current_batch_in_config)
     end
 
     if current_config > self.num_configs then
-        -- assert(self.current_batch == self.num_batches+1)
         current_config = 1
-        -- self.current_batch = 0
         assert(current_batch_in_config == self.batch_size)
     end
 

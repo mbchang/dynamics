@@ -245,7 +245,6 @@ function test_model()
     local p, gp = network:getParameters()
     print(p:size())
     print(gp:size())
-    -- assert(false)
     local rnns = g_cloneManyTimes(network, seq_length, not network.parameters)
 
     -- Data

@@ -69,7 +69,6 @@ end
 
 mp.input_dim = 8.0*mp.winsize/2
 mp.out_dim = 8.0*mp.winsize/2
--- mp.descrip = create_experiment_string({'batch_size', 'seq_length', 'layers', 'rnn_dim', 'max_epochs'}, mp)
 mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
@@ -145,7 +144,7 @@ end
 
 -- trains for one epoch
 function train(epoch_num)
-    local cntr = 0, new_params, train_loss
+    local new_params, train_loss
     for t = 1,train_loader.num_batches do
         -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
@@ -153,17 +152,11 @@ function train(epoch_num)
         if t % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e",
                     epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
-
-            -- trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
-            -- trainLogger:style{['log MSE loss (train set)'] = '~'}
-            -- if mp.plot then trainLogger:plot() end
         end
 
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
         if mp.plot then trainLogger:plot() end
-
-        cntr = cntr + 1
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
@@ -248,7 +241,6 @@ function save_example_prediction(example, description, modelfile_, dataloader)
 end
 
 -- runs experiment
--- TODO have anneal rate
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
@@ -259,8 +251,6 @@ function experiment()
         print('Saved model')
 
         local train_loss
-        -- print(train_loader)
-        -- assert(false)
         train_loss = train(i)
         -- train_loss = test(train_test_loader)
         local val_loss = test(val_loader, model.theta.params, false)
