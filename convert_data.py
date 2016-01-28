@@ -248,8 +248,10 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
 
     return config_sample_particles, config_sample_goos
 
-def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous):
+def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous, filterconfig):
     """
+        ACTUALLY IT IS 36 configs! (1-6)p, (0-5)g
+
         orig: 4 worlds * 30 configs * 500 videos * 400 timesteps * 1-6 particles
 
         subsampled: 4 worlds * 30 configs * 500 videos * 80 timesteps * 1-6 particles = 28,800,000
@@ -262,6 +264,9 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
         TODO: make more flexible
 
         samples_per: (per_config, per_video)
+
+        filter: a keyword substring that is in the world config that you want.
+                empty string if you want all the data
 
         # Train: 50 5 = 250 --> 4 worlds * 30 configs * 3 particles * 50 videos * 5 timesteps = 90,000
         # Val: 10 5 = 50 --> 4 worlds * 30 configs * 3 particles * 10 videos * 5 timesteps = 18,000
@@ -299,33 +304,33 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
     # TODO: where do we sample from each config?
     for world_config in os.listdir(data_root):
-        # if 'np=2_ng=0' in world_config:  # TAKEOUT
-        print '\n########################################################################'
-        print 'WORLD CONFIG:', world_config
-        config_path = os.path.join(data_root, world_config)
-        num_videos_per_config = len(os.listdir(config_path))
+        if filterconfig in world_config:  # TAKEOUT
+            print '\n########################################################################'
+            print 'WORLD CONFIG:', world_config
+            config_path = os.path.join(data_root, world_config)
+            num_videos_per_config = len(os.listdir(config_path))
 
-        # sample random videos in the config. Here is where we sample number of videos per config. Don't care if in train, val, or test
-        sampled_videos_idxs = np.random.choice(range(num_videos_per_config), num_sample_videos_per_config, replace=False)
+            # sample random videos in the config. Here is where we sample number of videos per config. Don't care if in train, val, or test
+            sampled_videos_idxs = np.random.choice(range(num_videos_per_config), num_sample_videos_per_config, replace=False)
 
-        # split into train and val and test. This is where we split train, val, set within the config
-        train_sample_idxs   = sampled_videos_idxs[:sp['train']['per_config']]  # first part
-        val_sample_idxs     = sampled_videos_idxs[sp['train']['per_config']:sp['train']['per_config']+sp['val']['per_config']]  # middle part
-        test_sample_idxs    = sampled_videos_idxs[sp['train']['per_config']+sp['val']['per_config']:]  # last part
+            # split into train and val and test. This is where we split train, val, set within the config
+            train_sample_idxs   = sampled_videos_idxs[:sp['train']['per_config']]  # first part
+            val_sample_idxs     = sampled_videos_idxs[sp['train']['per_config']:sp['train']['per_config']+sp['val']['per_config']]  # middle part
+            test_sample_idxs    = sampled_videos_idxs[sp['train']['per_config']+sp['val']['per_config']:]  # last part
 
-        # check sizes. We defined the number of videos sampled will also be the number of samples in that video
-        assert len(train_sample_idxs) == sp['train']['per_config']
-        assert len(val_sample_idxs) == sp['val']['per_config']
-        assert len(test_sample_idxs) == sp['test']['per_config']
+            # check sizes. We defined the number of videos sampled will also be the number of samples in that video
+            assert len(train_sample_idxs) == sp['train']['per_config']
+            assert len(val_sample_idxs) == sp['val']['per_config']
+            assert len(test_sample_idxs) == sp['test']['per_config']
 
-        # add to dictionary. The values returned by get_examples_for_config are tuples!
-        # Here sample within config, but pass num_samples_within_video here for use that will be used get_examples_for_video
-        print '\nTRAINSET'
-        trainset[world_config]    = get_examples_for_config(config_path, train_sample_idxs, sp['train']['per_video'], windowsize, contiguous)
-        print '\nVALSET'
-        valset[world_config]      = get_examples_for_config(config_path, val_sample_idxs, sp['val']['per_video'], windowsize, contiguous)
-        print '\nTESTSET'
-        testset[world_config]     = get_examples_for_config(config_path, test_sample_idxs, sp['test']['per_video'], windowsize, contiguous)
+            # add to dictionary. The values returned by get_examples_for_config are tuples!
+            # Here sample within config, but pass num_samples_within_video here for use that will be used get_examples_for_video
+            print '\nTRAINSET'
+            trainset[world_config]    = get_examples_for_config(config_path, train_sample_idxs, sp['train']['per_video'], windowsize, contiguous)
+            print '\nVALSET'
+            valset[world_config]      = get_examples_for_config(config_path, val_sample_idxs, sp['val']['per_video'], windowsize, contiguous)
+            print '\nTESTSET'
+            testset[world_config]     = get_examples_for_config(config_path, test_sample_idxs, sp['test']['per_video'], windowsize, contiguous)
 
     # flatten the datasets
     trainset = flatten_dataset(trainset)
@@ -352,23 +357,51 @@ def flatten_dataset(dataset):
     return flattened_dataset
 
 def save_all_datasets(dryrun):
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_contig'
-    data_root = '/om/data/public/mbchang/physics-data/data'
-    windowsize = 20  # 2
-    num_train_samples_per = (100, 5)  # 3
-    num_val_samples_per = (10, 5)  # 1
-    num_test_samples_per = (10, 5)  # 1
-    contiguous = True
+    """
+    let's say on average there are 3 particles
 
-    # dataset_files_folder = 'haha'
-    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
-    # windowsize = 10  # 20
-    # num_train_samples_per = (8, 8)  # 30
-    # num_val_samples_per = (4, 4)  # 10
-    # num_test_samples_per = (4, 4)  # 10
+    Full: 4 worlds * 36 configs * 500 videos * 400 timesteps * 3 particles = 86,400,000
+    Subsampled: 4 worlds * 36 configs * 500 videos * 80 timesteps * 3 particles = 17,280,000
+    Computation: 4 worlds * 36 configs * 3 particles * (x per config * y per video)
+
+
+    Subset of 2 particles:
+        4 worlds * 6 configs * 500 videos * 80 timesteps * 2 particles = 17,280,000
+        Computation: 4 worlds * 6 configs * 2 particles * (x per config * y per video)
+
+        80 timesteps --> 12 samples, with winsize = 20: about 1 sample every 5
+        500 videos --> 160 samples
+        Train: 4 * 6 * 2 * 160 * 12 = 92160
+        Test: 4 * 6 * 2 * 20 * 12 = 11,520
+
+    Note that you have 339,380 parameters with 4 layers, so you need about 60,000 training, 10,000 validation, 10,000 test
+
+    Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
+    """
+    # dataset_files_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'
+    # data_root = '/om/data/public/mbchang/physics-data/data'
+    # windowsize = 20  # 2
+    # num_train_samples_per = (160, 12)  # 3
+    # num_val_samples_per = (20, 12)  # 1
+    # num_test_samples_per = (20, 12)  # 1
     # contiguous = True
 
-    trainset, valset, testset = create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous)
+    dataset_files_folder = 'hoho'
+    data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
+    windowsize = 10  # 20
+    num_train_samples_per = (30, 30)  # 30
+    num_val_samples_per = (10, 10)  # 10
+    num_test_samples_per = (10, 10)  # 10
+    contiguous = True
+
+    trainset, valset, testset = create_datasets(data_root,
+                                                num_train_samples_per,
+                                                num_val_samples_per,
+                                                num_test_samples_per,
+                                                windowsize,
+                                                contiguous,
+                                                'np=2')
+    print(len(trainset.keys())/3)
 
     # # save
     if not dryrun:
@@ -838,7 +871,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
         save: true if want to save vid
     """
-    framerate = 5
+    framerate = 10
     windowsize = 10
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
@@ -877,13 +910,18 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
                     ' -pix_fmt yuv420p ' + images_root+'_' + mode +'.mp4')
 
     if not saveimgs:
-        print 'Removing images from', images_root
-        command =  'rm ' + images_root + '*.png'
-        os.system(command)
+        print 'Removing images from', images_root.replace('=', '\\=')
+        for i in os.listdir(os.path.dirname(images_root)):
+            if os.path.basename(images_root) in i and '.png' in i:
+                os.system('rm ' + os.path.join(os.path.dirname(images_root), i))
+        # command =  'rm ' + images_root.replace('=', '\\=') + '-*.png'
+        # # print command
+        # assert False
+        # os.system(command)
 
 
 if __name__ == "__main__":
-    # save_all_datasets(True)
+    # save_all_datasets(False)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -918,7 +956,7 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
 
     # 1/20/16: in summary: it can handle going straight, but it cannot bounce off objects
-    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
     # visualize_results(h5_file, 1)  # can bounce off walls
     # visualize_results(h5_file, 2)  # does not learn to bounce off other objects
     # visualize_results(h5_file, 3)  # does not learn to bounce off other objects Need a crisper way to model collisions
@@ -932,9 +970,69 @@ if __name__ == "__main__":
     # visualize_results(h5_file, 11)     # bounces off imaginary wall. How do something that is crisp?
     # visualize_results(h5_file, 12)     # bounces off imaginary wall. How do something that is crisp?
     # visualize_results(h5_file, 15)     #  GREAT EXAMPLE OF BOUNCING OFF WALL
-    visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=True, imgsave=False)     #  did not bounce against other object; good example
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=False, imgsave=False)     #  did not bounce against other object; good example
     # visualize_results(h5_file, 18)     #  definitive example of NOT BOUNCING OFF OBJECTS
     # visualize_results(h5_file, 19)     # GREAT EXAMPLE OF BOUNCING OFF WALL
     # visualize_results(h5_file, 26)     # DOES NOT BOUNCE OFF OTHER OBJECTS
     # visualize_results(h5_file, 27)     # Bounces off corner
     # visualize_results(h5_file, 34)     # Example of a bad ground truth rendering
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=1_ng=4_[1,50].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=False, imgsave=False)     #  moved slower
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)     #  bounces well off wall
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=True, imgsave=False)     #  straight line
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,50].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)       # soft bounce off wall
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=True, imgsave=False)        # moves straight
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=6, vidsave=False, imgsave=False)        # moves wrong direction
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=True, imgsave=False)         # CANNOT BOUNCE               # SAVED
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=18, vidsave=False, imgsave=False)         # Great bounce
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=20, vidsave=False, imgsave=False)         # moves wrong direction
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=3_ng=0_[1,50].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=True, imgsave=False)       # CANNOT BOUNCE                 # SAVED
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)       # CANNOT BOUNCE                # SAVED
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)       # CANNOT BOUNCE
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm4_np=5_ng=4_[1,50].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=False, imgsave=False)       # Stays stationary if stationary
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)       # Friction seems to have an effect?
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)       # Cannot bounce off objects
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=11, vidsave=False, imgsave=False)       # An example that performs well
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=12, vidsave=False, imgsave=False)       # Cannot bounce off objects
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=True, imgsave=False)       # CANNOT BOUNCE OFF OBJECTS    # SAVED
+
+
+    # 1/25/16 only 2 balls
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[1,50].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=34, vidsave=False, imgsave=False)        # inertia good
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)        # CANNOT BOUNCE
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)        # Bad bounce off wall
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=False, imgsave=False)        # Soft bounce off corner
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)        # Great bounce off wall
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=33, vidsave=False, imgsave=False)        # can bounce off objects (maybe?)
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=False)           # cannot bounce off objects (it seems to tweak physics such that it doesn't have to bounce off the other guy)
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[51,100].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)        # bad bounce off wall
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=True, imgsave=False)        # CANNOT BOUNCE          # Saved
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=22, vidsave=True, imgsave=False)       # Knows that there was an obj obj bounce in past    #SAVED
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=True, imgsave=False)       # Remembers one wall, but not really the other    #SAVED
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=32, vidsave=False, imgsave=False)       # Switches direction somehow
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=True, imgsave=False)       # DEFINITIVE CANNOT BOUNCE      # SAVED  # SHOW THIS
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=46, vidsave=True, imgsave=False)       # cannot bounce
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=49, vidsave=False, imgsave=False)       # knows that there is a corner
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001_batch_size_260/predictions/worldm1_np=2_ng=0_[1,260].h5'
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense2_opt_adam_traincfgs_[:-2:2-:]_shuffle_false_lrdecay_1_batch_size_260_testcfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[1,260].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=14, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=True, imgsave=False)        # Fast movement
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=30, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=43, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+
+
+    h5_file ='/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense3_opt_adam_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_260_testcfgs_[:-2:2-:]_lr_0.005/predictions/worldm1_np=2_ng=0_[1,260].h5'
+    visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)
