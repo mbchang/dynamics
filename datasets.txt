@@ -1,0 +1,19 @@
+Tomer's worlds
+
+Full:       4 worlds * (1-6 particles) * (0-5 goos) * 500 videos * 400 timesteps * 3 particles = 518,400,000
+Subsampled: 4 worlds * (1-6 particles) * (0-5 goos) * 500 videos * 80 timesteps * 3 particles = 103,680,000
+np2       : 4 worlds * (2 particles) * (0-5 goos) * 500 videos * 80 timesteps * 2 particles = 17,280,000
+
+dense: you overlap a lot within the video
+
+dataset_files_subsampled_dense_np2
+    Subsample:  5
+    Train:      4w * 6c * 2p * (160 per config * 12 per video) = 92,160
+    Test:       4w * 6c * 2p * (160 per config * 12 per video) = 92,160
+    Winsize:    20
+
+1
+    Subsample:  5
+    Train:      4w * 6c * 2p * (32 per config * 60 per video) = 92,160
+    Test:       4w * 6c * 2p * (32 per config * 60 per video) = 92,160
+    Winsize:    2

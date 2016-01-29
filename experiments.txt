@@ -1,0 +1,12 @@
+
+experiment: 1
+    Goal: compare decoder's Linear vs Tanh
+
+experiment: 2
+    Goal: compare encoder's ReLU to the best performing of experiment 1
+
+experiment: 3
+    Goal: compare the best from experiment 2 with 1, 2, 8 layers
+
+experiment: 4
+    Goal: comapre the best from experiment 3 with 1 in 1 out 
