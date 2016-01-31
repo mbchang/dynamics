@@ -62,11 +62,11 @@ function init_object_decoder(rnn_hid_dim, out_dim)
     -- local decoder_out = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     -- -- ok, here we will have to split up the output
-    local rnn_out1 = nn.Reshape(10,8,1, true)(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))-- TODO comment out same as reshape
-    local splitted = nn.SplitTable(3)(rnn_out1)
-    -- local world_state = nn.Tanh()(nn.JoinTable(3)(nn.NarrowTable(1,4)(splitted)))
-    local world_state = nn.JoinTable(3)(nn.NarrowTable(1,4)(splitted))  -- Linear
-    local obj_prop = nn.Sigmoid()(nn.JoinTable(3)(nn.NarrowTable(5,4)(splitted))) -- join along the extra 1 dimension
+    local world_state_pre, obj_prop_pre = split_tensor(3,{10,8})(nn.Linear(rnn_hid_dim, out_dim)(rnn_out)):split(2) -- dimensions hard coded!
+    local obj_prop = nn.Sigmoid()(obj_prop_pre)
+    local world_state = world_state_pre -- linear
+    -- local world_state = nn.Tanh()(world_state_pre)
+
     local dec_out_reshaped = nn.JoinTable(3)({world_state, obj_prop})
     local decoder_out = nn.Reshape(80, true)(dec_out_reshaped)
 
@@ -83,13 +83,16 @@ end
 
 -- reshape is something like (10,8)
 -- the numbers are hardcoded
+-- Takes a tensor, and returns its two halves, split on the particular dim
+-- For example, give  a tensor of size (260, 10, 8), if dim is 3, then
+-- this returns a table of two tensors: {(260,10,4), (260, 10,4)}
 function split_tensor(dim, reshape)
     assert(reshape[2] %2 == 0)
     local tensor = nn.Identity()()
     local reshaped = nn.Reshape(reshape[1],reshape[2], 1, true)(tensor)
     local splitted = nn.SplitTable(dim)(reshaped)
-    local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,4)(splitted))
-    local second_half = nn.JoinTable(dim)(nn.NarrowTable(5,4)(splitted))
+    local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted))
+    local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))
     return nn.gModule({tensor},{first_half, second_half})
 end
 
@@ -127,7 +130,6 @@ function init_network(params)
     --
     -- local klstm = LSTM.lstm(params.rnn_dim, params.rnn_dim, params.layers, 0)
     -- local outputs = klstm({lstm_input, unpack(prev_s)})
-    --
 
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
     -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
