@@ -133,10 +133,8 @@ function init_network(params)
     -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
 
     -- split criterion: I know that this works
-    local splitter1 = split_tensor(3, {10,8})
-    local splitter2 = split_tensor(3, {10,8})  -- what? I had to clone it?
-    local world_state, obj_prop = splitter1({prediction}):split(2) -- these are nil for some reason
-    local fworld_state, fobj_prop = splitter2({thisp_future}):split(2) -- these are nill for some reason
+    local world_state, obj_prop = split_tensor(3, {10,8})({prediction}):split(2) -- these are nil for some reason
+    local fworld_state, fobj_prop = split_tensor(3, {10,8})({thisp_future}):split(2) -- these are nill for some reason
 
     local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
     local err2 = nn.BCECriterion()({obj_prop, fobj_prop})
