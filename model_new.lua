@@ -3,8 +3,8 @@ require 'torch'
 require 'nngraph'
 require 'Base'
 local model_utils = require 'model_utils'
-local LSTM = require 'lstm'
-print(LSTM)
+-- local LSTM = require 'lstm'
+-- print(LSTM)
 
 nngraph.setDebug(true)
 
@@ -40,8 +40,14 @@ function init_object_encoder(input_dim, rnn_inp_dim)
     local thisp     = nn.Identity()() -- this particle of interest  (batch_size, input_dim)
     local contextp  = nn.Identity()() -- the context particle  (batch_size, partilce_dim)
 
-    local thisp_out     = nn.Tanh()(nn.Linear(input_dim, rnn_inp_dim/2)(thisp))  -- (batch_size, rnn_inp_dim/2)
-    local contextp_out  = nn.Tanh()(nn.Linear(input_dim, rnn_inp_dim/2)(contextp)) -- (batch_size, rnn_inp_dim/2)
+    --local thisp_out     = nn.Tanh()(nn.Linear(input_dim, rnn_inp_dim/2)(thisp))  -- (batch_size, rnn_inp_dim/2)
+    --local contextp_out  = nn.Tanh()(nn.Linear(input_dim, rnn_inp_dim/2)(contextp)) -- (batch_size, rnn_inp_dim/2)
+
+    local thisp_out     = nn.ReLU()(nn.Linear(input_dim, rnn_inp_dim/2)(thisp))  -- (batch_size, rnn_inp_dim/2)
+    local contextp_out  = nn.ReLU()(nn.Linear(input_dim, rnn_inp_dim/2)(contextp)) -- (batch_size, rnn_inp_dim/2)
+
+    -- local thisp_out     = nn.Linear(input_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/2)
+    -- local contextp_out  = nn.Linear(input_dim, rnn_inp_dim/2)(contextp) -- (batch_size, rnn_inp_dim/2)
 
     -- Concatenate
     local encoder_out = nn.JoinTable(2)({thisp_out, contextp_out})  -- (batch_size, rnn_inp_dim)
@@ -52,8 +58,9 @@ end
 
 function init_object_decoder(rnn_hid_dim, out_dim)
     local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
-    local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
+    local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))  -- TODO just do Linear instead
 
+    -- local decoder_out = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
     return nn.gModule({rnn_out}, {decoder_out})
 end
 
@@ -78,6 +85,7 @@ function init_network(params)
     local thisp_future  = nn.Identity()() -- the particle of interet, future
 
     -- Input to LSTM
+    -- actually can replace all of this with karpathy lstm
     local lstm_input = encoder({thisp_past, contextp})
     local prev_s = nn.Identity()() -- LSTM
 
@@ -95,9 +103,36 @@ function init_network(params)
         table.insert(next_s, next_h)
         rnn_inp[layer_idx] = next_h
     end
+    --
+    -- local klstm = LSTM.lstm(params.rnn_dim, params.rnn_dim, params.layers, 0)
+    -- local outputs = klstm({lstm_input, unpack(prev_s)})
+    --
 
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
-    local err = nn.MSECriterion()({prediction, thisp_future})  -- should be MSECriterion()({prediction, thisp_future})
+    local err = nn.SmoothL1Criterion()({prediction, thisp_future})
+
+
+    -- split criterion
+    local prediction1 = nn.Reshape(10,8,1, true)(prediction)-- TODO comment out same as reshape
+    local splitted = nn.SplitTable(3)(prediction1)
+    local world_state = nn.JoinTable(3)(nn.NarrowTable(1,4)(splitted)) -- join along the extra 1 dimension
+    local obj_prop = nn.JoinTable(3)(nn.NarrowTable(5,4)(splitted)) -- join along the extra 1 dimension
+    -- local prediction = nn.JoinTable(3)({world_state, obj_prop})
+
+    local thisp_future1 = nn.Reshape(10,8,1, true)(thisp_future)-- TODO comment out same as reshape
+    local fsplitted = nn.SplitTable(3)(thisp_future1)
+    local fworld_state = nn.JoinTable(3)(nn.NarrowTable(1,4)(fsplitted)) -- join along the extra 1 dimension
+    local fobj_prop = nn.JoinTable(3)(nn.NarrowTable(5,4)(fsplitted)) -- join along the extra 1 dimension
+    -- local prediction = nn.JoinTable(3)({world_state, obj_prop})
+
+
+    -- local err = nn.MSECriterion()({prediction, thisp_future})
+    -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
+
+    local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
+    local err2 = nn.SmoothL1Criterion()({obj_prop, fobj_prop})
+    -- local err = nn.MulConstant(0.5)(nn.CAddTable()({err1,err2}))  -- it should be the average err
+
     return nn.gModule({thisp_past, contextp, prev_s, thisp_future}, {err, nn.Identity()(next_s), prediction})  -- last output should be prediction
 end
 
@@ -189,7 +224,16 @@ function model:fp(params_, x, y)
     local predictions = {}
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
+        -- this_future = this_future:reshape(this_future:size(1),10,8) -- TODO comment out
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+        -- print(predictions[i])
+        -- print(this_future:size())
+        -- local ff = predictions[i]:reshape(predictions[i]:size(1), 10,8)
+        -- print(ff)
+        -- print(this_future:size())
+        -- print(predictions[i]:size())
+        -- print(loss[i])
+        -- assert(false)
     end
 
     -- self.loss = loss  -- TODO decide whether you want this or not, or you could just reset the state
