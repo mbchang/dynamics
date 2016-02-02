@@ -81,7 +81,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative)
+function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative, num_past, num_future)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -110,6 +110,8 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.object_dim = object_dim
     self.relative = relative
     self.cuda = cuda
+    self.num_past = num_past
+    self.num_future = num_future
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
@@ -155,7 +157,7 @@ end
         }
 --]]
 function expand_for_each_particle(batch_particles)
-    local num_samples, num_particles, windowsize = unpack(torch.totable(batch_particles:size()))  -- TODO 1in1out
+    local num_samples, num_particles, windowsize = unpack(torch.totable(batch_particles:size()))
     local this_particles = {}
     local other_particles = {}
     local this_idxes = {}
@@ -240,7 +242,7 @@ function dataloader:next_config(current_config, start, finish)
     local minibatch_m = minibatch_data.mask  -- 8
 
     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
-    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles -- TODO 1in1out
+    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
     local num_particles = minibatch_p:size(2)
     if num_samples ~= minibatch_p:size(1) * num_particles then
         print('num_samples', num_samples)
@@ -305,22 +307,21 @@ function dataloader:next_config(current_config, start, finish)
         end
     end
     assert(context:dim() == 4 and context:size(1) == num_samples and
-        context:size(2) == max_other_objects and context:size(3) == windowsize and  -- TODO 1in1out
+        context:size(2) == max_other_objects and context:size(3) == windowsize and
         context:size(4) == object_dim)
 
     -- split into x and y
-    local num_past = math.floor(windowsize/2)  -- TODO 1in1out
-    local this_x = this_particles[{{},{1,num_past},{}}]  -- (num_samples x windowsize/2 x 8)
-    local context_x = context[{{},{},{1,num_past},{}}]  -- (num_samples x max_other_objects x windowsize/2 x 8)
-    local y = this_particles[{{},{num_past+1,-1},{}}]  -- (num_samples x windowsize/2 x 8)  -- TODO 1in1out
-    local context_future = context[{{},{},{num_past+1,-1},{}}]  -- (num_samples x max_other_objects x windowsize/2 x 8)
+    local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
+    local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
+    local y = this_particles[{{},{self.num_past+1,-1},{}}]  -- (num_samples x num_future x 8)
+    local context_future = context[{{},{},{self.num_past+1,-1},{}}]  -- (num_samples x max_other_objects x num_future x 8)
 
     -- assert num_samples are correct
     assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
     -- assert number of axes of tensors are correct
     assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
     -- assert seq length is correct
-    assert(this_x:size(2)==num_past and context_x:size(3)==num_past and y:size(2)==num_past)  -- TODO 1in1out
+    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.num_future)
     -- check padding
     assert(context_x:size(2)==max_other_objects)
     -- check data dimension
@@ -339,11 +340,10 @@ function dataloader:next_config(current_config, start, finish)
     if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
 
     -- Reshape
-    -- -- TODO 1in1out
-    this_x          = this_x:reshape(num_samples, num_past*object_dim)
-    context_x       = context_x:reshape(num_samples, max_other_objects, num_past*object_dim)
-    y               = y:reshape(num_samples, num_past*object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, (windowsize-num_past)*object_dim)
+    this_x          = this_x:reshape(num_samples, self.num_past*object_dim)
+    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*object_dim)
+    y               = y:reshape(num_samples, self.num_future*object_dim)
+    context_future  = context_future:reshape(num_samples, max_other_objects, self.num_future*object_dim)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 

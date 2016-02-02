@@ -112,7 +112,9 @@ function inittrain(preload, model_path)
                               mp.batch_size,
                               mp.shuffle,
                               mp.cuda,
-                              mp.relative}
+                              mp.relative,
+                              mp.num_past,
+                              mp.num_future}
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
