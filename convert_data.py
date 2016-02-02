@@ -887,7 +887,6 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
         save: true if want to save vid
     """
     framerate = 10
-    windowsize = 10  # TODO 1in1out, this seems to be winsize/2?
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
@@ -901,6 +900,8 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     samples_past = recover_state(d['this'], d['context'], d['this'], config_name)
     samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name)
     samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name)
+
+    windowsize = np.array(samples_past[2][2]).shape[0]
 
     print 'render past'
     render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
@@ -1062,6 +1063,6 @@ if __name__ == "__main__":
     # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/2_TanhReLU_opt_optimrmsprop_layers_2_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_65_testcfgs_[:-2:2-:]_lr_0.001_max_epochs_20/predictions/worldm1_np=2_ng=0_[1,65].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
 
-
+    #
     # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/4_SL1TanhReLU_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
