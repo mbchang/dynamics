@@ -81,7 +81,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda)
+function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -108,6 +108,7 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.dataset_name = dataset_name  -- string
     self.batch_size = batch_size
     self.object_dim = object_dim
+    self.relative = relative
     self.cuda = cuda
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
@@ -126,10 +127,10 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     if not shuffle then topo_order(self.specified_configs) end
     self.num_configs = #self.specified_configs
     self.config_idxs = torch.range(1,self.num_configs)
-    self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)  -- TODO count_examples will take in argument
+    self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)
 
     ----------------------- Initial values for iterator ------------------------
-    self.batchlist = self:compute_batches()  -- TODO
+    self.batchlist = self:compute_batches()
     self.current_batch = 0
 
     ---------------------------------- Shuffle ---------------------------------
@@ -329,8 +330,11 @@ function dataloader:next_config(current_config, start, finish)
         context_x       = context_x:cuda()
         minibatch_m     = minibatch_m:cuda()
         y               = y:cuda()
-        context_future  = context_future:cuda()  -- TODO: note that you have to update this everywhere!
+        context_future  = context_future:cuda()
     end
+
+    -- Relative position wrt the last past coord
+    if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
 
     -- Reshape
     this_x          = this_x:reshape(num_samples, num_past*object_dim)
@@ -523,7 +527,6 @@ end
 
 -- "[4--],[1-2-3],[3--],[2-1-5]"
 -- notice that is surrounded by brackets
---TODO should I look up how to serialize table
 function dataloader.convert2allconfigs(config_abbrev_table_string)
     assert(stringx.lfind(config_abbrev_table_string, ' ') == nil)
     local x = stringx.split(config_abbrev_table_string,',')  -- get rid of brackets; x is a table
@@ -557,10 +560,6 @@ return dataloader
 --     print('################################################################')
 -- end
 
-
-
-
--- TODO: compute_batches is wrong; the start and finish are wrong?
 
 
 -- -- for i=1,20 do

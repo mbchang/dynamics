@@ -18,6 +18,7 @@ local M = require 'model_new'
 require 'logging_utils'
 
 ------------------------------------- Init -------------------------------------
+-- Best val: 1/29/16: baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.005_batch_size_260.out
 
 mp = lapp[[
    -e,--mode          (default "exp")           exp | pred
@@ -25,17 +26,18 @@ mp = lapp[[
    -m,--model         (default "lstm")   		type of model tor train: lstm |
    -n,--name          (default "densenp2shuffle")
    -p,--plot          (default true)                    	plot while training
-   -j,--traincfgs     (default "")
-   -k,--testcfgs      (default "")
-   -b,--batch_size    (default 260)
+   -j,--traincfgs     (default "[:-2:2-:]")
+   -k,--testcfgs      (default "[:-2:2-:]")
+   -b,--batch_size    (default 65)
    -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
-   -s,--shuffle  	  (default false)
+   -t,--relative      (default true)           relative state vs abs state
+   -s,--shuffle  	  (default "true")
    -r,--lr            (default 0.005)      	   learning rate
    -a,--lrdecay       (default 0.99)            annealing rate
-   -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
+   -i,--max_epochs    (default 20)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 100)
-   --layers           (default 4)
+   --layers           (default 2)
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
@@ -59,7 +61,6 @@ if mp.server == 'pc' then
 else
 	mp.winsize = 20
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'
-	-- mp.batch_size = 260--50  -- this is decided by looking at the dataset
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -73,6 +74,7 @@ mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
 if mp.shuffle == 'false' then mp.shuffle = false end
+if mp.relative == 'false' then mp.relative = false end
 if mp.rand_init_wts == 'false' then mp.rand_init_wts = false end
 if mp.save_output == 'false' then mp.save_output = false end
 if mp.plot == 'false' then mp.plot = false end
@@ -104,7 +106,8 @@ function inittrain(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.batch_size,
                               mp.shuffle,
-                              mp.cuda}
+                              mp.cuda,
+                              mp.relative}
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
@@ -125,7 +128,8 @@ function inittest(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.batch_size,
                               mp.shuffle,
-                              mp.cuda}
+                              mp.cuda,
+                              mp.relative}
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
     modelfile = model_path
@@ -135,7 +139,7 @@ end
 
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
-    local this, context, y, mask = unpack(train_loader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
+    local this, context, y, mask = unpack(train_loader:next_batch())
     local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
     local grad = model:bp({this=this,context=context}, y, mask, state)
     collectgarbage()
@@ -168,7 +172,7 @@ function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-        local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch()) -- TODO this should take care of curriculum, how to deal with dataloader?
+        local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch())
         local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
 
@@ -179,6 +183,8 @@ function test(dataloader, params_, saveoutput)
         prediction = prediction:reshape(this:size(1),
                                         mp.winsize/2,
                                         dataloader.object_dim)
+
+        -- TODO: relative indexing
 
         if saveoutput then
             save_example_prediction({this, context, y, prediction, context_future},
@@ -218,8 +224,8 @@ function save_example_prediction(example, description, modelfile_, dataloader)
         context_future = context_future:float()
     end
 
-    local num_past = math.floor(mp.winsize/2)
-    local num_future = mp.winsize-math.floor(mp.winsize/2)
+    local num_past = math.floor(mp.winsize/2)  -- TODO: pastfuture
+    local num_future = mp.winsize-math.floor(mp.winsize/2)  -- TODO pastfuture
 
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
     save_to_hdf5(save_path,

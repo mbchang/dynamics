@@ -58,7 +58,7 @@ end
 
 function init_object_decoder(rnn_hid_dim, out_dim)
     local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
-    -- local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))  -- TODO just do Linear instead
+    -- local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
     -- local decoder_out = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     -- -- ok, here we will have to split up the output
@@ -66,7 +66,7 @@ function init_object_decoder(rnn_hid_dim, out_dim)
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
     -- local world_state = nn.Tanh()(world_state_pre)
-
+    --
     local dec_out_reshaped = nn.JoinTable(3)({world_state, obj_prop})
     local decoder_out = nn.Reshape(80, true)(dec_out_reshaped)
 
@@ -132,9 +132,10 @@ function init_network(params)
     -- local outputs = klstm({lstm_input, unpack(prev_s)})
 
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
+    -- local err = nn.MSECriterion()({prediction, thisp_future})
     -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
 
-    -- split criterion: I know that this works
+    -- -- split criterion: I know that this works
     local world_state, obj_prop = split_tensor(3, {10,8})({prediction}):split(2) -- these are nil for some reason
     local fworld_state, fobj_prop = split_tensor(3, {10,8})({thisp_future}):split(2) -- these are nill for some reason
 
@@ -220,7 +221,7 @@ function model:fp(params_, x, y)
     self.theta.grad_params:zero()  -- reset gradient
     self.s = self:reset_state(self.s, self.mp.seq_length, self.mp.layers) -- because we are doing a fresh new forward pass
 
-    -- unpack inputs TODO: add context_future here too for rendering like in test.lua!
+    -- unpack inputs
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
     local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
@@ -235,11 +236,9 @@ function model:fp(params_, x, y)
     local predictions = {}
     for i = 1, self.mp.seq_length do
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
-        -- this_future = this_future:reshape(this_future:size(1),10,8) -- TODO comment out
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
     end
 
-    -- self.loss = loss  -- TODO decide whether you want this or not, or you could just reset the state
     collectgarbage()
     return loss:sum(), self.s, predictions  -- we sum the losses through time!
 end
