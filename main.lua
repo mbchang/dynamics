@@ -46,13 +46,12 @@ mp = lapp[[
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-	mp.winsize = 20  --10  -- TODO 1in1out
-    mp.num_past = 10
-    mp.num_future = 10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/dataset_files_subsampled_dense_np2' --'hoho'
+    mp.num_past = 1 --10
+    mp.num_future = 1 --10
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/1'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 260 --1
+	mp.batch_size = 80 --1
     mp.lrdecay = 0.95
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -61,7 +60,7 @@ if mp.server == 'pc' then
 	mp.cunn = false
     mp.max_epochs = 50
 else
-	mp.winsize = 20  -- TODO 1in1out; need to change this num_past num_future
+	-- mp.winsize = 20  -- TODO 1in1out; need to change this num_past num_future
     mp.num_past = 10
     mp.num_future = 10
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'  -- TODO 1in1out
@@ -190,6 +189,9 @@ function test(dataloader, params_, saveoutput)
         prediction = prediction:reshape(this:size(1),
                                         mp.num_future,
                                         dataloader.object_dim)
+        this = this:reshape(this:size(1),
+                    mp.num_past,
+                    dataloader.object_dim)
 
         -- TODO: relative indexing convert back
         if mp.relative then prediction = prediction + this[{{},{-1}}]:expandAs(prediction) end
