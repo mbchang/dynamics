@@ -1,12 +1,79 @@
 
-experiment: 1
-    Goal: compare decoder's Linear vs Tanh
+experiment: 1: 1_Tanh vs 1_Linear, dataset_files_subsampled_dense_np2
+    Goal: compare decoder's Linear vs Tanh as well as 1,2,8 layers
+    Observations:
+        Not much difference for Linear vs Tanh
+        1, 2 layers converge so fast, 8 layers takes forever to train
+            20 epochs
+        Shuffle seems to work better
 
-experiment: 2
+experiment: 2: 2_TanhReLU vs 2_LinearReLU, dataset_files_subsampled_dense_np2, 20 epochs
     Goal: compare encoder's ReLU to the best performing of experiment 1
+        Best from experiment 1: shuffle true, 1 or 2 layers
 
-experiment: 3
-    Goal: compare the best from experiment 2 with 1, 2, 8 layers
+    Observations
+        ReLU works better than Tanh for encoder, for both TanhReLU and LinearReLU
+        adam and optimrmsprop work both as well
+        ReLU encoder and Linear decoder work better than just Linear decoder
+        TanhRelU and LinearReLU both seem to work well, so just stick with LinearReLU
+        2 layers seems to work better than 1 layer
+        0.95 the best, then 0.99
 
-experiment: 4
-    Goal: comapre the best from experiment 3 with 1 in 1 out 
+experiment: 3: 3_TanhLinearvs 3_LinearLinear, dataset_files_subsampled_dense_np2, 20 epochs
+    Goal: compare encoder's ReLU to the best performing of experiment 2
+        TanhLinear vs LinearLinear
+        shuffle true, 2 layers, both adam and optimrmsprop, 0.95, 0.99, 1
+
+    Observations: a Linear encoder is generally worse than a ReLU encoder
+        LinearLinear better than TanhLinear, but still worse than ReLU
+        Clearly ReLU is the best for the encoder, but Tanh and Linear work for
+        decoder
+
+experiment: 4: MSECriterion vs SmoothL1Criterion
+    Goal: compare SmoothL1Criterion vs best in experiment3
+    Run: 4_SL1TanhReLU 4_SL1LinearReLU
+        0.99,0.95,1 all work similarly, so just use 0.99
+
+    Comment: may try to do LinearLinear again
+
+    Observations:
+        SL1 blows everything away; so good across the board (but it could just be because SL1 loss is incomparable with MSE though)
+            Works best with optimrmsprop (and corresponding 0.001)
+            TanhReLU and LinearReLU equal
+
+
+experiment: 5: Selected Criterion
+    Goal: compare a Criterion for all elements rather than for selected elements
+        5_Sl1BCETanhReLU: Tanh will be for state vector, Sigmoid for obj_attr
+        5_Sl1BCELinearReLU: Linear will be for state vector, Sigmoid for obj_attr
+            For some reason Linear gives me an error
+    Note: Need to visualize results from 2, 4, 5 to evaluate performance of 5
+
+    Observations:
+        optimrmsprop works better than adam generally here
+        Splitted criterion is the correct way to go.
+        Does not do obj-obj after visualization. Perhaps this problem is way too hard to learn.
+        Try doing relative positioning. Then try less in less out
+
+-- NOW YOU SHOULD VISUALIZE THE OUTPUT  -- none of them can do object-object
+
+experiment: 6: Relative Coordinates
+    Goal: compare 5_SL1BCELinearReLU vs 6_SL1BCELinearReLURel with relative coords
+
+    Observations:
+        seems like relative coordinates converge much faster
+        seems like relative coordinates has strictly better convergence and training
+
+
+experiment: 6
+    Goal: comapre the best from experiment 3 with 1 in 1 out
+    BEFORE YOU DO THIS YOU NEED TO MAKE SURE YOUR HARDCODED DIMENSIONS ARE GONE
+
+experiment: 7
+    Goal: compare the best from experiment 6 with augmented permutations of examples
+        or bidirectional LSTM: something that tells the model to not care about
+        order
+
+
+experiment: 8 Huge Feedforward baseline
+    Goal: compare

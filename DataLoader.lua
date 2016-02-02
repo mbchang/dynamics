@@ -155,7 +155,7 @@ end
         }
 --]]
 function expand_for_each_particle(batch_particles)
-    local num_samples, num_particles, windowsize = unpack(torch.totable(batch_particles:size()))
+    local num_samples, num_particles, windowsize = unpack(torch.totable(batch_particles:size()))  -- TODO 1in1out
     local this_particles = {}
     local other_particles = {}
     local this_idxes = {}
@@ -178,6 +178,8 @@ function expand_for_each_particle(batch_particles)
             end
             assert(this:size()[1] == other:size()[1])
             other_particles[#other_particles+1] = other
+
+            -- todo: generate data by permuting
         end
     else
         local this = batch_particles[{{},{i},{},{}}]
@@ -238,7 +240,7 @@ function dataloader:next_config(current_config, start, finish)
     local minibatch_m = minibatch_data.mask  -- 8
 
     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
-    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
+    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles -- TODO 1in1out
     local num_particles = minibatch_p:size(2)
     if num_samples ~= minibatch_p:size(1) * num_particles then
         print('num_samples', num_samples)
@@ -303,14 +305,14 @@ function dataloader:next_config(current_config, start, finish)
         end
     end
     assert(context:dim() == 4 and context:size(1) == num_samples and
-        context:size(2) == max_other_objects and context:size(3) == windowsize and
+        context:size(2) == max_other_objects and context:size(3) == windowsize and  -- TODO 1in1out
         context:size(4) == object_dim)
 
     -- split into x and y
-    local num_past = math.floor(windowsize/2)
+    local num_past = math.floor(windowsize/2)  -- TODO 1in1out
     local this_x = this_particles[{{},{1,num_past},{}}]  -- (num_samples x windowsize/2 x 8)
     local context_x = context[{{},{},{1,num_past},{}}]  -- (num_samples x max_other_objects x windowsize/2 x 8)
-    local y = this_particles[{{},{num_past+1,-1},{}}]  -- (num_samples x windowsize/2 x 8)
+    local y = this_particles[{{},{num_past+1,-1},{}}]  -- (num_samples x windowsize/2 x 8)  -- TODO 1in1out
     local context_future = context[{{},{},{num_past+1,-1},{}}]  -- (num_samples x max_other_objects x windowsize/2 x 8)
 
     -- assert num_samples are correct
@@ -318,7 +320,7 @@ function dataloader:next_config(current_config, start, finish)
     -- assert number of axes of tensors are correct
     assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
     -- assert seq length is correct
-    assert(this_x:size(2)==num_past and context_x:size(3)==num_past and y:size(2)==num_past)
+    assert(this_x:size(2)==num_past and context_x:size(3)==num_past and y:size(2)==num_past)  -- TODO 1in1out
     -- check padding
     assert(context_x:size(2)==max_other_objects)
     -- check data dimension
@@ -337,6 +339,7 @@ function dataloader:next_config(current_config, start, finish)
     if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
 
     -- Reshape
+    -- -- TODO 1in1out
     this_x          = this_x:reshape(num_samples, num_past*object_dim)
     context_x       = context_x:reshape(num_samples, max_other_objects, num_past*object_dim)
     y               = y:reshape(num_samples, num_past*object_dim)

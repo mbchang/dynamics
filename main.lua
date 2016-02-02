@@ -46,7 +46,7 @@ mp = lapp[[
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-	mp.winsize = 20  --10
+	mp.winsize = 20  --10  -- TODO 1in1out
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
@@ -59,8 +59,8 @@ if mp.server == 'pc' then
 	mp.cunn = false
     mp.max_epochs = 50
 else
-	mp.winsize = 20
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'
+	mp.winsize = 20  -- TODO 1in1out; need to change this num_past num_future
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'  -- TODO 1in1out
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -68,8 +68,8 @@ else
 	mp.cunn = true
 end
 
-mp.input_dim = 8.0*mp.winsize/2
-mp.out_dim = 8.0*mp.winsize/2
+mp.input_dim = 8.0*mp.winsize/2  -- TODO 1in1out
+mp.out_dim = 8.0*mp.winsize/2  -- TODO 1in1out
 mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
@@ -181,10 +181,11 @@ function test(dataloader, params_, saveoutput)
 
         -- reshape to -- (num_samples x windowsize/2 x 8)
         prediction = prediction:reshape(this:size(1),
-                                        mp.winsize/2,
+                                        mp.winsize/2,  -- TODO 1in1out
                                         dataloader.object_dim)
 
-        -- TODO: relative indexing
+        -- TODO: relative indexing convert back
+        if mp.relative then prediction = prediction + this[{{},{-1}}]:expandAs(prediction) end
 
         if saveoutput then
             save_example_prediction({this, context, y, prediction, context_future},
@@ -224,8 +225,8 @@ function save_example_prediction(example, description, modelfile_, dataloader)
         context_future = context_future:float()
     end
 
-    local num_past = math.floor(mp.winsize/2)  -- TODO: pastfuture
-    local num_future = mp.winsize-math.floor(mp.winsize/2)  -- TODO pastfuture
+    local num_past = math.floor(mp.winsize/2) -- TODO 1in1out
+    local num_future = mp.winsize-math.floor(mp.winsize/2)  -- TODO 1in1out
 
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
     save_to_hdf5(save_path,
@@ -281,7 +282,6 @@ end
 
 function checkpoint(savefile, data, mp_)
     if mp_.cuda then
-        -- print('converting to float')
         data = data:float()
         torch.save(savefile, data)
         data = data:cuda()

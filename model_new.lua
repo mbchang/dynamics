@@ -62,13 +62,13 @@ function init_object_decoder(rnn_hid_dim, out_dim)
     -- local decoder_out = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     -- -- ok, here we will have to split up the output
-    local world_state_pre, obj_prop_pre = split_tensor(3,{10,8})(nn.Linear(rnn_hid_dim, out_dim)(rnn_out)):split(2) -- dimensions hard coded!
+    local world_state_pre, obj_prop_pre = split_tensor(3,{10,8})(nn.Linear(rnn_hid_dim, out_dim)(rnn_out)):split(2) -- dimensions hard coded! TODO 1in1out
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
     -- local world_state = nn.Tanh()(world_state_pre)
     --
     local dec_out_reshaped = nn.JoinTable(3)({world_state, obj_prop})
-    local decoder_out = nn.Reshape(80, true)(dec_out_reshaped)
+    local decoder_out = nn.Reshape(80, true)(dec_out_reshaped) -- TODO 1in1out
 
     return nn.gModule({rnn_out}, {decoder_out})
 end
@@ -91,8 +91,8 @@ function split_tensor(dim, reshape)
     local tensor = nn.Identity()()
     local reshaped = nn.Reshape(reshape[1],reshape[2], 1, true)(tensor)
     local splitted = nn.SplitTable(dim)(reshaped)
-    local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted))
-    local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))
+    local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted)) -- TODO 1in1out
+    local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))  -- TODO 1in1out
     return nn.gModule({tensor},{first_half, second_half})
 end
 
@@ -136,8 +136,8 @@ function init_network(params)
     -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
 
     -- -- split criterion: I know that this works
-    local world_state, obj_prop = split_tensor(3, {10,8})({prediction}):split(2) -- these are nil for some reason
-    local fworld_state, fobj_prop = split_tensor(3, {10,8})({thisp_future}):split(2) -- these are nill for some reason
+    local world_state, obj_prop = split_tensor(3, {10,8})({prediction}):split(2) -- these are nil for some reason  -- TODO 1in1out
+    local fworld_state, fobj_prop = split_tensor(3, {10,8})({thisp_future}):split(2) -- these are nill for some reason  -- TODO 1in1out
 
     local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
     local err2 = nn.BCECriterion()({obj_prop, fobj_prop})

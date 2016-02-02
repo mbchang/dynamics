@@ -162,9 +162,14 @@ def subsample_range(range_length, windowsize, num_samples):
         rate:
 
     """
-    last_possible_index = range_length - windowsize
-    rate = int((last_possible_index)/(num_samples-1))
-    return np.arange(last_possible_index+1)[0::rate]
+    if num_samples == 1:
+        return np.array([0])
+    else:
+        last_possible_index = range_length - windowsize
+        rate = int((last_possible_index)/(num_samples-1))
+        subsampled_range = np.arange(last_possible_index+1)[0::rate][:num_samples]
+        assert(len(subsampled_range)==num_samples)
+        return subsampled_range
 
 def get_examples_for_video(video_path, num_samples, windowsize, contiguous):
     """
@@ -186,7 +191,6 @@ def get_examples_for_video(video_path, num_samples, windowsize, contiguous):
     particles, goos, observedPath = convert_file(video_path, G_SUBSAMPLE)
 
     # sample randomly
-    # TODO
     if contiguous:
         samples_idxs = subsample_range(len(observedPath), windowsize, num_samples)
     else:
@@ -302,6 +306,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
 
     # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
     for world_config in os.listdir(data_root):
+        print world_config
         if filterconfig in world_config:  # TAKEOUT
             print '\n########################################################################'
             print 'WORLD CONFIG:', world_config
@@ -369,28 +374,29 @@ def save_all_datasets(dryrun):
 
         80 timesteps --> 12 samples, with winsize = 20: about 1 sample every 5
         500 videos --> 160 samples
-        Train: 4 * 6 * 2 * 160 * 12 = 92160
+        Train: 4 * 6 * 2 * 160 * 12 = 92,160
         Test: 4 * 6 * 2 * 20 * 12 = 11,520
 
     Note that you have 339,380 parameters with 4 layers, so you need about 60,000 training, 10,000 validation, 10,000 test
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    # dataset_files_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'
-    # data_root = '/om/data/public/mbchang/physics-data/data'
-    # windowsize = 20  # 2
-    # num_train_samples_per = (160, 12)  # 3
-    # num_val_samples_per = (20, 12)  # 1
-    # num_test_samples_per = (20, 12)  # 1
-    # contiguous = True
-
-    dataset_files_folder = 'hoho'
-    data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
-    windowsize = 10  # 20
-    num_train_samples_per = (30, 30)  # 30
-    num_val_samples_per = (10, 10)  # 10
-    num_test_samples_per = (10, 10)  # 10
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/1'
+    if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
+    data_root = '/om/data/public/mbchang/physics-data/data'
+    windowsize = 2  # 2  -- TODO 1in1out
+    num_train_samples_per = (32, 60)  # 3
+    num_val_samples_per = (16, 20)  # 1
+    num_test_samples_per = (16, 20)  # 1
     contiguous = True
+
+    # dataset_files_folder = 'hey'
+    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
+    # windowsize = 2  # 20
+    # num_train_samples_per = (32, 60)  # 30
+    # num_val_samples_per = (32, 60)  # 10
+    # num_test_samples_per = (32, 60)  # 10
+    # contiguous = True
 
     trainset, valset, testset = create_datasets(data_root,
                                                 num_train_samples_per,
@@ -399,7 +405,8 @@ def save_all_datasets(dryrun):
                                                 windowsize,
                                                 contiguous,
                                                 'np=2')
-    print(len(trainset.keys())/3)
+
+    # print testset['worldm1_np=2_ng=1particles'].shape
 
     # # save
     if not dryrun:
@@ -408,6 +415,14 @@ def save_all_datasets(dryrun):
         save_dict_to_hdf5(trainset, 'trainset', dataset_files_folder)
         save_dict_to_hdf5(valset, 'valset', dataset_files_folder)
         save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
+    print '####################################################################'
+    print 'Dataset_files_folder:', dataset_files_folder
+    # print len(trainset.keys())/3, 'configurations'
+    print 'Trainset:', num_train_samples_per[0], 'examples per config', num_train_samples_per[1], 'examples per video'
+    print 'Valset:', num_val_samples_per[0], 'examples per config', num_val_samples_per[1], 'examples per video'
+    print 'Testset:', num_test_samples_per[0], 'examples per config', num_test_samples_per[1], 'examples per video'
+    print 'Windowsize:', windowsize
+    print 'Contiguous:', contiguous
 
 def fixInputSyntax(l):
     """
@@ -457,10 +472,10 @@ def getParticleCoords(observedPath,pindex):
     """
     return observedPath[:,0,pindex,:]
 
-def render_from_scheme_output(path, framerate, movie_folder, movieName):
+def render_from_scheme_output(path, framerate, movie_folder, movieName, save):
     particles, goos, observedPath = convert_file(path, G_SUBSAMPLE)
     print(observedPath.shape)
-    render(goos, particles, observedPath, framerate, movie_folder, movieName)
+    render(goos, particles, observedPath, framerate, movie_folder, movieName, save, 0)
 
 def render(goos, particles, observed_path, framerate, movie_folder, movieName, save, start_frame):
     """
@@ -737,8 +752,8 @@ def recover_particles(this, other):
 
 def recover_path(this, other):
     """
-            this:     (num_samples, winsize/2, 8)
-            other:    (num_samples, num_other_particles, winsize/2, 8)
+            this:     (num_samples, winsize/2, 8) -- TODO 1in1out
+            other:    (num_samples, num_other_particles, winsize/2, 8) -- TODO 1in1out
 
         output
             a list of paths, each like
@@ -872,7 +887,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
         save: true if want to save vid
     """
     framerate = 10
-    windowsize = 10
+    windowsize = 10  # TODO 1in1out, this seems to be winsize/2?
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
@@ -921,7 +936,7 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
 
 
 if __name__ == "__main__":
-    # save_all_datasets(False)
+    # save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -1036,3 +1051,17 @@ if __name__ == "__main__":
 
     # h5_file ='/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense3_opt_adam_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_260_testcfgs_[:-2:2-:]_lr_0.005/predictions/worldm1_np=2_ng=0_[1,260].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)
+    # for i in range(1, 20):
+        # print(len(subsample_range(80, 2, i))), subsample_range(80, 20, i)
+    # print(len(subsample_range(80, 2, 60))), subsample_range(80, 2, 60)
+    # render_from_scheme_output('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data/worldm1_np=1_ng=0/worldm1_np=1_ng=0_324.ss', 3, 'heyhey', 'hihi', False)
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/5_Sl1BCELinearReLU_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=14, vidsave=False, imgsave=False)   # CANNOT BOUNCE OFF OBJECTS
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/2_TanhReLU_opt_optimrmsprop_layers_2_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_65_testcfgs_[:-2:2-:]_lr_0.001_max_epochs_20/predictions/worldm1_np=2_ng=0_[1,65].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/4_SL1TanhReLU_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS

@@ -13,7 +13,3 @@ dataset_files_subsampled_dense_np2
     Winsize:    20
 
 1
-    Subsample:  5
-    Train:      4w * 6c * 2p * (32 per config * 60 per video) = 92,160
-    Test:       4w * 6c * 2p * (32 per config * 60 per video) = 92,160
-    Winsize:    2

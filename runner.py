@@ -27,26 +27,18 @@ def create_jobs(dry_run, mode, ext):
     base_networks = {
         }
 
-    jobs = [{'lr': r, 'opt': o, 'batch_size': b, 'shuffle': s, 'lrdecay': d}
-                for r in [5e-3, 1e-3]
-                    for o in ['optimrmsprop', 'adam']
-                        for b in [65, 260]
-                            for s in ['true', 'false']
-                                for d in [0.95, 0.99, 1]]
-    for job in jobs:
-        job['traincfgs'] = '[:-2:2-:]'
-        job['testcfgs'] = '[:-2:2-:]'
-        # job['lrdecay'] = 1
+    jobs = [{'lr': r, 'opt': o, 'relative': t}
+                for r in [5e-3, 1e-3, 5e-4]
+                    for o in ['adam', 'optimrmsprop']
+                        for t in ['true']]
 
     if dry_run:
         print "NOT starting jobs:"
     else:
         print "Starting jobs:"
 
-    # jobs = [jobs[6], jobs[7], jobs[8]]
-
     for job in jobs:
-        jobname = "baselinesubsampledcontigdense3"
+        jobname = "6_SL1BCELinearReLURel"
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):
