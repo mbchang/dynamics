@@ -34,7 +34,7 @@ mp = lapp[[
    -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
    -r,--lr            (default 0.0005)      	   learning rate
-   -a,--lrdecay       (default 0.99)            annealing rate
+   -a,--lrdecay       (default 0.95)            annealing rate
    -i,--max_epochs    (default 20)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 128)
    --layers           (default 2)
@@ -46,8 +46,9 @@ mp = lapp[[
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-    mp.num_past = 10 --10
-    mp.num_future = 10 --10
+    mp.winsize = 20  -- total number of frames
+    mp.num_past = 19 --10
+    mp.num_future = 1 --10
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
@@ -60,10 +61,10 @@ if mp.server == 'pc' then
 	mp.cunn = false
     mp.max_epochs = 50
 else
-	-- mp.winsize = 20  -- TODO 1in1out; need to change this num_past num_future
-    mp.num_past = 10
-    mp.num_future = 10
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'  -- TODO 1in1out
+	mp.winsize = 20  -- total number of frames
+    mp.num_past = 1 -- total number of past frames
+    mp.num_future = 1
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/4'  -- TODO 1in1out
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -113,7 +114,7 @@ function inittrain(preload, model_path)
                               mp.cuda,
                               mp.relative,
                               mp.num_past,
-                              mp.num_future}
+                              mp.winsize}
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
@@ -135,7 +136,9 @@ function inittest(preload, model_path)
                               mp.batch_size,
                               mp.shuffle,
                               mp.cuda,
-                              mp.relative}
+                              mp.relative,
+                              mp.num_past,
+                              mp.winsize}
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
     modelfile = model_path
@@ -146,11 +149,31 @@ end
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch())
-    -- print(mask)
+    y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
     local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+    -- print(predictions[torch.find(mask,1)[1]]:size())
     local grad = model:bp({this=this,context=context}, y, mask, state)
     collectgarbage()
     return loss, grad -- f(x), df/dx
+end
+
+-- tensor (batchsize, winsize*obj_dim)
+-- reshapesize (batchsize, winsize, obj_dim)
+-- cropdim (dim, amount_to_take) == (dim, mp.num_future)
+function crop_future(tensor, reshapesize, cropdim)
+    local crop = tensor:clone()
+    crop = crop:reshape(unpack(reshapesize))
+    --hacky
+    if crop:dim() == 3 then
+        assert(cropdim[1]==2)
+        crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+        crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
+    else
+        assert(crop:dim()==4 and cropdim[1] == 3)
+        crop = crop[{{},{},{1,cropdim[2]},{}}]
+        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)
+    end
+    return crop
 end
 
 -- trains for one epoch
@@ -183,6 +206,8 @@ function test(dataloader, params_, saveoutput)
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch())
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
+        context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
         local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
         sum_loss = sum_loss + test_loss
 
@@ -304,25 +329,22 @@ function save_example_prediction(example, description, modelfile_, dataloader)
         context_future = context_future:float()
     end
 
-    local num_past = mp.num_past -- math.floor(mp.winsize/2)
-    local num_future = mp.num_future -- mp.winsize-math.floor(mp.winsize/2)
-
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
     save_to_hdf5(save_path,
         {pred=prediction,
         this=this:reshape(this:size(1),
-                    num_past,
+                    mp.num_past,
                     dataloader.object_dim),
         context=context:reshape(context:size(1),
                     context:size(2),
-                    num_past,
+                    mp.num_past,
                     dataloader.object_dim),
         y=y:reshape(y:size(1),
-                    num_past,
+                    mp.num_future,
                     dataloader.object_dim),
         context_future=context_future:reshape(context_future:size(1),
                     context_future:size(2),
-                    num_future,
+                    mp.num_future,
                     dataloader.object_dim)})
 end
 

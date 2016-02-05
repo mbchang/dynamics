@@ -225,6 +225,10 @@ function model:fp(params_, x, y)
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
+    -- print(this_future:size())
+    -- print('a')
+    -- print(self.mp.out_dim)
+    -- print(self.mp.batch_size)
     assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.out_dim)
 
     -- it makes sense to zero the loss here

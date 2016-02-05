@@ -78,6 +78,9 @@ experiment 7: only worldm1_np=2_ng=0: 48000 examples
 
 experiment 8: np2_ng=0: 192,000 examples
 
+experiment 9: np2_ng=0 (dataset 4): 1in1out
+
+
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out
         Dataset: /om/data/public/mbchang/physics-data/2

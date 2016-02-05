@@ -81,7 +81,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative, num_past, num_future)
+function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative, num_past, winsize)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -111,7 +111,8 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.relative = relative
     self.cuda = cuda
     self.num_past = num_past
-    self.num_future = num_future
+    self.winsize = winsize
+    -- print(self.winsize)
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
@@ -309,15 +310,15 @@ function dataloader:next_config(current_config, start, finish)
     -- split into x and y
     local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
     local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
-    local y = this_particles[{{},{self.num_past+1,self.num_past+self.num_future},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
-    local context_future = context[{{},{},{self.num_past+1,self.num_past+self.num_future},{}}]  -- (num_samples x max_other_objects x num_future x 8)
+    local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+    local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
 
     -- assert num_samples are correct
     assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
     -- assert number of axes of tensors are correct
     assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
     -- assert seq length is correct
-    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.num_future)
+    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
     -- check padding
     assert(context_x:size(2)==max_other_objects)
     -- check data dimension
@@ -338,8 +339,9 @@ function dataloader:next_config(current_config, start, finish)
     -- Reshape
     this_x          = this_x:reshape(num_samples, self.num_past*object_dim)
     context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*object_dim)
-    y               = y:reshape(num_samples, self.num_future*object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, self.num_future*object_dim)
+    y               = y:reshape(num_samples, (self.winsize-self.num_past)*object_dim)
+    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*object_dim)
+    -- print(max_other_objects)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 
@@ -348,6 +350,13 @@ function dataloader:next_config(current_config, start, finish)
     context_x       = context_x[{{start,finish}}]
     y               = y[{{start,finish}}]
     context_future  = context_future[{{start,finish}}]
+
+    -- print(self.num_past)
+    -- print(self.winsize)
+    -- print(this_x:size())
+    -- print(context_x:size())
+    -- print(y:size())
+    -- print(context_future:size())
 
     collectgarbage()
     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
