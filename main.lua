@@ -28,15 +28,15 @@ mp = lapp[[
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
-   -b,--batch_size    (default 65)
-   -o,--opt           (default "adam")       rmsprop | adam | optimrmsprop
+   -b,--batch_size    (default 80)
+   -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
-   -t,--relative      (default true)           relative state vs abs state
+   -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
-   -r,--lr            (default 0.005)      	   learning rate
+   -r,--lr            (default 0.0005)      	   learning rate
    -a,--lrdecay       (default 0.99)            annealing rate
    -i,--max_epochs    (default 20)           	maximum nb of iterations per batch, for LBFGS
-   --rnn_dim          (default 100)
+   --rnn_dim          (default 128)
    --layers           (default 2)
    --seed             (default "true")
    --max_grad_norm    (default 10)
@@ -46,9 +46,9 @@ mp = lapp[[
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-    mp.num_past = 1 --10
-    mp.num_future = 1 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/1'--dataset_files_subsampled_dense_np2' --'hoho'
+    mp.num_past = 10 --10
+    mp.num_future = 10 --10
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 80 --1
@@ -63,7 +63,7 @@ else
 	-- mp.winsize = 20  -- TODO 1in1out; need to change this num_past num_future
     mp.num_past = 10
     mp.num_future = 10
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/dataset_files_subsampled_dense_np2'  -- TODO 1in1out
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'  -- TODO 1in1out
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -136,7 +136,7 @@ function inittest(preload, model_path)
                               mp.shuffle,
                               mp.cuda,
                               mp.relative}
-    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
     modelfile = model_path
     print("Initialized Network")
@@ -146,6 +146,7 @@ end
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch())
+    -- print(mask)
     local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
     local grad = model:bp({this=this,context=context}, y, mask, state)
     collectgarbage()
@@ -155,6 +156,7 @@ end
 -- trains for one epoch
 function train(epoch_num)
     local new_params, train_loss
+    local loss_run_avg = 0
     for t = 1,train_loader.num_batches do
         -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
@@ -164,13 +166,15 @@ function train(epoch_num)
                     epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
         end
 
+        loss_run_avg = loss_run_avg + train_loss[1]
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
         if mp.plot then trainLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
-    return train_loss[1]  -- because train_loss is returned as a table
+    return loss_run_avg/train_loader.num_batches  -- because train_loss is returned as a table
+    -- return train_loss[1]  -- because train_loss is returned as a table
 end
 
 -- test on dataset
@@ -190,11 +194,16 @@ function test(dataloader, params_, saveoutput)
                                         mp.num_future,
                                         dataloader.object_dim)
         this = this:reshape(this:size(1),
-                    mp.num_past,
-                    dataloader.object_dim)
+                            mp.num_past,
+                            dataloader.object_dim)
+        y = y:reshape(y:size(1),
+                            mp.num_future,
+                            dataloader.object_dim)
 
-        -- TODO: relative indexing convert back
-        if mp.relative then prediction = prediction + this[{{},{-1}}]:expandAs(prediction) end
+        if mp.relative then
+            prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
+            y = y + this[{{},{-1}}]:expandAs(y)
+        end
 
         if saveoutput then
             save_example_prediction({this, context, y, prediction, context_future},
@@ -207,6 +216,67 @@ function test(dataloader, params_, saveoutput)
     collectgarbage()
     return avg_loss
 end
+
+-- test on dataset
+-- assumption: that you predict 1 out
+--[[
+    Want:
+        the data given to still have windowsize of 20.
+        But we want to only predict for 1 timestep,
+        But we want the context to have full windowsize. Perhaps we can
+            have a flag to set? The full context, starting at the time prediction
+            starts until the end of the window, should be passed through
+        But also you need the full context and context_future to be passed in.
+            Where to do the processing?
+        Given the pred (batch_size, num_future, obj_dim) we will take the
+        first time slice: [{{},{1}}] of that
+
+
+
+
+-- ]]
+--
+-- function simulate(dataloader, params_, saveoutput)
+--     -- TODO basically you have to assert that num_future here is 1
+--     assert(dataloader.num_future == 1)
+--     local sum_loss = 0
+--     for i = 1,dataloader.num_batches do
+--         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+--         -- TODO wait, do we want dataloader.num_future to be constrained to be 1 at this point?
+--         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch())
+--         local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+--         sum_loss = sum_loss + test_loss
+--
+--         -- here you have the option to save predictions into a file
+--         local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
+--
+--         -- reshape to -- (num_samples x num_future x 8)
+--         prediction = prediction:reshape(this:size(1),
+--                                         mp.num_future,
+--                                         dataloader.object_dim)
+--
+--
+--         this = this:reshape(this:size(1),
+--                             mp.num_past,
+--                             dataloader.object_dim)
+--
+--         -- TODO: relative indexing convert back
+--         if mp.relative then
+--             prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
+--             y = y + this[{{},{-1}}]:expandAs(y)
+--         end
+--
+--         if saveoutput then
+--             save_example_prediction({this, context, y, prediction, context_future},
+--                                     {config, start, finish},
+--                                     modelfile,
+--                                     dataloader)
+--         end
+--     end
+--     local avg_loss = sum_loss/dataloader.num_batches
+--     collectgarbage()
+--     return avg_loss
+-- end
 
 function save_example_prediction(example, description, modelfile_, dataloader)
     --[[
@@ -271,7 +341,7 @@ function experiment()
         -- train_loss = test(train_test_loader)
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
-        print('val loss\t'..val_loss..'\ttest_loss\t'..test_loss)
+        print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 
         -- Save logs
         experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),

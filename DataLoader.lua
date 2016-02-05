@@ -280,7 +280,6 @@ function dataloader:next_config(current_config, start, finish)
     -- create context
     local context
     if num_other_particles > 0 and num_goos > 0 then
-        -- print('num_other_particles > 0 and num_goos > 0')
         context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
         if num_to_pad > 0 then
             local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
@@ -290,17 +289,14 @@ function dataloader:next_config(current_config, start, finish)
         assert(num_to_pad > 0)
         local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
         if num_other_particles > 0 then -- no goos
-            -- print('num_other_particles > 0 and num_goos = 0')
             assert(torch.type(m_goos)=='table')
             assert(not next(m_goos))  -- the table had better be empty
             context = torch.cat(other_particles, pad_p, 2)
         elseif num_goos > 0 then -- no other objects
-            -- print('num_other_particles = 0 and num_goos > 0')
             assert(torch.type(other_particles)=='table')
             assert(not next(other_particles))  -- the table had better be empty
             context = torch.cat(m_goos, pad_p, 2)
         else
-            -- print('num_other_particles = 0 and num_goos = 0')
             assert(num_other_particles == 0 and num_goos == 0)
             assert(num_to_pad == max_other_objects)
             context = pad_p  -- context is just the pad then
@@ -313,8 +309,8 @@ function dataloader:next_config(current_config, start, finish)
     -- split into x and y
     local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
     local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
-    local y = this_particles[{{},{self.num_past+1,-1},{}}]  -- (num_samples x num_future x 8)
-    local context_future = context[{{},{},{self.num_past+1,-1},{}}]  -- (num_samples x max_other_objects x num_future x 8)
+    local y = this_particles[{{},{self.num_past+1,self.num_past+self.num_future},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+    local context_future = context[{{},{},{self.num_past+1,self.num_past+self.num_future},{}}]  -- (num_samples x max_other_objects x num_future x 8)
 
     -- assert num_samples are correct
     assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)

@@ -40,14 +40,8 @@ function init_object_encoder(input_dim, rnn_inp_dim)
     local thisp     = nn.Identity()() -- this particle of interest  (batch_size, input_dim)
     local contextp  = nn.Identity()() -- the context particle  (batch_size, partilce_dim)
 
-    --local thisp_out     = nn.Tanh()(nn.Linear(input_dim, rnn_inp_dim/2)(thisp))  -- (batch_size, rnn_inp_dim/2)
-    --local contextp_out  = nn.Tanh()(nn.Linear(input_dim, rnn_inp_dim/2)(contextp)) -- (batch_size, rnn_inp_dim/2)
-
     local thisp_out     = nn.ReLU()(nn.Linear(input_dim, rnn_inp_dim/2)(thisp))  -- (batch_size, rnn_inp_dim/2)
     local contextp_out  = nn.ReLU()(nn.Linear(input_dim, rnn_inp_dim/2)(contextp)) -- (batch_size, rnn_inp_dim/2)
-
-    -- local thisp_out     = nn.Linear(input_dim, rnn_inp_dim/2)(thisp)  -- (batch_size, rnn_inp_dim/2)
-    -- local contextp_out  = nn.Linear(input_dim, rnn_inp_dim/2)(contextp) -- (batch_size, rnn_inp_dim/2)
 
     -- Concatenate
     local encoder_out = nn.JoinTable(2)({thisp_out, contextp_out})  -- (batch_size, rnn_inp_dim)
@@ -59,15 +53,12 @@ end
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
     -- local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
-    -- local decoder_out = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     local out_dim = num_future * object_dim
     -- -- ok, here we will have to split up the output
     local world_state_pre, obj_prop_pre = split_tensor(3,{num_future, object_dim})(nn.Linear(rnn_hid_dim, out_dim)(rnn_out)):split(2)
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
-    -- local world_state = nn.Tanh()(world_state_pre)
-    --
     local dec_out_reshaped = nn.JoinTable(3)({world_state, obj_prop})
     local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
 
@@ -234,7 +225,7 @@ function model:fp(params_, x, y)
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
-    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.input_dim)
+    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.out_dim)
 
     -- it makes sense to zero the loss here
     local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), self.mp.cuda)

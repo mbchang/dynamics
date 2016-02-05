@@ -59,15 +59,34 @@ experiment: 5: Selected Criterion
 
 experiment: 6: Relative Coordinates
     Goal: compare 5_SL1BCELinearReLU vs 6_SL1BCELinearReLURel with relative coords
+    Also tested different rnn_dims, and it seems like it doesn't matter too much.
+        rnn dim of 256 and 512, 1 and 2 layers
 
     Observations:
         seems like relative coordinates converge much faster
-        seems like relative coordinates has strictly better convergence and training
+        seems like relative coordinates has better convergence and training
+        but only for some configurations
 
+    Starting Now: I will use optimrmsprop, SL1BCELinearReLURel, lr=0.001, 2 layers, dim 128, relative
 
-experiment: 6
-    Goal: comapre the best from experiment 3 with 1 in 1 out
-    BEFORE YOU DO THIS YOU NEED TO MAKE SURE YOUR HARDCODED DIMENSIONS ARE GONE
+-- TEST ON THE TRAINING SET FIRST! YOU HAVE TO TEST ON THE TRAINING SET! AND GENERATE VIDEOS
+        -- note that 6_SL1BCELinearReLURel_opt_optimrmsprop_lr_0.001_predict.out is tested on train set
+        -- seems like the test error is actually representative of the training error
+            so how well it does on test reflects how well it does on train?
+
+experiment 7: only worldm1_np=2_ng=0: 48000 examples
+
+experiment 8: np2_ng=0: 192,000 examples
+
+experiment: 7: 8_1i1o
+    Goal: comapre the best from experiment 7 with 1 in 1 out
+        Dataset: /om/data/public/mbchang/physics-data/2
+        Batch_size: 65
+        Take the 1 in 1 out from the middle for training. or actually it can be
+        1 in "19" out for simulation
+    Observations: lr should be less than 0.01
+
+    Evaluate by actual performance
 
 experiment: 7
     Goal: compare the best from experiment 6 with augmented permutations of examples

@@ -381,13 +381,13 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/1'
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/4'
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
-    windowsize = 2  # 2  -- TODO 1in1out
-    num_train_samples_per = (32, 60)  # 3
-    num_val_samples_per = (16, 20)  # 1
-    num_test_samples_per = (16, 20)  # 1
+    windowsize = 20  # 2  -- TODO 1in1out
+    num_train_samples_per = (400, 60)  # 3
+    num_val_samples_per = (50, 60)  # 1
+    num_test_samples_per = (50, 60)  # 1
     contiguous = True
 
     # dataset_files_folder = 'hey'
@@ -404,7 +404,7 @@ def save_all_datasets(dryrun):
                                                 num_test_samples_per,
                                                 windowsize,
                                                 contiguous,
-                                                'np=2')
+                                                'np=2_ng=0')
 
     # print testset['worldm1_np=2_ng=1particles'].shape
 
@@ -937,7 +937,7 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
 
 
 if __name__ == "__main__":
-    # save_all_datasets(True)
+    save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -1026,7 +1026,7 @@ if __name__ == "__main__":
     # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)        # CANNOT BOUNCE
     # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)        # Bad bounce off wall
     # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=False, imgsave=False)        # Soft bounce off corner
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)        # Great bounce off wall
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=True, imgsave=False)        # Great bounce off wall
     # visualize_results(training_samples_hdf5=h5_file, sample_num=33, vidsave=False, imgsave=False)        # can bounce off objects (maybe?)
     # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=False)           # cannot bounce off objects (it seems to tweak physics such that it doesn't have to bounce off the other guy)
 
@@ -1066,3 +1066,8 @@ if __name__ == "__main__":
     #
     # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/4_SL1TanhReLU_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
+
+    # print subsample_range(80, 20, 60)
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/6_SL1BCELinearReLURel_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=15, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS ON TRAINING DATA

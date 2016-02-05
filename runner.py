@@ -27,10 +27,9 @@ def create_jobs(dry_run, mode, ext):
     base_networks = {
         }
 
-    jobs = [{'lr': r, 'opt': o, 'relative': t}
-                for r in [5e-3, 1e-3, 5e-4]
-                    for o in ['adam', 'optimrmsprop']
-                        for t in ['true']]
+    jobs = [{'lr': r, 'opt': o}
+                for r in [1e-3, 1e-5]
+                    for o in ['adam', 'optimrmsprop']]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -38,7 +37,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = "6_SL1BCELinearReLURel"
+        jobname = "7"
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):

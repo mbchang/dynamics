@@ -6,10 +6,34 @@ np2       : 4 worlds * (2 particles) * (0-5 goos) * 500 videos * 80 timesteps * 
 
 dense: you overlap a lot within the video
 
-dataset_files_subsampled_dense_np2
+dataset_files_subsampled_dense_np2 --> rename to 2
     Subsample:  5
     Train:      4w * 6c * 2p * (160 per config * 12 per video) = 92,160
     Test:       4w * 6c * 2p * (160 per config * 12 per video) = 92,160
     Winsize:    20
 
 1
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/1
+    Trainset: 32 examples per config 60 examples per video
+    Valset: 16 examples per config 20 examples per video
+    Testset: 16 examples per config 20 examples per video
+    Windowsize: 2
+    Contiguous: True
+
+3
+    Details: worldm1_np=2_ng=0
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/3
+    Trainset: 400 examples per config 60 examples per video
+    Valset: 50 examples per config 60 examples per video
+    Testset: 50 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
+
+4
+    Details: np=2_ng=0
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/4
+    Trainset: 400 examples per config 60 examples per video: 4*1*2*400*60= 192000
+    Valset: 50 examples per config 60 examples per video
+    Testset: 50 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
