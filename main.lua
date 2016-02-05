@@ -47,7 +47,7 @@ mp = lapp[[
 if mp.server == 'pc' then
     mp.root = 'logs'
     mp.winsize = 20  -- total number of frames
-    mp.num_past = 19 --10
+    mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
@@ -73,8 +73,10 @@ else
 end
 
 mp.object_dim = 8.0  -- hardcoded  -- TODO: put this into dataloader objectdim
-mp.input_dim = mp.object_dim*mp.num_past--mp.winsize/2  -- TODO 1in1out
-mp.out_dim = mp.object_dim*mp.num_future--mp.winsize/2  -- TODO 1in1out
+mp.input_dim = mp.object_dim*mp.num_past -- TODO 1in1out
+mp.out_dim = mp.object_dim*mp.num_future -- TODO 1in1out
+print('indim', mp.input_dim)
+print('outdim',mp.out_dim)
 mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
@@ -151,7 +153,6 @@ function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch())
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
     local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-    -- print(predictions[torch.find(mask,1)[1]]:size())
     local grad = model:bp({this=this,context=context}, y, mask, state)
     collectgarbage()
     return loss, grad -- f(x), df/dx
@@ -215,15 +216,9 @@ function test(dataloader, params_, saveoutput)
         local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
 
         -- reshape to -- (num_samples x num_future x 8)
-        prediction = prediction:reshape(this:size(1),
-                                        mp.num_future,
-                                        dataloader.object_dim)
-        this = this:reshape(this:size(1),
-                            mp.num_past,
-                            dataloader.object_dim)
-        y = y:reshape(y:size(1),
-                            mp.num_future,
-                            dataloader.object_dim)
+        prediction = prediction:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
+        this = this:reshape(mp.batch_size, mp.num_past, dataloader.object_dim)
+        y = y:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
 
         if mp.relative then
             prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
@@ -234,7 +229,8 @@ function test(dataloader, params_, saveoutput)
             save_example_prediction({this, context, y, prediction, context_future},
                                     {config, start, finish},
                                     modelfile,
-                                    dataloader)
+                                    dataloader,
+                                    mp.num_future)
         end
     end
     local avg_loss = sum_loss/dataloader.num_batches
@@ -256,41 +252,33 @@ end
         Given the pred (batch_size, num_future, obj_dim) we will take the
         first time slice: [{{},{1}}] of that
 
-
-
-
+        -- TODO wait, do we want dataloader.num_future to be constrained to be 1 at this point?
 -- ]]
 --
 function simulate(dataloader, params_, saveoutput, numsteps)
-    -- TODO basically you have to assert that num_future here is 1
-    assert(dataloader.num_future == 1)
+    assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-        -- TODO wait, do we want dataloader.num_future to be constrained to be 1 at this point?
-
         local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:next_batch())
-        -- do a for loop here over the number of timesteps INTO THE FUTURE
         local this, context = this_orig:clone(), context_orig:clone()
-        local y = crop_future(y_orig, {y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
-        local context_future = crop_future(context_future_orig, {context_future_orig:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
-        context_future = context_future:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
+        context_future = context_future_orig:clone():reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
         -- at this point:
         -- this (bsize, numpast*objdim)
         -- context (bsize, mp.seq_length, mp.numpast*mp.objdim)
-        -- y (bsize, numfuture*objdim)
-        -- context_future (bsize, mp.seqlength, mp.numpast*mp.objdim)
+        -- y_orig (bsize, (mp.winsize-mp.num_past)*objdim)
+        -- context_future (bsize, mp.seqlength, (mp.winsize-mp.num_past)*mp.objdim)
 
         -- allocate space, already assume reshape
-        local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, mp.numsteps, mp.object_dim), self.mp.cuda)
-        -- local cf_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, mp.seq_length, mp.numsteps, mp.object_dim), self.mp.cuda)
-
+        local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, numsteps, mp.object_dim), mp.cuda)
         for t = 1,numsteps do
-            y = y[{{},{t},{}}]:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- increment time in y; may need to reshape
+            -- the t-th timestep in the future
+            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape
+            y = y:reshape(mp.batch_size, 1*mp.object_dim)
 
             local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-            local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
+            local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future), but since num_future is 1 we are good
 
             pred_sim[{{},{t},{}}] = prediction
 
@@ -298,12 +286,20 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
 
-            -- update this, context and y
+            if mp.relative then
+                prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.
+            end
+
+            -- update this and context
             -- chop off first time step and then add in next one
-            -- this --> y
-            -- context --> context_future
-            this = torch.cat(this[{{},{2,-1},{}}]:clone(), prediction)
-            context = torch.cat(context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{1},{}}]:clone())
+            if mp.num_past > 1 then
+                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)
+                context = torch.cat({context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{t},{}}]:clone()},3)
+            else
+                assert(mp.num_past == 1)
+                this = prediction  -- just use prev prediction as input
+                context = context_future[{{},{},{t},{}}]:clone()
+            end
 
             -- reshape it back
             this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)
@@ -312,31 +308,21 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             sum_loss = sum_loss + test_loss
         end
 
-        -- TODO: DEBUG!
-
         -- reshape to -- (num_samples x num_future x 8)
-        prediction = prediction:reshape(this:size(1),
-                                        mp.num_future,
-                                        dataloader.object_dim)
+        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past
+        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
+        context_future_orig = context_future_orig:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
-
-        this = this:reshape(this:size(1),
-                            mp.num_past,
-                            dataloader.object_dim)
-
-        -- at this point, prediction should be (bsize, numsteps, mp.object_dim)
-
-        -- TODO: relative indexing convert back
-        if mp.relative then
-            prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
-            y = y + this[{{},{-1}}]:expandAs(y)
-        end
+        -- now crop only the number of timesteps you need
+        y_orig = y_orig[{{},{1,numsteps},{}}]
+        context_future_orig = context_future_orig[{{},{},{1,numsteps},{}}]
 
         if saveoutput then
-            save_example_prediction({this, context, y, prediction, context_future},
+            save_example_prediction({this_orig, context_orig, y_orig, pred_sim, context_future_orig},
                                     {config, start, finish},
                                     modelfile,
-                                    dataloader)
+                                    dataloader,
+                                    numsteps)
         end
     end
     local avg_loss = sum_loss/dataloader.num_batches/numsteps
@@ -344,7 +330,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
     return avg_loss
 end
 
-function save_example_prediction(example, description, modelfile_, dataloader)
+function save_example_prediction(example, description, modelfile_, dataloader, numsteps)
     --[[
         example: {this, context, y, prediction, context_future}
         description: {config, start, finish}
@@ -381,11 +367,11 @@ function save_example_prediction(example, description, modelfile_, dataloader)
                     mp.num_past,
                     dataloader.object_dim),
         y=y:reshape(y:size(1),
-                    mp.num_future,
+                    numsteps,
                     dataloader.object_dim),
         context_future=context_future:reshape(context_future:size(1),
                     context_future:size(2),
-                    mp.num_future,
+                    numsteps,
                     dataloader.object_dim)})
 end
 
@@ -443,6 +429,11 @@ function predict()
     print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
 end
 
+function predict_simulate()
+    inittest(true, mp.savedir ..'/'..'network.t7')
+    print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
+end
+
 -- function curriculum()
 --     local cur = cur = {'[:-1:1-:]','[:-2:2-:]','[:-3:3-:]',
 --                         '[:-4:4-:]','[:-5:5-:]','[:-6:6-:]'}
@@ -463,4 +454,6 @@ if mp.mode == 'exp' then
 else
     predict()
 end
--- curriculum()
+
+-- inittest(false, mp.savedir ..'/'..'network.t7')
+-- print(simulate(test_loader, model.theta.params, false, 3))
