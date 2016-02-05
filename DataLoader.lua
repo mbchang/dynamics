@@ -300,7 +300,7 @@ function dataloader:next_config(current_config, start, finish)
         else
             assert(num_other_particles == 0 and num_goos == 0)
             assert(num_to_pad == max_other_objects)
-            context = pad_p  -- context is just the pad then
+            context = pad_p  -- context is just the pad then so second dim is always max_objects
         end
     end
     assert(context:dim() == 4 and context:size(1) == num_samples and

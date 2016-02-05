@@ -261,47 +261,88 @@ end
 
 -- ]]
 --
--- function simulate(dataloader, params_, saveoutput)
---     -- TODO basically you have to assert that num_future here is 1
---     assert(dataloader.num_future == 1)
---     local sum_loss = 0
---     for i = 1,dataloader.num_batches do
---         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
---         -- TODO wait, do we want dataloader.num_future to be constrained to be 1 at this point?
---         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch())
---         local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
---         sum_loss = sum_loss + test_loss
---
---         -- here you have the option to save predictions into a file
---         local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
---
---         -- reshape to -- (num_samples x num_future x 8)
---         prediction = prediction:reshape(this:size(1),
---                                         mp.num_future,
---                                         dataloader.object_dim)
---
---
---         this = this:reshape(this:size(1),
---                             mp.num_past,
---                             dataloader.object_dim)
---
---         -- TODO: relative indexing convert back
---         if mp.relative then
---             prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
---             y = y + this[{{},{-1}}]:expandAs(y)
---         end
---
---         if saveoutput then
---             save_example_prediction({this, context, y, prediction, context_future},
---                                     {config, start, finish},
---                                     modelfile,
---                                     dataloader)
---         end
---     end
---     local avg_loss = sum_loss/dataloader.num_batches
---     collectgarbage()
---     return avg_loss
--- end
+function simulate(dataloader, params_, saveoutput, numsteps)
+    -- TODO basically you have to assert that num_future here is 1
+    assert(dataloader.num_future == 1)
+    local sum_loss = 0
+    for i = 1,dataloader.num_batches do
+        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        -- TODO wait, do we want dataloader.num_future to be constrained to be 1 at this point?
+
+        local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:next_batch())
+        -- do a for loop here over the number of timesteps INTO THE FUTURE
+        local this, context = this_orig:clone(), context_orig:clone()
+        local y = crop_future(y_orig, {y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
+        local context_future = crop_future(context_future_orig, {context_future_orig:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
+        context_future = context_future:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
+
+        -- at this point:
+        -- this (bsize, numpast*objdim)
+        -- context (bsize, mp.seq_length, mp.numpast*mp.objdim)
+        -- y (bsize, numfuture*objdim)
+        -- context_future (bsize, mp.seqlength, mp.numpast*mp.objdim)
+
+        -- allocate space, already assume reshape
+        local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, mp.numsteps, mp.object_dim), self.mp.cuda)
+        -- local cf_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, mp.seq_length, mp.numsteps, mp.object_dim), self.mp.cuda)
+
+        for t = 1,numsteps do
+            y = y[{{},{t},{}}]:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- increment time in y; may need to reshape
+
+            local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+            local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
+
+            pred_sim[{{},{t},{}}] = prediction
+
+            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
+            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
+            context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
+
+            -- update this, context and y
+            -- chop off first time step and then add in next one
+            -- this --> y
+            -- context --> context_future
+            this = torch.cat(this[{{},{2,-1},{}}]:clone(), prediction)
+            context = torch.cat(context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{1},{}}]:clone())
+
+            -- reshape it back
+            this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)
+            context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
+
+            sum_loss = sum_loss + test_loss
+        end
+
+        -- TODO: DEBUG!
+
+        -- reshape to -- (num_samples x num_future x 8)
+        prediction = prediction:reshape(this:size(1),
+                                        mp.num_future,
+                                        dataloader.object_dim)
+
+
+        this = this:reshape(this:size(1),
+                            mp.num_past,
+                            dataloader.object_dim)
+
+        -- at this point, prediction should be (bsize, numsteps, mp.object_dim)
+
+        -- TODO: relative indexing convert back
+        if mp.relative then
+            prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
+            y = y + this[{{},{-1}}]:expandAs(y)
+        end
+
+        if saveoutput then
+            save_example_prediction({this, context, y, prediction, context_future},
+                                    {config, start, finish},
+                                    modelfile,
+                                    dataloader)
+        end
+    end
+    local avg_loss = sum_loss/dataloader.num_batches/numsteps
+    collectgarbage()
+    return avg_loss
+end
 
 function save_example_prediction(example, description, modelfile_, dataloader)
     --[[
