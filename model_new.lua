@@ -124,7 +124,6 @@ function init_network(params)
     -- local outputs = klstm({lstm_input, unpack(prev_s)})
 
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
-    -- local err = nn.MSECriterion()({prediction, thisp_future})
     -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
 
     -- -- split criterion: I know that this works
@@ -225,10 +224,6 @@ function model:fp(params_, x, y)
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
-    -- print(this_future:size())
-    -- print('a')
-    -- print(self.mp.out_dim)
-    -- print(self.mp.batch_size)
     assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.out_dim)
 
     -- it makes sense to zero the loss here
@@ -277,7 +272,6 @@ function model:bp(x, y, mask, state)
         local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), self.mp.cuda)
         local dtp, dc, dsim1, dtf = unpack(self.rnns[i]:backward({this_past, context[{{},i}], sim1, this_future}, {derr, self.ds, dpred}))
         g_replace_table(self.ds, dsim1)
-        -- cutorch.synchronize()
     end
     self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
     collectgarbage()

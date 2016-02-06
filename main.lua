@@ -33,7 +33,7 @@ mp = lapp[[
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
-   -r,--lr            (default 0.0005)      	   learning rate
+   -r,--lr            (default 0.005)      	   learning rate
    -a,--lrdecay       (default 0.95)            annealing rate
    -i,--max_epochs    (default 20)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 128)
@@ -197,8 +197,7 @@ function train(epoch_num)
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
-    return loss_run_avg/train_loader.num_batches  -- because train_loss is returned as a table
-    -- return train_loss[1]  -- because train_loss is returned as a table
+    return loss_run_avg/train_loader.num_batches -- running avg of training loss.
 end
 
 -- test on dataset
@@ -206,13 +205,14 @@ function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+
+        -- get batch
         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch())
         y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
-        local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-        sum_loss = sum_loss + test_loss
 
-        -- here you have the option to save predictions into a file
+        -- predict
+        local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
         local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
 
         -- reshape to -- (num_samples x num_future x 8)
@@ -220,11 +220,13 @@ function test(dataloader, params_, saveoutput)
         this = this:reshape(mp.batch_size, mp.num_past, dataloader.object_dim)
         y = y:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
 
+        -- take care of relative position
         if mp.relative then
             prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
             y = y + this[{{},{-1}}]:expandAs(y)
         end
 
+        -- save
         if saveoutput then
             save_example_prediction({this, context, y, prediction, context_future},
                                     {config, start, finish},
@@ -232,6 +234,7 @@ function test(dataloader, params_, saveoutput)
                                     dataloader,
                                     mp.num_future)
         end
+        sum_loss = sum_loss + test_loss
     end
     local avg_loss = sum_loss/dataloader.num_batches
     collectgarbage()
@@ -260,6 +263,8 @@ function simulate(dataloader, params_, saveoutput, numsteps)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+
+        -- get data
         local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:next_batch())
         local this, context = this_orig:clone(), context_orig:clone()
         context_future = context_future_orig:clone():reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
@@ -280,8 +285,6 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
             local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future), but since num_future is 1 we are good
 
-            pred_sim[{{},{t},{}}] = prediction
-
             prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
@@ -297,7 +300,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
                 context = torch.cat({context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{t},{}}]:clone()},3)
             else
                 assert(mp.num_past == 1)
-                this = prediction  -- just use prev prediction as input
+                this = prediction:clone()  -- just use prev prediction as input
                 context = context_future[{{},{},{t},{}}]:clone()
             end
 
@@ -305,6 +308,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
 
+            pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep
             sum_loss = sum_loss + test_loss
         end
 
@@ -385,9 +389,7 @@ function experiment()
         checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
         print('Saved model')
 
-        local train_loss
-        train_loss = train(i)
-        -- train_loss = test(train_test_loader)
+        local train_loss = train(i)
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
         print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
@@ -449,11 +451,11 @@ end
 -- end
 
 ------------------------------------- Main -------------------------------------
-if mp.mode == 'exp' then
-    run_experiment()
-else
-    predict()
-end
+-- if mp.mode == 'exp' then
+--     run_experiment()
+-- else
+--     predict()
+-- end
 
 -- inittest(false, mp.savedir ..'/'..'network.t7')
 -- print(simulate(test_loader, model.theta.params, false, 3))

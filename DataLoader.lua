@@ -112,7 +112,7 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.cuda = cuda
     self.num_past = num_past
     self.winsize = winsize
-    -- print(self.winsize)
+
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
     self.configs = get_keys(self.dataset)  -- table of all keys
@@ -165,8 +165,7 @@ function expand_for_each_particle(batch_particles)
     if num_particles > 1 then
         for i=1,num_particles do  -- this is doing it in transpose order
             local this = batch_particles[{{},{i},{},{}}]
-            this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8)
-            -- this = this:resize(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8)  -- this is the issue! resize actually gives the wrong answer!
+            this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8); NOTE that resize gives the wrong answer!
             this_particles[#this_particles+1] = this
             this_idxes[#this_idxes+1] = i
 
@@ -182,7 +181,7 @@ function expand_for_each_particle(batch_particles)
             assert(this:size()[1] == other:size()[1])
             other_particles[#other_particles+1] = other
 
-            -- todo: generate data by permuting
+            -- TODO: generate data by permuting
         end
     else
         local this = batch_particles[{{},{i},{},{}}]
@@ -235,8 +234,6 @@ end
         num_samples_slice is num_samples[start:finish], inclusive
 --]]
 function dataloader:next_config(current_config, start, finish)
-    -- print('current_config', current_config)
-    -- print('start', start, 'finish', finish)
     local minibatch_data = self.dataset[current_config]
     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
     local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
@@ -341,7 +338,6 @@ function dataloader:next_config(current_config, start, finish)
     context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*object_dim)
     y               = y:reshape(num_samples, (self.winsize-self.num_past)*object_dim)
     context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*object_dim)
-    -- print(max_other_objects)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 
@@ -350,13 +346,6 @@ function dataloader:next_config(current_config, start, finish)
     context_x       = context_x[{{start,finish}}]
     y               = y[{{start,finish}}]
     context_future  = context_future[{{start,finish}}]
-
-    -- print(self.num_past)
-    -- print(self.winsize)
-    -- print(this_x:size())
-    -- print(context_x:size())
-    -- print(y:size())
-    -- print(context_future:size())
 
     collectgarbage()
     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
@@ -393,8 +382,6 @@ function dataloader:compute_batches()
     local current_batch_in_config = 0
     local batchlist = {}
     for i=1,self.num_batches do
-
-        -- todo: update current_config and current_batch_in_config here
         local batch_info = self:get_batch_info(current_config, current_batch_in_config)
         current_config = unpack(subrange(batch_info, 4,4))
         current_batch_in_config = unpack(subrange(batch_info, 3,3))
@@ -406,7 +393,6 @@ end
 
 
 function dataloader:get_batch_info(current_config, current_batch_in_config)
-
     -- assumption that a config contains more than one batch
     current_batch_in_config = current_batch_in_config + self.batch_size
     -- current batch is the range: [current_batch_in_config - self.batch_size + 1, current_batch_in_config]
@@ -458,8 +444,6 @@ end
 
 function contains_world(worldconfigtable)
     for _,v in pairs(worldconfigtable) do
-        -- print(worldconfigtable)
-        -- print(v)
         if #v >= #'worldm1' then
             local prefix = v:sub(1,#'worldm')
             local suffix = v:sub(#'worldm'+1)

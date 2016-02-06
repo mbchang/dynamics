@@ -108,9 +108,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         For goos:  crop --> ltrb2xywh --> normalize
         For particles:
     """
-    # print starttime, windowsize, len(observedPath)
     assert starttime + windowsize <= len(observedPath)  # 400 is the total length of the video
-
 
     path_slice = observedPath[starttime:starttime+windowsize]  # (windowsize, [pos, vel], numObjects, [x,y])
 
@@ -148,8 +146,6 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
         assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
         assert goos.shape == (num_goos, 8)
-
-
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
     goos = np.asarray(goos, dtype=np.float64)
@@ -406,8 +402,6 @@ def save_all_datasets(dryrun):
                                                 contiguous,
                                                 'np=2_ng=0')
 
-    # print testset['worldm1_np=2_ng=1particles'].shape
-
     # # save
     if not dryrun:
         print '\n########################################################################'
@@ -417,7 +411,6 @@ def save_all_datasets(dryrun):
         save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
     print '####################################################################'
     print 'Dataset_files_folder:', dataset_files_folder
-    # print len(trainset.keys())/3, 'configurations'
     print 'Trainset:', num_train_samples_per[0], 'examples per config', num_train_samples_per[1], 'examples per video'
     print 'Valset:', num_val_samples_per[0], 'examples per config', num_val_samples_per[1], 'examples per video'
     print 'Testset:', num_test_samples_per[0], 'examples per config', num_test_samples_per[1], 'examples per video'
@@ -474,7 +467,6 @@ def getParticleCoords(observedPath,pindex):
 
 def render_from_scheme_output(path, framerate, movie_folder, movieName, save):
     particles, goos, observedPath = convert_file(path, G_SUBSAMPLE)
-    print(observedPath.shape)
     render(goos, particles, observedPath, framerate, movie_folder, movieName, save, 0)
 
 def render(goos, particles, observed_path, framerate, movie_folder, movieName, save, start_frame):
@@ -622,14 +614,6 @@ def create_all_videos(root, movie_root):
                 movie_folder = os.path.join(world_config_folder, movieName)
                 if not os.path.isdir(movie_folder): os.mkdir(movie_folder)
                 render_from_scheme_output(path=path, framerate=framerate, movie_folder = movie_folder, movieName = movieName)
-
-def test_write_data_file():
-    data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds'
-    windowsize = 2  # 20
-    num_train_samples_per = 3  # 30
-    num_val_samples_per = 1  # 10
-    num_test_samples_per = 1  # 10
-    create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize)
 
 def separate_context(context, config):
     """
@@ -811,8 +795,6 @@ def recover_state(this, context, this_pred, config):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    # TODO: this will later be used for the predictions and ground truth other
-    # but for now we will try to render the past
 
     num_samples = len(this)
 
@@ -886,7 +868,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
         save: true if want to save vid
     """
-    framerate = 10
+    framerate = 1
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
@@ -930,14 +912,9 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
         for i in os.listdir(os.path.dirname(images_root)):
             if os.path.basename(images_root) in i and '.png' in i:
                 os.system('rm ' + os.path.join(os.path.dirname(images_root), i))
-        # command =  'rm ' + images_root.replace('=', '\\=') + '-*.png'
-        # # print command
-        # assert False
-        # os.system(command)
-
 
 if __name__ == "__main__":
-    save_all_datasets(True)
+    # save_all_datasets(True)
 
     # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
     # assert False
@@ -1071,3 +1048,6 @@ if __name__ == "__main__":
 
     # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/6_SL1BCELinearReLURel_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=15, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS ON TRAINING DATA
+
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/9_opt_optimrmsprop_layers_2_lr_0.005/predictions/worldm1_np=2_ng=0_[1,80].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)
