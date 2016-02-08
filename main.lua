@@ -47,12 +47,12 @@ mp = lapp[[
 if mp.server == 'pc' then
     mp.root = 'logs'
     mp.winsize = 20  -- total number of frames
-    mp.num_past = 2 --10
+    mp.num_past = 10 --10
     mp.num_future = 1 --10
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 80 --1
+	mp.batch_size = 400 --1
     mp.lrdecay = 0.95
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -64,7 +64,7 @@ else
 	mp.winsize = 20  -- total number of frames
     mp.num_past = 1 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/4'  -- TODO 1in1out
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/4'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -72,11 +72,9 @@ else
 	mp.cunn = true
 end
 
-mp.object_dim = 8.0  -- hardcoded  -- TODO: put this into dataloader objectdim
-mp.input_dim = mp.object_dim*mp.num_past -- TODO 1in1out
-mp.out_dim = mp.object_dim*mp.num_future -- TODO 1in1out
-print('indim', mp.input_dim)
-print('outdim',mp.out_dim)
+mp.object_dim = 8.0  -- hardcoded
+mp.input_dim = mp.object_dim*mp.num_past
+mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
@@ -152,8 +150,11 @@ end
 function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch())
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
-    local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-    local grad = model:bp({this=this,context=context}, y, mask, state)
+    -- local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+    -- local grad = model:bp({this=this,context=context}, y, mask, state)
+
+    local loss, predictions = model:fp(params_, {this=this,context=context}, y)
+    local grad = model:bp({this=this,context=context}, y, mask)
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
@@ -189,7 +190,6 @@ function train(epoch_num)
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e",
                     epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
         end
-
         loss_run_avg = loss_run_avg + train_loss[1]
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
@@ -212,7 +212,8 @@ function test(dataloader, params_, saveoutput)
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
         -- predict
-        local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+        -- local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
+        local test_loss, predictions = model:fp(params_, {this=this,context=context}, y)
         local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
 
         -- reshape to -- (num_samples x num_future x 8)
@@ -385,10 +386,6 @@ function experiment()
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
     for i = 1, mp.max_epochs do
         print('Learning rate is now '..optim_state.learningRate)
-        checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
-        checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
-        print('Saved model')
-
         local train_loss = train(i)
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
@@ -401,6 +398,10 @@ function experiment()
         experimentLogger:style{['log MSE loss (train set)'] = '~',
                                ['log MSE loss (val set)'] = '~',
                                ['log MSE loss (test set)'] = '~'}
+
+        checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
+        checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
+        print('Saved model')
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
 
@@ -451,11 +452,11 @@ end
 -- end
 
 ------------------------------------- Main -------------------------------------
--- if mp.mode == 'exp' then
---     run_experiment()
--- else
---     predict()
--- end
+if mp.mode == 'exp' then
+    run_experiment()
+else
+    predict()
+end
 
 -- inittest(false, mp.savedir ..'/'..'network.t7')
 -- print(simulate(test_loader, model.theta.params, false, 3))

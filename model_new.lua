@@ -235,21 +235,26 @@ function model:fp(params_, x, y)
     end
 
     collectgarbage()
-    return loss:sum(), self.s, predictions  -- we sum the losses through time!
+    -- return loss:sum(), self.s, predictions  -- we sum the losses through time!
+    return loss:sum(), predictions  -- we sum the losses through time!
+
 end
 
 
-function model:bp(x, y, mask, state)
+-- function model:bp(x, y, mask, state)
+function model:bp(x, y, mask)
+
     -- assert that state equals self.s
     -- Perhaps, later, if we want to do validation testing, we do a bunch of
     -- forward passes, which all will mutate the model.s. So we will accept
     -- state as a parameter to this function here to make sure that we are
     -- backpropagating wrt the correct state
-    for j = 0, self.mp.seq_length do
-        for d = 1, 2 * self.mp.layers do
-            assert(torch.sum(state[j][d]:eq(self.s[j][d])) == torch.numel(self.s[j][d]))
-        end
-    end
+    -- for j = 0, self.mp.seq_length do
+    --     for d = 1, 2 * self.mp.layers do
+    --         assert(torch.sum(state[j][d]:eq(self.s[j][d])) == torch.numel(self.s[j][d]))
+    --     end
+    -- end
+    local state = self.s
 
     self.theta.grad_params:zero() -- the d_parameters
     self.ds = self:reset_ds(self.ds)  -- the d_outputs of the states
@@ -269,7 +274,7 @@ function model:bp(x, y, mask, state)
         else
             error('invalid mask')
         end
-        local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), self.mp.cuda)
+        local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), self.mp.cuda)  -- TODO is this correct?
         local dtp, dc, dsim1, dtf = unpack(self.rnns[i]:backward({this_past, context[{{},i}], sim1, this_future}, {derr, self.ds, dpred}))
         g_replace_table(self.ds, dsim1)
     end
