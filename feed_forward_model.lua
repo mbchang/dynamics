@@ -158,7 +158,7 @@ function model:bp(x, y, mask)
     local derr = model_utils.transfer_data(torch.ones(1), self.mp.cuda)
     local dpred = model_utils.transfer_data(torch.zeros(self.mp.batch_size,self.mp.out_dim), self.mp.cuda)
     local dtp, dc, dtf = unpack(self.network:backward({this_past, context[{{},i}], this_future},{derr, dpred}))
-    self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
+    -- self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm) -- not necessary
     collectgarbage()
     return self.theta.grad_params
 end

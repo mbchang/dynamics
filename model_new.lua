@@ -267,7 +267,7 @@ function model:bp(x, y, mask)
         local dtp, dc, dsim1, dtf = unpack(self.rnns[i]:backward({this_past, context[{{},i}], sim1, this_future}, {derr, self.ds, dpred}))
         g_replace_table(self.ds, dsim1)
     end
-    self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
+    -- self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
     collectgarbage()
     return self.theta.grad_params
 end

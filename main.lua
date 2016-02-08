@@ -28,16 +28,16 @@ mp = lapp[[
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
-   -b,--batch_size    (default 80)
+   -b,--batch_size    (default 64)
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
-   -r,--lr            (default 0.005)      	   learning rate
-   -a,--lrdecay       (default 0.95)            annealing rate
+   -r,--lr            (default 0.0005)      	   learning rate
+   -a,--lrdecay       (default 1)            annealing rate
    -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
-   --rnn_dim          (default 256)
-   --layers           (default 1)
+   --rnn_dim          (default 50)
+   --layers           (default 2)
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
@@ -48,12 +48,12 @@ if mp.server == 'pc' then
     mp.root = 'logs'
     mp.winsize = 20  -- total number of frames
     mp.num_past = 10 --10
-    mp.num_future = 1 --10
+    mp.num_future = 10 --10
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 400 --1
-    mp.lrdecay = 0.95
+	mp.batch_size = 40 --1
+    mp.lrdecay = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.plot = true
@@ -62,7 +62,7 @@ if mp.server == 'pc' then
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
-    mp.num_past = 1 -- total number of past frames
+    mp.num_past = 10 -- total number of past frames
     mp.num_future = 1
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
@@ -460,13 +460,13 @@ end
 -- end
 
 ------------------------------------- Main -------------------------------------
--- if mp.mode == 'exp' then
---     run_experiment()
--- elseif mp.mode == 'sim' then
---     predict_simulate()
--- else
---     predict()
--- end
+if mp.mode == 'exp' then
+    run_experiment()
+elseif mp.mode == 'sim' then
+    predict_simulate()
+else
+    predict()
+end
 
-inittest(false, mp.savedir ..'/'..'network.t7')
-print(simulate(test_loader, model.theta.params, false, 3))
+-- inittest(false, mp.savedir ..'/'..'network.t7')
+-- print(simulate(test_loader, model.theta.params, false, 3))
