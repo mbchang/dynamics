@@ -40,7 +40,7 @@ function init_feedforward(rnn_hid_dim, numlayers)
     local ff = nn.Sequential()
     for i = 1,numlayers do
         ff:add(nn.Linear(rnn_hid_dim, rnn_hid_dim))
-        ff:add(nn.Sigmoid())
+        ff:add(nn.SoftSign())
     end
     local output = ff(input)
     return nn.gModule({input}, {output})

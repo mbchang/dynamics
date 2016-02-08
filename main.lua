@@ -36,8 +36,8 @@ mp = lapp[[
    -r,--lr            (default 0.005)      	   learning rate
    -a,--lrdecay       (default 0.95)            annealing rate
    -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
-   --rnn_dim          (default 128)
-   --layers           (default 2)
+   --rnn_dim          (default 256)
+   --layers           (default 1)
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
@@ -62,8 +62,8 @@ if mp.server == 'pc' then
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
-    mp.num_past = 10 -- total number of past frames
-    mp.num_future = 10
+    mp.num_past = 1 -- total number of past frames
+    mp.num_future = 1
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
 	mp.num_threads = 4
@@ -301,7 +301,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             -- update this and context
             -- chop off first time step and then add in next one
             if mp.num_past > 1 then
-                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)
+                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)  -- you can add y in here
                 context = torch.cat({context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{t},{}}]:clone()},3)
             else
                 assert(mp.num_past == 1)
@@ -313,7 +313,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
 
-            pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep
+            pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
             sum_loss = sum_loss + test_loss
         end
 
@@ -322,7 +322,11 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
         context_future_orig = context_future_orig:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
-        -- now crop only the number of timesteps you need
+        if mp.relative then
+            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)
+        end
+
+        -- now crop only the number of timesteps you need; pred_sim is also this many timesteps
         y_orig = y_orig[{{},{1,numsteps},{}}]
         context_future_orig = context_future_orig[{{},{},{1,numsteps},{}}]
 
@@ -456,11 +460,13 @@ end
 -- end
 
 ------------------------------------- Main -------------------------------------
-if mp.mode == 'exp' then
-    run_experiment()
-else
-    predict()
-end
+-- if mp.mode == 'exp' then
+--     run_experiment()
+-- elseif mp.mode == 'sim' then
+--     predict_simulate()
+-- else
+--     predict()
+-- end
 
--- inittest(false, mp.savedir ..'/'..'network.t7')
--- print(simulate(test_loader, model.theta.params, false, 3))
+inittest(false, mp.savedir ..'/'..'network.t7')
+print(simulate(test_loader, model.theta.params, false, 3))

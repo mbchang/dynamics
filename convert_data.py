@@ -1057,5 +1057,8 @@ if __name__ == "__main__":
     # visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)    # cannot bounce
     # visualize_results(training_samples_hdf5=h5_file, sample_num=130, vidsave=False, imgsave=False)    # cannot bounce
 
-    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11b_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[401,800].h5'
-    visualize_results(training_samples_hdf5=h5_file, sample_num=84, vidsave=True, imgsave=False)  # no bounce
+    # running simulation
+    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[1,80].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=20, vidsave=False, imgsave=False)  # possible bounce? look at 20, 21, 22
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)  # very soft bounce off wall
+    visualize_results(training_samples_hdf5=h5_file, sample_num=62, vidsave=False, imgsave=False)  # very soft bounce off wall
