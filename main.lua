@@ -14,7 +14,7 @@ require 'pl'
 -- Local Imports
 local model_utils = require 'model_utils'
 local D = require 'DataLoader'
-local M = require 'model_new'
+-- local M = require 'model_new'
 require 'logging_utils'
 
 ------------------------------------- Init -------------------------------------
@@ -23,7 +23,7 @@ require 'logging_utils'
 mp = lapp[[
    -e,--mode          (default "exp")           exp | pred
    -d,--root          (default "logslink")      	subdirectory to save logs
-   -m,--model         (default "lstm")   		type of model tor train: lstm |
+   -m,--model         (default "ff")   		type of model tor train: lstm | ff
    -n,--name          (default "densenp2shuffle")
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
@@ -35,7 +35,7 @@ mp = lapp[[
    -s,--shuffle  	  (default "true")
    -r,--lr            (default 0.005)      	   learning rate
    -a,--lrdecay       (default 0.95)            annealing rate
-   -i,--max_epochs    (default 20)           	maximum nb of iterations per batch, for LBFGS
+   -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 128)
    --layers           (default 2)
    --seed             (default "true")
@@ -62,14 +62,23 @@ if mp.server == 'pc' then
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
-    mp.num_past = 1 -- total number of past frames
-    mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/4'
+    mp.num_past = 10 -- total number of past frames
+    mp.num_future = 10
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
 	mp.cuda = true
 	mp.cunn = true
+end
+
+local M
+if mp.model == 'lstm' then
+    M = require 'model_new'
+elseif mp.model == 'ff' then
+    M = require 'feed_forward_model'
+else
+    error('Unrecognized model')
 end
 
 mp.object_dim = 8.0  -- hardcoded
@@ -279,8 +288,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape
             y = y:reshape(mp.batch_size, 1*mp.object_dim)
 
-            local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-            local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future), but since num_future is 1 we are good
+            local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
             prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)

@@ -23,7 +23,7 @@ require 'logging_utils'
 mp = lapp[[
    -e,--mode          (default "exp")           exp | pred
    -d,--root          (default "logslink")      	subdirectory to save logs
-   -m,--model         (default "lstm")   		type of model tor train: lstm |
+   -m,--model         (default "ff")   		type of model tor train: lstm |
    -n,--name          (default "densenp2shuffle")
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
@@ -33,11 +33,11 @@ mp = lapp[[
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
-   -r,--lr            (default 0.01)      	   learning rate
-   -a,--lrdecay       (default 0.99)            annealing rate
+   -r,--lr            (default 0.005)      	   learning rate
+   -a,--lrdecay       (default 0.95)            annealing rate
    -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
-   --rnn_dim          (default 64)
-   --layers           (default 1)
+   --rnn_dim          (default 128)
+   --layers           (default 2)
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
@@ -48,8 +48,8 @@ if mp.server == 'pc' then
     mp.root = 'logs'
     mp.winsize = 20  -- total number of frames
     mp.num_past = 10 --10
-    mp.num_future = 10 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/4'--dataset_files_subsampled_dense_np2' --'hoho'
+    mp.num_future = 1 --10
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 400 --1
@@ -150,7 +150,7 @@ end
 function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch())
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
-    local loss, predictions = model:fp(params_, {this=this,context=context}, y)
+    local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
     local grad = model:bp({this=this,context=context}, y, mask)
     collectgarbage()
     return loss, grad -- f(x), df/dx
@@ -209,7 +209,7 @@ function test(dataloader, params_, saveoutput)
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
         -- predict
-        local test_loss, prediction = model:fp(params_, {this=this,context=context}, y)
+        local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
 
         -- reshape to -- (num_samples x num_future x 8)
         prediction = prediction:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
@@ -278,8 +278,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape
             y = y:reshape(mp.batch_size, 1*mp.object_dim)
 
-            local test_loss, prediction = model:fp(params_, {this=this,context=context}, y)
-            -- local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future), but since num_future is 1 we are good
+            local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
             prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)

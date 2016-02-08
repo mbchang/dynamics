@@ -87,7 +87,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH -c 1\n")
         slurmfile.write("#SBATCH -p gpu\n")
         slurmfile.write("#SBATCH --gres=gpu:1\n")
-        slurmfile.write("#SBATCH --mem=30000\n")
+        slurmfile.write("#SBATCH --mem=5000\n")
         slurmfile.write(jobcommand)
 
     if not dry_run:
