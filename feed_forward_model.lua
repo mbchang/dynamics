@@ -23,7 +23,6 @@ end
 
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
-    -- local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
 
     local out_dim = num_future * object_dim
     -- -- ok, here we will have to split up the output
@@ -41,7 +40,7 @@ function init_feedforward(rnn_hid_dim, numlayers)
     local ff = nn.Sequential()
     for i = 1,numlayers do
         ff:add(nn.Linear(rnn_hid_dim, rnn_hid_dim))
-        ff:add(nn.SoftSign())
+        ff:add(nn.Sigmoid())
     end
     local output = ff(input)
     return nn.gModule({input}, {output})

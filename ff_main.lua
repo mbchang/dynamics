@@ -33,10 +33,10 @@ mp = lapp[[
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
-   -r,--lr            (default 0.005)      	   learning rate
-   -a,--lrdecay       (default 0.95)            annealing rate
-   -i,--max_epochs    (default 20)           	maximum nb of iterations per batch, for LBFGS
-   --rnn_dim          (default 32)
+   -r,--lr            (default 0.01)      	   learning rate
+   -a,--lrdecay       (default 0.99)            annealing rate
+   -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
+   --rnn_dim          (default 64)
    --layers           (default 1)
    --seed             (default "true")
    --max_grad_norm    (default 10)
@@ -49,7 +49,7 @@ if mp.server == 'pc' then
     mp.winsize = 20  -- total number of frames
     mp.num_past = 10 --10
     mp.num_future = 10 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/4'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 400 --1
@@ -62,9 +62,9 @@ if mp.server == 'pc' then
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
-    mp.num_past = 1 -- total number of past frames
-    mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/4'
+    mp.num_past = 10 -- total number of past frames
+    mp.num_future = 10
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -75,8 +75,6 @@ end
 mp.object_dim = 8.0  -- hardcoded
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
-print('indim', mp.input_dim)
-print('outdim',mp.out_dim)
 mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
@@ -383,10 +381,6 @@ function experiment()
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
     for i = 1, mp.max_epochs do
         print('Learning rate is now '..optim_state.learningRate)
-        checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
-        checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
-        print('Saved model')
-
         local train_loss = train(i)
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
@@ -399,6 +393,9 @@ function experiment()
         experimentLogger:style{['log MSE loss (train set)'] = '~',
                                ['log MSE loss (val set)'] = '~',
                                ['log MSE loss (test set)'] = '~'}
+        checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
+        checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
+        print('Saved model')
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
 

@@ -80,6 +80,15 @@ experiment 8: np2_ng=0: 192,000 examples
 
 experiment 9: np2_ng=0 (dataset 4): 1in1out
 
+experiment 10: dataset 4, feedforward, 10 in 10 out, ff_runner.py, run on the cpu
+
+experiment 11: dataset 3, feedforward, 1 in 1 out, ff_runner.py, run on the cpu
+
+experiment 11b: dataset 3, feedforward, 10 in 10 out, ff_runner.py, run on the cpu
+
+experiment 11c: dataset 3, feedforward, 10 in 10 out, ff_runner.py, run on the cpu, Sigmoid in FF, 50 epcs, lr=0.99, bsize=80
+
+
 
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out
