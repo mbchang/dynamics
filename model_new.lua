@@ -211,7 +211,7 @@ function model:reset_ds(ds)
 end
 
 
-function model:fp(params_, x, y)
+function model:fp(params_, x, y, mask)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
     self.s = self:reset_state(self.s, self.mp.seq_length, self.mp.layers) -- because we are doing a fresh new forward pass
@@ -234,26 +234,15 @@ function model:fp(params_, x, y)
         loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
     end
 
+    local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
+
     collectgarbage()
-    -- return loss:sum(), self.s, predictions  -- we sum the losses through time!
-    return loss:sum(), predictions  -- we sum the losses through time!
+    return loss:sum(), prediction -- we sum the losses through time!
 
 end
 
 
--- function model:bp(x, y, mask, state)
 function model:bp(x, y, mask)
-
-    -- assert that state equals self.s
-    -- Perhaps, later, if we want to do validation testing, we do a bunch of
-    -- forward passes, which all will mutate the model.s. So we will accept
-    -- state as a parameter to this function here to make sure that we are
-    -- backpropagating wrt the correct state
-    -- for j = 0, self.mp.seq_length do
-    --     for d = 1, 2 * self.mp.layers do
-    --         assert(torch.sum(state[j][d]:eq(self.s[j][d])) == torch.numel(self.s[j][d]))
-    --     end
-    -- end
     local state = self.s
 
     self.theta.grad_params:zero() -- the d_parameters
@@ -281,114 +270,6 @@ function model:bp(x, y, mask)
     self.theta.grad_params:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
     collectgarbage()
     return self.theta.grad_params
-end
-
-
--- Create Model
-function test_model()
-    local params = {
-                    layers          = 2,
-                    input_dim        = 8*10,
-                    rnn_dim         = 100,
-                    out_dim         = 8*10
-                    }
-
-    local batch_size = 6
-    local seq_length = 3
-
-    -- Network
-    local network = init_network(params)
-    local p, gp = network:getParameters()
-    print(p:size())
-    print(gp:size())
-    local rnns = g_cloneManyTimes(network, seq_length, not network.parameters)
-
-    -- Data
-    local this_past       = torch.uniform(torch.Tensor(batch_size, params.input_dim))
-    local context         = torch.uniform(torch.Tensor(batch_size, seq_length, params.input_dim))
-    local this_future     = torch.uniform(torch.Tensor(batch_size, params.input_dim))
-    local mask            = torch.Tensor({1,1,1})
-
-    for i=1,10000 do
-
-    -- State
-    local s = {}
-    for j = 0, seq_length do
-        s[j] = {}
-        for d = 1, 2 * params.layers do
-            s[j][d] = torch.zeros(batch_size, params.rnn_dim)
-        end
-    end
-
-    local ds = {}
-    for d = 1, 2 * params.layers do
-        ds[d] = torch.zeros(batch_size, params.rnn_dim)
-    end
-
-    -- Forward
-    local loss = torch.zeros(seq_length)
-    local predictions = {}
-    for i = 1, seq_length do
-        local sim1 = s[i-1]
-        loss[i], s[i], predictions[i] = unpack(rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
-    end
-    print('total loss', loss:sum())
-    -- print('accum_loss', accum_loss)
-
-    -- Backward
-    for i = seq_length, 1, -1 do
-        local sim1 = s[i - 1]
-        local derr
-        if mask:clone()[i] == 1 then
-            derr = torch.ones(1)
-        elseif mask:clone()[i] == 0 then
-            derr = torch.zeros(1)
-        else
-            error('invalid mask')
-        end
-        local dpred = torch.zeros(batch_size,params.out_dim)
-        local dtp, dc, dsim1, dtf = unpack(rnns[i]:backward({this_past, context[{{},i}], sim1, this_future}, {derr, ds, dpred}))
-        g_replace_table(ds, dsim1)
-    end
-
-    -- config = {
-    --     learningRate = 0.0001,
-    --     momentumDecay = 0.1,
-    --     updateDecay = 0.01
-    -- }
-    -- p = rmsprop(gp, p, config, state)
-
-    -- network:updateParameters(0.00001)
-    -- gp:clamp(-self.mp.max_grad_norm, self.mp.max_grad_norm)
-    -- collectgarbage()
-    -- return loss, self.theta.grad_params
-    end
-end
-
-
-function test_encoder()
-    local params = {
-                    layers          = 2,
-                    input_dim    = 7,
-                    rnn_inp_dim     = 50,
-                    rnn_hid_dim     = 50,  -- problem: basically inpdim and hiddim should be the same if you want to do multilayer
-                    out_dim         = 7
-                    }
-
-    local batch_size = 8
-    local seq_length = 3
-
-    -- Data
-    local thisp_past       = torch.random(torch.Tensor(batch_size, params.input_dim))
-    local contextp         = torch.random(torch.Tensor(batch_size, params.input_dim))
-
-    print(thisp_past:size())
-    print(contextp:size())
-
-    local encoder = init_object_encoder(params.input_dim, params.rnn_inp_dim)
-    local encoder_out = encoder:forward({thisp_past, contextp})
-
-    print(encoder_out:size())
 end
 
 return model -- might be unnecessary

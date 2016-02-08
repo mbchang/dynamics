@@ -150,10 +150,8 @@ end
 function feval_train(params_)  -- params_ should be first argument
     local this, context, y, mask = unpack(train_loader:next_batch())
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
-    -- local loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-    -- local grad = model:bp({this=this,context=context}, y, mask, state)
 
-    local loss, predictions = model:fp(params_, {this=this,context=context}, y)
+    local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
     local grad = model:bp({this=this,context=context}, y, mask)
     collectgarbage()
     return loss, grad -- f(x), df/dx
@@ -212,9 +210,7 @@ function test(dataloader, params_, saveoutput)
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
         -- predict
-        -- local test_loss, state, predictions = model:fp(params_, {this=this,context=context}, y)
-        local test_loss, predictions = model:fp(params_, {this=this,context=context}, y)
-        local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
+        local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
 
         -- reshape to -- (num_samples x num_future x 8)
         prediction = prediction:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
