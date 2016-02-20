@@ -41,7 +41,7 @@ mp = lapp[[
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
-   --print_every      (default 10)
+   --print_every      (default 1)
 ]]
 
 if mp.server == 'pc' then
@@ -56,7 +56,7 @@ if mp.server == 'pc' then
     mp.lrdecay = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.plot = true
+    mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
     mp.max_epochs = 50
@@ -127,6 +127,8 @@ function inittrain(preload, model_path)
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+    -- print(train_loader.batchlist)
+    -- assert(false)
     model = M.create(mp, preload, model_path)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
@@ -157,7 +159,8 @@ end
 
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
-    local this, context, y, mask = unpack(train_loader:next_batch())
+    -- local this, context, y, mask = unpack(train_loader:next_batch())
+    local this, context, y, mask = unpack(train_loader:sample_sequential_batch())
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
 
     local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)

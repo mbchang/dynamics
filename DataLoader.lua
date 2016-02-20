@@ -24,7 +24,6 @@ local world_range = {1,4}
 local particle_range = {1,6}
 local goo_range = {0,5}
 
-
 --[[ Loads the dataset as a table of configurations
 
     Input
@@ -135,6 +134,10 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     ----------------------- Initial values for iterator ------------------------
     self.batchlist = self:compute_batches()
     self.current_batch = 0
+    self.num_batches = #self.batchlist
+    -- self.batch_weights = {}
+    -- print(self.batchlist)
+    -- assert(false)
 
     ---------------------------------- Shuffle ---------------------------------
     if shuffle then
@@ -427,6 +430,39 @@ function dataloader:next_batch()
     local nextbatch = self:next_config(config_name, start, finish)
     return nextbatch
 end
+
+function dataloader:sample_priority_batch()
+
+end
+
+function dataloader:sample_random_batch()
+
+end
+
+function dataloader:sample_sequential_batch()
+    self.current_batch = self.current_batch + 1
+    if self.current_batch > self.num_batches then self.current_batch = 1 end
+    return self:sample_batch_id(self.batch_idxs[self.current_batch])
+end
+
+function dataloader:sample_batch_id(id)
+    local config_name, start, finish = unpack(self.batchlist[id])
+    -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+    local nextbatch = self:next_config(config_name, start, finish)
+    return nextbatch
+end
+
+-- function dataloader:weighted_next_batch()
+--
+-- end
+--
+-- function dataloader:update_batch_weight(batch_id, loss)
+--     self.batch_weights[batch_id] = loss
+--
+-- end
+--
+-- function
 
 -- you should have an method that returns the batches for a whole config at once
 -- that is just next_config, but with start and finish as the entire config.
