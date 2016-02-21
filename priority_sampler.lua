@@ -1,13 +1,14 @@
 
 local priority_sampler = {}
-priority_sampler.__index = dataloader
+priority_sampler.__index = priority_sampler
 
-function priority_sampler.create(num_train_exs)
+function priority_sampler.create(num_batches)
     local self = {}
     setmetatable(self, priority_sampler)
-
-    self.batch_weights = torch.zeros(num_train_exs)
-    self.alpha = 0.9 -- corresponds to when we do random sampling
+    self.batch_weights = torch.zeros(num_batches)
+    self.alpha = 0.1 -- corresponds to when we do random sampling
+    self.epc_num = 1
+    self.num_batches = num_batches
 
     collectgarbage()
     return self
@@ -15,27 +16,52 @@ end
 
 function priority_sampler:update_batch_weight(batch_id, weight)
     self.batch_weights[batch_id] = weight
+    -- print(self.batch_weights)
 end
 
-function priority_sampler:normalize()
-    -- make sure they are nonzero, it is very hard to get zero loss
-    assert(self.batch_weights:min() > 0)
-    self.batch_weights = self.batch_weights/self.batch_weights:sum()
+-- function priority_sampler:normalize()
+--     -- make sure they are nonzero, it is very hard to get zero loss
+--     assert(self.batch_weights:min() > 0)
+--     self.batch_weights = self.batch_weights/self.batch_weights:sum()
+-- end
+
+function normalize(tensor)
+    local out = tensor:clone()
+    assert(out:min() > 0)
+    local result = out/out:sum()
+    return result
 end
 
-function priority_sampler:sample()
-    self:normalize()  -- make sure values are between 0 and 1
+-- you should call this method after about 2 epochs or something
+function priority_sampler:sample(pow)
+    -- self:normalize()  -- make sure values are between 0 and 1  -- TODO, because you sample every time
     local batch_id
     if math.random(100)/100.0 < self.alpha then
-        batch_id = math.random(num_train_ex)
+        -- print('random')
+        batch_id = math.random(self.num_batches)
     else
-        batch_id = torch.multinomial(self.batch_weights,1,true)
+        if not pow then pow = 1 end
+        local sharpened = torch.pow(self.batch_weights, pow)
+        local normalized = normalize(sharpened)
+        batch_id = torch.multinomial(normalized,1,true):sum()
+        -- print('priority:',batch_id)
     end
+    return batch_id
+end
+
+function priority_sampler:get_hardest_batch()
+    local max, argmax = torch.max(self.batch_weights,1)
+    assert(max:dim() == 1 and argmax:dim() == 1)
+    return {max:sum(), argmax:sum()}
 end
 
 -- can do some sort of annealing
 function priority_sampler:set_alpha(newvalue)
     self.alpha = newvalue
+end
+
+function priority_sampler:set_epcnum(new_epcnum)
+    self.epc_num = new_epcnum
 end
 
 

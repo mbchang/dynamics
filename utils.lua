@@ -190,9 +190,30 @@ function range (i, to, inc)
     -- step back (once) before we start
     i = i - inc
 
-    return function () if i == to then return nil end i = i + inc return i, i end
+    local d = function ()
+                i = i + inc
+                if i >= to then
+                    return nil
+                end
+                return i, i
+            end
+
+    return d
 end
 
+function range_list(i, to, inc)
+    return iterator_to_table(range (i, to, inc))
+end
+
+function iterator_to_table(iterator)
+  local arr = {}
+  for v in iterator do
+    arr[#arr + 1] = v
+  end
+  return arr
+end
 -- print(merge_tables_by_value({['a']=1}, {['b'] = 2, ['c'] = 5}))
 
 -- print(intersect({'a','b','c'}, {'d','b','c'}))
+
+-- print(range_list(1,100,11))

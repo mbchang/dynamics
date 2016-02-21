@@ -91,7 +91,8 @@ experiment 11c: dataset 3, feedforward, 10 in 10 out, ff_runner.py, run on the c
 
 experiment 11d: dataset 3, feedforward, 10 in 1 out, runner.py, run on the cpu, SoftSign in FF, 50 epcs, lr=0.95, bsize=80
 
-
+experiment 12: priority sampling (no sharpening), dataset 3, 10 in 10 out
+    12b: sharpening with exponent 2
 
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out

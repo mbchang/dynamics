@@ -13,6 +13,7 @@ require 'utils'
 require 'pl.stringx'
 require 'pl.Set'
 local T = require 'pl.tablex'
+local PS = require 'priority_sampler'
 
 local dataloader = {}
 dataloader.__index = dataloader
@@ -135,9 +136,10 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.batchlist = self:compute_batches()
     self.current_batch = 0
     self.num_batches = #self.batchlist
-    -- self.batch_weights = {}
-    -- print(self.batchlist)
-    -- assert(false)
+    self.priority_sampler = PS.create(self.num_batches)
+    -- print(self.priority_sampler)
+    self.current_sampled_id = 0
+
 
     ---------------------------------- Shuffle ---------------------------------
     if shuffle then
@@ -431,12 +433,21 @@ function dataloader:next_batch()
     return nextbatch
 end
 
-function dataloader:sample_priority_batch()
-
+function dataloader:sample_priority_batch(pow)
+    if self.priority_sampler.epc_num > 2 then
+        -- print('priority sampler')
+        -- print(self.priority_sampler.batch_weights)
+        -- print(self.priority_sampler.batch_weights:sum())
+        return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
+    else
+        -- print('regular sampler')
+        return self:sample_sequential_batch()  -- or sample_random_batch
+    end
 end
 
 function dataloader:sample_random_batch()
-
+    local id = math.random(self.num_batches)
+    return self:sample_batch_id(id)
 end
 
 function dataloader:sample_sequential_batch()
@@ -446,6 +457,8 @@ function dataloader:sample_sequential_batch()
 end
 
 function dataloader:sample_batch_id(id)
+    -- print('id:',id)
+    self.current_sampled_id = id
     local config_name, start, finish = unpack(self.batchlist[id])
     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
@@ -453,16 +466,7 @@ function dataloader:sample_batch_id(id)
     return nextbatch
 end
 
--- function dataloader:weighted_next_batch()
---
--- end
---
--- function dataloader:update_batch_weight(batch_id, loss)
---     self.batch_weights[batch_id] = loss
---
--- end
---
--- function
+
 
 -- you should have an method that returns the batches for a whole config at once
 -- that is just next_config, but with start and finish as the entire config.

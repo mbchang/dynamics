@@ -28,16 +28,17 @@ mp = lapp[[
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
-   -b,--batch_size    (default 64)
+   -b,--batch_size    (default 30)
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
-   -s,--shuffle  	  (default "true")
+   -s,--shuffle  	  (default "false")
    -r,--lr            (default 0.0005)      	   learning rate
    -a,--lrdecay       (default 1)            annealing rate
-   -i,--max_epochs    (default 50)           	maximum nb of iterations per batch, for LBFGS
+   -h,--sharpen       (default 100)               sharpen exponent
+   -i,--max_epochs    (default 500)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 50)
-   --layers           (default 2)
+   --layers           (default 1)
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
@@ -52,18 +53,18 @@ if mp.server == 'pc' then
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 40 --1
+	mp.batch_size = 6000 --1
     mp.lrdecay = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.plot = false--true
+    mp.plot = true--true
 	mp.cuda = false
 	mp.cunn = false
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
     mp.num_past = 10 -- total number of past frames
-    mp.num_future = 1
+    mp.num_future = 10
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
 	mp.num_threads = 4
@@ -127,7 +128,7 @@ function inittrain(preload, model_path)
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
-    -- print(train_loader.batchlist)
+    print(train_loader.num_batches)
     -- assert(false)
     model = M.create(mp, preload, model_path)
 
@@ -159,12 +160,14 @@ end
 
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
-    -- local this, context, y, mask = unpack(train_loader:next_batch())
-    local this, context, y, mask = unpack(train_loader:sample_sequential_batch())
+
+    local this, context, y, mask = unpack(train_loader:sample_priority_batch(mp.sharpen))
+
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
 
     local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
     local grad = model:bp({this=this,context=context}, y, mask)
+    train_loader.priority_sampler:update_batch_weight(train_loader.current_sampled_id, loss)
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
@@ -193,12 +196,17 @@ function train(epoch_num)
     local new_params, train_loss
     local loss_run_avg = 0
     for t = 1,train_loader.num_batches do
+        train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
         -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
         if t % mp.print_every == 0 then
-            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e",
-                    epoch_num, t, train_loss[1], model.theta.grad_params:norm()))
+            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e\tbatch = %4d\thardest batch: %4d with loss %6.8f",
+                    epoch_num, t, train_loss[1],
+                    model.theta.grad_params:norm(),
+                    train_loader.current_sampled_id,
+                    train_loader.priority_sampler:get_hardest_batch()[2],
+                    train_loader.priority_sampler:get_hardest_batch()[1]))
         end
         loss_run_avg = loss_run_avg + train_loss[1]
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
@@ -217,7 +225,7 @@ function test(dataloader, params_, saveoutput)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         -- get batch
-        local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:next_batch())
+        local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
         y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
@@ -274,7 +282,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         -- get data
-        local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:next_batch())
+        local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
         local this, context = this_orig:clone(), context_orig:clone()
         context_future = context_future_orig:clone():reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
@@ -424,9 +432,9 @@ end
 
 function checkpoint(savefile, data, mp_)
     if mp_.cuda then
-        data = data:float()
+        -- data = data:float()
         torch.save(savefile, data)
-        data = data:cuda()
+        -- data = data:cuda()
     else
         torch.save(savefile, data)
     end
