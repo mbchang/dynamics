@@ -14,7 +14,6 @@ require 'pl'
 -- Local Imports
 local model_utils = require 'model_utils'
 local D = require 'DataLoader'
--- local M = require 'model_new'
 require 'logging_utils'
 
 ------------------------------------- Init -------------------------------------
@@ -32,10 +31,10 @@ mp = lapp[[
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
-   -s,--shuffle  	  (default "false")
+   -s,--shuffle  	  (default "true")
    -r,--lr            (default 0.0005)      	   learning rate
    -a,--lrdecay       (default 1)            annealing rate
-   -h,--sharpen       (default 100)               sharpen exponent
+   -h,--sharpen       (default 1)               sharpen exponent
    -i,--max_epochs    (default 500)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 50)
    --layers           (default 1)
@@ -53,7 +52,7 @@ if mp.server == 'pc' then
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 6000 --1
+	mp.batch_size = 30 --1
     mp.lrdecay = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -63,8 +62,8 @@ if mp.server == 'pc' then
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
-    mp.num_past = 10 -- total number of past frames
-    mp.num_future = 10
+    mp.num_past = 2 -- total number of past frames
+    mp.num_future = 1
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
 	mp.num_threads = 4
@@ -403,6 +402,7 @@ end
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
+    local train_losses, val_losses, test_losses = {},{},{}
     for i = 1, mp.max_epochs do
         print('Learning rate is now '..optim_state.learningRate)
         local train_loss = train(i)
@@ -417,9 +417,13 @@ function experiment()
         experimentLogger:style{['log MSE loss (train set)'] = '~',
                                ['log MSE loss (val set)'] = '~',
                                ['log MSE loss (test set)'] = '~'}
+        train_losses[#train_losses+1] = train_loss
+        val_losses[#val_losses+1] = val_loss
+        test_losses[#test_losses+1] = test_loss
 
-        checkpoint(mp.savedir .. '/network.t7', model.network, mp) -- model.rnns[1]?
-        checkpoint(mp.savedir .. '/params.t7', model.theta.params, mp)
+
+        checkpoint(mp.savedir .. '/network'..'epc'..i..'.t7', model.network, mp) -- model.rnns[1]?
+        checkpoint(mp.savedir .. '/params'..'epc'..i..'.t7', model.theta.params, mp)
         print('Saved model')
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end

@@ -16,17 +16,15 @@ end
 
 function priority_sampler:update_batch_weight(batch_id, weight)
     self.batch_weights[batch_id] = weight
-    -- print(self.batch_weights)
 end
-
--- function priority_sampler:normalize()
---     -- make sure they are nonzero, it is very hard to get zero loss
---     assert(self.batch_weights:min() > 0)
---     self.batch_weights = self.batch_weights/self.batch_weights:sum()
--- end
 
 function normalize(tensor)
     local out = tensor:clone()
+    if out:min() <= 0 then
+        local m, am = torch.min(out,1)
+        print('min'..m)
+        print('amin'..am)
+    end
     assert(out:min() > 0)
     local result = out/out:sum()
     return result
@@ -34,17 +32,14 @@ end
 
 -- you should call this method after about 2 epochs or something
 function priority_sampler:sample(pow)
-    -- self:normalize()  -- make sure values are between 0 and 1  -- TODO, because you sample every time
     local batch_id
     if math.random(100)/100.0 < self.alpha then
-        -- print('random')
         batch_id = math.random(self.num_batches)
     else
         if not pow then pow = 1 end
         local sharpened = torch.pow(self.batch_weights, pow)
         local normalized = normalize(sharpened)
         batch_id = torch.multinomial(normalized,1,true):sum()
-        -- print('priority:',batch_id)
     end
     return batch_id
 end

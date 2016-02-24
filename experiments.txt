@@ -91,8 +91,16 @@ experiment 11c: dataset 3, feedforward, 10 in 10 out, ff_runner.py, run on the c
 
 experiment 11d: dataset 3, feedforward, 10 in 1 out, runner.py, run on the cpu, SoftSign in FF, 50 epcs, lr=0.95, bsize=80
 
-experiment 12: priority sampling (no sharpening), dataset 3, 10 in 10 out
+experiment 12: priority sampling (no sharpening), dataset 3, 10 in 10 out, bsize 30
     12b: sharpening with exponent 2
+    12c: different learning rates (0.9 and 0.97), no sharpening, start at 1 epoch, 1 or 2 layers
+        Killed
+            12c_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005_lrdecay_0.97.out
+            12c_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005_lrdecay_0.9.out
+    12d: 2 in 1 out, 0.9 lr, no sharp, start at 1 epoch, 1 or 2 layers
+
+    Observations
+        2 layers is the way to go, 0.001 is good
 
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out

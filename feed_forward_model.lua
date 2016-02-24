@@ -84,6 +84,7 @@ function init_network(params)
     local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)
     local fworld_state, fobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)
 
+
     local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
     local err2 = nn.BCECriterion()({obj_prop, fobj_prop})
     local err = nn.MulConstant(0.5)(nn.CAddTable()({err1,err2}))  -- it should be the average err

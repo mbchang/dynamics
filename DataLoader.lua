@@ -422,25 +422,21 @@ function dataloader:get_batch_info(current_config, current_batch_in_config)
             current_config}  -- end index in config
 end
 
-function dataloader:next_batch()
-    self.current_batch = self.current_batch + 1
-    if self.current_batch > self.num_batches then self.current_batch = 1 end
-
-    local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
-    -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
-    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    local nextbatch = self:next_config(config_name, start, finish)
-    return nextbatch
-end
+-- function dataloader:next_batch()
+--     self.current_batch = self.current_batch + 1
+--     if self.current_batch > self.num_batches then self.current_batch = 1 end
+--
+--     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
+--     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+--     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+--     local nextbatch = self:next_config(config_name, start, finish)
+--     return nextbatch
+-- end
 
 function dataloader:sample_priority_batch(pow)
-    if self.priority_sampler.epc_num > 2 then
-        -- print('priority sampler')
-        -- print(self.priority_sampler.batch_weights)
-        -- print(self.priority_sampler.batch_weights:sum())
+    if self.priority_sampler.epc_num > 1 then
         return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
-        -- print('regular sampler')
         return self:sample_sequential_batch()  -- or sample_random_batch
     end
 end
@@ -452,6 +448,7 @@ end
 
 function dataloader:sample_sequential_batch()
     self.current_batch = self.current_batch + 1
+    -- print(self.current_batch)
     if self.current_batch > self.num_batches then self.current_batch = 1 end
     return self:sample_batch_id(self.batch_idxs[self.current_batch])
 end

@@ -1052,9 +1052,9 @@ if __name__ == "__main__":
     # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/9_opt_optimrmsprop_layers_2_lr_0.005/predictions/worldm1_np=2_ng=0_[1,80].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)
 
-    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/10_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.0005/predictions/worldm1_np=2_ng=0_[1,400].h5'
+    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/10_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.0005/predictions/worldm1_np=2_ng=0_[1,400].h5'
     # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)    # weird movement
-    visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)    # cannot bounce
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)    # cannot bounce
     # visualize_results(training_samples_hdf5=h5_file, sample_num=130, vidsave=False, imgsave=False)    # cannot bounce
 
     # running simulation
@@ -1065,3 +1065,18 @@ if __name__ == "__main__":
     # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[81,160].h5'
     # # visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)  # inertia, simulation
     # visualize_results(training_samples_hdf5=h5_file, sample_num=50, vidsave=False, imgsave=False)
+
+    # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005/predictions/worldm1_np=2_ng=0_[31,60].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)
+
+
+
+    # 2/23/16
+    h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12c_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.001_lrdecay_0.97/predictions/worldm1_np=2_ng=0_[1,30].h5'
+    visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)  # NO BOUNCE?  for [1,30]
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=15, vidsave=False, imgsave=False)  # good crisp wall bounce for [31, 60]
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # seems hesitant to move when close to other ball for [91,120]
+
+
+    # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005_sharpen_2/predictions/worldm1_np=2_ng=0_[91,120].h5'
+    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)  # NO BOUNCE?  for [1,30]
