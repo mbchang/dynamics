@@ -2,6 +2,7 @@ require 'nn'
 require 'torch'
 require 'nngraph'
 require 'Base'
+require 'IdentityCriterion'
 local model_utils = require 'model_utils'
 
 nngraph.setDebug(true)
@@ -84,30 +85,14 @@ function init_network(params)
     local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)
     local gtworld_state, gtobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)
 
-    local pred_split = {split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)}
-    local gt_split = {split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)}
+    -- split state: only pass gradients on velocity
+    local pos, vel = split_tensor(3, {params.num_future, params.object_dim/2})({world_state}):split(2) -- basically split world_state in half on the last dim
+    local gt_pos, gt_vel = split_tensor(3, {params.num_future, params.object_dim/2})({gtworld_state}):split(2)
 
-    -- pred_split[1] = nn.Identity()(gt_split[1])
-
-    local world_state = pred_split[1]
-    local obj_prop = pred_split[2]
-    local gtworld_state = gt_split[1]
-    local gtobj_prop = gt_split[2]
-
-    -- split the position and velocity
-    -- local pos, vel = split_tensor(3, {params.num_future, world_state:size(3)/2})  -- basically split world_state in half on the last dim
-    -- local poserr = nn.
-
-    -- don't pass gradient on the position. world_state is [bsize, num_fut, 4]
-    -- world_state[{{},{},{1,2}}] = gtworld_state[{{},{},{1,2}}]
-    -- world_state:zero()
-    -- world_state = nn.Identity()(gtworld_state)
-    -- obj_prop = nn.Identity()(gtobj_prop)
-
-    local err1 = nn.SmoothL1Criterion()({world_state, gtworld_state})
-    local err2 = nn.BCECriterion()({obj_prop, gtobj_prop})
-    local err = nn.MulConstant(0.5)(nn.CAddTable()({err1,err2}))  -- it should be the average err
-
+    local err0 = nn.IdentityCriterion()({pos, gt_pos})  -- don't pass gradients on position
+    local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
+    local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
+    local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))  -- we will just multiply by 1 for velocity
     return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
 end
 
