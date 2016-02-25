@@ -56,7 +56,8 @@ if mp.server == 'pc' then
     mp.lrdecay = 1
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.plot = true--true
+    mp.print_every = 1
+    mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
     mp.max_epochs = 50

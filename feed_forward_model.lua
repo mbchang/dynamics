@@ -49,7 +49,7 @@ end
 -- reshape is something like (10,8)
 -- the numbers are hardcoded
 -- Takes a tensor, and returns its two halves, split on the particular dim
--- For example, give  a tensor of size (260, 10, 8), if dim is 3, then
+-- For example, give a tensor of size (260, 10, 8), if dim is 3, then
 -- this returns a table of two tensors: {(260,10,4), (260, 10,4)}
 function split_tensor(dim, reshape)
     assert(reshape[2] %2 == 0)
@@ -82,11 +82,30 @@ function init_network(params)
 
     -- -- split criterion: I know that this works
     local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)
-    local fworld_state, fobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)
+    local gtworld_state, gtobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)
 
+    local pred_split = {split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)}
+    local gt_split = {split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)}
 
-    local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
-    local err2 = nn.BCECriterion()({obj_prop, fobj_prop})
+    -- pred_split[1] = nn.Identity()(gt_split[1])
+
+    local world_state = pred_split[1]
+    local obj_prop = pred_split[2]
+    local gtworld_state = gt_split[1]
+    local gtobj_prop = gt_split[2]
+
+    -- split the position and velocity
+    -- local pos, vel = split_tensor(3, {params.num_future, world_state:size(3)/2})  -- basically split world_state in half on the last dim
+    -- local poserr = nn.
+
+    -- don't pass gradient on the position. world_state is [bsize, num_fut, 4]
+    -- world_state[{{},{},{1,2}}] = gtworld_state[{{},{},{1,2}}]
+    -- world_state:zero()
+    -- world_state = nn.Identity()(gtworld_state)
+    -- obj_prop = nn.Identity()(gtobj_prop)
+
+    local err1 = nn.SmoothL1Criterion()({world_state, gtworld_state})
+    local err2 = nn.BCECriterion()({obj_prop, gtobj_prop})
     local err = nn.MulConstant(0.5)(nn.CAddTable()({err1,err2}))  -- it should be the average err
 
     return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
