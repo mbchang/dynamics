@@ -19,6 +19,7 @@ import particle
 from context_particles import *
 from utils import *
 
+# G_w_width, G_w_height = 640.0,480.0
 G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
@@ -764,7 +765,7 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-def recover_state(this, context, this_pred, config, velocityonly=True, subsamp):
+def recover_state(this, context, this_pred, config, velocityonly=True, subsamp=5):
     """
         input
             this:       (num_samples, winsize/2, 8)
@@ -813,21 +814,35 @@ def recover_state(this, context, this_pred, config, velocityonly=True, subsamp):
 
     # Take care of velocity only
     # do I need to take care of the ground truth reconstruction? TODO you should do this for testing purposes
+    # TODO DEBUG!
     if velocityonly:
-        lastpos = this[:,-1,:2]  # (num_samples, winsize/2 [px,py])
-        lastvel = this[:,-1,:2]*subsamp
-        thispos = this_pred[:,:,:2]  # note that "this" can mean gt or pred
-        thisvel = this_pred[:,:,2:]*subsamp  # TODO this depends
+        # here you have to unnormalize first
+        lastpos = np.copy(this[:,-1,:2])*G_w_width  # (num_samples, winsize/2 [px,py])
+        lastvel = np.copy(this[:,-1,2:4])*G_max_velocity/1000*subsamp
+        thispos = np.copy(this_pred[:,:,:2])*G_w_width  # note that "this" can mean gt or pred
+        thisvel = np.copy(this_pred[:,:,2:4])*G_max_velocity/1000*subsamp  # TODO this depends
+
+        lastpos = lastpos.reshape(num_samples,1,lastpos.shape[-1])
+        lastvel = lastvel.reshape(num_samples,1,lastvel.shape[-1])
 
         # this is length n+1
         pos = np.hstack((lastpos,thispos))
         vel = np.hstack((lastvel, thisvel))
 
         # take the last part (future)
-        for i in range(len(pos)):
-            pos[:,i+1,:] = pos[:,i,:] + vel[:,i,:]
+        # print(pos.shape[1])
+        for i in range(pos.shape[1]-1):
+            pos[:,i+1,:] = pos[:,i,:] + vel[:,i,:]  # last dimension is 2
+
+        # normalize again
+        pos = pos/G_w_width
+        # print lastpos[0,0]/G_w_width
+        # print pos[0,0,:2]
+        # print this_pred[0,0,:2]
+        # assert False
 
         assert pos[:,1:,:].shape[1] == this_pred.shape[1]
+
         this_pred[:,:,:2] = pos[:,1:,:]  # reassign back to this_pred
 
     # Next recover path
@@ -900,9 +915,9 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     d = load_dict_from_hdf5(training_samples_hdf5)
     config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
 
-    samples_past = recover_state(d['this'], d['context'], d['this'], config_name)  # TODO velocityonly should not apply for the past!
-    samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name)
-    samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name)
+    samples_past = recover_state(d['this'], d['context'], d['this'], config_name, False)  # TODO velocityonly should not apply for the past!
+    samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name, True)
+    samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name, True)
 
     windowsize = np.array(samples_past[2][2]).shape[0]
 
@@ -912,11 +927,11 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
     make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
 
-    print 'render past'
-    render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
-    print 'render future pred'
-    render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName, save, windowsize)
-    make_video(images_root, framerate, 'pred', vidsave, imgsave)
+    # print 'render past'
+    # render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
+    # print 'render future pred'
+    # render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName, save, windowsize)
+    # make_video(images_root, framerate, 'pred', vidsave, imgsave)
 
 def make_video(images_root, framerate, mode, savevid, saveimgs):
     """
@@ -933,171 +948,3 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
         for i in os.listdir(os.path.dirname(images_root)):
             if os.path.basename(images_root) in i and '.png' in i:
                 os.system('rm ' + os.path.join(os.path.dirname(images_root), i))
-
-if __name__ == "__main__":
-    # save_all_datasets(True)
-
-    # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
-    # assert False
-
-    # visualize_results('worldm1_np=6_ng=5_[15,15].h5', 0)
-    # visualize_results('model_predictions/worldm1_np=6_ng=5_[3,3].h5', 0)
-
-
-    # FOR THIS EXAMPLE:
-    # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetwork/predictions/lr=0.0005_worldm3_np=3_ng=1_[101,200].h5'
-
-    # visualize_results(h5_file, 2)  # fail
-    # visualize_results(h5_file, 99)  # okay
-    # visualize_results(h5_file, 98)  # bounce off wall: knows boundaries
-    # visualize_results(h5_file, 96)  # moves in space, but noisily: it'd be nice to have crisp movement
-    # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
-    # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
-    # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS! (predicted after bounce though)
-    # visualize_results(h5_file, 65)  # KNOWS HOW TO BOUNCE OFF WALLS! (almost)
-    # visualize_results(h5_file, 55)  # particle-particle fail
-    # visualize_results(h5_file, 4)  # particle-particle fail
-
-    # # FOR THIS EXAMPLE:
-    # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetworkcurriculum/predictions/lr=0.0005_worldm3_np=2_ng=2_[101,200].h5'
-    #
-    # # visualize_results(h5_file, 2)  # fail
-    # # visualize_results(h5_file, 99)  # okay
-    # # visualize_results(h5_file, 98)  # bounce off wall: knows boundaries
-    # visualize_results(h5_file, 96)  # moves in space, but noisily: it'd be nice to have crisp movement
-    # # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
-    # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
-    # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
-
-    # 1/20/16: in summary: it can handle going straight, but it cannot bounce off objects
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
-    # visualize_results(h5_file, 1)  # can bounce off walls
-    # visualize_results(h5_file, 2)  # does not learn to bounce off other objects
-    # visualize_results(h5_file, 3)  # does not learn to bounce off other objects Need a crisper way to model collisions
-    # visualize_results(h5_file, 4)  # can definitely bounce off walls. I think we just need more training examples of particle collisions
-    # visualize_results(h5_file, 5)    # soft "bounce"
-    # visualize_results(h5_file, 6)    # reproduces linear motion very nicely
-    # visualize_results(h5_file, 7)    # bounces off imaginary wall, soft bounce. Note though that a lot of the ground truth also have soft bounces
-    # visualize_results(h5_file, 8)    # instead of bouncing, it slows down
-    # visualize_results(h5_file, 9)    # no obj-obj bouncing interaction
-    # visualize_results(h5_file, 10)    # bounces off imaginary wall
-    # visualize_results(h5_file, 11)     # bounces off imaginary wall. How do something that is crisp?
-    # visualize_results(h5_file, 12)     # bounces off imaginary wall. How do something that is crisp?
-    # visualize_results(h5_file, 15)     #  GREAT EXAMPLE OF BOUNCING OFF WALL
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=False, imgsave=False)     #  did not bounce against other object; good example
-    # visualize_results(h5_file, 18)     #  definitive example of NOT BOUNCING OFF OBJECTS
-    # visualize_results(h5_file, 19)     # GREAT EXAMPLE OF BOUNCING OFF WALL
-    # visualize_results(h5_file, 26)     # DOES NOT BOUNCE OFF OTHER OBJECTS
-    # visualize_results(h5_file, 27)     # Bounces off corner
-    # visualize_results(h5_file, 34)     # Example of a bad ground truth rendering
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=1_ng=4_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=False, imgsave=False)     #  moved slower
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)     #  bounces well off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=True, imgsave=False)     #  straight line
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)       # soft bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=True, imgsave=False)        # moves straight
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=6, vidsave=False, imgsave=False)        # moves wrong direction
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=True, imgsave=False)         # CANNOT BOUNCE               # SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=18, vidsave=False, imgsave=False)         # Great bounce
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=20, vidsave=False, imgsave=False)         # moves wrong direction
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=3_ng=0_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=True, imgsave=False)       # CANNOT BOUNCE                 # SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)       # CANNOT BOUNCE                # SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)       # CANNOT BOUNCE
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm4_np=5_ng=4_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=False, imgsave=False)       # Stays stationary if stationary
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)       # Friction seems to have an effect?
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)       # Cannot bounce off objects
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=11, vidsave=False, imgsave=False)       # An example that performs well
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=12, vidsave=False, imgsave=False)       # Cannot bounce off objects
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=True, imgsave=False)       # CANNOT BOUNCE OFF OBJECTS    # SAVED
-
-
-    # 1/25/16 only 2 balls
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=34, vidsave=False, imgsave=False)        # inertia good
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)        # CANNOT BOUNCE
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)        # Bad bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=False, imgsave=False)        # Soft bounce off corner
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=True, imgsave=False)        # Great bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=33, vidsave=False, imgsave=False)        # can bounce off objects (maybe?)
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=False)           # cannot bounce off objects (it seems to tweak physics such that it doesn't have to bounce off the other guy)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[51,100].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)        # bad bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=True, imgsave=False)        # CANNOT BOUNCE          # Saved
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=22, vidsave=True, imgsave=False)       # Knows that there was an obj obj bounce in past    #SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=True, imgsave=False)       # Remembers one wall, but not really the other    #SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=32, vidsave=False, imgsave=False)       # Switches direction somehow
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=True, imgsave=False)       # DEFINITIVE CANNOT BOUNCE      # SAVED  # SHOW THIS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=46, vidsave=True, imgsave=False)       # cannot bounce
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=49, vidsave=False, imgsave=False)       # knows that there is a corner
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001_batch_size_260/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense2_opt_adam_traincfgs_[:-2:2-:]_shuffle_false_lrdecay_1_batch_size_260_testcfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=14, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=True, imgsave=False)        # Fast movement
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=30, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=43, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-
-
-    # h5_file ='/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense3_opt_adam_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_260_testcfgs_[:-2:2-:]_lr_0.005/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)
-    # for i in range(1, 20):
-        # print(len(subsample_range(80, 2, i))), subsample_range(80, 20, i)
-    # print(len(subsample_range(80, 2, 60))), subsample_range(80, 2, 60)
-    # render_from_scheme_output('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data/worldm1_np=1_ng=0/worldm1_np=1_ng=0_324.ss', 3, 'heyhey', 'hihi', False)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/5_Sl1BCELinearReLU_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=14, vidsave=False, imgsave=False)   # CANNOT BOUNCE OFF OBJECTS
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/2_TanhReLU_opt_optimrmsprop_layers_2_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_65_testcfgs_[:-2:2-:]_lr_0.001_max_epochs_20/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-
-    #
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/4_SL1TanhReLU_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-
-    # print subsample_range(80, 20, 60)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/6_SL1BCELinearReLURel_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=15, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS ON TRAINING DATA
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/9_opt_optimrmsprop_layers_2_lr_0.005/predictions/worldm1_np=2_ng=0_[1,80].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/10_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.0005/predictions/worldm1_np=2_ng=0_[1,400].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)    # weird movement
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)    # cannot bounce
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=130, vidsave=False, imgsave=False)    # cannot bounce
-
-    # running simulation
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[1,80].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=20, vidsave=False, imgsave=False)  # possible bounce? look at 20, 21, 22
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)  # very soft bounce off wall
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[81,160].h5'
-    # # visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)  # inertia, simulation
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=50, vidsave=False, imgsave=False)
-
-    # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005/predictions/worldm1_np=2_ng=0_[31,60].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)
-
-
-
-    # 2/23/16
-    h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12c_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.001_lrdecay_0.97/predictions/worldm1_np=2_ng=0_[1,30].h5'
-    visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)  # NO BOUNCE?  for [1,30]
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=15, vidsave=False, imgsave=False)  # good crisp wall bounce for [31, 60]
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # seems hesitant to move when close to other ball for [91,120]
-
-
-    # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005_sharpen_2/predictions/worldm1_np=2_ng=0_[91,120].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)  # NO BOUNCE?  for [1,30]

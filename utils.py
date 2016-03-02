@@ -83,9 +83,7 @@ def subtensor_equal(subtensor, tensor, dim):
         Return if subtensor, when broaadcasted along dim
     """
     num_copies = tensor.shape[dim]
-
     subtensor_stack = np.concatenate([subtensor for s in num_copies], dim=dim)
-
     return subtensor_stack == tensor
 
 
