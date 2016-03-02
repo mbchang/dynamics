@@ -88,33 +88,35 @@ def subtensor_equal(subtensor, tensor, dim):
 
     return subtensor_stack == tensor
 
-G_w_width, G_w_height = 640.0,480.0
-G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0
 
-a = load_dict_from_hdf5('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3/trainset.h5')
-b = a['worldm1_np=2_ng=0particles']
-ex = b[3]
-state = ex[:,:,:4]
-print state.shape
-pos = state[:,:,:2]*G_w_width  # (numobjects, timesteps, [px,py])
-vel = state[:,:,2:]*G_max_velocity/1000*5  # (numobjects, timesteps, [vx,vy])
+if __name__ == "__main__":
+    G_w_width, G_w_height = 640.0,480.0
+    G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0
 
-predpos = np.copy(pos)
+    a = load_dict_from_hdf5('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3/trainset.h5')
+    b = a['worldm1_np=2_ng=0particles']
+    ex = b[3]
+    state = ex[:,:,:4]
+    print state.shape
+    pos = state[:,:,:2]*G_w_width  # (numobjects, timesteps, [px,py])
+    vel = state[:,:,2:]*G_max_velocity/1000*5  # (numobjects, timesteps, [vx,vy])
 
-for i in range(0,19):
-    predpos[0,i+1,:] = predpos[0,i,:] + vel[0,i+1,:]  # so this method is not completely correct because of subsampling.
+    predpos = np.copy(pos)
 
-print pos[0]
-print predpos[0]
-# try plotting position
-# plot_pos = np.vstack((pos[0,:,0],np.arange(len(pos[0]))))
-# print (pos[0])
-# print(pos[0,:].shape)
-# plt.plot(vel[0,:,1])
-plt.plot(pos[0,:,0],pos[0,:,1])
-plt.plot(predpos[0,:,0],predpos[0,0:,1])
-# plt.plot(vel[0,:,0],vel[0,:,1])
-plt.show()
+    for i in range(0,19):
+        predpos[0,i+1,:] = predpos[0,i,:] + vel[0,i+1,:]  # so this method is not completely correct because of subsampling.
+
+    print pos[0]
+    print predpos[0]
+    # try plotting position
+    # plot_pos = np.vstack((pos[0,:,0],np.arange(len(pos[0]))))
+    # print (pos[0])
+    # print(pos[0,:].shape)
+    # plt.plot(vel[0,:,1])
+    plt.plot(pos[0,:,0],pos[0,:,1])
+    plt.plot(predpos[0,:,0],predpos[0,0:,1])
+    # plt.plot(vel[0,:,0],vel[0,:,1])
+    plt.show()
 
 
 

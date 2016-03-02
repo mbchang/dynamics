@@ -812,7 +812,7 @@ def recover_state(this, context, this_pred, config, velocityonly=True, subsamp):
     recovered_particles_all_samples = recover_particles(this, other)  # this just gets state information
 
     # Take care of velocity only
-    # do I need to take care of the ground truth reconstruction TODO you should do this for testing purposes
+    # do I need to take care of the ground truth reconstruction? TODO you should do this for testing purposes
     if velocityonly:
         lastpos = this[:,-1,:2]  # (num_samples, winsize/2 [px,py])
         lastvel = this[:,-1,:2]*subsamp
