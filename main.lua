@@ -27,13 +27,13 @@ mp = lapp[[
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
-   -b,--batch_size    (default 30)
+   -b,--batch_size    (default 60)
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
    -s,--shuffle  	  (default "true")
    -r,--lr            (default 0.0005)      	   learning rate
-   -a,--lrdecay       (default 1)            annealing rate
+   -a,--lrdecay       (default 0.9)            annealing rate
    -h,--sharpen       (default 1)               sharpen exponent
    -i,--max_epochs    (default 500)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 50)
@@ -63,8 +63,8 @@ if mp.server == 'pc' then
     mp.max_epochs = 50
 else
 	mp.winsize = 20  -- total number of frames
-    mp.num_past = 2 -- total number of past frames
-    mp.num_future = 1
+    mp.num_past = 10 -- total number of past frames
+    mp.num_future = 10
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
 	mp.seq_length = 10
 	mp.num_threads = 4
@@ -128,8 +128,7 @@ function inittrain(preload, model_path)
     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
-    print(train_loader.num_batches)
-    -- assert(false)
+    train_test_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
@@ -240,7 +239,7 @@ function test(dataloader, params_, saveoutput)
         -- take care of relative position
         if mp.relative then
             prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
-            y = y + this[{{},{-1}}]:expandAs(y)
+            y = y + this[{{},{-1}}]:expandAs(y) -- add back because relative
         end
 
         -- save
@@ -406,7 +405,8 @@ function experiment()
     local train_losses, val_losses, test_losses = {},{},{}
     for i = 1, mp.max_epochs do
         print('Learning rate is now '..optim_state.learningRate)
-        local train_loss = train(i)
+        train(i)
+        local train_loss = test(train_test_loader, model.theta.params, false)
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
         print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
@@ -461,19 +461,6 @@ function predict_simulate()
     print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
 end
 
--- function curriculum()
---     local cur = cur = {'[:-1:1-:]','[:-2:2-:]','[:-3:3-:]',
---                         '[:-4:4-:]','[:-5:5-:]','[:-6:6-:]'}
---     for _,problem in cur do
---         mp.traincfgs = problem
---         mp.testcfgs = problem
---         print('traincfgs', mp.traincfgs)
---         print('testcfgs', mp.testcfgs)
---         reset folder to save
---         run_experiment()
---         -- make sure that things get reset correctly.
---     end
--- end
 
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then

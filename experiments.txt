@@ -102,6 +102,29 @@ experiment 12: priority sampling (no sharpening), dataset 3, 10 in 10 out, bsize
     Observations
         2 layers is the way to go, 0.001 is good
 
+experiment 13: priority sampling, dataset 3, 10 in 10 out, bsize 60, velocity only
+    lrdeacy 0.90, lr [1e-4,5e-4,1e-3], 1, 2, 3 layers
+
+    Observations
+        killed the 1e-4 jobs, killed 5e-4 jobs, killed 1e-3 jobs
+        also killed jobs with 3e-4 + lr=0.99
+
+    Converged:
+        13_layers_1_sharpen_1_lr_0.005
+        13_layers_1_sharpen_2_lr_0.005
+        13_layers_2_sharpen_1_lr_0.005
+        13_layers_2_sharpen_2_lr_0.005
+        13_layers_3_sharpen_1_lr_0.005
+        13_layers_3_sharpen_2_lr_0.005
+        13_layers_1_sharpen_1_lr_0.01
+        13_layers_1_sharpen_2_lr_0.01
+        13_layers_2_sharpen_1_lr_0.01
+        13_layers_2_sharpen_2_lr_0.01
+        13_layers_3_sharpen_1_lr_0.01
+        13_layers_3_sharpen_2_lr_0.01
+
+experiment 14: experiment 13, but with sigmoid
+
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out
         Dataset: /om/data/public/mbchang/physics-data/2
@@ -120,3 +143,11 @@ experiment: 7
 
 experiment: 8 Huge Feedforward baseline
     Goal: compare
+
+
+
+NOTE
+    - predpos[0,i+1,:] = predpos[0,i,:] + vel[0,i+1,:]  # so this method is not completely correct because of subsampling.
+        - for now you can just use this dataset to debug, but for the real thing you need to regenerate data.
+        - note that you should do a threshold that sets velocities to 0 if they are less than e-10
+            (you should check numpy's precision though)

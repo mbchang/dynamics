@@ -764,7 +764,7 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-def recover_state(this, context, this_pred, config):
+def recover_state(this, context, this_pred, config, velocityonly=True, subsamp):
     """
         input
             this:       (num_samples, winsize/2, 8)
@@ -776,6 +776,8 @@ def recover_state(this, context, this_pred, config):
                     can be ground truth if you want to render ground truth
                     or prediction if you want to render prediction
             config:     something like: worldm1_np=1_ng=1
+            velocityonly: boolean for whether you want to extrapolate from velocity
+            subsamp: subsample rate
 
         output
             observedPath    = (winsize, [pos, vel], numObjects, [x, y])
@@ -807,10 +809,29 @@ def recover_state(this, context, this_pred, config):
     recovered_goos_all_samples = recover_goos(goos)
 
     # Next recover particles
-    recovered_particles_all_samples = recover_particles(this, other)
+    recovered_particles_all_samples = recover_particles(this, other)  # this just gets state information
+
+    # Take care of velocity only
+    # do I need to take care of the ground truth reconstruction TODO you should do this for testing purposes
+    if velocityonly:
+        lastpos = this[:,-1,:2]  # (num_samples, winsize/2 [px,py])
+        lastvel = this[:,-1,:2]*subsamp
+        thispos = this_pred[:,:,:2]  # note that "this" can mean gt or pred
+        thisvel = this_pred[:,:,2:]*subsamp  # TODO this depends
+
+        # this is length n+1
+        pos = np.hstack((lastpos,thispos))
+        vel = np.hstack((lastvel, thisvel))
+
+        # take the last part (future)
+        for i in range(len(pos)):
+            pos[:,i+1,:] = pos[:,i,:] + vel[:,i,:]
+
+        assert pos[:,1:,:].shape[1] == this_pred.shape[1]
+        this_pred[:,:,:2] = pos[:,1:,:]  # reassign back to this_pred
 
     # Next recover path
-    recoverd_path_all_samples = recover_path(this_pred, other)
+    recoverd_path_all_samples = recover_path(this_pred, other)  # future TODO you need positional information from past
 
     assert len(recovered_goos_all_samples) \
             == len(recovered_particles_all_samples) \
@@ -879,7 +900,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     d = load_dict_from_hdf5(training_samples_hdf5)
     config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
 
-    samples_past = recover_state(d['this'], d['context'], d['this'], config_name)
+    samples_past = recover_state(d['this'], d['context'], d['this'], config_name)  # TODO velocityonly should not apply for the past!
     samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name)
     samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name)
 
