@@ -505,8 +505,6 @@ function add_accel_each(obj,isthis)
         return new_obj:clone()
     else
         assert(obj:dim() == 4)
-        -- print('before')
-        -- print(obj:size())
         local num_steps = obj:size(3)
         local max_objects = obj:size(2)
         local vel = obj[{{},{},{},{3,4}}]

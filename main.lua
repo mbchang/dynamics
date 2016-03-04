@@ -83,7 +83,7 @@ else
     error('Unrecognized model')
 end
 
--- mp.accel = false
+mp.accel = false
 mp.object_dim = 8.0  -- hardcoded
 if mp.accel then mp.object_dim = 10 end
 mp.input_dim = mp.object_dim*mp.num_past

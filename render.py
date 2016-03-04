@@ -168,5 +168,8 @@ from convert_data import *
 # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)  # NO BOUNCE?  for [1,30]
 
 # 3/2/16: experiments 13 tested velocity only
-h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/13_layers_3_sharpen_1_lr_0.005/predictions/worldm1_np=2_ng=0_[5521,5580].h5'
-visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/13_layers_3_sharpen_1_lr_0.005/predictions/worldm1_np=2_ng=0_[5521,5580].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=45, vidsave=False, imgsave=False)   # corner bounce
+
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/13_layers_3_sharpen_1_lr_0.005/predictions/worldm1_np=2_ng=0_[1,60].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=58, vidsave=False, imgsave=False)

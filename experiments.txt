@@ -108,6 +108,7 @@ experiment 13: priority sampling, dataset 3, 10 in 10 out, bsize 60, velocity on
     Observations
         killed the 1e-4 jobs, killed 5e-4 jobs, killed 1e-3 jobs
         also killed jobs with 3e-4 + lr=0.99
+        THe one with the best validation loss did not work model obj-obj bouncing
 
     Converged:
         13_layers_1_sharpen_1_lr_0.005
@@ -123,7 +124,17 @@ experiment 13: priority sampling, dataset 3, 10 in 10 out, bsize 60, velocity on
         13_layers_3_sharpen_1_lr_0.01
         13_layers_3_sharpen_2_lr_0.01
 
-experiment 14: experiment 13, but with sigmoid
+
+experiment 14:
+    This experiment will try to reexamine the model. If need be instead of
+    feedforward we will try lstm through time. What I will do is to do all
+    internal activations as ReLU and the output activation will be linear.
+    This way the ReLU will turn on or off some neurons. And you want your
+    output to be positive or negative. So basically the internal layers will
+    do the logic computation of which weights to turn on or off in the output
+    layer, which will do the work of figure out positive or negative. We know
+    that the model is capable of switching velocities, because it can switch
+    directions.
 
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out

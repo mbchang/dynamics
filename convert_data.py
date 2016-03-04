@@ -927,11 +927,11 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
     make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
 
-    # print 'render past'
-    # render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
-    # print 'render future pred'
-    # render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName, save, windowsize)
-    # make_video(images_root, framerate, 'pred', vidsave, imgsave)
+    print 'render past'
+    render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
+    print 'render future pred'
+    render_output(samples_future_pred, sample_num, framerate, movie_folder, movieName, save, windowsize)
+    make_video(images_root, framerate, 'pred', vidsave, imgsave)
 
 def make_video(images_root, framerate, mode, savevid, saveimgs):
     """
@@ -947,4 +947,6 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
         print 'Removing images from', images_root.replace('=', '\\=')
         for i in os.listdir(os.path.dirname(images_root)):
             if os.path.basename(images_root) in i and '.png' in i:
-                os.system('rm ' + os.path.join(os.path.dirname(images_root), i))
+                imgfile = os.path.join(os.path.dirname(images_root), i)
+                imgfile = imgfile.replace(' ','\ ').replace('(','\(').replace(')','\)')
+                os.system('rm ' + imgfile)
