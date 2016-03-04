@@ -28,6 +28,7 @@ mp = lapp[[
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
    -b,--batch_size    (default 60)
+   -l,--accel         (default "true")
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
@@ -57,7 +58,7 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
-    mp.plot = false--true
+    mp.plot = true--true
 	mp.cuda = false
 	mp.cunn = false
     mp.max_epochs = 50
@@ -82,7 +83,9 @@ else
     error('Unrecognized model')
 end
 
+-- mp.accel = false
 mp.object_dim = 8.0  -- hardcoded
+if mp.accel then mp.object_dim = 10 end
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.root .. '/' .. mp.name
@@ -232,9 +235,9 @@ function test(dataloader, params_, saveoutput)
         local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
 
         -- reshape to -- (num_samples x num_future x 8)
-        prediction = prediction:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
-        this = this:reshape(mp.batch_size, mp.num_past, dataloader.object_dim)
-        y = y:reshape(mp.batch_size, mp.num_future, dataloader.object_dim)
+        prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
+        this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
+        y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)
 
         -- take care of relative position
         if mp.relative then
@@ -384,18 +387,18 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
         {pred=prediction,
         this=this:reshape(this:size(1),
                     mp.num_past,
-                    dataloader.object_dim),
+                    mp.object_dim),
         context=context:reshape(context:size(1),
                     context:size(2),
                     mp.num_past,
-                    dataloader.object_dim),
+                    mp.object_dim),
         y=y:reshape(y:size(1),
                     numsteps,
-                    dataloader.object_dim),
+                    mp.object_dim),
         context_future=context_future:reshape(context_future:size(1),
                     context_future:size(2),
                     numsteps,
-                    dataloader.object_dim)})
+                    mp.object_dim)})
 end
 
 -- runs experiment

@@ -326,23 +326,21 @@ function dataloader:next_config(current_config, start, finish)
     -- check data dimension
     assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
 
-    -- cuda
-    if self.cuda then
-        this_x          = this_x:cuda()
-        context_x       = context_x:cuda()
-        minibatch_m     = minibatch_m:cuda()
-        y               = y:cuda()
-        context_future  = context_future:cuda()
-    end
-
     -- Relative position wrt the last past coord
     if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
 
+    if mp.accel then
+        this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
+        new_object_dim = object_dim + 2
+    else
+        new_object_dim = object_dim
+    end
+
     -- Reshape
-    this_x          = this_x:reshape(num_samples, self.num_past*object_dim)
-    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*object_dim)
-    y               = y:reshape(num_samples, (self.winsize-self.num_past)*object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*object_dim)
+    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
+    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
+    y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
+    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
 
@@ -351,6 +349,15 @@ function dataloader:next_config(current_config, start, finish)
     context_x       = context_x[{{start,finish}}]
     y               = y[{{start,finish}}]
     context_future  = context_future[{{start,finish}}]
+
+    -- cuda
+    if self.cuda then
+        this_x          = this_x:cuda()
+        context_x       = context_x:cuda()
+        minibatch_m     = minibatch_m:cuda()
+        y               = y:cuda()
+        context_future  = context_future:cuda()
+    end
 
     collectgarbage()
     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
@@ -454,13 +461,70 @@ function dataloader:sample_sequential_batch()
 end
 
 function dataloader:sample_batch_id(id)
-    -- print('id:',id)
     self.current_sampled_id = id
     local config_name, start, finish = unpack(self.batchlist[id])
     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
     local nextbatch = self:next_config(config_name, start, finish)
+
     return nextbatch
+end
+
+
+-- this             (num_samples x num_past x 8)
+-- context          (num_samples x max_other_objects x num_past x 8)
+-- y                (num_samples x num_future x 8)
+-- context_future   (num_samples x max_other_objects x num_future x 8)
+function add_accel(this_x, context_x, y, context_future)
+    local this_x_accel = add_accel_each(this_x,true)
+    local context_x_accel = add_accel_each(context_x,false)
+    local y_accel = add_accel_each(y,true)
+    local context_future_accel = add_accel_each(context_future,false)
+
+    return {this_x_accel,context_x_accel,y_accel,context_future_accel}
+end
+
+function add_accel_each(obj,isthis)
+    local eps = 1e-10
+    local num_samples = obj:size(1)
+    if isthis then
+        assert(obj:dim() == 3)
+        local num_steps = obj:size(2)
+        local vel = obj[{{},{},{3,4}}]:clone()  -- num_samples, num_steps, 2
+        local accel = torch.zeros(num_samples,num_steps,2)
+
+        for step = 2,num_steps do
+            accel[{{},{step},{1}}] = torch.abs((vel[{{},{step},{1}}] - vel[{{},{step-1},{1}}])):gt(eps)
+            accel[{{},{step},{2}}] = torch.abs(vel[{{},{step},{2}}] - vel[{{},{step-1},{2}}]):gt(eps)
+        end
+
+        local new_obj = torch.zeros(num_samples,num_steps,obj:size(3)+2)
+        new_obj[{{},{},{3,4}}] = obj[{{},{},{3,4}}]
+        new_obj[{{},{},{5,6}}] = accel
+        new_obj[{{},{},{7,10}}] = obj[{{},{},{5,8}}]
+        return new_obj:clone()
+    else
+        assert(obj:dim() == 4)
+        -- print('before')
+        -- print(obj:size())
+        local num_steps = obj:size(3)
+        local max_objects = obj:size(2)
+        local vel = obj[{{},{},{},{3,4}}]
+        local accel = torch.zeros(num_samples,max_objects,num_steps,2)
+
+        for step = 2,num_steps do
+            accel[{{},{},{step},{1}}] = torch.abs((vel[{{},{},{step},{1}}] - vel[{{},{},{step-1},{1}}])):gt(eps)
+            accel[{{},{},{step},{2}}] = torch.abs(vel[{{},{},{step},{2}}] - vel[{{},{},{step-1},{2}}]):gt(eps)
+        end
+
+        local new_obj = torch.zeros(num_samples,max_objects,num_steps,obj:size(4)+2)
+        new_obj[{{},{},{},{3,4}}] = obj[{{},{},{},{3,4}}]
+        new_obj[{{},{},{},{5,6}}] = accel
+        new_obj[{{},{},{},{7,10}}] = obj[{{},{},{},{5,8}}]
+        -- print('hi')
+        -- print(new_obj:size())
+        return new_obj:clone()
+    end
 end
 
 

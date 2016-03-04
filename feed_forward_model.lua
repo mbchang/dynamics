@@ -27,13 +27,23 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
 
     local out_dim = num_future * object_dim
     -- -- ok, here we will have to split up the output
-    local world_state_pre, obj_prop_pre = split_tensor(3,{num_future, object_dim})(nn.Linear(rnn_hid_dim, out_dim)(rnn_out)):split(2)
-    local obj_prop = nn.Sigmoid()(obj_prop_pre)
-    local world_state = world_state_pre -- linear
-    local dec_out_reshaped = nn.JoinTable(3)({world_state, obj_prop})
-    local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+    local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
-    return nn.gModule({rnn_out}, {decoder_out})
+    if mp.accel then
+        local pos_vel_pre, accel_prop_pre = split_tensor(3,{num_future, object_dim},{{1,4},{5,10}})(decoder_preout):split(2)
+        local accel_prop = nn.Sigmoid()(accel_prop_pre)
+        local pos_vel = pos_vel_pre
+        local dec_out_reshaped = nn.JoinTable(3)({pos_vel, accel_prop})
+        local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+        return nn.gModule({rnn_out}, {decoder_out})
+    else
+        local world_state_pre, obj_prop_pre = split_tensor(3,{num_future, object_dim},{{1,4},{5,8}})(decoder_preout):split(2)
+        local obj_prop = nn.Sigmoid()(obj_prop_pre)
+        local world_state = world_state_pre -- linear
+        local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
+        local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+        return nn.gModule({rnn_out}, {decoder_out})
+    end
 end
 
 function init_feedforward(rnn_hid_dim, numlayers)
@@ -41,7 +51,7 @@ function init_feedforward(rnn_hid_dim, numlayers)
     local ff = nn.Sequential()
     for i = 1,numlayers do
         ff:add(nn.Linear(rnn_hid_dim, rnn_hid_dim))
-        ff:add(nn.SoftSign())  -- let's make this Sigmoid
+        ff:add(nn.ReLU())  -- let's make this Sigmoid
     end
     local output = ff(input)
     return nn.gModule({input}, {output})
@@ -52,14 +62,29 @@ end
 -- Takes a tensor, and returns its two halves, split on the particular dim
 -- For example, give a tensor of size (260, 10, 8), if dim is 3, then
 -- this returns a table of two tensors: {(260,10,4), (260, 10,4)}
-function split_tensor(dim, reshape)
-    assert(reshape[2] %2 == 0)
+-- TODO update this for arbitrary slices
+-- function split_tensor(dim, reshape)
+--     assert(reshape[2] %2 == 0)
+--     local tensor = nn.Identity()()
+--     local reshaped = nn.Reshape(reshape[1],reshape[2], 1, true)(tensor)
+--     local splitted = nn.SplitTable(dim)(reshaped)
+--     local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted))
+--     local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))
+--     return nn.gModule({tensor},{first_half, second_half})
+-- end
+
+-- boundaries: {{l1,r1},{l2,r2},{l3,r3},etc}
+function split_tensor(dim, reshape, boundaries)
+    -- assert(reshape[2] %2 == 0)
     local tensor = nn.Identity()()
     local reshaped = nn.Reshape(reshape[1],reshape[2], 1, true)(tensor)
     local splitted = nn.SplitTable(dim)(reshaped)
-    local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted))
-    local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))
-    return nn.gModule({tensor},{first_half, second_half})
+    local chunks = {}
+    for cb = 1,#boundaries do
+        local left,right = unpack(boundaries[cb])
+        chunks[#chunks+1] = nn.JoinTable(dim)(nn.NarrowTable(left,right)(splitted))
+    end
+    return nn.gModule({tensor},chunks)
 end
 
 -- do not need the mask
@@ -81,19 +106,38 @@ function init_network(params)
     local model_output = ff(model_input)
     local prediction = decoder({model_output})  -- next_h is the output of the last layer
 
-    -- -- split criterion: I know that this works
-    local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)
-    local gtworld_state, gtobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)
+    local POSVELDIM = 4
+    if mp.accel then
+        -- -- split criterion: I know that this works
+        local pos_vel, accel, obj_prop = split_tensor(3, {params.num_future,params.object_dim},{{1,4},{5,6},{7,10}})({prediction}):split(3)
+        local gt_pos_vel, gt_accel, gtobj_prop = split_tensor(3, {params.num_future,params.object_dim},{{1,4},{5,6},{7,10}})({thisp_future}):split(3)
 
-    -- split state: only pass gradients on velocity
-    local pos, vel = split_tensor(3, {params.num_future, params.object_dim/2})({world_state}):split(2) -- basically split world_state in half on the last dim
-    local gt_pos, gt_vel = split_tensor(3, {params.num_future, params.object_dim/2})({gtworld_state}):split(2)
+        -- split state: only pass gradients on velocity
+        local pos, vel = split_tensor(3, {params.num_future, POSVELDIM},{{1,2},{3,4}})({pos_vel}):split(2) -- basically split world_state in half on the last dim
+        local gt_pos, gt_vel = split_tensor(3, {params.num_future, POSVELDIM},{{1,2},{3,4}})({gt_pos_vel}):split(2)
 
-    local err0 = nn.IdentityCriterion()({pos, gt_pos})  -- don't pass gradients on position
-    local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
-    local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
-    local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))  -- we will just multiply by 1 for velocity
-    return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
+        local err0 = nn.IdentityCriterion()({pos, gt_pos})  -- don't pass gradients on position
+        local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
+        local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
+        local err3 = nn.IdentityCriterion()({accel,gt_accel})
+        local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2,err3}))  -- we will just multiply by 1 for velocity
+        return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
+    else
+        -- -- split criterion: I know that this works
+        local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim},{{1,4},{5,8}})({prediction}):split(2)
+        local gtworld_state, gtobj_prop = split_tensor(3, {params.num_future,params.object_dim},{{1,4},{5,8}})({thisp_future}):split(2)
+
+        -- split state: only pass gradients on velocity
+        local pos, vel = split_tensor(3, {params.num_future, POSVELDIM},{{1,2},{3,4}})({world_state}):split(2) -- basically split world_state in half on the last dim
+        local gt_pos, gt_vel = split_tensor(3, {params.num_future, POSVELDIM},{{1,2},{3,4}})({gtworld_state}):split(2)
+
+        local err0 = nn.IdentityCriterion()({pos, gt_pos})  -- don't pass gradients on position
+        local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
+        local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
+        local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))  -- we will just multiply by 1 for velocity
+
+        return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
+    end
 end
 
 
