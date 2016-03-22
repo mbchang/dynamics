@@ -6,7 +6,7 @@ function model_utils.transfer_data(x, should_cuda)
     if should_cuda then
         return x:cuda()
     else
-        return x
+        return x:double()
     end
 end
 
