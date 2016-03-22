@@ -120,7 +120,6 @@ function init_network(params)
         local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
         local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
         local err3 = nn.BCECriterion()({accel,gt_accel})
-        -- local err = nn.CAddTable()({err0,err1,err2,err3})  -- we will just multiply by 1 for velocity
         local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2,err3}))  -- we will just multiply by 1 for velocity
         return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
     else
@@ -135,7 +134,6 @@ function init_network(params)
         local err0 = nn.IdentityCriterion()({pos, gt_pos})  -- don't pass gradients on position
         local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
         local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
-        -- local err = nn.CAddTable()({err0,err1,err2})  -- we will just multiply by 1 for velocity
         local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))  -- we will just multiply by 1 for velocity
 
         return nn.gModule({thisp_past, contextp, thisp_future}, {err, prediction})  -- last output should be prediction
