@@ -106,6 +106,7 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
 
     ---------------------------------- Givens ----------------------------------
     self.dataset_name = dataset_name  -- string
+    self.dataset_folder = dataset_folder
     self.batch_size = batch_size
     self.object_dim = object_dim
     self.relative = relative
@@ -137,7 +138,6 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.current_batch = 0
     self.num_batches = #self.batchlist
     self.priority_sampler = PS.create(self.num_batches)
-    -- print(self.priority_sampler)
     self.current_sampled_id = 0
 
 
@@ -357,6 +357,12 @@ function dataloader:next_config(current_config, start, finish)
         minibatch_m     = minibatch_m:cuda()
         y               = y:cuda()
         context_future  = context_future:cuda()
+    else
+        this_x          = this_x:float()
+        context_x       = context_x:float()
+        minibatch_m     = minibatch_m:float()
+        y               = y:float()
+        context_future  = context_future:float()
     end
 
     collectgarbage()
@@ -429,20 +435,11 @@ function dataloader:get_batch_info(current_config, current_batch_in_config)
             current_config}  -- end index in config
 end
 
--- function dataloader:next_batch()
---     self.current_batch = self.current_batch + 1
---     if self.current_batch > self.num_batches then self.current_batch = 1 end
---
---     local config_name, start, finish = unpack(self.batchlist[self.batch_idxs[self.current_batch]])
---     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
---     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
---     local nextbatch = self:next_config(config_name, start, finish)
---     return nextbatch
--- end
 
 function dataloader:sample_priority_batch(pow)
     if self.priority_sampler.epc_num > 1 then
-        return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
+        return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
+        -- return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
         return self:sample_sequential_batch()  -- or sample_random_batch
     end
@@ -450,14 +447,24 @@ end
 
 function dataloader:sample_random_batch()
     local id = math.random(self.num_batches)
-    return self:sample_batch_id(id)
+    return self:load_batch_id(id)
 end
 
 function dataloader:sample_sequential_batch()
     self.current_batch = self.current_batch + 1
-    -- print(self.current_batch)
     if self.current_batch > self.num_batches then self.current_batch = 1 end
-    return self:sample_batch_id(self.batch_idxs[self.current_batch])
+    return self:load_batch_id(self.batch_idxs[self.current_batch])
+end
+
+function dataloader:save_sequential_batches()
+    local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
+    if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
+    for i = 1,self.num_batches do
+        local batch = self:sample_batch_id(self.batch_idxs[i])
+        local batchname = savefolder..'/'..'batch'..i
+        torch.save(batchname, batch)
+        print('saved '..batchname)
+    end
 end
 
 function dataloader:sample_batch_id(id)
@@ -466,7 +473,21 @@ function dataloader:sample_batch_id(id)
     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
     local nextbatch = self:next_config(config_name, start, finish)
+    return nextbatch
+end
 
+
+function dataloader:load_batch_id(id)
+    self.current_sampled_id = id
+    -- local config_name, start, finish = unpack(self.batchlist[id])
+    -- -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+    -- --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+    -- local nextbatch = self:next_config(config_name, start, finish)
+
+    local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
+    local batchname = savefolder..'/'..'batch'..id
+    local nextbatch = torch.load(batchname)
+    -- print(nextbatch)
     return nextbatch
 end
 
@@ -524,13 +545,6 @@ function add_accel_each(obj,isthis)
         return new_obj:clone()
     end
 end
-
-
-
--- you should have an method that returns the batches for a whole config at once
--- that is just next_config, but with start and finish as the entire config.
--- then you'd break that up during training time.
-
 
 -- orders the configs in topo order
 -- there can be two equally valid topo sorts:
