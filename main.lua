@@ -46,7 +46,7 @@ mp = lapp[[
    --max_grad_norm    (default 10)
    --save_output	  (default false)
    --print_every      (default 100)
-   --save_every       (default 50)
+   --save_every       (default 1)
 ]]
 
 if mp.server == 'pc' then
@@ -62,7 +62,7 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
-    mp.plot = true--true
+    mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
     mp.max_epochs = 50
@@ -222,7 +222,7 @@ end
 function train(epoch_num)
     local new_params, train_loss
     local loss_run_avg = 0
-    for t = 1,train_loader.num_batches do
+    for t = 1,6 do --train_loader.num_batches do
         train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
         -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
@@ -444,7 +444,7 @@ function experiment()
         print('Learning rate is now '..optim_state.learningRate)
         train(i)
         local train_loss = test(train_test_loader, model.theta.params, false)
-        local val_loss = test(val_loader, model.theta.params, false)
+        local val_loss = 2--test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
         print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 
@@ -460,8 +460,18 @@ function experiment()
         test_losses[#test_losses+1] = test_loss
 
         if i % mp.save_every == 0 then
-            checkpoint(mp.savedir .. '/network'..'epc'..i..'.t7', model.network, mp) -- model.rnns[1]?
-            checkpoint(mp.savedir .. '/params'..'epc'..i..'.t7', model.theta.params, mp)
+            -- checkpoint(mp.savedir .. '/network'..'epc'..i..'.t7', model.network, mp) -- model.rnns[1]?
+            -- checkpoint(mp.savedir .. '/params'..'epc'..i..'.t7', model.theta.params, mp)
+
+            local model_file = string.format('%s/epoch%.2f_%.4f.t7', mp.savedir, i, val_loss)
+            print('saving checkpoint to ' .. model_file)
+            local checkpoint = {}
+            checkpoint.model = model
+            checkpoint.mp = mp
+            checkpoint.train_losses = train_losses
+            checkpoint.val_losses = val_losses
+            torch.save(model_file, checkpoint)
+
             print('Saved model')
         end
         if mp.plot then experimentLogger:plot() end
