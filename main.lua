@@ -16,6 +16,8 @@ local model_utils = require 'model_utils'
 local D = require 'DataLoader'
 require 'logging_utils'
 
+-- torch.setdefaulttensortype('torch.FloatTensor')
+
 ------------------------------------- Init -------------------------------------
 -- Best val: 1/29/16: baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.005_batch_size_260.out
 
@@ -23,7 +25,7 @@ mp = lapp[[
    -e,--mode          (default "exp")           exp | pred
    -d,--root          (default "logslink")      	subdirectory to save logs
    -m,--model         (default "ff")   		type of model tor train: lstm | ff
-   -n,--name          (default "densenp2shuffle")
+   -n,--name          (default "save3")
    -p,--plot          (default true)                    	plot while training
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
@@ -32,17 +34,19 @@ mp = lapp[[
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
-   -s,--shuffle  	  (default "true")
-   -r,--lr            (default 0.0005)      	   learning rate
+   -s,--shuffle  	  (default "false")
+   -r,--lr            (default 0.005)      	   learning rate
    -a,--lrdecay       (default 0.9)            annealing rate
    -h,--sharpen       (default 1)               sharpen exponent
-   -i,--max_epochs    (default 500)           	maximum nb of iterations per batch, for LBFGS
+   -f,--lrdecayafter  (default 50)              number of epochs before turning down lr
+   -i,--max_epochs    (default 1000)           	maximum nb of iterations per batch, for LBFGS
    --rnn_dim          (default 50)
    --layers           (default 1)
    --seed             (default "true")
    --max_grad_norm    (default 10)
    --save_output	  (default false)
-   --print_every      (default 1)
+   --print_every      (default 100)
+   --save_every       (default 50)
 ]]
 
 if mp.server == 'pc' then
@@ -83,7 +87,6 @@ else
     error('Unrecognized model')
 end
 
-mp.accel = false
 mp.object_dim = 8.0  -- hardcoded
 if mp.accel then mp.object_dim = 10 end
 mp.input_dim = mp.object_dim*mp.num_past
@@ -143,6 +146,28 @@ function inittrain(preload, model_path)
     print("Initialized Network")
 end
 
+function initsavebatches(preload, model_path)
+    mp.cuda = false
+    mp.cunn = false
+    mp.shuffle = false
+    print("Network parameters:")
+    print(mp)
+    local data_loader_args = {mp.dataset_folder,
+                              mp.batch_size,
+                              mp.shuffle,
+                              mp.cuda,
+                              mp.relative,
+                              mp.num_past,
+                              mp.winsize}
+    train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
+    val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
+    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+
+    train_loader:save_sequential_batches()
+    val_loader:save_sequential_batches()
+    test_loader:save_sequential_batches()
+end
+
 function inittest(preload, model_path)
     print("Network parameters:")
     print(mp)
@@ -160,11 +185,11 @@ function inittest(preload, model_path)
 end
 
 
+
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
     local this, context, y, mask = unpack(train_loader:sample_priority_batch(mp.sharpen))
-
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
 
     local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
@@ -203,12 +228,13 @@ function train(epoch_num)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
         if t % mp.print_every == 0 then
-            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e\tbatch = %4d\thardest batch: %4d with loss %6.8f",
+            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e\tbatch = %4d\thardest batch: %4d \twith loss %6.8f lr = %6.4e",
                     epoch_num, t, train_loss[1],
                     model.theta.grad_params:norm(),
                     train_loader.current_sampled_id,
                     train_loader.priority_sampler:get_hardest_batch()[2],
-                    train_loader.priority_sampler:get_hardest_batch()[1]))
+                    train_loader.priority_sampler:get_hardest_batch()[1],
+                    optim_state.learningRate))
         end
         loss_run_avg = loss_run_avg + train_loss[1]
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
@@ -228,6 +254,14 @@ function test(dataloader, params_, saveoutput)
 
         -- get batch
         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
+
+        if mp.cuda then
+            this = this:cuda()
+            context = context:cuda()
+            y = y:cuda()
+            context_future = context_future:cuda()
+        end
+
         y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
@@ -425,15 +459,18 @@ function experiment()
         val_losses[#val_losses+1] = val_loss
         test_losses[#test_losses+1] = test_loss
 
-
-        checkpoint(mp.savedir .. '/network'..'epc'..i..'.t7', model.network, mp) -- model.rnns[1]?
-        checkpoint(mp.savedir .. '/params'..'epc'..i..'.t7', model.theta.params, mp)
-        print('Saved model')
+        if i % mp.save_every == 0 then
+            checkpoint(mp.savedir .. '/network'..'epc'..i..'.t7', model.network, mp) -- model.rnns[1]?
+            checkpoint(mp.savedir .. '/params'..'epc'..i..'.t7', model.theta.params, mp)
+            print('Saved model')
+        end
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
 
         -- here you can adjust the learning rate based on val loss
-        optim_state.learningRate =optim_state.learningRate*mp.lrdecay
+        if i >= mp.lrdecayafter then
+            optim_state.learningRate =optim_state.learningRate*mp.lrdecay
+        end
         collectgarbage()
     end
 end
@@ -465,14 +502,17 @@ function predict_simulate()
 end
 
 
-------------------------------------- Main -------------------------------------
+-- ------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
     run_experiment()
 elseif mp.mode == 'sim' then
     predict_simulate()
+elseif mp.mode == 'save' then
+    initsavebatches(false)
 else
     predict()
 end
+
 
 -- inittest(false, mp.savedir ..'/'..'network.t7')
 -- print(simulate(test_loader, model.theta.params, false, 3))

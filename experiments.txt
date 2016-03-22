@@ -125,7 +125,7 @@ experiment 13: priority sampling, dataset 3, 10 in 10 out, bsize 60, velocity on
         13_layers_3_sharpen_2_lr_0.01
 
 
-experiment 14:
+experiment 14: accel
     This experiment will try to reexamine the model. If need be instead of
     feedforward we will try lstm through time. What I will do is to do all
     internal activations as ReLU and the output activation will be linear.
@@ -135,6 +135,19 @@ experiment 14:
     layer, which will do the work of figure out positive or negative. We know
     that the model is capable of switching velocities, because it can switch
     directions.
+
+    exp: 1e-3, layers 1 2 3 4, sharpen 1 2, dataset 3. lrdecay 0.95
+
+    accel_after: use lrdecay after of 50
+        * as well as use 1000 epochs, sharpen 1, 1.3, 1.6
+
+        Observations:
+            smaller model has better val loss (3 layers, less sharpen)
+            complexer model has better loss on hardest example (4 layers, sharpen 1.6)
+            lr = 0.003 seems good.
+
+    sharpen: 4 layers, sharpen 3/10, 0.003/0.005
+    sharpengradual: 4 layers, gradual sharpen 1-100, 0.003
 
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out
