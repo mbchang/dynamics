@@ -159,7 +159,10 @@ function model.create(mp_, preload, model_path)
 
     if preload then
         print('Loading saved model.')
-        self.network = torch.load(model_path):clone()
+        -- self.network = torch.load(model_path):clone()
+
+        local checkpoint = torch.load(model_path)
+        self.network = checkpoint.model.network:clone()
     else
         self.network = init_network(self.mp)
     end
