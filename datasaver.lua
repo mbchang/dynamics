@@ -457,7 +457,7 @@ function datasaver:save_sequential_batches()
 
     local config_data = self:get_config_data()
 
-    for i = 1,self.num_batches do
+    for i = 1,12 do --self.num_batches do
         local batch = self:get_batch(i, config_data)
         local batchname = savefolder..'/'..'batch'..i
         torch.save(batchname, batch)
@@ -512,8 +512,8 @@ function add_accel_each(obj,isthis)
             accel[{{},{step},{2}}] = torch.abs(vel[{{},{step},{2}}] - vel[{{},{step-1},{2}}]):gt(eps)
         end
 
-        local new_obj = torch.zeros(num_samples,num_steps,obj:size(3)+2)
-        new_obj[{{},{},{3,4}}] = obj[{{},{},{3,4}}]
+        local new_obj = torch.zeros(num_samples,num_steps,obj:size(3)+2)  -- TODO: bug! position informatoin is not copied!
+        new_obj[{{},{},{1,4}}] = obj[{{},{},{1,4}}]
         new_obj[{{},{},{5,6}}] = accel
         new_obj[{{},{},{7,10}}] = obj[{{},{},{5,8}}]
 
@@ -531,11 +531,9 @@ function add_accel_each(obj,isthis)
         end
 
         local new_obj = torch.zeros(num_samples,max_objects,num_steps,obj:size(4)+2)
-        new_obj[{{},{},{},{3,4}}] = obj[{{},{},{},{3,4}}]
+        new_obj[{{},{},{},{1,4}}] = obj[{{},{},{},{1,4}}]
         new_obj[{{},{},{},{5,6}}] = accel
         new_obj[{{},{},{},{7,10}}] = obj[{{},{},{},{5,8}}]
-        -- print('hi')
-        -- print(new_obj:size())
         return new_obj:clone()
     end
 end
