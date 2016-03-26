@@ -128,18 +128,23 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     end
     self.specified_configs = intersect(self.specified_configs, self.configs) -- TODO hacky
     assert(is_subset(self.specified_configs, self.configs))
-    if not shuffle then topo_order(self.specified_configs) end
+    topo_order(self.specified_configs)  -- sort by world
     self.num_configs = #self.specified_configs
     self.config_idxs = torch.range(1,self.num_configs)
     self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)
 
     ----------------------- Initial values for iterator ------------------------
-    self.batchlist = self:compute_batches()
+    self.batchlist = self:compute_batches()  -- you will index into this
     self.current_batch = 0
-    self.num_batches = #self.batchlist
+    assert(self.num_batches == #self.batchlist)
+
+    -- at this point you should be able to save
+    -- print(self.batchlist)
+    -- assert(false)
+
+
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0
-
 
     ---------------------------------- Shuffle ---------------------------------
     if shuffle then
@@ -153,7 +158,6 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
 end
 
 
-
 --[[ Expands the number of examples per batch to have an example per particle
     Input: batch_particles: (num_samples x num_particles x windowsize x 8)
     Output:
@@ -161,64 +165,64 @@ end
             this_particles: (num_samples, windowsize, 8)
             other_particles: (num_samples x (num_particles-1) x windowsize x 8) or {}
         }
---]]
-function expand_for_each_particle(batch_particles)
-    local num_samples, num_particles, windowsize, _ = unpack(torch.totable(batch_particles:size()))  -- (num_samples x num_particles x windowsize x 8)
-    local this_particles = {}
-    local other_particles = {}
-    if num_particles > 1 then
-        for i=1,num_particles do  -- this is doing it in transpose order
-
-            local this = batch_particles[{{},{i},{},{}}]
-            this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8); NOTE that resize gives the wrong answer!
-
-            local other
-            if i == 1 then
-                other = batch_particles[{{},{i+1,-1},{},{}}]
-            elseif i == num_particles then
-                other = batch_particles[{{},{1,i-1},{},{}}]
-            else
-                other = torch.cat(batch_particles[{{},{1,i-1},{},{}}],
-                            batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 8)
-            end
-
-            -- permute here
-            assert(this:size()[1] == other:size()[1])
-            -- this: (num_samples, winsize, 8)
-            -- other: (num_samples, num_other_particles, winsize, 8)
-            -- local num_other_particles = other:size(2)
-            -- for j = 1, num_other_particles do
-            --
-            --     local permuted_other = torch.cat(permute(other),1)
-            --     assert(permuted_other:size(1) == factorial(num_other_particles))
-            --     for k = 1, factorial(num_other_particles) do
-            --         this_particles[#this_particles+1] = this
-            --     end
-            --     other_particles[#other_particles+1] = permuted_other
-            --
-            --     -- this_particles[#this_particles+1] = this
-            --     -- other_particles[#other_particles+1] = other
-            -- end
-            this_particles[#this_particles+1] = this
-            other_particles[#other_particles+1] = other
-        end
-    else
-        local this = batch_particles[{{},{i},{},{}}]
-        this_particles[#this_particles+1] = torch.squeeze(this,2)--this:resize(this:size(1), this:size(3), this:size(4)) -- (num_samples x windowsize x 8)
-    end
-
-    assert(#this_particles==factorial(num_particles)) -- this assertion should be equal to the number possible permutations
-    this_particles = torch.cat(this_particles,1)  -- concatenate along batch dimension
-
-    -- make other_particles into Torch tensor if more than one particle. Otherwise {}
-    if next(other_particles) then
-        other_particles = torch.cat(other_particles,1)
-        assert(this_particles:size(1) == other_particles:size(1))
-        assert(other_particles:size(2) == num_particles-1)
-    end
-    return this_particles, other_particles
-end
-
+-- --]]
+-- function expand_for_each_particle(batch_particles)
+--     local num_samples, num_particles, windowsize, _ = unpack(torch.totable(batch_particles:size()))  -- (num_samples x num_particles x windowsize x 8)
+--     local this_particles = {}
+--     local other_particles = {}
+--     if num_particles > 1 then
+--         for i=1,num_particles do  -- this is doing it in transpose order
+--
+--             local this = batch_particles[{{},{i},{},{}}]
+--             this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8); NOTE that resize gives the wrong answer!
+--
+--             local other
+--             if i == 1 then
+--                 other = batch_particles[{{},{i+1,-1},{},{}}]
+--             elseif i == num_particles then
+--                 other = batch_particles[{{},{1,i-1},{},{}}]
+--             else
+--                 other = torch.cat(batch_particles[{{},{1,i-1},{},{}}],
+--                             batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 8)
+--             end
+--
+--             -- permute here
+--             assert(this:size()[1] == other:size()[1])
+--             -- this: (num_samples, winsize, 8)
+--             -- other: (num_samples, num_other_particles, winsize, 8)
+--             -- local num_other_particles = other:size(2)
+--             -- for j = 1, num_other_particles do
+--             --
+--             --     local permuted_other = torch.cat(permute(other),1)
+--             --     assert(permuted_other:size(1) == factorial(num_other_particles))
+--             --     for k = 1, factorial(num_other_particles) do
+--             --         this_particles[#this_particles+1] = this
+--             --     end
+--             --     other_particles[#other_particles+1] = permuted_other
+--             --
+--             --     -- this_particles[#this_particles+1] = this
+--             --     -- other_particles[#other_particles+1] = other
+--             -- end
+--             this_particles[#this_particles+1] = this
+--             other_particles[#other_particles+1] = other
+--         end
+--     else
+--         local this = batch_particles[{{},{i},{},{}}]
+--         this_particles[#this_particles+1] = torch.squeeze(this,2)--this:resize(this:size(1), this:size(3), this:size(4)) -- (num_samples x windowsize x 8)
+--     end
+--
+--     assert(#this_particles==factorial(num_particles)) -- this assertion should be equal to the number possible permutations
+--     this_particles = torch.cat(this_particles,1)  -- concatenate along batch dimension
+--
+--     -- make other_particles into Torch tensor if more than one particle. Otherwise {}
+--     if next(other_particles) then
+--         other_particles = torch.cat(other_particles,1)
+--         assert(this_particles:size(1) == other_particles:size(1))
+--         assert(other_particles:size(2) == num_particles-1)
+--     end
+--     return this_particles, other_particles
+-- end
+--
 
 --[[
     Each batch is a table of 5 things: {this, others, goos, mask, y}
@@ -250,315 +254,312 @@ end
         y: (num_samples_slice, windowsize/2 * object_dim)
         minibatch_m: (max_other_objects)
 
-        num_samples_slice is num_samples[start:finish], inclusive
---]]
--- TODO: you should separate this method into two: one part is to process the whole dataset
-function dataloader:next_config(current_config, start, finish)
-    local minibatch_data = self.dataset[current_config]
-    local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
-    local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
-    local minibatch_m = minibatch_data.mask  -- 8
+--         num_samples_slice is num_samples[start:finish], inclusive
+-- --]]
+-- -- TODO: you should separate this method into two: one part is to process the whole dataset
+-- function dataloader:next_config(current_config, start, finish)
+--     local minibatch_data = self.dataset[current_config]
+--     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
+--     local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
+--     local minibatch_m = minibatch_data.mask  -- 8
+--
+--     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
+--     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
+--     local num_particles = minibatch_p:size(2)
+--     if num_samples ~= minibatch_p:size(1) * num_particles then
+--         print('num_samples', num_samples)
+--         print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
+--         print('minibatch_p:size()', minibatch_p:size(1))
+--         print('num_particles', num_particles)
+--         print('this_particles:size()', this_particles:size())
+--         print('other_particles:size()', other_particles:size())
+--     end
+--
+--     assert(num_samples == minibatch_p:size(1) * num_particles)
+--
+--     -- check if m_goos is empty
+--     -- if m_goos is empty, then {}, else it is (num_samples, num_goos, 8)
+--     local m_goos = {}
+--     local num_goos = 0  -- default
+--     if minibatch_g:dim() > 1 then
+--         for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end  -- make num_particles copies of minibatch_g
+--         m_goos = torch.cat(m_goos,1)
+--         num_goos = m_goos:size(2)
+--         m_goos = m_goos:reshape(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8) -- take a look at this!
+--         local m_goos_window = {}
+--         for i=1,windowsize do m_goos_window[#m_goos_window+1] = m_goos end
+--         m_goos = torch.cat(m_goos_window, 3)
+--     end
+--
+--     -- check if other_particles is empty
+--     local num_other_particles = 0
+--     if torch.type(other_particles) ~= 'table' then num_other_particles = other_particles:size(2) end
+--
+--     -- get the number of steps that we need to pad to 0
+--     local num_to_pad = max_other_objects - (num_goos + num_other_particles)
+--     if num_goos + num_other_particles > 1 then assert(unpack(torch.find(minibatch_m,1)) == max_other_objects - num_to_pad) end  -- make sure we are padding the right amount
+--
+--     -- create context
+--     local context
+--     if num_other_particles > 0 and num_goos > 0 then
+--         context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
+--         if num_to_pad > 0 then
+--             local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
+--             context = torch.cat(context, pad_p, 2)
+--         end
+--     else
+--         assert(num_to_pad > 0)
+--         local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
+--         if num_other_particles > 0 then -- no goos
+--             assert(torch.type(m_goos)=='table')
+--             assert(not next(m_goos))  -- the table had better be empty
+--             context = torch.cat(other_particles, pad_p, 2)
+--         elseif num_goos > 0 then -- no other objects
+--             assert(torch.type(other_particles)=='table')
+--             assert(not next(other_particles))  -- the table had better be empty
+--             context = torch.cat(m_goos, pad_p, 2)
+--         else
+--             assert(num_other_particles == 0 and num_goos == 0)
+--             assert(num_to_pad == max_other_objects)
+--             context = pad_p  -- context is just the pad then so second dim is always max_objects
+--         end
+--     end
+--     assert(context:dim() == 4 and context:size(1) == num_samples and
+--         context:size(2) == max_other_objects and context:size(3) == windowsize and
+--         context:size(4) == object_dim)
+--
+--     -- split into x and y
+--     local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
+--     local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
+--     local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+--     local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
+--
+--     -- assert num_samples are correct
+--     assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
+--     -- assert number of axes of tensors are correct
+--     assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
+--     -- assert seq length is correct
+--     assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
+--     -- check padding
+--     assert(context_x:size(2)==max_other_objects)
+--     -- check data dimension
+--     assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
+--
+--     -- Relative position wrt the last past coord
+--     if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
+--
+--     if mp.accel then
+--         this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
+--         new_object_dim = object_dim + 2
+--
+--         -- here find the indices of the examples that have positive acceleration for this
+--         print(this_x:size())  -- (num_examples, 10, 10)
+--         -- for each example, see if there exists a one in the acceleration in the (10,10) grid
+--         local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
+--         local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
+--         local hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
+--         print(hard_examples)
+--         assert(false)
+--
+--     else
+--         new_object_dim = object_dim
+--     end
+--
+--     -- Reshape
+--     this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
+--     context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
+--     y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
+--     context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
+--
+--     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
+--
+--
+--     -- TODO this is where the first method hand
+--
+--     -- here only get the batch you need. There is a lot of redundant computation here
+--     this_x          = this_x[{{start,finish}}]
+--     context_x       = context_x[{{start,finish}}]
+--     y               = y[{{start,finish}}]
+--     context_future  = context_future[{{start,finish}}]
+--
+--     -- cuda
+--     if self.cuda then
+--         this_x          = this_x:cuda()
+--         context_x       = context_x:cuda()
+--         minibatch_m     = minibatch_m:cuda()
+--         y               = y:cuda()
+--         context_future  = context_future:cuda()
+--     else
+--         this_x          = this_x:float()
+--         context_x       = context_x:float()
+--         minibatch_m     = minibatch_m:float()
+--         y               = y:float()
+--         context_future  = context_future:float()
+--     end
+--
+--     collectgarbage()
+--     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
+-- end
+--
 
-    local this_particles, other_particles = expand_for_each_particle(minibatch_p)
-    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
-    local num_particles = minibatch_p:size(2)
-    if num_samples ~= minibatch_p:size(1) * num_particles then
-        print('num_samples', num_samples)
-        print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
-        print('minibatch_p:size()', minibatch_p:size(1))
-        print('num_particles', num_particles)
-        print('this_particles:size()', this_particles:size())
-        print('other_particles:size()', other_particles:size())
-    end
-
-    assert(num_samples == minibatch_p:size(1) * num_particles)
-
-    -- check if m_goos is empty
-    -- if m_goos is empty, then {}, else it is (num_samples, num_goos, 8)
-    local m_goos = {}
-    local num_goos = 0  -- default
-    if minibatch_g:dim() > 1 then
-        for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end  -- make num_particles copies of minibatch_g
-        m_goos = torch.cat(m_goos,1)
-        num_goos = m_goos:size(2)
-        m_goos = m_goos:reshape(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8) -- take a look at this!
-        local m_goos_window = {}
-        for i=1,windowsize do m_goos_window[#m_goos_window+1] = m_goos end
-        m_goos = torch.cat(m_goos_window, 3)
-    end
-
-    -- check if other_particles is empty
-    local num_other_particles = 0
-    if torch.type(other_particles) ~= 'table' then num_other_particles = other_particles:size(2) end
-
-    -- get the number of steps that we need to pad to 0
-    local num_to_pad = max_other_objects - (num_goos + num_other_particles)
-    if num_goos + num_other_particles > 1 then assert(unpack(torch.find(minibatch_m,1)) == max_other_objects - num_to_pad) end  -- make sure we are padding the right amount
-
-    -- create context
-    local context
-    if num_other_particles > 0 and num_goos > 0 then
-        context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
-        if num_to_pad > 0 then
-            local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
-            context = torch.cat(context, pad_p, 2)
-        end
-    else
-        assert(num_to_pad > 0)
-        local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
-        if num_other_particles > 0 then -- no goos
-            assert(torch.type(m_goos)=='table')
-            assert(not next(m_goos))  -- the table had better be empty
-            context = torch.cat(other_particles, pad_p, 2)
-        elseif num_goos > 0 then -- no other objects
-            assert(torch.type(other_particles)=='table')
-            assert(not next(other_particles))  -- the table had better be empty
-            context = torch.cat(m_goos, pad_p, 2)
-        else
-            assert(num_other_particles == 0 and num_goos == 0)
-            assert(num_to_pad == max_other_objects)
-            context = pad_p  -- context is just the pad then so second dim is always max_objects
-        end
-    end
-    assert(context:dim() == 4 and context:size(1) == num_samples and
-        context:size(2) == max_other_objects and context:size(3) == windowsize and
-        context:size(4) == object_dim)
-
-    -- split into x and y
-    local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
-    local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
-    local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
-    local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
-
-    -- assert num_samples are correct
-    assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
-    -- assert number of axes of tensors are correct
-    assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
-    -- assert seq length is correct
-    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
-    -- check padding
-    assert(context_x:size(2)==max_other_objects)
-    -- check data dimension
-    assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
-
-    -- Relative position wrt the last past coord
-    if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
-
-    if mp.accel then
-        this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
-        new_object_dim = object_dim + 2
-
-        -- here find the indices of the examples that have positive acceleration for this
-        print(this_x:size())  -- (num_examples, 10, 10)
-        -- for each example, see if there exists a one in the acceleration in the (10,10) grid
-        local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
-        local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
-        local hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
-        print(hard_examples)
-        assert(false)
-
-    else
-        new_object_dim = object_dim
-    end
-
-    -- Reshape
-    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
-    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
-    y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
-
-    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
-
-
-    -- TODO this is where the first method hand
-
-    -- here only get the batch you need. There is a lot of redundant computation here
-    this_x          = this_x[{{start,finish}}]
-    context_x       = context_x[{{start,finish}}]
-    y               = y[{{start,finish}}]
-    context_future  = context_future[{{start,finish}}]
-
-    -- cuda
-    if self.cuda then
-        this_x          = this_x:cuda()
-        context_x       = context_x:cuda()
-        minibatch_m     = minibatch_m:cuda()
-        y               = y:cuda()
-        context_future  = context_future:cuda()
-    else
-        this_x          = this_x:float()
-        context_x       = context_x:float()
-        minibatch_m     = minibatch_m:float()
-        y               = y:float()
-        context_future  = context_future:float()
-    end
-
-    collectgarbage()
-    return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
-end
-
-
-
-
-function dataloader:process_config(current_config)
-    local minibatch_data = self.dataset[current_config]
-    local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
-    local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
-    local minibatch_m = minibatch_data.mask  -- 8
-
-    local this_particles, other_particles = expand_for_each_particle(minibatch_p)
-    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
-    local num_particles = minibatch_p:size(2)
-    if num_samples ~= minibatch_p:size(1) * num_particles then
-        print('num_samples', num_samples)
-        print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
-        print('minibatch_p:size()', minibatch_p:size(1))
-        print('num_particles', num_particles)
-        print('this_particles:size()', this_particles:size())
-        print('other_particles:size()', other_particles:size())
-    end
-
-    assert(num_samples == minibatch_p:size(1) * num_particles)
-
-    -- check if m_goos is empty
-    -- if m_goos is empty, then {}, else it is (num_samples, num_goos, 8)
-    local m_goos = {}
-    local num_goos = 0  -- default
-    if minibatch_g:dim() > 1 then
-        for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end  -- make num_particles copies of minibatch_g
-        m_goos = torch.cat(m_goos,1)
-        num_goos = m_goos:size(2)
-        m_goos = m_goos:reshape(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8) -- take a look at this!
-        local m_goos_window = {}
-        for i=1,windowsize do m_goos_window[#m_goos_window+1] = m_goos end
-        m_goos = torch.cat(m_goos_window, 3)
-    end
-
-    -- check if other_particles is empty
-    local num_other_particles = 0
-    if torch.type(other_particles) ~= 'table' then num_other_particles = other_particles:size(2) end
-
-    -- get the number of steps that we need to pad to 0
-    local num_to_pad = max_other_objects - (num_goos + num_other_particles)
-    if num_goos + num_other_particles > 1 then assert(unpack(torch.find(minibatch_m,1)) == max_other_objects - num_to_pad) end  -- make sure we are padding the right amount
-
-    -- create context
-    local context
-    if num_other_particles > 0 and num_goos > 0 then
-        context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
-        if num_to_pad > 0 then
-            local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
-            context = torch.cat(context, pad_p, 2)
-        end
-    else
-        assert(num_to_pad > 0)
-        local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
-        if num_other_particles > 0 then -- no goos
-            assert(torch.type(m_goos)=='table')
-            assert(not next(m_goos))  -- the table had better be empty
-            context = torch.cat(other_particles, pad_p, 2)
-        elseif num_goos > 0 then -- no other objects
-            assert(torch.type(other_particles)=='table')
-            assert(not next(other_particles))  -- the table had better be empty
-            context = torch.cat(m_goos, pad_p, 2)
-        else
-            assert(num_other_particles == 0 and num_goos == 0)
-            assert(num_to_pad == max_other_objects)
-            context = pad_p  -- context is just the pad then so second dim is always max_objects
-        end
-    end
-    assert(context:dim() == 4 and context:size(1) == num_samples and
-        context:size(2) == max_other_objects and context:size(3) == windowsize and
-        context:size(4) == object_dim)
-
-    -- split into x and y
-    local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
-    local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
-    local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
-    local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
-
-    -- assert num_samples are correct
-    assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
-    -- assert number of axes of tensors are correct
-    assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
-    -- assert seq length is correct
-    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
-    -- check padding
-    assert(context_x:size(2)==max_other_objects)
-    -- check data dimension
-    assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
-
-    -- Relative position wrt the last past coord
-    if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
-
-    if mp.accel then
-        this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
-        new_object_dim = object_dim + 2
-
-        -- here find the indices of the examples that have positive acceleration for this
-        print(this_x:size())  -- (num_examples, 10, 10)
-        -- for each example, see if there exists a one in the acceleration in the (10,10) grid
-        local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
-        local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
-        local hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
-        print(hard_examples)
-        assert(false)
-
-    else
-        new_object_dim = object_dim
-    end
-
-    -- Reshape
-    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
-    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
-    y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
-
-    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
-
-    return {this_x, context_x, y, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
-end
-
-
-function dataloader:next_config2(current_config, start, finish, data)
-    local this_x, context_x, y, minibatch_m, context_future, hard_examples = data -- TODO: possibly instead refer to these as field variables
-
-    -- here only get the batch you need. There is a lot of redundant computation here
-    this_x          = this_x[{{start,finish}}]
-    context_x       = context_x[{{start,finish}}]
-    y               = y[{{start,finish}}]
-    context_future  = context_future[{{start,finish}}]
-
-    -- cuda
-    if self.cuda then
-        this_x          = this_x:cuda()
-        context_x       = context_x:cuda()
-        minibatch_m     = minibatch_m:cuda()
-        y               = y:cuda()
-        context_future  = context_future:cuda()
-    else
-        this_x          = this_x:float()
-        context_x       = context_x:float()
-        minibatch_m     = minibatch_m:float()
-        y               = y:float()
-        context_future  = context_future:float()
-    end
-
-    collectgarbage()
-    return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}
-end
-
-
--- works
-function dataloader.slice_batch(table_of_data, start, finish)
-    local sliced_table_of_data = {}
-    for i=1,#table_of_data do
-        sliced_table_of_data[i] = table_of_data[i][{{start,finish}}]
-    end
-    return sliced_table_of_data
-end
-
-
+--
+--
+-- function dataloader:process_config(current_config)
+--     local minibatch_data = self.dataset[current_config]
+--     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
+--     local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
+--     local minibatch_m = minibatch_data.mask  -- 8
+--
+--     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
+--     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
+--     local num_particles = minibatch_p:size(2)
+--     if num_samples ~= minibatch_p:size(1) * num_particles then
+--         print('num_samples', num_samples)
+--         print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
+--         print('minibatch_p:size()', minibatch_p:size(1))
+--         print('num_particles', num_particles)
+--         print('this_particles:size()', this_particles:size())
+--         print('other_particles:size()', other_particles:size())
+--     end
+--
+--     assert(num_samples == minibatch_p:size(1) * num_particles)
+--
+--     -- check if m_goos is empty
+--     -- if m_goos is empty, then {}, else it is (num_samples, num_goos, 8)
+--     local m_goos = {}
+--     local num_goos = 0  -- default
+--     if minibatch_g:dim() > 1 then
+--         for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end  -- make num_particles copies of minibatch_g
+--         m_goos = torch.cat(m_goos,1)
+--         num_goos = m_goos:size(2)
+--         m_goos = m_goos:reshape(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8) -- take a look at this!
+--         local m_goos_window = {}
+--         for i=1,windowsize do m_goos_window[#m_goos_window+1] = m_goos end
+--         m_goos = torch.cat(m_goos_window, 3)
+--     end
+--
+--     -- check if other_particles is empty
+--     local num_other_particles = 0
+--     if torch.type(other_particles) ~= 'table' then num_other_particles = other_particles:size(2) end
+--
+--     -- get the number of steps that we need to pad to 0
+--     local num_to_pad = max_other_objects - (num_goos + num_other_particles)
+--     if num_goos + num_other_particles > 1 then assert(unpack(torch.find(minibatch_m,1)) == max_other_objects - num_to_pad) end  -- make sure we are padding the right amount
+--
+--     -- create context
+--     local context
+--     if num_other_particles > 0 and num_goos > 0 then
+--         context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
+--         if num_to_pad > 0 then
+--             local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
+--             context = torch.cat(context, pad_p, 2)
+--         end
+--     else
+--         assert(num_to_pad > 0)
+--         local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
+--         if num_other_particles > 0 then -- no goos
+--             assert(torch.type(m_goos)=='table')
+--             assert(not next(m_goos))  -- the table had better be empty
+--             context = torch.cat(other_particles, pad_p, 2)
+--         elseif num_goos > 0 then -- no other objects
+--             assert(torch.type(other_particles)=='table')
+--             assert(not next(other_particles))  -- the table had better be empty
+--             context = torch.cat(m_goos, pad_p, 2)
+--         else
+--             assert(num_other_particles == 0 and num_goos == 0)
+--             assert(num_to_pad == max_other_objects)
+--             context = pad_p  -- context is just the pad then so second dim is always max_objects
+--         end
+--     end
+--     assert(context:dim() == 4 and context:size(1) == num_samples and
+--         context:size(2) == max_other_objects and context:size(3) == windowsize and
+--         context:size(4) == object_dim)
+--
+--     -- split into x and y
+--     local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
+--     local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
+--     local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+--     local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
+--
+--     -- assert num_samples are correct
+--     assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
+--     -- assert number of axes of tensors are correct
+--     assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
+--     -- assert seq length is correct
+--     assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
+--     -- check padding
+--     assert(context_x:size(2)==max_other_objects)
+--     -- check data dimension
+--     assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
+--
+--     -- Relative position wrt the last past coord
+--     if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
+--
+--     if mp.accel then
+--         this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
+--         new_object_dim = object_dim + 2
+--
+--         -- here find the indices of the examples that have positive acceleration for this
+--         print(this_x:size())  -- (num_examples, 10, 10)
+--         -- for each example, see if there exists a one in the acceleration in the (10,10) grid
+--         local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
+--         local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
+--         local hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
+--     else
+--         new_object_dim = object_dim
+--     end
+--
+--     -- Reshape
+--     this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
+--     context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
+--     y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
+--     context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
+--
+--     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
+--
+--     return {this_x, context_x, y, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
+-- end
+--
+--
+-- function dataloader:next_config2(current_config, start, finish, data)
+--     local this_x, context_x, y, minibatch_m, context_future, hard_examples = data -- TODO: possibly instead refer to these as field variables
+--
+--     -- here only get the batch you need. There is a lot of redundant computation here
+--     this_x          = this_x[{{start,finish}}]
+--     context_x       = context_x[{{start,finish}}]
+--     y               = y[{{start,finish}}]
+--     context_future  = context_future[{{start,finish}}]
+--
+--     -- cuda
+--     if self.cuda then
+--         this_x          = this_x:cuda()
+--         context_x       = context_x:cuda()
+--         minibatch_m     = minibatch_m:cuda()
+--         y               = y:cuda()
+--         context_future  = context_future:cuda()
+--     else
+--         this_x          = this_x:float()
+--         context_x       = context_x:float()
+--         minibatch_m     = minibatch_m:float()
+--         y               = y:float()
+--         context_future  = context_future:float()
+--     end
+--
+--     collectgarbage()
+--     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}
+-- end
+--
+--
+-- -- works
+-- function dataloader.slice_batch(table_of_data, start, finish)
+--     local sliced_table_of_data = {}
+--     for i=1,#table_of_data do
+--         sliced_table_of_data[i] = table_of_data[i][{{start,finish}}]
+--     end
+--     return sliced_table_of_data
+-- end
+--
+--
 function dataloader:count_examples(configs)
     local total_samples = 0
     local config_sizes = {}
@@ -572,8 +573,8 @@ function dataloader:count_examples(configs)
     local num_batches = total_samples/self.batch_size
     return total_samples, num_batches, config_sizes
 end
-
-
+--
+--
 function dataloader:compute_batches()
     local current_config = 1
     local current_batch_in_config = 0
@@ -587,8 +588,8 @@ function dataloader:compute_batches()
     assert(self.num_batches == #batchlist)
     return batchlist
 end
-
-
+--
+--
 function dataloader:get_batch_info(current_config, current_batch_in_config)
     -- assumption that a config contains more than one batch
     current_batch_in_config = current_batch_in_config + self.batch_size
@@ -634,26 +635,26 @@ function dataloader:sample_sequential_batch()
     if self.current_batch > self.num_batches then self.current_batch = 1 end
     return self:load_batch_id(self.batch_idxs[self.current_batch])
 end
-
-function dataloader:save_sequential_batches()
-    local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
-    if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
-    for i = 1,self.num_batches do
-        local batch = self:sample_batch_id(self.batch_idxs[i])
-        local batchname = savefolder..'/'..'batch'..i
-        torch.save(batchname, batch)
-        print('saved '..batchname)
-    end
-end
-
-function dataloader:sample_batch_id(id)
-    self.current_sampled_id = id
-    local config_name, start, finish = unpack(self.batchlist[id])
-    -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
-    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    local nextbatch = self:next_config(config_name, start, finish)
-    return nextbatch
-end
+--
+-- function dataloader:save_sequential_batches()
+--     local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
+--     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
+--     for i = 1,self.num_batches do
+--         local batch = self:sample_batch_id(self.batch_idxs[i])
+--         local batchname = savefolder..'/'..'batch'..i
+--         torch.save(batchname, batch)
+--         print('saved '..batchname)
+--     end
+-- end
+--
+-- function dataloader:sample_batch_id(id)
+--     self.current_sampled_id = id
+--     local config_name, start, finish = unpack(self.batchlist[id])
+--     -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
+--     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+--     local nextbatch = self:next_config(config_name, start, finish)
+--     return nextbatch
+-- end
 
 
 function dataloader:load_batch_id(id)
@@ -673,66 +674,66 @@ end
 
 -- this             (num_samples x num_past x 8)
 -- context          (num_samples x max_other_objects x num_past x 8)
--- y                (num_samples x num_future x 8)
--- context_future   (num_samples x max_other_objects x num_future x 8)
-function add_accel(this_x, context_x, y, context_future)
-    local this_x_accel = add_accel_each(this_x,true)
-    local context_x_accel = add_accel_each(context_x,false)
-    local y_accel = add_accel_each(y,true)
-    local context_future_accel = add_accel_each(context_future,false)
-
-    return {this_x_accel,context_x_accel,y_accel,context_future_accel}
-end
-
-function add_accel_each(obj,isthis)
-    local eps = 1e-10
-    local num_samples = obj:size(1)
-    if isthis then
-        assert(obj:dim() == 3)
-        local num_steps = obj:size(2)
-        local vel = obj[{{},{},{3,4}}]:clone()  -- num_samples, num_steps, 2
-        local accel = torch.zeros(num_samples,num_steps,2)
-
-        for step = 2,num_steps do
-            accel[{{},{step},{1}}] = torch.abs((vel[{{},{step},{1}}] - vel[{{},{step-1},{1}}])):gt(eps)
-            accel[{{},{step},{2}}] = torch.abs(vel[{{},{step},{2}}] - vel[{{},{step-1},{2}}]):gt(eps)
-        end
-
-        local new_obj = torch.zeros(num_samples,num_steps,obj:size(3)+2)
-        new_obj[{{},{},{3,4}}] = obj[{{},{},{3,4}}]
-        new_obj[{{},{},{5,6}}] = accel
-        new_obj[{{},{},{7,10}}] = obj[{{},{},{5,8}}]
-
-        return new_obj:clone()
-    else
-        assert(obj:dim() == 4)
-        local num_steps = obj:size(3)
-        local max_objects = obj:size(2)
-        local vel = obj[{{},{},{},{3,4}}]
-        local accel = torch.zeros(num_samples,max_objects,num_steps,2)
-
-        for step = 2,num_steps do
-            accel[{{},{},{step},{1}}] = torch.abs((vel[{{},{},{step},{1}}] - vel[{{},{},{step-1},{1}}])):gt(eps)
-            accel[{{},{},{step},{2}}] = torch.abs(vel[{{},{},{step},{2}}] - vel[{{},{},{step-1},{2}}]):gt(eps)
-        end
-
-        local new_obj = torch.zeros(num_samples,max_objects,num_steps,obj:size(4)+2)
-        new_obj[{{},{},{},{3,4}}] = obj[{{},{},{},{3,4}}]
-        new_obj[{{},{},{},{5,6}}] = accel
-        new_obj[{{},{},{},{7,10}}] = obj[{{},{},{},{5,8}}]
-        -- print('hi')
-        -- print(new_obj:size())
-        return new_obj:clone()
-    end
-end
-
--- orders the configs in topo order
--- there can be two equally valid topo sorts:
---      first: all particles, then all goos
---      second: diagonal
-function topo_order(configs)
-    table.sort(configs)
-end
+-- -- y                (num_samples x num_future x 8)
+-- -- context_future   (num_samples x max_other_objects x num_future x 8)
+-- function add_accel(this_x, context_x, y, context_future)
+--     local this_x_accel = add_accel_each(this_x,true)
+--     local context_x_accel = add_accel_each(context_x,false)
+--     local y_accel = add_accel_each(y,true)
+--     local context_future_accel = add_accel_each(context_future,false)
+--
+--     return {this_x_accel,context_x_accel,y_accel,context_future_accel}
+-- end
+--
+-- function add_accel_each(obj,isthis)
+--     local eps = 1e-10
+--     local num_samples = obj:size(1)
+--     if isthis then
+--         assert(obj:dim() == 3)
+--         local num_steps = obj:size(2)
+--         local vel = obj[{{},{},{3,4}}]:clone()  -- num_samples, num_steps, 2
+--         local accel = torch.zeros(num_samples,num_steps,2)
+--
+--         for step = 2,num_steps do
+--             accel[{{},{step},{1}}] = torch.abs((vel[{{},{step},{1}}] - vel[{{},{step-1},{1}}])):gt(eps)
+--             accel[{{},{step},{2}}] = torch.abs(vel[{{},{step},{2}}] - vel[{{},{step-1},{2}}]):gt(eps)
+--         end
+--
+--         local new_obj = torch.zeros(num_samples,num_steps,obj:size(3)+2)
+--         new_obj[{{},{},{3,4}}] = obj[{{},{},{3,4}}]
+--         new_obj[{{},{},{5,6}}] = accel
+--         new_obj[{{},{},{7,10}}] = obj[{{},{},{5,8}}]
+--
+--         return new_obj:clone()
+--     else
+--         assert(obj:dim() == 4)
+--         local num_steps = obj:size(3)
+--         local max_objects = obj:size(2)
+--         local vel = obj[{{},{},{},{3,4}}]
+--         local accel = torch.zeros(num_samples,max_objects,num_steps,2)
+--
+--         for step = 2,num_steps do
+--             accel[{{},{},{step},{1}}] = torch.abs((vel[{{},{},{step},{1}}] - vel[{{},{},{step-1},{1}}])):gt(eps)
+--             accel[{{},{},{step},{2}}] = torch.abs(vel[{{},{},{step},{2}}] - vel[{{},{},{step-1},{2}}]):gt(eps)
+--         end
+--
+--         local new_obj = torch.zeros(num_samples,max_objects,num_steps,obj:size(4)+2)
+--         new_obj[{{},{},{},{3,4}}] = obj[{{},{},{},{3,4}}]
+--         new_obj[{{},{},{},{5,6}}] = accel
+--         new_obj[{{},{},{},{7,10}}] = obj[{{},{},{},{5,8}}]
+--         -- print('hi')
+--         -- print(new_obj:size())
+--         return new_obj:clone()
+--     end
+-- end
+--
+-- -- orders the configs in topo order
+-- -- there can be two equally valid topo sorts:
+-- --      first: all particles, then all goos
+-- --      second: diagonal
+-- function topo_order(configs)
+--     table.sort(configs)
+-- end
 
 
 function contains_world(worldconfigtable)
