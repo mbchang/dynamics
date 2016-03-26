@@ -141,6 +141,7 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     -- at this point you should be able to save
     -- print(self.batchlist)
     -- assert(false)
+    self.num_batches = 12 -- TODO hardcoded!
 
 
     self.priority_sampler = PS.create(self.num_batches)
@@ -617,7 +618,7 @@ end
 
 
 function dataloader:sample_priority_batch(pow)
-    if self.priority_sampler.epc_num > 1 then
+    if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1
         return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
         -- return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
