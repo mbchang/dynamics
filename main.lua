@@ -468,7 +468,7 @@ function experiment()
         print('Learning rate is now '..optim_state.learningRate)
         train(i)
         local train_loss = test(train_test_loader, model.theta.params, false)
-        local val_loss = 2--test(val_loader, model.theta.params, false)
+        local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
         print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 
