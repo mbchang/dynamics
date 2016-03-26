@@ -110,7 +110,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.batch_size = batch_size
     self.object_dim = object_dim
     self.relative = relative
-    self.cuda = cuda
+    self.cuda = cuda  -- TODO remove this if you are just saving
     self.num_past = num_past
     self.winsize = winsize
 
@@ -135,7 +135,6 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
 
     ----------------------- Initial values for iterator ------------------------
     self.batchlist = self:compute_batches()  -- you will index into this
-    self.current_batch = 0
     assert(self.num_batches == #self.batchlist)
 
     collectgarbage()
@@ -241,151 +240,6 @@ end
 
         num_samples_slice is num_samples[start:finish], inclusive
 --]]
--- TODO: you should separate this method into two: one part is to process the whole dataset
-function datasaver:next_config(current_config, start, finish)
-    local minibatch_data = self.dataset[current_config]
-    local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
-    local minibatch_g = minibatch_data.goos  -- (num_examples x num_goos x 8) or {}?
-    local minibatch_m = minibatch_data.mask  -- 8
-
-    local this_particles, other_particles = expand_for_each_particle(minibatch_p)
-    local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
-    local num_particles = minibatch_p:size(2)
-    if num_samples ~= minibatch_p:size(1) * num_particles then
-        print('num_samples', num_samples)
-        print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
-        print('minibatch_p:size()', minibatch_p:size(1))
-        print('num_particles', num_particles)
-        print('this_particles:size()', this_particles:size())
-        print('other_particles:size()', other_particles:size())
-    end
-
-    assert(num_samples == minibatch_p:size(1) * num_particles)
-
-    -- check if m_goos is empty
-    -- if m_goos is empty, then {}, else it is (num_samples, num_goos, 8)
-    local m_goos = {}
-    local num_goos = 0  -- default
-    if minibatch_g:dim() > 1 then
-        for i=1,num_particles do m_goos[#m_goos+1] = minibatch_g end  -- make num_particles copies of minibatch_g
-        m_goos = torch.cat(m_goos,1)
-        num_goos = m_goos:size(2)
-        m_goos = m_goos:reshape(m_goos:size(1), m_goos:size(2), 1, m_goos:size(3))  -- (num_samples, num_goos, 1, 8) -- take a look at this!
-        local m_goos_window = {}
-        for i=1,windowsize do m_goos_window[#m_goos_window+1] = m_goos end
-        m_goos = torch.cat(m_goos_window, 3)
-    end
-
-    -- check if other_particles is empty
-    local num_other_particles = 0
-    if torch.type(other_particles) ~= 'table' then num_other_particles = other_particles:size(2) end
-
-    -- get the number of steps that we need to pad to 0
-    local num_to_pad = max_other_objects - (num_goos + num_other_particles)
-    if num_goos + num_other_particles > 1 then assert(unpack(torch.find(minibatch_m,1)) == max_other_objects - num_to_pad) end  -- make sure we are padding the right amount
-
-    -- create context
-    local context
-    if num_other_particles > 0 and num_goos > 0 then
-        context = torch.cat(other_particles, m_goos, 2)  -- (num_samples x (num_objects-1) x windowsize/2 x 8)
-        if num_to_pad > 0 then
-            local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
-            context = torch.cat(context, pad_p, 2)
-        end
-    else
-        assert(num_to_pad > 0)
-        local pad_p = torch.Tensor(num_samples, num_to_pad, windowsize, object_dim):fill(0)
-        if num_other_particles > 0 then -- no goos
-            assert(torch.type(m_goos)=='table')
-            assert(not next(m_goos))  -- the table had better be empty
-            context = torch.cat(other_particles, pad_p, 2)
-        elseif num_goos > 0 then -- no other objects
-            assert(torch.type(other_particles)=='table')
-            assert(not next(other_particles))  -- the table had better be empty
-            context = torch.cat(m_goos, pad_p, 2)
-        else
-            assert(num_other_particles == 0 and num_goos == 0)
-            assert(num_to_pad == max_other_objects)
-            context = pad_p  -- context is just the pad then so second dim is always max_objects
-        end
-    end
-    assert(context:dim() == 4 and context:size(1) == num_samples and
-        context:size(2) == max_other_objects and context:size(3) == windowsize and
-        context:size(4) == object_dim)
-
-    -- split into x and y
-    local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
-    local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
-    local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
-    local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
-
-    -- assert num_samples are correct
-    assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
-    -- assert number of axes of tensors are correct
-    assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
-    -- assert seq length is correct
-    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
-    -- check padding
-    assert(context_x:size(2)==max_other_objects)
-    -- check data dimension
-    assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
-
-    -- Relative position wrt the last past coord
-    if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
-
-    if mp.accel then
-        this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
-        new_object_dim = object_dim + 2
-
-        -- here find the indices of the examples that have positive acceleration for this
-        print(this_x:size())  -- (num_examples, 10, 10)
-        -- for each example, see if there exists a one in the acceleration in the (10,10) grid
-        local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
-        local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
-        local hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
-        -- print(hard_examples)
-        -- assert(false)
-    else
-        new_object_dim = object_dim
-    end
-
-    -- Reshape
-    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
-    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
-    y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
-
-    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
-
-
-    -- TODO this is where the first method hand
-
-    -- here only get the batch you need. There is a lot of redundant computation here
-    this_x          = this_x[{{start,finish}}]
-    context_x       = context_x[{{start,finish}}]
-    y               = y[{{start,finish}}]
-    context_future  = context_future[{{start,finish}}]
-
-    -- cuda
-    if self.cuda then
-        this_x          = this_x:cuda()
-        context_x       = context_x:cuda()
-        minibatch_m     = minibatch_m:cuda()
-        y               = y:cuda()
-        context_future  = context_future:cuda()
-    else
-        this_x          = this_x:float()
-        context_x       = context_x:float()
-        minibatch_m     = minibatch_m:float()
-        y               = y:float()
-        context_future  = context_future:float()
-    end
-
-    collectgarbage()
-    return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}  -- here return start, finish, and configname too
-end
-
-
 function datasaver:process_config(current_config)
     local minibatch_data = self.dataset[current_config]
     local minibatch_p = minibatch_data.particles  -- (num_examples x num_particles x windowsize x 8)
@@ -505,7 +359,7 @@ function datasaver:process_config(current_config)
 end
 
 
-function datasaver:next_config2(current_config, start, finish, data)
+function datasaver:next_batch(current_config, start, finish, data)
     local this_x, context_x, y, minibatch_m, context_future, hard_examples = unpack(data) -- TODO: possibly instead refer to these as field variables
 
     -- here only get the batch you need. There is a lot of redundant computation here
@@ -558,7 +412,6 @@ function datasaver:count_examples(configs)
     return total_samples, num_batches, config_sizes
 end
 
-
 function datasaver:compute_batches()
     local current_config = 1
     local current_batch_in_config = 0
@@ -598,36 +451,15 @@ function datasaver:get_batch_info(current_config, current_batch_in_config)
             current_config}  -- end index in config
 end
 
-function datasaver:sample_priority_batch(pow)
-    if self.priority_sampler.epc_num > 1 then
-        return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
-        -- return self:get_batch(self.priority_sampler:sample(pow))  -- sum turns it into a number
-    else
-        return self:sample_sequential_batch()  -- or sample_random_batch
-    end
-end
-
-function datasaver:sample_random_batch()
-    local id = math.random(self.num_batches)
-    return self:load_batch_id(id)
-end
-
-function datasaver:sample_sequential_batch()
-    self.current_batch = self.current_batch + 1
-    if self.current_batch > self.num_batches then self.current_batch = 1 end
-    return self:load_batch_id(self.batch_idxs[self.current_batch])
-end
-
 function datasaver:save_sequential_batches()
     local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
 
     local config_data = self:get_config_data()
 
-    for i = 1,12 do --self.num_batches do
-        local batch, config_name = self:get_batch(i, config_data)
-        paths.mkdir(savefolder..'/'..config_name) -- TODO remove
-        local batchname = savefolder..'/'..config_name..'/'..'batch'..i
+    for i = 1,self.num_batches do
+        local batch = self:get_batch(i, config_data)
+        local batchname = savefolder..'/'..'batch'..i
         torch.save(batchname, batch)
         print('saved '..batchname)
     end
@@ -645,25 +477,10 @@ end
 function datasaver:get_batch(id, config_data)
     self.current_sampled_id = id
     local config_name, start, finish = unpack(self.batchlist[id])
-    print('current batch: '..self.current_batch .. ' id: '.. id ..
-            ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    local nextbatch = self:next_config2(config_name, start, finish, config_data[config_name])
+    -- print('current batch: '..self.current_batch .. ' id: '.. id ..
+    --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
+    local nextbatch = self:next_batch(config_name, start, finish, config_data[config_name])
     collectgarbage()
-    return nextbatch, config_name
-end
-
-
-function datasaver:load_batch_id(id)
-    self.current_sampled_id = id
-    -- local config_name, start, finish = unpack(self.batchlist[id])
-    -- -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
-    -- --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    -- local nextbatch = self:next_config(config_name, start, finish)
-
-    local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
-    local batchname = savefolder..'/'..'batch'..id
-    local nextbatch = torch.load(batchname)
-    -- print(nextbatch)
     return nextbatch
 end
 
@@ -823,36 +640,3 @@ function datasaver.convert2allconfigs(config_abbrev_table_string)
 end
 
 return datasaver
-
---
--- d = datasaver.create('trainset', {}, '/om/user/mbchang/physics-data/dataset_files_subsampled', 100, false, false)
--- d = datasaver.create('trainset', {'worldm1', 'worldm2_np=3_ng=3'}, 'haha', 4, true, false)
--- print(d.specified_configs)
-
-
--- d = datasaver.create('trainset', convert2allconfigs("[4:-:-:],[1-2-3]"), 'haha', 4, true, false)
--- print(d.specified_configs)
-
-
-
--- local cur = {'[:-1:1-:]','[:-2:2-:]','[:-3:3-:]','[:-4:4-:]','[:-5:5-:]','[:-6:6-:]'}
--- for _,c in pairs(cur) do
---     print(c)
---     print(convert2allconfigs(c))
---     print('################################################################')
--- end
-
-
-
--- -- for i=1,20 do
--- -- print(d:next_batch()) end
--- -- print(d:next_batch())
--- print(d.batchlist)
--- print('num_batches:', d.num_batches)
--- for i=1,d.num_batches do
---     d:next_batch()
--- end
--- -- print(d:count_examples(d.config_idxs))
--- -- d:compute_batches()
-
--- d:next_batch()
