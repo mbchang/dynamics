@@ -25,23 +25,14 @@ local world_range = {1,4}
 local particle_range = {1,6}
 local goo_range = {0,5}
 
-function dataloader.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative, num_past, winsize)
+function dataloader.create(dataset_name, dataset_folder, shuffle, cuda)
     --[[
+        I actually only need dataset_name, dataset_folder, shufffle, cuda. Do I need a priority_sampler?
+
         Input
             dataset_name: file containing data, like 'trainset'
             dataset_folder: folder containing the .h5 files
             shuffle: boolean
-
-
-            What I want to be able to is to have a dataloader, that takes in parameters:
-                - dataset_name?
-                - shuffle
-                - a table of configs (indexed by number, in order)
-                - batch size
-
-            Then when I do next_batch, it will go through appropriately.
-
-            specified_configs = table of worlds or configs
     --]]
     assert(all_args_exist({dataset_name, dataset_folder, specified_configs,batch_size,shuffle,cuda},6))
 
@@ -53,7 +44,6 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     self.dataset_folder = dataset_folder
     self.cuda = cuda
     self.current_batch = 0
-    -- assert(self.num_batches == #self.batchlist)
 
     self.num_batches = 12 -- TODO hardcoded!
 
@@ -96,15 +86,13 @@ function dataloader:load_batch_id(id)
     -- local config_name, start, finish = unpack(self.batchlist[id])
     -- -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
     -- --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    -- local nextbatch = self:next_config(config_name, start, finish)
-
     local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     local batchname = savefolder..'/'..'batch'..id
     local nextbatch = torch.load(batchname)
     local this, context, y, mask, config, start, finish, context_future = unpack(nextbatch)
 
     -- convert to cuda or double
-    this,context,y,context_future = unpack(map(convert_type,{this,context,y,context_future}))
+    this,context,y,context_future = unpack(map(convert_type,{this,context,y,context_future},self.cuda))
 
     nextbatch = {this, context, y, mask, config, start, finish, context_future}
     collectgarbage()

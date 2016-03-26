@@ -66,7 +66,7 @@ if mp.server == 'pc' then
     mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
-    mp.max_epochs = 50
+    -- mp.max_epochs = 5
 else
 	mp.winsize = 20  -- total number of frames
     mp.num_past = 10 -- total number of past frames
@@ -126,16 +126,12 @@ function inittrain(preload, model_path)
     print("Network parameters:")
     print(mp)
     local data_loader_args = {mp.dataset_folder,
-                              mp.batch_size,
                               mp.shuffle,
-                              mp.cuda,
-                              mp.relative,
-                              mp.num_past,
-                              mp.winsize}
-    train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
-    val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
-    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
-    train_test_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
+                              mp.cuda}
+    train_loader = D.create('trainset', unpack(data_loader_args))
+    val_loader =  D.create('valset', unpack(data_loader_args))  -- using testcfgs
+    test_loader = D.create('testset', unpack(data_loader_args))
+    train_test_loader = D.create('trainset', unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
@@ -147,29 +143,29 @@ function inittrain(preload, model_path)
     print("Initialized Network")
 end
 
+-- function initsavebatches(preload, model_path)
+--     mp.cuda = false
+--     mp.cunn = false
+--     mp.shuffle = false
+--     print("Network parameters:")
+--     print(mp)
+--     local data_loader_args = {mp.dataset_folder,
+--                               mp.batch_size,
+--                               mp.shuffle,
+--                               mp.cuda,
+--                               mp.relative,
+--                               mp.num_past,
+--                               mp.winsize}
+--     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
+--     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
+--     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+--
+--     train_loader:save_sequential_batches()
+--     val_loader:save_sequential_batches()
+--     test_loader:save_sequential_batches()
+-- end
+
 function initsavebatches(preload, model_path)
-    mp.cuda = false
-    mp.cunn = false
-    mp.shuffle = false
-    print("Network parameters:")
-    print(mp)
-    local data_loader_args = {mp.dataset_folder,
-                              mp.batch_size,
-                              mp.shuffle,
-                              mp.cuda,
-                              mp.relative,
-                              mp.num_past,
-                              mp.winsize}
-    train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
-    val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
-    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
-
-    train_loader:save_sequential_batches()
-    val_loader:save_sequential_batches()
-    test_loader:save_sequential_batches()
-end
-
-function initsavebatches2(preload, model_path)
     mp.cuda = false
     mp.cunn = false
     mp.shuffle = false
@@ -195,13 +191,9 @@ function inittest(preload, model_path)
     print("Network parameters:")
     print(mp)
     local data_loader_args = {mp.dataset_folder,
-                              mp.batch_size,
                               mp.shuffle,
-                              mp.cuda,
-                              mp.relative,
-                              mp.num_past,
-                              mp.winsize}
-    test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- TODO: Testing on trainset
+                              mp.cuda}
+    test_loader = D.create('testset', unpack(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
     if preload then mp = torch.load(model_path).mp end
     modelfile = model_path
@@ -560,7 +552,7 @@ if mp.mode == 'exp' then
 elseif mp.mode == 'sim' then
     predict_simulate()
 elseif mp.mode == 'save' then
-    initsavebatches2(false)
+    initsavebatches(false)
 else
     predict()
 end
