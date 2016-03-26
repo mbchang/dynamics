@@ -105,10 +105,10 @@ end
 -- from http://lua-users.org/wiki/FunctionalLibrary
 -- map(function, table)
 -- e.g: map(double, {1,2,3})    -> {2,4,6}
-function map(func, tbl)
+function map(func, tbl, args)  -- args are for the func
     local newtbl = {}
     for i,v in pairs(tbl) do
-        newtbl[i] = func(v)
+        newtbl[i] = func(v, args)
     end
     return newtbl
 end
