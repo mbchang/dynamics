@@ -137,7 +137,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.batchlist = self:compute_batches()  -- you will index into this
     assert(self.num_batches == #self.batchlist)
 
-    self.num_batches = 12 -- TODO hardcoded!
+    self.num_batches = 20 -- TODO hardcoded!
 
     collectgarbage()
     return self
@@ -451,8 +451,10 @@ function datasaver:save_sequential_batches()
     local config_data = self:get_config_data()
 
     for i = 1,self.num_batches do
-        local batch = self:get_batch(i, config_data)
-        local batchname = savefolder..'/'..'batch'..i
+        local batch, ishard = self:get_batch(i, config_data)
+        local ext
+        if ishard then ext = '_hard' else ext = '' end
+        local batchname = savefolder..'/'..'batch'..i..ext
         torch.save(batchname, batch)
         print('saved '..batchname)
     end
@@ -473,8 +475,12 @@ function datasaver:get_batch(id, config_data)
     -- print('current batch: '..self.current_batch .. ' id: '.. id ..
     --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
     local nextbatch = self:next_batch(config_name, start, finish, config_data[config_name])
+
+    local ishard = false
+    if isin(id,config_data[config_name][6]) then ishard = true end  -- [6] is hard_examples
+
     collectgarbage()
-    return nextbatch
+    return nextbatch, ishard
 end
 
 
