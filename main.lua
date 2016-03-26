@@ -14,6 +14,7 @@ require 'pl'
 -- Local Imports
 local model_utils = require 'model_utils'
 local D = require 'DataLoader'
+local D2 = require 'datasaver'
 require 'logging_utils'
 
 -- torch.setdefaulttensortype('torch.FloatTensor')
@@ -54,7 +55,7 @@ if mp.server == 'pc' then
     mp.winsize = 20  -- total number of frames
     mp.num_past = 10 --10
     mp.num_future = 10 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/3'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/7'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 30 --1
@@ -168,6 +169,28 @@ function initsavebatches(preload, model_path)
     test_loader:save_sequential_batches()
 end
 
+function initsavebatches2(preload, model_path)
+    mp.cuda = false
+    mp.cunn = false
+    mp.shuffle = false
+    print("Network parameters:")
+    print(mp)
+    local data_loader_args = {mp.dataset_folder,
+                              mp.batch_size,
+                              mp.shuffle,
+                              mp.cuda,
+                              mp.relative,
+                              mp.num_past,
+                              mp.winsize}
+    train_loader = D2.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
+    val_loader =  D2.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
+    test_loader = D2.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+
+    train_loader:save_sequential_batches()
+    val_loader:save_sequential_batches()
+    test_loader:save_sequential_batches()
+end
+
 function inittest(preload, model_path)
     print("Network parameters:")
     print(mp)
@@ -180,6 +203,7 @@ function inittest(preload, model_path)
                               mp.winsize}
     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
+    if preload then mp = torch.load(model_path).mp end
     modelfile = model_path
     print("Initialized Network")
 end
@@ -222,7 +246,7 @@ end
 function train(epoch_num)
     local new_params, train_loss
     local loss_run_avg = 0
-    for t = 1,6 do --train_loader.num_batches do
+    for t = 1,train_loader.num_batches do
         train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
         -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
@@ -501,8 +525,26 @@ function run_experiment()
     experiment()
 end
 
+
+function getLastSnapshot(network_name)
+    local res_file = io.popen("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1")
+    local status, result = pcall(function() return res_file:read():match( "^%s*(.-)%s*$" ) end)
+    res_file:close()
+    if not status then
+        return false
+    else
+        return result
+    end
+end
+
 function predict()
-    inittest(true, mp.savedir ..'/'..'network.t7')
+    local snapshot = getLastSnapshot('save3')
+    print(snapshot)
+    -- assert(false)
+    mp = torch.load(mp.savedir ..'/'..snapshot).mp
+    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
+
+    -- inittest(true, mp.savedir ..'/'..'network.t7')  -- assuming the mp.savedir doesn't change
     print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
 end
 
@@ -518,7 +560,7 @@ if mp.mode == 'exp' then
 elseif mp.mode == 'sim' then
     predict_simulate()
 elseif mp.mode == 'save' then
-    initsavebatches(false)
+    initsavebatches2(false)
 else
     predict()
 end
