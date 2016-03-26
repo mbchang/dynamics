@@ -81,7 +81,7 @@ function load_data(dataset_name, dataset_folder)
 end
 
 
-function datasaver.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, cuda, relative, num_past, winsize)
+function datasaver.create(dataset_name, specified_configs, dataset_folder, batch_size, shuffle, relative, num_past, winsize)
     --[[
         Input
             dataset_name: file containing data, like 'trainset'
@@ -99,7 +99,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
 
             specified_configs = table of worlds or configs
     --]]
-    assert(all_args_exist({dataset_name, dataset_folder, specified_configs,batch_size,shuffle,cuda},6))
+    assert(all_args_exist({dataset_name, dataset_folder, specified_configs,batch_size,shuffle},5))
 
     local self = {}
     setmetatable(self, datasaver)
@@ -110,7 +110,6 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.batch_size = batch_size
     self.object_dim = object_dim
     self.relative = relative
-    self.cuda = cuda  -- TODO remove this if you are just saving
     self.num_past = num_past
     self.winsize = winsize
 
@@ -119,6 +118,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.configs = get_keys(self.dataset)  -- table of all keys
 
     ---------------------- Focus Dataset to Specification ----------------------
+    specified_configs = convert2allconfigs(specified_configs)
     if is_empty(specified_configs) then
         self.specified_configs = self.configs
     elseif contains_world(specified_configs) then
@@ -370,20 +370,11 @@ function datasaver:next_batch(current_config, start, finish, data)
     y               = y[{{start,finish}}]
     context_future  = context_future[{{start,finish}}]
 
-    -- cuda
-    if self.cuda then
-        this_x          = this_x:cuda()
-        context_x       = context_x:cuda()
-        minibatch_m     = minibatch_m:cuda()
-        y               = y:cuda()
-        context_future  = context_future:cuda()
-    else
-        this_x          = this_x:float()
-        context_x       = context_x:float()
-        minibatch_m     = minibatch_m:float()
-        y               = y:float()
-        context_future  = context_future:float()
-    end
+    this_x          = this_x:float()
+    context_x       = context_x:float()
+    minibatch_m     = minibatch_m:float()
+    y               = y:float()
+    context_future  = context_future:float()
 
     collectgarbage()
     return {this_x, context_x, y, minibatch_m, current_config, start, finish, context_future}
@@ -626,7 +617,7 @@ end
 
 -- "[4--],[1-2-3],[3--],[2-1-5]"
 -- notice that is surrounded by brackets
-function datasaver.convert2allconfigs(config_abbrev_table_string)
+function convert2allconfigs(config_abbrev_table_string)
     assert(stringx.lfind(config_abbrev_table_string, ' ') == nil)
     local x = stringx.split(config_abbrev_table_string,',')  -- get rid of brackets; x is a table
 
