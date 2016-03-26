@@ -698,7 +698,7 @@ def recover_goos(goos):
 
     return all_sample_goos
 
-def recover_particles(this, other):
+def recover_particles(this, other, accel):
     """
         Just recovers the particle attributes not the paths
 
@@ -726,11 +726,11 @@ def recover_particles(this, other):
     samples = []  # each element is a list of particles for that sample
     for s in xrange(this.shape[0]): # iterate over samples
         sample_particles = []
-        this_particle = hardcode_attributes(Context_Particle(this[s,:,:]).to_dict(), True)
+        this_particle = hardcode_attributes(Context_Particle(this[s,:,:]).to_dict(accel), True)
         sample_particles.append(this_particle)
 
         for o in xrange(other.shape[1]):  # iterate through other particles
-            other_particle = hardcode_attributes(Context_Particle(other[s,o,:,:]).to_dict(), False)
+            other_particle = hardcode_attributes(Context_Particle(other[s,o,:,:]).to_dict(accel), False)
             sample_particles.append(other_particle)
         samples.append(sample_particles)
     return samples
@@ -765,8 +765,10 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-def recover_state(this, context, this_pred, config, velocityonly=True, subsamp=5):
+def recover_state(this, context, this_pred, config, velocityonly=True, accel=True, subsamp=5):
     """
+        if accel then object_dim should be 10
+
         input
             this:       (num_samples, winsize/2, 8)
                 past
@@ -778,6 +780,7 @@ def recover_state(this, context, this_pred, config, velocityonly=True, subsamp=5
                     or prediction if you want to render prediction
             config:     something like: worldm1_np=1_ng=1
             velocityonly: boolean for whether you want to extrapolate from velocity
+            accel: boolean for whether you are using accel data
             subsamp: subsample rate
 
         output
@@ -810,11 +813,9 @@ def recover_state(this, context, this_pred, config, velocityonly=True, subsamp=5
     recovered_goos_all_samples = recover_goos(goos)
 
     # Next recover particles
-    recovered_particles_all_samples = recover_particles(this, other)  # this just gets state information
+    recovered_particles_all_samples = recover_particles(this, other, accel)  # this just gets state information
 
     # Take care of velocity only
-    # do I need to take care of the ground truth reconstruction? TODO you should do this for testing purposes
-    # TODO DEBUG!
     if velocityonly:
         # here you have to unnormalize first
         lastpos = np.copy(this[:,-1,:2])*G_w_width  # (num_samples, winsize/2 [px,py])
@@ -836,10 +837,6 @@ def recover_state(this, context, this_pred, config, velocityonly=True, subsamp=5
 
         # normalize again
         pos = pos/G_w_width
-        # print lastpos[0,0]/G_w_width
-        # print pos[0,0,:2]
-        # print this_pred[0,0,:2]
-        # assert False
 
         assert pos[:,1:,:].shape[1] == this_pred.shape[1]
 
@@ -915,9 +912,27 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     d = load_dict_from_hdf5(training_samples_hdf5)
     config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
 
-    samples_past = recover_state(d['this'], d['context'], d['this'], config_name, False)  # TODO velocityonly should not apply for the past!
-    samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name, True)
-    samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name, True)
+    print(d['this'])
+    assert(False)
+
+    samples_past = recover_state(this=d['this'],
+                                 context=d['context'],
+                                 this_pred=d['this'],
+                                 config=config_name,
+                                 velocityonly=False, # TODO velocityonly should not apply for the past!
+                                 accel=True)
+    samples_future_gt = recover_state(this=d['this'],
+                                      context=d['context_future'],
+                                      this_pred=d['y'],
+                                      config=config_name,
+                                      velocityonly=True,
+                                      accel=True)
+    samples_future_pred = recover_state(this=d['this'],
+                                        context=d['context_future'],
+                                        this_pred=d['pred'],
+                                        config=config_name,
+                                        velocityonly=True,
+                                        accel=True)
 
     windowsize = np.array(samples_past[2][2]).shape[0]
 

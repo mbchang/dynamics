@@ -55,7 +55,7 @@ if mp.server == 'pc' then
     mp.winsize = 20  -- total number of frames
     mp.num_past = 10 --10
     mp.num_future = 10 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/7'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/5'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 30 --1
@@ -174,13 +174,12 @@ function initsavebatches(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.batch_size,
                               mp.shuffle,
-                              mp.cuda,
                               mp.relative,
                               mp.num_past,
                               mp.winsize}
-    train_loader = D2.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
-    val_loader =  D2.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
-    test_loader = D2.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
+    train_loader = D2.create('trainset', mp.traincfgs, unpack(data_loader_args))
+    val_loader =  D2.create('valset', mp.testcfgs, unpack(data_loader_args))  -- using testcfgs
+    test_loader = D2.create('testset', mp.testcfgs, unpack(data_loader_args))
 
     train_loader:save_sequential_batches()
     val_loader:save_sequential_batches()

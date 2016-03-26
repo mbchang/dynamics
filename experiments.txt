@@ -149,6 +149,11 @@ experiment 14: accel
     sharpen: 4 layers, sharpen 3/10, 0.003/0.005
     sharpengradual: 4 layers, gradual sharpen 1-100, 0.003
 
+    Turns out that all of these are failures because my data is wrong;
+    I don't give it positional information.
+
+experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
+
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out
         Dataset: /om/data/public/mbchang/physics-data/2

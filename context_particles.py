@@ -85,11 +85,15 @@ class Context_Particle():
     def __str__(self):
         return "Particle: color: %s" %(self.color)
 
-    def to_dict(self):
+    def to_dict(self, accel):
+        start,end = (6,9) if accel else (4,7)
+        print(self.particle_path[0:10])
+        assert(False)
+
         # Get mass
-        one_hot = self.particle_path[0, 4:7]  # should be the same for all timesteps, so we just use the first one
+        one_hot = self.particle_path[0, start:end]  # should be the same for all timesteps, so we just use the first one
         self.mass = one_hot_to_num(one_hot, G_mass_values)
-        assert np.allclose(self.particle_path[:, 7], 1)  # object id
+        assert np.allclose(self.particle_path[:, end], 1)  # object id
         self.color = G_particle_mass2color[self.mass]
         return {'color': self.color, 'mass': self.mass}
 
