@@ -85,12 +85,14 @@ end
 function all_args_exist(args_table, num_args)
     if not(#args_table == num_args) then return false end
     local exist = true
-    for _,a in pairs(args_table) do
+    local pasti = 0
+    for i,a in pairs(args_table) do
         if a == nil then
             exist = false
         end
+        if not(i == pasti+1) then return false end  -- turns out that if an arg isn't there, then the key is not there either
+        pasti = i
     end
-    -- assert(false)
     return exist
 end
 
