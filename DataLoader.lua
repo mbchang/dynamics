@@ -18,13 +18,6 @@ local PS = require 'priority_sampler'
 local dataloader = {}
 dataloader.__index = dataloader
 
-local object_dim = 8
-local max_other_objects = 10
-local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}  -- all_worlds[1] should correspond to worldm1
-local world_range = {1,4}
-local particle_range = {1,6}
-local goo_range = {0,5}
-
 function dataloader.create(dataset_name, dataset_folder, shuffle, cuda)
     --[[
         I actually only need dataset_name, dataset_folder, shufffle, cuda. Do I need a priority_sampler?
