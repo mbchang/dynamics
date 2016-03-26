@@ -1,5 +1,8 @@
 results*
 demo_results*
+*.sh
+*.h5
+*.hdf5
 *.pyc
 *.svg
 *.dot
