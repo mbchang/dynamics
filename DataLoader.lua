@@ -107,42 +107,38 @@ function dataloader.create(dataset_name, specified_configs, dataset_folder, batc
     ---------------------------------- Givens ----------------------------------
     self.dataset_name = dataset_name  -- string
     self.dataset_folder = dataset_folder
-    self.batch_size = batch_size
-    self.object_dim = object_dim
-    self.relative = relative
+    -- self.batch_size = batch_size
+    -- self.object_dim = object_dim
+    -- self.relative = relative
     self.cuda = cuda
-    self.num_past = num_past
-    self.winsize = winsize
+    -- self.num_past = num_past
+    -- self.winsize = winsize
 
     -------------------------------- Get Dataset -----------------------------
-    self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
-    self.configs = get_keys(self.dataset)  -- table of all keys
+    -- self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
+    -- self.configs = get_keys(self.dataset)  -- table of all keys
 
     ---------------------- Focus Dataset to Specification ----------------------
-    if is_empty(specified_configs) then
-        self.specified_configs = self.configs
-    elseif contains_world(specified_configs) then
-        self.specified_configs = get_all_specified_configs(specified_configs, T.deepcopy(self.configs))
-    else
-        self.specified_configs = specified_configs
-    end
-    self.specified_configs = intersect(self.specified_configs, self.configs) -- TODO hacky
-    assert(is_subset(self.specified_configs, self.configs))
-    topo_order(self.specified_configs)  -- sort by world
-    self.num_configs = #self.specified_configs
-    self.config_idxs = torch.range(1,self.num_configs)
-    self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)
+    -- if is_empty(specified_configs) then
+    --     self.specified_configs = self.configs
+    -- elseif contains_world(specified_configs) then
+    --     self.specified_configs = get_all_specified_configs(specified_configs, T.deepcopy(self.configs))
+    -- else
+    --     self.specified_configs = specified_configs
+    -- end
+    -- self.specified_configs = intersect(self.specified_configs, self.configs) -- TODO hacky
+    -- assert(is_subset(self.specified_configs, self.configs))
+    -- topo_order(self.specified_configs)  -- sort by world
+    -- self.num_configs = #self.specified_configs
+    -- self.config_idxs = torch.range(1,self.num_configs)
+    -- self.total_examples, self.num_batches, self.config_sizes = self:count_examples(self.specified_configs)
 
     ----------------------- Initial values for iterator ------------------------
-    self.batchlist = self:compute_batches()  -- you will index into this
+    -- self.batchlist = self:compute_batches()  -- you will index into this
     self.current_batch = 0
-    assert(self.num_batches == #self.batchlist)
+    -- assert(self.num_batches == #self.batchlist)
 
-    -- at this point you should be able to save
-    -- print(self.batchlist)
-    -- assert(false)
     self.num_batches = 12 -- TODO hardcoded!
-
 
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0
