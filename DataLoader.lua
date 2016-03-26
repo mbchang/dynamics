@@ -667,7 +667,13 @@ function dataloader:load_batch_id(id)
     local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     local batchname = savefolder..'/'..'batch'..id
     local nextbatch = torch.load(batchname)
-    -- print(nextbatch)
+    local this, context, y, mask, config, start, finish, context_future = unpack(nextbatch)
+
+    -- convert to cuda or double
+    this,context,y,context_future = unpack(map(convert_type,{this,context,y,context_future}))
+
+    nextbatch = {this, context, y, mask, config, start, finish, context_future}
+    collectgarbage()
     return nextbatch
 end
 

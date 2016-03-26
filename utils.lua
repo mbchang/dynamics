@@ -217,3 +217,50 @@ end
 -- print(intersect({'a','b','c'}, {'d','b','c'}))
 
 -- print(range_list(1,100,11))
+
+
+function factorial(n)
+    if n == 0 or n == 1 then
+        return n
+    elseif n < 0 then
+        assert(false, "n must be nonnegative")
+    else
+        return n * factorial(n-1)
+    end
+end
+
+-- given a number, return a list from 1 to n
+function permute_helper(n)
+
+end
+
+-- given a table 1 to n, return table of permutations
+function permute(t)
+    local n = #t
+    assert(n>=1)
+    if n == 1 then
+        return t
+    else
+        local x = {}
+        for i = 1, n do
+
+            local first = {{i}}
+
+            local rest
+            if i == 1 then
+                rest = subrange(t,i+1,n)
+            elseif i == n then
+                rest = subrange(t,1,n-1)
+            else
+                rest = merge_tables_by_value(subrange(t,1,i-1), subrange(t,i+1,n))
+            end
+
+            local mergei = merge_tables_by_value(first, permute(rest))
+            x = merge_tables_by_value(x,mergei)
+        end
+        return x
+    end
+end
+
+-- print('hi')
+-- print(permute(range_list(1,4,1)))

@@ -97,3 +97,11 @@ function concatenate_table(table)
     end
     return container
 end
+
+function convert_type(x, should_cuda)
+    if should_cuda then
+        return x:cuda()
+    else
+        return x:double()
+    end
+end
