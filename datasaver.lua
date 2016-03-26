@@ -137,6 +137,8 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.batchlist = self:compute_batches()  -- you will index into this
     assert(self.num_batches == #self.batchlist)
 
+    self.num_batches = 12 -- TODO hardcoded!
+
     collectgarbage()
     return self
 end
@@ -457,7 +459,7 @@ function datasaver:save_sequential_batches()
 
     local config_data = self:get_config_data()
 
-    for i = 1,12 do --self.num_batches do
+    for i = 1,self.num_batches do
         local batch = self:get_batch(i, config_data)
         local batchname = savefolder..'/'..'batch'..i
         torch.save(batchname, batch)
