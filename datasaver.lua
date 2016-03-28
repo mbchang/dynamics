@@ -99,7 +99,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
 
             specified_configs = table of worlds or configs
     --]]
-    assert(all_args_exist({dataset_name, dataset_folder, specified_configs,batch_size,shuffle},5))
+    assert(all_args_exist({dataset_name, dataset_folder, specified_configs,batch_size,shuffle, relative, num_past, winsize},8))
 
     local self = {}
     setmetatable(self, datasaver)
@@ -331,7 +331,11 @@ function datasaver:process_config(current_config)
     assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
 
     -- Relative position wrt the last past coord
-    if self.relative then y = y - this_x[{{},{-1}}]:expandAs(y) end
+    if self.relative then
+        y[{{},{},{1,4}}] = y[{{},{},{1,4}}] - this_x[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}])
+        -- y = y - this_x[{{},{-1}}]:expandAs(y)
+        -- assert(false, "this should not include acceleration, nor diff")
+    end  -- Should this include acceleration? No I don't think so
 
     -- TODO: bad design: basically to get hard_examples I am forcing you to use accleration data
     local hard_examples
@@ -349,13 +353,22 @@ function datasaver:process_config(current_config)
         new_object_dim = object_dim
     end
 
+
+    -- here take care of the vector differences (should I do differences in velocity too?)
+    -- if mp.diff then
+    --     this_x, context_x = add_diff(this_x,context_x)  -- TODO RESIZE THIS
+    --     y, context_future = add_diff(y, context_future)
+    --     new_object_dim = new_object_dim + 4 -- added the differences between position and velocities
+    -- end
+
+
     -- Reshape
-    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)
+    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)  -- TODO RESIZE THIS
     context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
     y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
     context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
 
-    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)
+    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)  -- TODO RESIZE THIS
 
     return {this_x, context_x, y, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
 end
@@ -481,6 +494,25 @@ function datasaver:get_batch(id, config_data)
 
     collectgarbage()
     return nextbatch, ishard
+end
+
+
+-- this (num_samples x num_past x obj_dim) (obj_dim: 8 or 10)
+-- other (num_samples x num_past x obj_dim) (obj_dim: 8 or 10)
+-- get vector differences for position and velocity (tag this at the end)
+function add_diff(this_, other_)
+    local this = this_:clone()
+    local other = other_:clone()
+    assert(other:size(2) == 1)  -- for now, we only want one context object
+
+    local diff_this = (this[{{},{},{1,4}}] - other[{{},{},{},{1,4}}]):abs()  -- same size as this  -- TODO RESIZE THIS
+    local diff_other = (other[{{},{},{},{1,4}}] - this[{{},{},{1,4}}]):abs()  -- same size as other
+    assert((diff_this-diff_other):max()==0)  -- they had better be equal
+
+    local this = torch.cat({this, diff_this}, 3)  -- TODO RESIZE THIS
+    local other = torch.cat({other, diff_other}, 4)
+
+    return this, other
 end
 
 

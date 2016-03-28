@@ -31,7 +31,7 @@ mp = lapp[[
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
    -b,--batch_size    (default 60)
-   -l,--accel         (default false)
+   -l,--accel         (default true)
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state
@@ -41,6 +41,7 @@ mp = lapp[[
    -h,--sharpen       (default 1)               sharpen exponent
    -f,--lrdecayafter  (default 50)              number of epochs before turning down lr
    -i,--max_epochs    (default 1000)           	maximum nb of iterations per batch, for LBFGS
+   --diff             (default "true")
    --rnn_dim          (default 50)
    --layers           (default 1)
    --seed             (default "true")
@@ -55,7 +56,7 @@ if mp.server == 'pc' then
     mp.winsize = 20  -- total number of frames
     mp.num_past = 10 --10
     mp.num_future = 10 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/5'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/7'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 30 --1
@@ -68,10 +69,10 @@ if mp.server == 'pc' then
 	mp.cunn = false
     -- mp.max_epochs = 5
 else
-	mp.winsize = 20  -- total number of frames
-    mp.num_past = 10 -- total number of past frames
-    mp.num_future = 10
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/3'
+	mp.winsize = 2  -- total number of frames
+    mp.num_past = 1 -- total number of past frames
+    mp.num_future = 1
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/6'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -205,7 +206,7 @@ end
 function feval_train(params_)  -- params_ should be first argument
 
     local this, context, y, mask = unpack(train_loader:sample_priority_batch(mp.sharpen))
-    y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
+    y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})   -- TODO RESIZE THIS
 
     local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
     local grad = model:bp({this=this,context=context}, y, mask)
@@ -228,7 +229,7 @@ function crop_future(tensor, reshapesize, cropdim)
     else
         assert(crop:dim()==4 and cropdim[1] == 3)
         crop = crop[{{},{},{1,cropdim[2]},{}}]
-        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)
+        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
     end
     return crop
 end
@@ -270,28 +271,31 @@ function test(dataloader, params_, saveoutput)
         -- get batch
         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
 
-        if mp.cuda then
-            this = this:cuda()
-            context = context:cuda()
-            y = y:cuda()
-            context_future = context_future:cuda()
-        end
+        -- if mp.cuda then
+        --     this = this:cuda()
+        --     context = context:cuda()
+        --     y = y:cuda()
+        --     context_future = context_future:cuda()
+        -- end
 
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
         -- predict
         local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
 
         -- reshape to -- (num_samples x num_future x 8)
-        prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-        this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
-        y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)
+        prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+        this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
+        y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
         -- take care of relative position
         if mp.relative then
-            prediction = prediction + this[{{},{-1}}]:expandAs(prediction)
-            y = y + this[{{},{-1}}]:expandAs(y) -- add back because relative
+            prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
+            y[{{},{},{1,4}}] = y[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}]) -- add back because relative  -- TODO RESIZE THIS?
+
+            -- prediction = prediction + this[{{},{-1}}]:expandAs(prediction)  -- TODO RESIZE THIS?
+            -- y = y - this[{{},{-1}}]:expandAs(y) -- add back because relative  -- TODO RESIZE THIS?
         end
 
         -- save
@@ -338,32 +342,32 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         context_future = context_future_orig:clone():reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
         -- at this point:
-        -- this (bsize, numpast*objdim)
+        -- this (bsize, numpast*objdim)  -- TODO RESIZE THIS
         -- context (bsize, mp.seq_length, mp.numpast*mp.objdim)
         -- y_orig (bsize, (mp.winsize-mp.num_past)*objdim)
         -- context_future (bsize, mp.seqlength, (mp.winsize-mp.num_past)*mp.objdim)
 
         -- allocate space, already assume reshape
-        local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, numsteps, mp.object_dim), mp.cuda)
+        local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, numsteps, mp.object_dim), mp.cuda)  -- TODO RESIZE THIS
         for t = 1,numsteps do
             -- the t-th timestep in the future
-            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape
-            y = y:reshape(mp.batch_size, 1*mp.object_dim)
+            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape  -- TODO RESIZE THIS
+            y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
 
             local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
-            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
+            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
+            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
 
             if mp.relative then
-                prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.
+                prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.  -- TODO RESIZE THIS
             end
 
             -- update this and context
             -- chop off first time step and then add in next one
             if mp.num_past > 1 then
-                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)  -- you can add y in here
+                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)  -- you can add y in here  -- TODO RESIZE THIS
                 context = torch.cat({context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{t},{}}]:clone()},3)
             else
                 assert(mp.num_past == 1)
@@ -372,7 +376,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             end
 
             -- reshape it back
-            this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)
+            this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)  -- TODO RESIZE THIS
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
 
             pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
@@ -380,16 +384,16 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         end
 
         -- reshape to -- (num_samples x num_future x 8)
-        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past
-        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
+        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
+        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future  -- TODO RESIZE THIS
         context_future_orig = context_future_orig:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
         if mp.relative then
-            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)
+            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
         end
 
         -- now crop only the number of timesteps you need; pred_sim is also this many timesteps
-        y_orig = y_orig[{{},{1,numsteps},{}}]
+        y_orig = y_orig[{{},{1,numsteps},{}}]  -- TODO RESIZE THIS
         context_future_orig = context_future_orig[{{},{},{1,numsteps},{}}]
 
         if saveoutput then
@@ -434,14 +438,14 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
     save_to_hdf5(save_path,
         {pred=prediction,
-        this=this:reshape(this:size(1),
+        this=this:reshape(this:size(1), -- TODO RESIZE THIS
                     mp.num_past,
                     mp.object_dim),
         context=context:reshape(context:size(1),
                     context:size(2),
                     mp.num_past,
                     mp.object_dim),
-        y=y:reshape(y:size(1),
+        y=y:reshape(y:size(1),  -- TODO RESIZE THIS (Probably reshaping y is unnecessary)
                     numsteps,
                     mp.object_dim),
         context_future=context_future:reshape(context_future:size(1),
