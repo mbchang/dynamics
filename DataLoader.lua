@@ -38,7 +38,7 @@ function dataloader.create(dataset_name, dataset_folder, shuffle, cuda)
     self.cuda = cuda
     self.current_batch = 0
 
-    self.num_batches = 20 -- TODO hardcoded!
+    self.num_batches = 12 -- TODO hardcoded!
 
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0
@@ -82,7 +82,7 @@ function dataloader:load_batch_id(id)
     local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     local batchname = savefolder..'/'..'batch'..id
     if not paths.filep(batchname) then batchname = batchname..'_hard' end -- this is a hard example. TODO: maybe put in a binary value as input
-    print(batchname)
+    -- print(batchname)
     local nextbatch = torch.load(batchname)
     local this, context, y, mask, config, start, finish, context_future = unpack(nextbatch)
 

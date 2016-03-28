@@ -62,7 +62,6 @@ end
 -- Takes a tensor, and returns its two halves, split on the particular dim
 -- For example, give a tensor of size (260, 10, 8), if dim is 3, then
 -- this returns a table of two tensors: {(260,10,4), (260, 10,4)}
--- TODO update this for arbitrary slices
 -- function split_tensor(dim, reshape)
 --     assert(reshape[2] %2 == 0)
 --     local tensor = nn.Identity()()
@@ -185,10 +184,10 @@ function model:fp(params_, x, y)
     local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
 
-    assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
+    assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)  -- TODO RESIZE THIS
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
             and context:size(3) == self.mp.input_dim)
-    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.out_dim)
+    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.out_dim)  -- TODO RESIZE THIS
 
     -- it makes sense to zero the loss here
     local loss, prediction = unpack(self.network:forward({this_past, context[{{},1}], this_future})) -- because it is padded with 0s elsewhere
