@@ -378,13 +378,13 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/4'
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/6'
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
-    windowsize = 20  # 2  -- TODO 1in1out
-    num_train_samples_per = (400, 60)  # 3
-    num_val_samples_per = (50, 60)  # 1
-    num_test_samples_per = (50, 60)  # 1
+    windowsize = 2  # 2  -- TODO 1in1out
+    num_train_samples_per = (400, 79)  # 3
+    num_val_samples_per = (50, 79)  # 1
+    num_test_samples_per = (50, 79)  # 1
     contiguous = True
 
     # dataset_files_folder = 'hey'
@@ -976,3 +976,7 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
                 imgfile = os.path.join(os.path.dirname(images_root), i)
                 imgfile = imgfile.replace(' ','\ ').replace('(','\(').replace(')','\)')
                 os.system('rm ' + imgfile)
+
+if __name__ == "__main__":
+     save_all_datasets(True)
+    # print(subsample_range(80, 2, 79))
