@@ -31,7 +31,7 @@ mp = lapp[[
    -j,--traincfgs     (default "[:-2:2-:]")
    -k,--testcfgs      (default "[:-2:2-:]")
    -b,--batch_size    (default 60)
-   -l,--accel         (default "true")
+   -l,--accel         (default false)
    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
    -c,--server		  (default "op")			pc=personal | op = openmind
    -t,--relative      (default "true")           relative state vs abs state

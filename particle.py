@@ -29,7 +29,7 @@ class Particle:
         self.fieldcolor = fieldcolor
         self.rect = pygame.rect.Rect(self.x, self.y, self.width, self.height)
 
-    def draw(self):
+    def draw(self, debug):
         # Erase the previous particle
 
         # Update frame number or loop back to first
@@ -42,6 +42,7 @@ class Particle:
 
         nx, ny = self.path[self.frame][0], self.path[self.frame][1]
         self.frame = self.frame + 1
+        if debug: print 'x:',nx,'y:',ny
 
         # Draw the new particle
         self.rect = pygame.rect.Rect(nx, ny, self.width, self.height)

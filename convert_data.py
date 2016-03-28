@@ -577,7 +577,11 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
         for i in range(numberOfParticles):
             if (eval('particle' + str(i) + '.frame >=' + str(maxPath-1))):
                 exec('particle' + str(i) + '.frame = ' + str(maxPath-1))
-            exec('particle' + str(i) + '.draw()')
+
+            if (eval('particle' + str(i) + ".fieldcolor == THECOLORS['green']") or eval('particle' + str(i) + ".fieldcolor == THECOLORS['hotpink1']")):
+                exec('particle' + str(i) + '.draw(True)')
+            else:
+                exec('particle' + str(i) + '.draw(False)')
 
         pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
 
@@ -590,7 +594,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
                             len(str(movieFrame+start_frame))] + \
                             str(movieFrame+start_frame)
             imagefile = movie_folder + "/" + movieName + '-' + imageName + ".png"
-            print imagefile
+            # print imagefile
             pygame.image.save(screen, imagefile)
             movieFrame += 1
         elif movieFrame > (len(observed_path)-1):
@@ -638,9 +642,9 @@ def separate_context(context, config):
     start = config.find('_ng=')+len('_ng=')
     num_goos = int(config[start:])
 
-    print 'num_particles', num_particles
-    print 'num_goos', num_goos
-    print 'num_other', num_other
+    # print 'num_particles', num_particles
+    # print 'num_goos', num_goos
+    # print 'num_other', num_other
 
     # Thus, the RNN should only run for num_particles + num_goos iterations
     if num_particles + num_goos != G_num_objects+1:  # TODO: shouldn't this be G_num_objects + 1?
@@ -759,6 +763,9 @@ def recover_path(this, other):
             sample_particles.append(other_particle.reshape_path(other_particle.path))
 
         sample_particles = stack(sample_particles)  # (numObjects, winsize, [pos vel] [x y])
+        if s == 58:
+            print(sample_particles[0].reshape(1,10,4))
+        # assert(False)
 
         # Now transpose to (winsize, [pos, vel], numObjects, [x, y])
         sample_particles = np.transpose(sample_particles, (1, 2, 0, 3))  # works
@@ -842,6 +849,8 @@ def recover_state(this, context, this_pred, config, velocityonly=True, accel=Tru
 
         this_pred[:,:,:2] = pos[:,1:,:]  # reassign back to this_pred
 
+    print(this_pred[58,:,:4])
+
     # Next recover path
     recoverd_path_all_samples = recover_path(this_pred, other)  # future TODO you need positional information from past
 
@@ -912,27 +921,29 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     d = load_dict_from_hdf5(training_samples_hdf5)
     config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
 
-    print(d['this'])
-    assert(False)
+    accel = False
 
+    print('past')
     samples_past = recover_state(this=d['this'],
                                  context=d['context'],
                                  this_pred=d['this'],
                                  config=config_name,
                                  velocityonly=False, # TODO velocityonly should not apply for the past!
-                                 accel=True)
+                                 accel=accel)
+    print('gt')
     samples_future_gt = recover_state(this=d['this'],
                                       context=d['context_future'],
                                       this_pred=d['y'],
                                       config=config_name,
                                       velocityonly=True,
-                                      accel=True)
+                                      accel=accel)
+    print('pred')
     samples_future_pred = recover_state(this=d['this'],
                                         context=d['context_future'],
                                         this_pred=d['pred'],
                                         config=config_name,
                                         velocityonly=True,
-                                        accel=True)
+                                        accel=accel)
 
     windowsize = np.array(samples_past[2][2]).shape[0]
 

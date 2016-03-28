@@ -87,8 +87,6 @@ class Context_Particle():
 
     def to_dict(self, accel):
         start,end = (6,9) if accel else (4,7)
-        print(self.particle_path[0:10])
-        assert(False)
 
         # Get mass
         one_hot = self.particle_path[0, start:end]  # should be the same for all timesteps, so we just use the first one
