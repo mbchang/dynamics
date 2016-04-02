@@ -18,7 +18,7 @@ local PS = require 'priority_sampler'
 local datasaver = {}
 datasaver.__index = datasaver
 
-local object_dim = 8
+local object_dim = 9  -- change to 9
 local max_other_objects = 10
 local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}  -- all_worlds[1] should correspond to worldm1
 local world_range = {1,4}
@@ -158,46 +158,50 @@ function expand_for_each_particle(batch_particles)
     local other_particles = {}
     if num_particles > 1 then
         for i=1,num_particles do  -- this is doing it in transpose order
+            -- NOTE: the one-hot encoding has 4 values, and if the last value is 1 that means it is the stationary ball!
 
-            local this = batch_particles[{{},{i},{},{}}]
-            this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8); NOTE that resize gives the wrong answer!
 
-            local other
-            if i == 1 then
-                other = batch_particles[{{},{i+1,-1},{},{}}]
-            elseif i == num_particles then
-                other = batch_particles[{{},{1,i-1},{},{}}]
-            else
-                other = torch.cat(batch_particles[{{},{1,i-1},{},{}}],
-                            batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 8)
+            local this = batch_particles[{{},{i},{},{}}]  --all of the particles here should be the same
+            if this[{{},{},{},{-2}}]:sum() == 0 then -- only do it if the particle is not stationary
+                this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x 8); NOTE that resize gives the wrong answer!
+
+                local other
+                if i == 1 then
+                    other = batch_particles[{{},{i+1,-1},{},{}}]
+                elseif i == num_particles then
+                    other = batch_particles[{{},{1,i-1},{},{}}]
+                else
+                    other = torch.cat(batch_particles[{{},{1,i-1},{},{}}],
+                                batch_particles[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_particles-1) x windowsize x 8)
+                end
+
+                -- permute here
+                assert(this:size()[1] == other:size()[1])
+                -- this: (num_samples, winsize, 8)
+                -- other: (num_samples, num_other_particles, winsize, 8)
+                -- local num_other_particles = other:size(2)
+                -- for j = 1, num_other_particles do
+                --
+                --     local permuted_other = torch.cat(permute(other),1)
+                --     assert(permuted_other:size(1) == factorial(num_other_particles))
+                --     for k = 1, factorial(num_other_particles) do
+                --         this_particles[#this_particles+1] = this
+                --     end
+                --     other_particles[#other_particles+1] = permuted_other
+                --
+                --     -- this_particles[#this_particles+1] = this
+                --     -- other_particles[#other_particles+1] = other
+                -- end
+                this_particles[#this_particles+1] = this
+                other_particles[#other_particles+1] = other
             end
-
-            -- permute here
-            assert(this:size()[1] == other:size()[1])
-            -- this: (num_samples, winsize, 8)
-            -- other: (num_samples, num_other_particles, winsize, 8)
-            -- local num_other_particles = other:size(2)
-            -- for j = 1, num_other_particles do
-            --
-            --     local permuted_other = torch.cat(permute(other),1)
-            --     assert(permuted_other:size(1) == factorial(num_other_particles))
-            --     for k = 1, factorial(num_other_particles) do
-            --         this_particles[#this_particles+1] = this
-            --     end
-            --     other_particles[#other_particles+1] = permuted_other
-            --
-            --     -- this_particles[#this_particles+1] = this
-            --     -- other_particles[#other_particles+1] = other
-            -- end
-            this_particles[#this_particles+1] = this
-            other_particles[#other_particles+1] = other
         end
     else
         local this = batch_particles[{{},{i},{},{}}]
         this_particles[#this_particles+1] = torch.squeeze(this,2)--this:resize(this:size(1), this:size(3), this:size(4)) -- (num_samples x windowsize x 8)
     end
 
-    assert(#this_particles==factorial(num_particles)) -- this assertion should be equal to the number possible permutations
+    -- assert(#this_particles==factorial(num_particles)) -- this assertion should be equal to the number possible permutations
     this_particles = torch.cat(this_particles,1)  -- concatenate along batch dimension
 
     -- make other_particles into Torch tensor if more than one particle. Otherwise {}
@@ -206,6 +210,7 @@ function expand_for_each_particle(batch_particles)
         assert(this_particles:size(1) == other_particles:size(1))
         assert(other_particles:size(2) == num_particles-1)
     end
+
     return this_particles, other_particles
 end
 
@@ -250,17 +255,17 @@ function datasaver:process_config(current_config)
 
     local this_particles, other_particles = expand_for_each_particle(minibatch_p)
     local num_samples, windowsize = unpack(torch.totable(this_particles:size()))  -- num_samples is now multiplied by the number of particles
-    local num_particles = minibatch_p:size(2)
-    if num_samples ~= minibatch_p:size(1) * num_particles then
+    local num_particles = this_particles:size(2)
+
+    if num_samples ~= this_particles:size(1) then
         print('num_samples', num_samples)
-        print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)
+        print('minibatch_p:size(1) * num_particles', minibatch_p:size(1) * num_particles)  -- adapt to stationary particles
         print('minibatch_p:size()', minibatch_p:size(1))
         print('num_particles', num_particles)
         print('this_particles:size()', this_particles:size())
         print('other_particles:size()', other_particles:size())
     end
-
-    assert(num_samples == minibatch_p:size(1) * num_particles)
+    assert(num_samples == this_particles:size(1))
 
     -- check if m_goos is empty
     -- if m_goos is empty, then {}, else it is (num_samples, num_goos, 8)
@@ -340,6 +345,8 @@ function datasaver:process_config(current_config)
     -- TODO: bad design: basically to get hard_examples I am forcing you to use accleration data
     local hard_examples
     if mp.accel then
+        print('hey')
+        -- print(this_x[{{1,100}}])
         this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
         new_object_dim = object_dim + 2
 
@@ -361,6 +368,7 @@ function datasaver:process_config(current_config)
     --     new_object_dim = new_object_dim + 4 -- added the differences between position and velocities
     -- end
 
+    -- note that you do relative position and velocity as target!
 
     -- Reshape
     this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)  -- TODO RESIZE THIS
@@ -369,7 +377,6 @@ function datasaver:process_config(current_config)
     context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
 
     assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)  -- TODO RESIZE THIS
-
     return {this_x, context_x, y, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
 end
 
@@ -468,7 +475,8 @@ function datasaver:save_sequential_batches()
         local ext
         if ishard then ext = '_hard' else ext = '' end
         local batchname = savefolder..'/'..'batch'..i..ext
-        torch.save(batchname, batch)
+
+        -- torch.save(batchname, batch)
         print('saved '..batchname)
     end
 end
@@ -490,7 +498,7 @@ function datasaver:get_batch(id, config_data)
     local nextbatch = self:next_batch(config_name, start, finish, config_data[config_name])
 
     local ishard = false
-    if isin(id,config_data[config_name][6]) then ishard = true end  -- [6] is hard_examples
+    -- if isin(id,config_data[config_name][6]) then ishard = true end  -- [6] is hard_examples TODO: this is actually referring to the wrong thing
 
     collectgarbage()
     return nextbatch, ishard
@@ -535,6 +543,8 @@ function add_accel_each(obj,isthis)
     if isthis then
         assert(obj:dim() == 3)
         local num_steps = obj:size(2)
+        print(num_steps)
+        assert(false)
         local vel = obj[{{},{},{3,4}}]:clone()  -- num_samples, num_steps, 2
         local accel = torch.zeros(num_samples,num_steps,2)
 

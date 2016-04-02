@@ -19,7 +19,6 @@ import particle
 from context_particles import *
 from utils import *
 
-# G_w_width, G_w_height = 640.0,480.0
 G_num_videos = 500.0
 G_num_timesteps = 400.0
 G_num_objects = 6 + 5 - 1  # 6 particles + 5 goos - 1 for the particle you are conditioning on
@@ -40,6 +39,8 @@ def convert_file(path, subsample):
     configuration   = eval(fixInputSyntax(data[0]))
     forces          = np.array(configuration[0])
     particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
+    # print(particles)
+    # assert(False)
     goos            = np.array(configuration[2])
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
@@ -83,6 +84,7 @@ def crop_to_window(boxes):
     return boxes
 
 def construct_example(particles, goos, observedPath, starttime, windowsize):
+    # TODO Change this!
     """
         input
             :particles: list of dictionaries (each dictionary is a particle)
@@ -97,12 +99,12 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
             :starttime + windowsize < 400
 
         output
-            :path_slice: np array (numObjects, numSteps, [px, py, vx, vy, [onehot mass]])
+            :path_slice: np array (numObjects, numSteps, [px, py, vx, vy, [onehot mass], objectid])
             :goos: np array [cx, cy, width, height, [onehot goo strength], objectid]
             :mask? TODO
 
-        masses: [0.33, 1.0, 3.0]
-        gooStrength: [0, -5, -20]
+        masses: [0.33, 1.0, 3.0, 1e30]
+        gooStrength: [0, -5, -20, -100.0]
 
         object id: 1 if particle, 0 if goo
 
@@ -123,15 +125,15 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     # get masses
     masses = tuple(np.array([p['mass'] for p in particles]) for i in xrange(num_steps))
     masses = np.column_stack(masses)  # (numObjects, numSteps)
-    masses = num_to_one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)
+    masses = num_to_one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)  # TODO: stationary
 
-    # turn it into (numObjects, numSteps, [px, py, vx, vy, [one-hot-mass]]) = (numObjects, numSteps, 7)
+    # turn it into (numObjects, numSteps, [px, py, vx, vy, [one-hot-mass]]) = (numObjects, numSteps,97)
     path_slice = np.dstack((path_slice, masses))
     path_slice = np.dstack((path_slice, np.ones((num_objects, num_steps))))  # object ids: particle = 1
     path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
     assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
-    assert path_slice.shape == (num_objects, num_steps, 8)
+    assert path_slice.shape == (num_objects, num_steps, 4+len(G_mass_values)+1)
 
     goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
     num_goos = goos.shape[0]
@@ -146,7 +148,8 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         goos[:,:4] = ltrb2xywh(goos[:,:4])  # convert [left, top, right, bottom] to [cx, cy, w, h]
         goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
         assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
-        assert goos.shape == (num_goos, 8)
+        assert goos.shape == (num_goos, 4+len(G_goo_strength_values)+1)
+        assert(len(G_goo_strength_values) == len(G_mass_values))  # should be same mass. TODO: there must be a better way of representing this
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
     goos = np.asarray(goos, dtype=np.float64)
@@ -378,13 +381,14 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/6'
+
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/8'  # (w=384, h=288)
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
     windowsize = 2  # 2  -- TODO 1in1out
-    num_train_samples_per = (400, 79)  # 3
-    num_val_samples_per = (50, 79)  # 1
-    num_test_samples_per = (50, 79)  # 1
+    num_train_samples_per = (1000, 79)  # 3
+    num_val_samples_per = (100, 79)  # 1
+    num_test_samples_per = (100, 79)  # 1
     contiguous = True
 
     # dataset_files_folder = 'hey'
@@ -401,7 +405,7 @@ def save_all_datasets(dryrun):
                                                 num_test_samples_per,
                                                 windowsize,
                                                 contiguous,
-                                                'np=2_ng=0')
+                                                'worldm5_np=2_ng=0')
 
     # # save
     if not dryrun:
@@ -622,13 +626,13 @@ def create_all_videos(root, movie_root):
 
 def separate_context(context, config):
     """
-    context:    (num_samples, G_num_objects, winsize/2, 8)
-        8: [[4 number description], [3 number type], [1 number id]]
+    context:    (num_samples, G_num_objects, winsize/2, 9)
+        0: [[4 number description], [4 number type], [1 number id]]
     config: something like: worldm1_np=1_ng=1
 
     Return
-        other: (num_samples, num_other_particles, winsize/2, 8)
-        goos: (num_samples, num_goos, winsize/2, 8)
+        other: (num_samples, num_other_particles, winsize/2, 9)
+        goos: (num_samples, num_goos, winsize/2, 9)
 
         Note that num_other_particles and num_goos could be 0
     """
@@ -654,10 +658,10 @@ def separate_context(context, config):
     begin_goos_here = begin_zeros_here - num_goos
     assert num_other == begin_goos_here
 
-    # other_particles should be: (num_samples, num_other, winsize/2, 8)
+    # other_particles should be: (num_samples, num_other, winsize/2, 9)
     other = context[:, :begin_goos_here, :, :]  # take care of the case when other is nothing
 
-    # goos should be: (num_samples, num_goos, winsize/2, 8)
+    # goos should be: (num_samples, num_goos, winsize/2, 9)
     goos = context[:,begin_goos_here:begin_zeros_here,:,:]
 
     # as a check, the object ids for goos should be 0 and for other should be 1
@@ -669,7 +673,7 @@ def separate_context(context, config):
 
 def recover_goos(goos):
     """
-        goos: (num_samples, num_goos, winsize/2, 8)
+        goos: (num_samples, num_goos, winsize/2, 9)
 
         The winsize/2 dimension doesn't matter, so goos[:,:,0,:] should
         equal goos[:,:,1,:], etc
@@ -686,7 +690,7 @@ def recover_goos(goos):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    unduplicated_goos = goos[:,:,0,:]  # (num_samples, num_goos, 8)
+    unduplicated_goos = goos[:,:,0,:]  # (num_samples, num_goos, 9)
 
     # Double check that the winsize/2 dimension doesn't matter
     for i in range(1, goos.shape[2]):
@@ -706,8 +710,8 @@ def recover_particles(this, other, accel):
     """
         Just recovers the particle attributes not the paths
 
-        this:     (num_samples, winsize/2, 8)
-        other:    (num_samples, num_other_particles, winsize/2, 8)
+        this:     (num_samples, winsize/2, 9)
+        other:    (num_samples, num_other_particles, winsize/2, 9)
 
         this:
                 {'color': 'red',
@@ -741,8 +745,8 @@ def recover_particles(this, other, accel):
 
 def recover_path(this, other):
     """
-            this:     (num_samples, winsize/2, 8) -- TODO 1in1out
-            other:    (num_samples, num_other_particles, winsize/2, 8) -- TODO 1in1out
+            this:     (num_samples, winsize/2, 9) -- TODO 1in1out
+            other:    (num_samples, num_other_particles, winsize/2, 9) -- TODO 1in1out
 
         output
             a list of paths, each like
@@ -777,11 +781,11 @@ def recover_state(this, context, this_pred, config, velocityonly=True, accel=Tru
         if accel then object_dim should be 10
 
         input
-            this:       (num_samples, winsize/2, 8)
+            this:       (num_samples, winsize/2, 9)
                 past
-            context:    (num_samples, G_num_objects, winsize/2, 8)
+            context:    (num_samples, G_num_objects, winsize/2, 9)
                 may be future or past
-            this_pred:       (num_samples, winsize/2, 8)
+            this_pred:       (num_samples, winsize/2, 9)
                 must match the time of context
                     can be ground truth if you want to render ground truth
                     or prediction if you want to render prediction
@@ -812,8 +816,8 @@ def recover_state(this, context, this_pred, config, velocityonly=True, accel=Tru
     num_samples = len(this)
 
     # First separate out context
-    # other: (num_samples, num_other_particles, winsize/2, 8)
-    # goos: (num_samples, num_goos, winsize/2, 8)
+    # other: (num_samples, num_other_particles, winsize/2, 9)
+    # goos: (num_samples, num_goos, winsize/2, 9)
     other, goos =  separate_context(context, config)
 
     # Next recover goos
