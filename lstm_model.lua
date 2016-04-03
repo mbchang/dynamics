@@ -1,10 +1,11 @@
 require 'nn'
 require 'torch'
 require 'nngraph'
+require 'IdentityCriterion'
 require 'Base'
+require 'utils'
+local T = require 'pl.tablex'
 local model_utils = require 'model_utils'
-
-
 nngraph.setDebug(true)
 
 function lstm(x, prev_c, prev_h, params)
@@ -51,40 +52,40 @@ end
 
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
-    -- local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
 
     local out_dim = num_future * object_dim
     -- -- ok, here we will have to split up the output
-    local world_state_pre, obj_prop_pre = split_tensor(3,{num_future, object_dim})(nn.Linear(rnn_hid_dim, out_dim)(rnn_out)):split(2)
-    local obj_prop = nn.Sigmoid()(obj_prop_pre)
-    local world_state = world_state_pre -- linear
-    local dec_out_reshaped = nn.JoinTable(3)({world_state, obj_prop})
-    local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+    local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
-    return nn.gModule({rnn_out}, {decoder_out})
+    if mp.accel then
+        local pos_vel_pre, accel_prop_pre = split_tensor(3,{num_future, object_dim},{{1,4},{5,object_dim+2}})(decoder_preout):split(2)
+        local accel_prop = nn.Sigmoid()(accel_prop_pre)
+        local pos_vel = pos_vel_pre
+        local dec_out_reshaped = nn.JoinTable(3)({pos_vel, accel_prop})
+        local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+        return nn.gModule({rnn_out}, {decoder_out})
+    else
+        local world_state_pre, obj_prop_pre = split_tensor(3,{num_future, object_dim},{{1,4},{5,object_dim}})(decoder_preout):split(2)   -- contains info about object dim!
+        local obj_prop = nn.Sigmoid()(obj_prop_pre)
+        local world_state = world_state_pre -- linear
+        local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
+        local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+        return nn.gModule({rnn_out}, {decoder_out})
+    end
 end
 
--- note that input_dim for this is a timestep
--- input: (batch_size, input_dim) = (batch_size, obj_dim) = (batch_size, 8)
--- output: (batch_size, rnn_dim) = (batch_size, obj_rnn_dim)
--- so the time-rnn has rnn_dim and the object-rnn has rnn_dim
-function init_encoder_lstm(input_dim, rnn_inp_dim)
-
-end
-
--- reshape is something like (10,8)
--- the numbers are hardcoded
--- Takes a tensor, and returns its two halves, split on the particular dim
--- For example, give  a tensor of size (260, 10, 8), if dim is 3, then
--- this returns a table of two tensors: {(260,10,4), (260, 10,4)}
-function split_tensor(dim, reshape)
-    assert(reshape[2] %2 == 0)
+-- boundaries: {{l1,r1},{l2,r2},{l3,r3},etc}
+function split_tensor(dim, reshape, boundaries)
+    -- assert(reshape[2] %2 == 0)
     local tensor = nn.Identity()()
     local reshaped = nn.Reshape(reshape[1],reshape[2], 1, true)(tensor)
     local splitted = nn.SplitTable(dim)(reshaped)
-    local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted))
-    local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))
-    return nn.gModule({tensor},{first_half, second_half})
+    local chunks = {}
+    for cb = 1,#boundaries do
+        local left,right = unpack(boundaries[cb])
+        chunks[#chunks+1] = nn.JoinTable(dim)(nn.NarrowTable(left,right)(splitted))
+    end
+    return nn.gModule({tensor},chunks)
 end
 
 -- do not need the mask
@@ -94,7 +95,7 @@ function init_network(params)
     local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
     local decoder = init_object_decoder(params.rnn_dim, params.num_future, params.object_dim)
 
-    -- Input to netowrk
+    -- Input to netowrk TODO: change this to just input and output
     local thisp_past    = nn.Identity()() -- this particle of interest, past
     local contextp      = nn.Identity()() -- the context particle
     local thisp_future  = nn.Identity()() -- the particle of interet, future
@@ -125,13 +126,32 @@ function init_network(params)
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
     -- local err = nn.SmoothL1Criterion()({prediction, thisp_future})
 
-    -- -- split criterion: I know that this works
-    local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)
-    local fworld_state, fobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)
 
-    local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
-    local err2 = nn.BCECriterion()({obj_prop, fobj_prop})
-    local err = nn.MulConstant(0.5)(nn.CAddTable()({err1,err2}))  -- it should be the average err
+
+    -- -- -- split criterion: I know that this works
+    -- local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim})({prediction}):split(2)  -- TODO TIME
+    -- local fworld_state, fobj_prop = split_tensor(3, {params.num_future,params.object_dim})({thisp_future}):split(2)  -- TODO TIME
+    --
+    -- local err1 = nn.SmoothL1Criterion()({world_state, fworld_state})
+    -- local err2 = nn.BCECriterion()({obj_prop, fobj_prop})
+    -- local err = nn.MulConstant(0.5)(nn.CAddTable()({err1,err2}))  -- it should be the average err
+    --
+    -- return nn.gModule({thisp_past, contextp, prev_s, thisp_future}, {err, nn.Identity()(next_s), prediction})  -- last output should be prediction
+
+    local POSVELDIM = 4
+    -- -- split criterion: I know that this works
+    local world_state, obj_prop = split_tensor(3, {params.num_future,params.object_dim},{{1,4},{5,params.object_dim}})({prediction}):split(2)
+    local gtworld_state, gtobj_prop = split_tensor(3, {params.num_future,params.object_dim},{{1,4},{5,params.object_dim}})({thisp_future}):split(2)
+
+    -- split state: only pass gradients on velocity
+    local pos, vel = split_tensor(3, {params.num_future, POSVELDIM},{{1,2},{3,4}})({world_state}):split(2) -- basically split world_state in half on the last dim
+    local gt_pos, gt_vel = split_tensor(3, {params.num_future, POSVELDIM},{{1,2},{3,4}})({gtworld_state}):split(2)
+
+    local err0 = nn.IdentityCriterion()({pos, gt_pos})  -- don't pass gradients on position
+    -- local err1 = nn.SmoothL1Criterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
+    local err1 = nn.MSECriterion()({vel, gt_vel})  -- SmoothL1Criterion on velocity
+    local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})  -- don't pass gradients on object properties for now
+    local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))  -- we will just multiply by 1 for velocity
 
     return nn.gModule({thisp_past, contextp, prev_s, thisp_future}, {err, nn.Identity()(next_s), prediction})  -- last output should be prediction
 end
@@ -168,7 +188,7 @@ function model.create(mp_, preload, model_path)
 
     -- This will cache the values that s takes on in one forward pass
     self.s = {}
-    for j = 0, self.mp.seq_length do
+    for j = 0, self.mp.seq_length do  -- TODO TIME change to windowsize
         self.s[j] = {}
         for d = 1, 2 * self.mp.layers do
             self.s[j][d] = model_utils.transfer_data(torch.zeros(self.mp.batch_size, self.mp.rnn_dim), self.mp.cuda)
@@ -182,10 +202,10 @@ function model.create(mp_, preload, model_path)
     end
 
     self.rnns = model_utils.clone_many_times(self.network,
-                                                self.mp.seq_length,
+                                                self.mp.seq_length,  -- TODO TIME
                                                 not self.network.parameters)
     -- self.norm_dw = 0
-    self.loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length)) -- initial value
+    self.loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length)) -- initial value  -- TODO TIME
 
     collectgarbage()
     return self
@@ -210,30 +230,46 @@ function model:reset_ds(ds)
 end
 
 
-function model:fp(params_, x, y, mask)
+function model:fp(params_, batch)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
-    self.s = self:reset_state(self.s, self.mp.seq_length, self.mp.layers) -- because we are doing a fresh new forward pass
+    self.s = self:reset_state(self.s, self.mp.seq_length, self.mp.layers) -- because we are doing a fresh new forward pass  -- TODO TIME
 
-    -- unpack inputs
-    local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
-    local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
-    local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
+    -- either (bsize, num_steps, obj_dim) or (bsize, num_objs, num_steps, obj_dim)
+    local this_past, context_past, this_future, mask, config, start, finish, context_future = unpack(batch)
+    -- apply mask
+    context_past = torch.squeeze(context_past[{{},torch.find(mask,1)}])
+    context_future = torch.squeeze(context_future[{{},torch.find(mask,1)}])
+    assert(context_past:dim() == 3 and context_future:dim() == 3) -- assume one context object for now
 
-    assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)
-    assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
-            and context:size(3) == self.mp.input_dim)
-    assert(this_future:size(1) == self.mp.batch_size and this_future:size(2) == self.mp.out_dim)
+    -- now everything is (bsize, num_steps, obj_dim)
+    assert(alleq({unpack(map(torch.totable,
+                    {this_past:size(),context_past:size(),
+                    this_future:size(),context_future:size()})),
+                    {self.mp.batch_size,self.mp.winsize-1,self.mp.object_dim}}))
 
     -- it makes sense to zero the loss here
-    local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), self.mp.cuda)
+    local loss = model_utils.transfer_data(torch.zeros(self.mp.seq_length), self.mp.cuda)  -- TODO TIME
     local predictions = {}
-    for i = 1, self.mp.seq_length do
+    for i = 1, self.mp.winsize-1 do  -- up to here
         local sim1 = self.s[i-1]  -- had been reset to 0 for initial pass
-        loss[i], self.s[i], predictions[i] = unpack(self.rnns[i]:forward({this_past, context[{{},i}], sim1, this_future}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+        loss[i], self.s[i], predictions[i] = unpack(
+            self.rnns[i]:forward({
+                this_past[{{},i}],
+                context[{{},i}],
+                sim1,
+                this_future[{{},i}]}))  -- problem! (feeding thisp_future every time; is that okay because I just update the gradient based on desired timesstep?)
+
+
+        -- here I will have to do some updating for
+            -- relative
+            -- obj_prop, etc
+
+
+
     end
 
-    local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)
+    local prediction = predictions[torch.find(mask,1)[1]] -- (1, num_future)  -- TODO TIME
 
     collectgarbage()
     return loss:sum(), prediction -- we sum the losses through time!
@@ -241,16 +277,21 @@ function model:fp(params_, x, y, mask)
 end
 
 
-function model:bp(x, y, mask)
+function model:bp(batch)
     local state = self.s
 
     self.theta.grad_params:zero() -- the d_parameters
     self.ds = self:reset_ds(self.ds)  -- the d_outputs of the states
 
+    local this_past, context_past, this_future, mask, config, start, finish, context_future = unpack(batch)
+    assert(false)
+
     -- unpack inputs. All of these have been CUDAed already if need be
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
     local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
+
+    -- TODO TIME also here you don't want to any masking
 
     for i = self.mp.seq_length, 1, -1 do  -- go backwards in time
         local sim1 = state[i - 1]
