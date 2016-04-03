@@ -137,7 +137,10 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.batchlist = self:compute_batches()  -- you will index into this
     assert(self.num_batches == #self.batchlist)
 
-    self.num_batches = 20 -- TODO hardcoded!
+    -- hacky: I basically get the correct value of self.num_batches when I
+    -- actually process the configs
+
+    self.num_batches = 30 -- TODO hardcoded!
 
     collectgarbage()
     return self
@@ -416,7 +419,7 @@ function datasaver:count_examples(configs)
     local config_sizes = {}
     for i, config in pairs(configs) do
         local config_examples = self.dataset[config]
-        local num_samples = config_examples.particles:size(1)*config_examples.particles:size(2)
+        local num_samples = config_examples.particles:size(1)*config_examples.particles:size(2)  -- bug here!
         total_samples = total_samples + num_samples
         config_sizes[i] = num_samples -- each config has an id
     end
@@ -469,6 +472,12 @@ function datasaver:save_sequential_batches()
     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
 
     local config_data = self:get_config_data()
+
+    local num_batches = 0
+    for k,v in pairs(config_data) do
+        num_batches = num_batches + config_data[k][1]:size(1)
+    end
+    self.num_batches = num_batches
 
     for i = 1,self.num_batches do
         local batch, ishard = self:get_batch(i, config_data)

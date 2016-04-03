@@ -4,6 +4,7 @@ require 'torch'
 require 'math'
 require 'image'
 require 'lfs'
+require 'sys'
 require 'torch'
 require 'paths'
 require 'hdf5'
@@ -38,7 +39,9 @@ function dataloader.create(dataset_name, dataset_folder, shuffle, cuda)
     self.cuda = cuda
     self.current_batch = 0
 
-    self.num_batches = 12 -- TODO hardcoded!
+    -- here find out how many batches
+    local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
+    self.num_batches = tonumber(sys.execute("ls -1 " .. savefolder .. "/ | wc -l"))
 
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0
@@ -55,6 +58,8 @@ function dataloader.create(dataset_name, dataset_folder, shuffle, cuda)
 end
 
 function dataloader:sample_priority_batch(pow)
+    -- return self:sample_sequential_batch()  -- or sample_random_batch
+    --
     if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1
         return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
         -- return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
