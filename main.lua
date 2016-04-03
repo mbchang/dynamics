@@ -22,45 +22,74 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 -- Best val: 1/29/16: baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.005_batch_size_260.out
 
-mp = lapp[[
-   -e,--mode          (default "exp")           exp | pred
-   -d,--root          (default "logslink")      	subdirectory to save logs
-   -m,--model         (default "ff")   		type of model tor train: lstm | ff
-   -n,--name          (default "save3")
-   -p,--plot          (default true)                    	plot while training
-   -j,--traincfgs     (default "[:-2:2-:]")
-   -k,--testcfgs      (default "[:-2:2-:]")
-   -b,--batch_size    (default 60)
-   -l,--accel         (default true)
-   -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
-   -c,--server		  (default "op")			pc=personal | op = openmind
-   -t,--relative      (default "true")           relative state vs abs state
-   -s,--shuffle  	  (default "false")
-   -r,--lr            (default 0.005)      	   learning rate
-   -a,--lrdecay       (default 0.9)            annealing rate
-   -h,--sharpen       (default 1)               sharpen exponent
-   -f,--lrdecayafter  (default 50)              number of epochs before turning down lr
-   -i,--max_epochs    (default 1000)           	maximum nb of iterations per batch, for LBFGS
-   --diff             (default "true")
-   --rnn_dim          (default 50)
-   --layers           (default 1)
-   --seed             (default "true")
-   --max_grad_norm    (default 10)
-   --save_output	  (default false)
-   --print_every      (default 100)
-   --save_every       (default 1)
-]]
+-- mp = lapp[[
+--    -e,--mode          (default "exp")           exp | pred
+--    -d,--root          (default "logslink")      	subdirectory to save logs
+--    -m,--model         (default "ff")   		type of model tor train: lstm | ff
+--    -n,--name          (default "save3")
+--    -p,--plot          (default true)                    	plot while training
+--    -j,--traincfgs     (default "[:-2:2-:]")
+--    -k,--testcfgs      (default "[:-2:2-:]")
+--    -b,--batch_size    (default 60)
+--    -l,--accel         (default false)
+--    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
+--    -c,--server		  (default "op")			pc=personal | op = openmind
+--    -t,--relative      (default "true")           relative state vs abs state
+--    -s,--shuffle  	  (default "false")
+--    -r,--lr            (default 0.005)      	   learning rate
+--    -a,--lrdecay       (default 0.9)            annealing rate
+--    -h,--sharpen       (default 1)               sharpen exponent
+--    -f,--lrdecayafter  (default 50)              number of epochs before turning down lr
+--    -i,--max_epochs    (default 1000)           	maximum nb of iterations per batch, for LBFGS
+--    --diff             (default "true")
+--    --rnn_dim          (default 50)
+--    --layers           (default 1)
+--    --seed             (default "true")
+--    --print_every      (default 100)
+--    --save_every       (default 1)
+-- ]]
+
+local cmd = torch.CmdLine()
+cmd:option('-mode', "exp", 'exp | pred | simulate | save')
+cmd:option('-root', "logslink", 'subdirectory to save logs')
+cmd:option('-model', "ff", 'ff | lstm')
+cmd:option('-name', "stattestpos2", 'experiment name')
+cmd:option('-plot', true, 'turn on/off plot')
+cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
+cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
+cmd:option('-batch_size', 60, 'batch size')
+cmd:option('-accel', false, 'use acceleration data')
+cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
+cmd:option('-server', "op", 'pc = personal | op = openmind')
+cmd:option('-relative', true, 'relative state vs absolute state')
+cmd:option('-shuffle', false, 'shuffle batches')
+cmd:option('-lr', 0.005, 'learning rate')
+cmd:option('-lrdecay', 0.99, 'learning rate annealing')
+cmd:option('-sharpen', 1, 'sharpen exponent')
+cmd:option('-lrdecayafter', 100, 'number of epochs before turning down lr')
+cmd:option('-max_epochs', 1000, 'max number of epochs')
+cmd:option('-diff', false, 'use relative context position and velocity state')
+cmd:option('-rnn_dim', 50, 'hidden dimension')
+cmd:option('-object_dim', 9, 'number of input features')
+cmd:option('-layers', 3, 'layers in network')
+cmd:option('-seed', true, 'manual seed or not')
+cmd:option('-print_every', 100, 'print every number of batches')
+cmd:option('-save_every', 20, 'save every number of epochs')
+cmd:text()
+
+-- parse input params
+mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
     mp.root = 'logs'
     mp.winsize = 20  -- total number of frames
-    mp.num_past = 10 --10
-    mp.num_future = 10 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/7'--dataset_files_subsampled_dense_np2' --'hoho'
+    mp.num_past = 2 --10
+    mp.num_future = 1 --10
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/9'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 30 --1
-    mp.lrdecay = 1
+	mp.batch_size = 60 --1
+    mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
@@ -69,10 +98,10 @@ if mp.server == 'pc' then
 	mp.cunn = false
     -- mp.max_epochs = 5
 else
-	mp.winsize = 2  -- total number of frames
-    mp.num_past = 1 -- total number of past frames
+	mp.winsize = 20  -- total number of frames
+    mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/6'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/9'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -89,18 +118,14 @@ else
     error('Unrecognized model')
 end
 
-mp.object_dim = 8.0  -- hardcoded
-if mp.accel then mp.object_dim = 10 end
+
+if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
+if mp.accel then mp.object_dim = mp.object_dim+2 end
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
-if mp.shuffle == 'false' then mp.shuffle = false end
-if mp.relative == 'false' then mp.relative = false end
-if mp.rand_init_wts == 'false' then mp.rand_init_wts = false end
-if mp.save_output == 'false' then mp.save_output = false end
-if mp.plot == 'false' then mp.plot = false end
 if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
 
@@ -119,6 +144,7 @@ elseif mp.opt == 'adam' then
 end
 
 local model, train_loader, test_loader, modelfile
+print(mp)
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -143,28 +169,6 @@ function inittrain(preload, model_path)
     end
     print("Initialized Network")
 end
-
--- function initsavebatches(preload, model_path)
---     mp.cuda = false
---     mp.cunn = false
---     mp.shuffle = false
---     print("Network parameters:")
---     print(mp)
---     local data_loader_args = {mp.dataset_folder,
---                               mp.batch_size,
---                               mp.shuffle,
---                               mp.cuda,
---                               mp.relative,
---                               mp.num_past,
---                               mp.winsize}
---     train_loader = D.create('trainset', D.convert2allconfigs(mp.traincfgs), unpack(data_loader_args))
---     val_loader =  D.create('valset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))  -- using testcfgs
---     test_loader = D.create('testset', D.convert2allconfigs(mp.testcfgs), unpack(data_loader_args))
---
---     train_loader:save_sequential_batches()
---     val_loader:save_sequential_batches()
---     test_loader:save_sequential_batches()
--- end
 
 function initsavebatches(preload, model_path)
     mp.cuda = false
@@ -193,13 +197,12 @@ function inittest(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.shuffle,
                               mp.cuda}
-    test_loader = D.create('testset', unpack(data_loader_args))  -- TODO: Testing on trainset
+    test_loader = D.create('trainset', unpack(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
     if preload then mp = torch.load(model_path).mp end
     modelfile = model_path
     print("Initialized Network")
 end
-
 
 
 -- closure: returns loss, grad_params
@@ -270,13 +273,6 @@ function test(dataloader, params_, saveoutput)
 
         -- get batch
         local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
-
-        -- if mp.cuda then
-        --     this = this:cuda()
-        --     context = context:cuda()
-        --     y = y:cuda()
-        --     context_future = context_future:cuda()
-        -- end
 
         y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
@@ -361,7 +357,8 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
 
             if mp.relative then
-                prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.  -- TODO RESIZE THIS
+                -- prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.  -- TODO RESIZE THIS
+                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
             end
 
             -- update this and context
@@ -522,8 +519,12 @@ end
 
 
 function getLastSnapshot(network_name)
+    -- print(os.execute("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1"))
+    -- assert(false)
     local res_file = io.popen("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1")
     local status, result = pcall(function() return res_file:read():match( "^%s*(.-)%s*$" ) end)
+    print(result)
+    -- assert(false)
     res_file:close()
     if not status then
         return false
@@ -533,19 +534,28 @@ function getLastSnapshot(network_name)
 end
 
 function predict()
-    local snapshot = getLastSnapshot('save3')
+    local snapshot = getLastSnapshot('stattestpos2')
     print(snapshot)
-    -- assert(false)
-    mp = torch.load(mp.savedir ..'/'..snapshot).mp
+    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
 
     -- inittest(true, mp.savedir ..'/'..'network.t7')  -- assuming the mp.savedir doesn't change
-    print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
+    -- print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
+    print(test(test_loader,checkpoint.model.theta.params, true))
 end
 
 function predict_simulate()
-    inittest(true, mp.savedir ..'/'..'network.t7')
-    print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
+    -- inittest(true, mp.savedir ..'/'..'network.t7')
+    -- print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
+
+
+    local snapshot = getLastSnapshot('stattestpos2')
+    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    print(snapshot)
+    mp = checkpoint.mp
+    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
+    print(simulate(test_loader, checkpoint.model.theta.params, true, 15))
 end
 
 
