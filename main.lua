@@ -211,10 +211,6 @@ end
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
-    -- local this, context, y, mask = unpack(train_loader:sample_priority_batch(mp.sharpen))
-    -- local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
-    -- local grad = model:bp({this=this,context=context}, y, mask)
-
     local batch = train_loader:sample_priority_batch(mp.sharpen)
     local loss, _ = model:fp(params_, batch)
     local grad = model:bp(batch)
@@ -223,25 +219,6 @@ function feval_train(params_)  -- params_ should be first argument
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
-
--- -- tensor (batchsize, winsize*obj_dim)
--- -- reshapesize (batchsize, winsize, obj_dim)
--- -- cropdim (dim, amount_to_take) == (dim, mp.num_future)
--- function crop_future(tensor, reshapesize, cropdim)
---     local crop = tensor:clone()
---     crop = crop:reshape(unpack(reshapesize))
---     --hacky
---     if crop:dim() == 3 then
---         assert(cropdim[1]==2)
---         crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
---         crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
---     else
---         assert(crop:dim()==4 and cropdim[1] == 3)
---         crop = crop[{{},{},{1,cropdim[2]},{}}]
---         crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
---     end
---     return crop
--- end
 
 -- trains for one epoch
 function train(epoch_num)
@@ -277,22 +254,12 @@ function test(dataloader, params_, saveoutput)
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
-        -- -- get batch
-        -- local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
-        -- context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
-        --
-        -- -- predict
-        -- local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
-
-
-
         local batch = dataloader:sample_sequential_batch()
         local test_loss, prediction = model:fp(params_, batch)
+
+        -- hacky for backwards compatability
         local this, context, y, mask, config, start, finish, context_future = unpack(batch)
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
-
-
-
 
         -- reshape to -- (num_samples x num_future x 8)
         prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS

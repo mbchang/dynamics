@@ -58,21 +58,6 @@ function init_feedforward(rnn_hid_dim, numlayers)
     return nn.gModule({input}, {output})
 end
 
--- reshape is something like (10,8)
--- the numbers are hardcoded
--- Takes a tensor, and returns its two halves, split on the particular dim
--- For example, give a tensor of size (260, 10, 8), if dim is 3, then
--- this returns a table of two tensors: {(260,10,4), (260, 10,4)}
--- function split_tensor(dim, reshape)
---     assert(reshape[2] %2 == 0)
---     local tensor = nn.Identity()()
---     local reshaped = nn.Reshape(reshape[1],reshape[2], 1, true)(tensor)
---     local splitted = nn.SplitTable(dim)(reshaped)
---     local first_half = nn.JoinTable(dim)(nn.NarrowTable(1,reshape[2]/2)(splitted))
---     local second_half = nn.JoinTable(dim)(nn.NarrowTable(1+reshape[2]/2,reshape[2]/2)(splitted))
---     return nn.gModule({tensor},{first_half, second_half})
--- end
-
 -- boundaries: {{l1,r1},{l2,r2},{l3,r3},etc}
 function split_tensor(dim, reshape, boundaries)
     -- assert(reshape[2] %2 == 0)
@@ -177,11 +162,6 @@ function model.create(mp_, preload, model_path)
 end
 
 
-
--- function model:fp(params_, x, y)
---     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
---     self.theta.grad_params:zero()  -- reset gradient
-
 function model:fp(params_, batch)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
@@ -207,11 +187,6 @@ function model:fp(params_, batch)
     collectgarbage()
     return loss:sum(), prediction  -- we sum the losses through time!  -- the loss:sum() just converts the doubleTensor into a number
 end
-
-
--- function model:bp(x, y, mask)
---     self.theta.grad_params:zero() -- the d_parameters
-
 
 function model:bp(batch)
     self.theta.grad_params:zero() -- the d_parameters
