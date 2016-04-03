@@ -511,12 +511,15 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
     ## and each PARTICLE consists of (x, y).
     ## So, for example, in order to get the x-coordinates of particle 1 in time-step 3, we would do data[3][1][0]
 
-    WINSIZE = 640,480
+    # WINSIZE = 640,480
+    WINSIZE = 384,288
+    width, height = WINSIZE
+
     pygame.init()
     screen = pygame.display.set_mode(WINSIZE)
     clock = pygame.time.Clock()
     screen.fill(THECOLORS["white"])
-    pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)
+    pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)
 
     # Set up masses, their number, color, and size
     numberOfParticles   = len(particles)
@@ -548,6 +551,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
     basicString = '0'*frameAllocation
 
     maxPath = len(observed_path)
+    print(maxPath)
 
     done = False
     while not done:
@@ -560,7 +564,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
 
         clock.tick(float(framerate))
         screen.fill(THECOLORS["white"])
-        pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
+        pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)  # draw border
 
 
         # fill the background with goo, if there is any
@@ -581,13 +585,12 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
         for i in range(numberOfParticles):
             if (eval('particle' + str(i) + '.frame >=' + str(maxPath-1))):
                 exec('particle' + str(i) + '.frame = ' + str(maxPath-1))
-
             if (eval('particle' + str(i) + ".fieldcolor == THECOLORS['green']") or eval('particle' + str(i) + ".fieldcolor == THECOLORS['hotpink1']")):
                 exec('particle' + str(i) + '.draw(True)')
             else:
                 exec('particle' + str(i) + '.draw(False)')
 
-        pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
+        pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)  # draw border
 
         # Drawing finished this iteration?  Update the screen
         pygame.display.flip()
@@ -601,6 +604,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
             # print imagefile
             pygame.image.save(screen, imagefile)
             movieFrame += 1
+            if movieFrame == len(observed_path): done = True
         elif movieFrame > (len(observed_path)-1):
             done = True
 
@@ -645,10 +649,6 @@ def separate_context(context, config):
     # find number of goos
     start = config.find('_ng=')+len('_ng=')
     num_goos = int(config[start:])
-
-    # print 'num_particles', num_particles
-    # print 'num_goos', num_goos
-    # print 'num_other', num_other
 
     # Thus, the RNN should only run for num_particles + num_goos iterations
     if num_particles + num_goos != G_num_objects+1:  # TODO: shouldn't this be G_num_objects + 1?
@@ -754,10 +754,14 @@ def recover_path(this, other):
     """
     num_samples = this.shape[0]
     samples = []
+    # print(this.shape[0])
+    # assert False
     for s in xrange(this.shape[0]):
         # get it to (numObjects, winsize, [pos vel] [x y])
         sample_particles = []
         this_particle = Context_Particle(this[s,:,:])
+        if s == 0: print(this_particle.path)
+        # assert(False)
         this_particle_reshaped_path = this_particle.reshape_path(this_particle.path)
         assert this_particle_reshaped_path.shape == (this.shape[1],2,2)
         sample_particles.append(this_particle_reshaped_path)
@@ -767,9 +771,6 @@ def recover_path(this, other):
             sample_particles.append(other_particle.reshape_path(other_particle.path))
 
         sample_particles = stack(sample_particles)  # (numObjects, winsize, [pos vel] [x y])
-        if s == 58:
-            print(sample_particles[0].reshape(1,10,4))
-        # assert(False)
 
         # Now transpose to (winsize, [pos, vel], numObjects, [x, y])
         sample_particles = np.transpose(sample_particles, (1, 2, 0, 3))  # works
@@ -853,8 +854,6 @@ def recover_state(this, context, this_pred, config, velocityonly=True, accel=Tru
 
         this_pred[:,:,:2] = pos[:,1:,:]  # reassign back to this_pred
 
-    print(this_pred[58,:,:4])
-
     # Next recover path
     recoverd_path_all_samples = recover_path(this_pred, other)  # future TODO you need positional information from past
 
@@ -914,7 +913,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
         save: true if want to save vid
     """
-    framerate = 10
+    framerate = 1
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
