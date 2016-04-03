@@ -10,6 +10,7 @@ require 'Base'
 require 'sys'
 require 'rmsprop'
 require 'pl'
+require 'data_utils'
 
 -- Local Imports
 local model_utils = require 'model_utils'
@@ -52,8 +53,8 @@ require 'logging_utils'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('-model', "ff", 'ff | lstm')
-cmd:option('-name', "stattestpos2", 'experiment name')
+cmd:option('-model', "ff", 'ff | lstmobj | lstmtime')
+cmd:option('-name', "lstmtest", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
@@ -82,7 +83,7 @@ mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-    mp.winsize = 20  -- total number of frames
+    mp.winsize = 10  -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/9'--dataset_files_subsampled_dense_np2' --'hoho'
@@ -110,8 +111,10 @@ else
 end
 
 local M
-if mp.model == 'lstm' then
+if mp.model == 'lstmobj' then
     M = require 'model_new'
+elseif mp.model == 'lstmtime' then
+    M = require 'lstm_model'
 elseif mp.model == 'ff' then
     M = require 'feed_forward_model'
 else
@@ -208,34 +211,37 @@ end
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
-    local this, context, y, mask = unpack(train_loader:sample_priority_batch(mp.sharpen))
-    y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})   -- TODO RESIZE THIS
+    -- local this, context, y, mask = unpack(train_loader:sample_priority_batch(mp.sharpen))
+    -- local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
+    -- local grad = model:bp({this=this,context=context}, y, mask)
 
-    local loss, _ = model:fp(params_, {this=this,context=context}, y, mask)
-    local grad = model:bp({this=this,context=context}, y, mask)
+    local batch = train_loader:sample_priority_batch(mp.sharpen)
+    local loss, _ = model:fp(params_, batch)
+    local grad = model:bp(batch)
+
     train_loader.priority_sampler:update_batch_weight(train_loader.current_sampled_id, loss)
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
 
--- tensor (batchsize, winsize*obj_dim)
--- reshapesize (batchsize, winsize, obj_dim)
--- cropdim (dim, amount_to_take) == (dim, mp.num_future)
-function crop_future(tensor, reshapesize, cropdim)
-    local crop = tensor:clone()
-    crop = crop:reshape(unpack(reshapesize))
-    --hacky
-    if crop:dim() == 3 then
-        assert(cropdim[1]==2)
-        crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
-        crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
-    else
-        assert(crop:dim()==4 and cropdim[1] == 3)
-        crop = crop[{{},{},{1,cropdim[2]},{}}]
-        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
-    end
-    return crop
-end
+-- -- tensor (batchsize, winsize*obj_dim)
+-- -- reshapesize (batchsize, winsize, obj_dim)
+-- -- cropdim (dim, amount_to_take) == (dim, mp.num_future)
+-- function crop_future(tensor, reshapesize, cropdim)
+--     local crop = tensor:clone()
+--     crop = crop:reshape(unpack(reshapesize))
+--     --hacky
+--     if crop:dim() == 3 then
+--         assert(cropdim[1]==2)
+--         crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+--         crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
+--     else
+--         assert(crop:dim()==4 and cropdim[1] == 3)
+--         crop = crop[{{},{},{1,cropdim[2]},{}}]
+--         crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
+--     end
+--     return crop
+-- end
 
 -- trains for one epoch
 function train(epoch_num)
@@ -271,18 +277,27 @@ function test(dataloader, params_, saveoutput)
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
-        -- get batch
-        local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
+        -- -- get batch
+        -- local this, context, y, mask, config, start, finish, context_future = unpack(dataloader:sample_sequential_batch())
+        -- context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
+        --
+        -- -- predict
+        -- local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
 
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
+
+
+        local batch = dataloader:sample_sequential_batch()
+        local test_loss, prediction = model:fp(params_, batch)
+        local this, context, y, mask, config, start, finish, context_future = unpack(batch)
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
-        -- predict
-        local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)
+
+
 
         -- reshape to -- (num_samples x num_future x 8)
         prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
         this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
         y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
         -- take care of relative position

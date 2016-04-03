@@ -177,9 +177,17 @@ function model.create(mp_, preload, model_path)
 end
 
 
-function model:fp(params_, x, y)
+
+-- function model:fp(params_, x, y)
+--     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+--     self.theta.grad_params:zero()  -- reset gradient
+
+function model:fp(params_, batch)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
+
+    local this, context, y, mask = unpack(batch)
+    local x = {this=this,context=context}
 
     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
 
@@ -187,11 +195,6 @@ function model:fp(params_, x, y)
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
     local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
-
-    -- print(this_past:size())
-    -- print(context:size())
-    -- print(this_future:size())
-    -- assert(false)
 
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)  -- TODO RESIZE THIS
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length
@@ -206,8 +209,14 @@ function model:fp(params_, x, y)
 end
 
 
-function model:bp(x, y, mask)
+-- function model:bp(x, y, mask)
+--     self.theta.grad_params:zero() -- the d_parameters
+
+
+function model:bp(batch)
     self.theta.grad_params:zero() -- the d_parameters
+    local this, context, y, mask = unpack(batch)
+    local x = {this=this,context=context}
 
     -- unpack inputs. All of these have been CUDAed already if need be
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
