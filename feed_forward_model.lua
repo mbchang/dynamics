@@ -3,6 +3,7 @@ require 'torch'
 require 'nngraph'
 require 'Base'
 require 'IdentityCriterion'
+require 'data_utils'
 local model_utils = require 'model_utils'
 
 nngraph.setDebug(true)
@@ -99,7 +100,6 @@ function init_network(params)
     local contextp      = nn.Identity()() -- the context particle
     local thisp_future  = nn.Identity()() -- the particle of interet, future
 
-    -- Input to LSTM
     -- actually can replace all of this with karpathy lstm
     local model_input = encoder({thisp_past, contextp})
     local model_output = ff(model_input)
@@ -181,10 +181,17 @@ function model:fp(params_, x, y)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
 
+    y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
+
     -- unpack inputs
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
     local context       = model_utils.transfer_data(x.context:clone(), self.mp.cuda)
     local this_future   = model_utils.transfer_data(y:clone(), self.mp.cuda)
+
+    -- print(this_past:size())
+    -- print(context:size())
+    -- print(this_future:size())
+    -- assert(false)
 
     assert(this_past:size(1) == self.mp.batch_size and this_past:size(2) == self.mp.input_dim)  -- TODO RESIZE THIS
     assert(context:size(1) == self.mp.batch_size and context:size(2)==self.mp.seq_length

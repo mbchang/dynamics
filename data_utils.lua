@@ -105,3 +105,23 @@ function convert_type(x, should_cuda)
         return x:double()
     end
 end
+
+
+-- tensor (batchsize, winsize*obj_dim)
+-- reshapesize (batchsize, winsize, obj_dim)
+-- cropdim (dim, amount_to_take) == (dim, mp.num_future)
+function crop_future(tensor, reshapesize, cropdim)
+    local crop = tensor:clone()
+    crop = crop:reshape(unpack(reshapesize))
+    --hacky
+    if crop:dim() == 3 then
+        assert(cropdim[1]==2)
+        crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+        crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
+    else
+        assert(crop:dim()==4 and cropdim[1] == 3)
+        crop = crop[{{},{},{1,cropdim[2]},{}}]
+        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
+    end
+    return crop
+end
