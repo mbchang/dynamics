@@ -112,6 +112,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.relative = relative
     self.num_past = num_past
     self.winsize = winsize
+    self.incremental = true -- TODO: add to main. This means predict next timestep
 
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
@@ -321,66 +322,125 @@ function datasaver:process_config(current_config)
         context:size(2) == max_other_objects and context:size(3) == windowsize and
         context:size(4) == object_dim)
 
-    -- split into x and y
-    local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
-    local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
-    local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
-    local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
+    -- TODO: here at this point you can do something for lstm version
+    if self.incremental then
+        -- (num_samples, num_steps, object_dim)
+        local this_past = this_particles[{{},{1,self.winsize-1},{}}]
+        local context_past = context[{{},{},{1,self.winsize-1},{}}]
+        -- (num_samples, num_objects, num_steps, object_dim)
+        local this_future = this_particles[{{},{2,self.winsize},{}}]
+        local context_future = context[{{},{},{2,self.winsize},{}}]
 
-    -- assert num_samples are correct
-    assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
-    -- assert number of axes of tensors are correct
-    assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
-    -- assert seq length is correct
-    assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
-    -- check padding
-    assert(context_x:size(2)==max_other_objects)
-    -- check data dimension
-    assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
+        -- assert num_samples are correct
+        assert(this_past:size(1) == num_samples and
+                context_past:size(1) == num_samples and
+                this_future:size(1) == num_samples and
+                context_future:size(1) == num_samples)
+        -- assert number of axes of tensors are correct
+        assert(this_past:size():size()==3 and
+                context_past:size():size()==4 and
+                this_future:size():size()==3 and
+                context_future:size():size()==4)
+        -- assert seq length is correct
+        assert(this_past:size(2)==self.winsize-1 and
+                context_past:size(3)==self.winsize-1 and
+                this_future:size(2)==self.winsize-1 and
+                context_future:size(3)==self.winsize-1)
+        -- check padding
+        assert(context_past:size(2)==max_other_objects and
+                context_future:size(2)==max_other_objects)
+        -- check data dimension
+        assert(this_past:size(3) == object_dim and
+                context_past:size(4) == object_dim and
+                this_future:size(3) == object_dim and
+                context_future:size(4) == object_dim)
 
-    -- Relative position wrt the last past coord
-    if self.relative then
-        y[{{},{},{1,4}}] = y[{{},{},{1,4}}] - this_x[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}])
-        -- y = y - this_x[{{},{-1}}]:expandAs(y)
-        -- assert(false, "this should not include acceleration, nor diff")
-    end  -- Should this include acceleration? No I don't think so
+        if self.relative then
+            this_future[{{},{},{1,4}}] = this_future[{{},{},{1,4}}]
+                                        - this_past[{{},{-1},{1,4}}]
+                                        :expandAs(this_future[{{},{},{1,4}}])
+        end
 
-    -- TODO: bad design: basically to get hard_examples I am forcing you to use accleration data
-    local hard_examples
-    if mp.accel then
-        print('hey')
-        -- print(this_x[{{1,100}}])
-        this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
-        new_object_dim = object_dim + 2
+        if mp.accel then
+            assert(false, 'implement this')
+        else
+            new_object_dim = object_dim
+        end
 
-        -- here find the indices of the examples that have positive acceleration for this
-        -- print(this_x:size())  -- (num_examples, 10, 10)
-        -- for each example, see if there exists a one in the acceleration in the (10,10) grid
-        local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
-        local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
-        hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
+        if mp.diff then
+            assert(false, 'implement this')
+        end
+
+        print(this_past:size())
+        print(this_future:size())
+        print(context_past:size())
+        print(context_future:size())
+
+        assert(this_past:dim()==3 and context_past:dim()==4 and
+                this_future:dim()==3 and context_future:dim()==4)
+        return {this_past, context_past, this_future, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
     else
-        new_object_dim = object_dim
+
+        -- split into x and y
+        local this_x = this_particles[{{},{1,self.num_past},{}}]  -- (num_samples x num_past x 8)
+        local context_x = context[{{},{},{1,self.num_past},{}}]  -- (num_samples x max_other_objects x num_past x 8)
+        local y = this_particles[{{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+        local context_future = context[{{},{},{self.num_past+1,self.winsize},{}}]  -- (num_samples x max_other_objects x num_future x 8)
+
+        -- assert num_samples are correct
+        assert(this_x:size(1) == num_samples and context_x:size(1) == num_samples and y:size(1) == num_samples)
+        -- assert number of axes of tensors are correct
+        assert(this_x:size():size()==3 and context_x:size():size()==4 and y:size():size()==3)
+        -- assert seq length is correct
+        assert(this_x:size(2)==self.num_past and context_x:size(3)==self.num_past and y:size(2)==self.winsize-self.num_past)
+        -- check padding
+        assert(context_x:size(2)==max_other_objects)
+        -- check data dimension
+        assert(this_x:size(3) == object_dim and context_x:size(4) == object_dim and y:size(3) == object_dim)
+
+        -- Relative position wrt the last past coord
+        if self.relative then
+            y[{{},{},{1,4}}] = y[{{},{},{1,4}}] - this_x[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}])
+            -- y = y - this_x[{{},{-1}}]:expandAs(y)
+            -- assert(false, "this should not include acceleration, nor diff")
+        end  -- Should this include acceleration? No I don't think so
+
+        -- TODO: bad design: basically to get hard_examples I am forcing you to use accleration data
+        local hard_examples
+        if mp.accel then
+            print('hey')
+            -- print(this_x[{{1,100}}])
+            this_x, context_x, y, context_future = unpack(add_accel(this_x,context_x,y,context_future))
+            new_object_dim = object_dim + 2
+
+            -- here find the indices of the examples that have positive acceleration for this
+            -- print(this_x:size())  -- (num_examples, 10, 10)
+            -- for each example, see if there exists a one in the acceleration in the (10,10) grid
+            local ex_accels = this_x[{{},{},{5,6}}]:sum(2) -- sum over the windowsize
+            local ex_accel_summary = torch.squeeze(ex_accels):sum(2)  -- (num_examples, 1)
+            hard_examples = torch.find(ex_accel_summary,1)  -- indicator of whether there is accel at all. for each example! (each group of windowsize)
+        else
+            new_object_dim = object_dim
+        end
+
+        -- here take care of the vector differences (should I do differences in velocity too?)
+        -- if mp.diff then
+        --     this_x, context_x = add_diff(this_x,context_x)  -- TODO RESIZE THIS
+        --     y, context_future = add_diff(y, context_future)
+        --     new_object_dim = new_object_dim + 4 -- added the differences between position and velocities
+        -- end
+
+        -- note that you do relative position and velocity as target!
+
+        -- Reshape
+        this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)  -- TODO RESIZE THIS
+        context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
+        y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
+        context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
+
+        assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)  -- TODO RESIZE THIS
+        return {this_x, context_x, y, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
     end
-
-
-    -- here take care of the vector differences (should I do differences in velocity too?)
-    -- if mp.diff then
-    --     this_x, context_x = add_diff(this_x,context_x)  -- TODO RESIZE THIS
-    --     y, context_future = add_diff(y, context_future)
-    --     new_object_dim = new_object_dim + 4 -- added the differences between position and velocities
-    -- end
-
-    -- note that you do relative position and velocity as target!
-
-    -- Reshape
-    this_x          = this_x:reshape(num_samples, self.num_past*new_object_dim)  -- TODO RESIZE THIS
-    context_x       = context_x:reshape(num_samples, max_other_objects, self.num_past*new_object_dim)
-    y               = y:reshape(num_samples, (self.winsize-self.num_past)*new_object_dim)
-    context_future  = context_future:reshape(num_samples, max_other_objects, (self.winsize-self.num_past)*new_object_dim)
-
-    assert(this_x:dim()==2 and context_x:dim()==3 and y:dim()==2)  -- TODO RESIZE THIS
-    return {this_x, context_x, y, minibatch_m, context_future, hard_examples}  -- possibly save this as a variable
 end
 
 
@@ -472,12 +532,14 @@ function datasaver:save_sequential_batches()
     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
 
     local config_data = self:get_config_data()
+    print(config_data)
 
-    local num_batches = 0
+    local num_samples = 0
     for k,v in pairs(config_data) do
-        num_batches = num_batches + config_data[k][1]:size(1)
+        num_samples = num_samples + config_data[k][1]:size(1)
     end
-    self.num_batches = num_batches
+    self.num_batches = num_samples/self.batch_size  -- mutates self.num_batches to the correct size?
+    self.num_batches = 30
 
     for i = 1,self.num_batches do
         local batch, ishard = self:get_batch(i, config_data)
@@ -485,7 +547,7 @@ function datasaver:save_sequential_batches()
         if ishard then ext = '_hard' else ext = '' end
         local batchname = savefolder..'/'..'batch'..i..ext
 
-        -- torch.save(batchname, batch)
+        torch.save(batchname, batch)
         print('saved '..batchname)
     end
 end
