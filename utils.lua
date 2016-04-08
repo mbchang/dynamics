@@ -266,3 +266,24 @@ end
 
 -- print('hi')
 -- print(permute(range_list(1,4,1)))
+
+function alleq(tableoftables)
+    local sizes
+    local reftable
+    for index,subtable in pairs(tableoftables) do
+        if index == 1 then
+            sizes = #subtable
+            reftable = T.deepcopy(subtable)
+        end
+        if not(#subtable == sizes) then return false end
+    end
+    -- if we get here that means all have same size
+    for k,v in pairs(reftable) do
+        for index, subtable in pairs(tableoftables) do
+            if index > 1 then
+                if not(subtable[k] == reftable[k]) then return false end
+            end
+        end
+    end
+    return true
+end
