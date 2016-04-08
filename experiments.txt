@@ -152,6 +152,32 @@ experiment 14: accel
     Turns out that all of these are failures because my data is wrong;
     I don't give it positional information.
 
+
+experiment 15:
+    stationary dataset with smaller window
+    2 in 1 out
+    dataset 9
+
+    Tested:
+        15_stat_layers_1_sharpen_1_lr_0.0003_lrdecay_0.99.out
+        15_stat_layers_1_sharpen_1_lr_0.003_lrdecay_0.99.out
+        15_stat_layers_2_sharpen_1_lr_0.0003_lrdecay_0.99.out
+        15_stat_layers_2_sharpen_1_lr_0.003_lrdecay_0.99.out
+        15_stat_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99.out  - does best
+        15_stat_layers_3_sharpen_1_lr_0.003_lrdecay_0.99.out
+
+    Observations
+        - examples with extremely high velocity. I should change the dataset to
+        reduce velocity
+        -
+
+experimet 16:
+    stationary dataset with smaller window
+    2 in 1 out
+    dataset 11
+    non-overlapping particles, so won't have problem of 15
+    no sharpening
+
 experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
 
 experiment: 7: 8_1i1o

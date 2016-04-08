@@ -3,7 +3,7 @@ from utils import *
 
 # Hardcoded Global Variables
 G_w_width, G_w_height = 384.0, 288.0 #640.0,480.0
-G_max_velocity, G_min_velocity = 2*3000.0, -2*3000.0 #2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies (this is normalizing factor)
+G_max_velocity, G_min_velocity = 2*3000,-2*3000#2*3000.0, -2*3000.0 #2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies (this is normalizing factor)
 G_mass_values = [0.33, 1.0, 3.0, 1e30]  # hardcoded  TODO: add 1e30
 G_goo_strength_values = [0.0, -5.0, -20.0, -100.0]  # hardcoded the -100 is a dummy
 G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen", -100.0: "pink"}

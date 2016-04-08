@@ -382,13 +382,13 @@ def save_all_datasets(dryrun):
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
 
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/8'  # (w=384, h=288)
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/11'  # (w=384, h=288)
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
-    windowsize = 2  # 2  -- TODO 1in1out
-    num_train_samples_per = (1000, 79)  # 3
-    num_val_samples_per = (100, 79)  # 1
-    num_test_samples_per = (100, 79)  # 1
+    windowsize = 10  # 2  -- TODO 1in1out
+    num_train_samples_per = (1500, 70)  # 3
+    num_val_samples_per = (250, 70)  # 1
+    num_test_samples_per = (250, 70)  # 1
     contiguous = True
 
     # dataset_files_folder = 'hey'
@@ -405,7 +405,7 @@ def save_all_datasets(dryrun):
                                                 num_test_samples_per,
                                                 windowsize,
                                                 contiguous,
-                                                'worldm5_np=2_ng=0')
+                                                'worldm5_np=2_ng=0_nonoverlap')
 
     # # save
     if not dryrun:
@@ -648,7 +648,8 @@ def separate_context(context, config):
 
     # find number of goos
     start = config.find('_ng=')+len('_ng=')
-    num_goos = int(config[start:])
+    end = start + config[start:].find('_')
+    num_goos = int(config[start:end])
 
     # Thus, the RNN should only run for num_particles + num_goos iterations
     if num_particles + num_goos != G_num_objects+1:  # TODO: shouldn't this be G_num_objects + 1?
@@ -982,4 +983,4 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
 
 if __name__ == "__main__":
      save_all_datasets(True)
-    # print(subsample_range(80, 2, 79))
+    # print(subsample_range(80, 10, 70))

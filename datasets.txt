@@ -56,3 +56,69 @@ dataset_files_subsampled_dense_np2 --> rename to 2
     num_val_samples_per = (50, 79)  # 1
     num_test_samples_per = (50, 79)  # 1
     contiguous = True
+
+
+8
+    (w=384, h=288), stationary
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/8
+    Trainset: 1000 examples per config 79 examples per video
+    Valset: 100 examples per config 79 examples per video
+    Testset: 100 examples per config 79 examples per video
+    Windowsize: 2
+    Contiguous: True
+    problem: velocity too high
+
+
+9
+    like 8, but with windowsize 20, 2 in 1 out
+    (w=384, h=288), stationary
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/9
+    Trainset: 1500 examples per config 60 examples per video
+    Valset: 200 examples per config 60 examples per video
+    Testset: 200 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
+    problem: velocity too high
+
+
+10test
+    like 9, but with 10 in 10 out
+
+11test
+    copy of 9
+
+10
+    (w=384, h=288), stationary, winsize 10
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/10
+    Trainset: 3000 examples per config 70 examples per video
+    Valset: 500 examples per config 70 examples per video
+    Testset: 500 examples per config 70 examples per video
+    Windowsize: 10
+    Contiguous: True
+
+slowtest
+    (w=384, h=288), stationary, winsize 10
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/slowtest
+    Trainset: 6 examples per config 70 examples per video
+    Valset: 2 examples per config 70 examples per video
+    Testset: 2 examples per config 70 examples per video
+    Windowsize: 10
+    Contiguous: True
+
+nonoverlaptest
+    (w=384, h=288), stationary, winsize 10, pc
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/nonoverlaptest
+    Trainset: 6 examples per config 70 examples per video
+    Valset: 2 examples per config 70 examples per video
+    Testset: 2 examples per config 70 examples per video
+    Windowsize: 10
+    Contiguous: True
+
+11
+    (w=384, h=288), stationary, winsize 10, om
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/11
+    Trainset: 1500 examples per config 70 examples per video
+    Valset: 250 examples per config 70 examples per video
+    Testset: 250 examples per config 70 examples per video
+    Windowsize: 10
+    Contiguous: True

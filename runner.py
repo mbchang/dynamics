@@ -28,10 +28,10 @@ def create_jobs(dry_run, mode, ext):
         }
 
     jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d}
-                for r in [3e-3,7e-3]
+                for r in [3e-4]
                     for l in [3,4]
-                        for s in [2]
-                            for d in [0.99,1]]
+                        for s in [1,1.5]
+                            for d in [0.99]]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -39,7 +39,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = '14_accel_after'
+        jobname = '16_'
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):

@@ -156,7 +156,6 @@ from convert_data import *
 # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=False, imgsave=False)
 
 
-
 # 2/23/16: experiments 12 tested priority sampling
 # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/12c_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.001_lrdecay_0.97/predictions/worldm1_np=2_ng=0_[1,30].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)  # NO BOUNCE?  for [1,30]
@@ -171,5 +170,17 @@ from convert_data import *
 # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/13_layers_3_sharpen_1_lr_0.005/predictions/worldm1_np=2_ng=0_[5521,5580].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=45, vidsave=False, imgsave=False)   # corner bounce
 
-h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/13_layers_3_sharpen_1_lr_0.005/predictions/worldm1_np=2_ng=0_[1,60].h5'
-visualize_results(training_samples_hdf5=h5_file, sample_num=58, vidsave=False, imgsave=False)
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/13_layers_3_sharpen_1_lr_0.005/predictions/worldm1_np=2_ng=0_[1,60].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=58, vidsave=False, imgsave=False)
+
+# Stationary test
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/stattestpos/predictions/worldm5_np=2_ng=0_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=23, vidsave=False, imgsave=False)
+
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/stattestpos2/predictions/worldm5_np=2_ng=0_[1321,1380].h5'
+# # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/stattestpos2/predictions/worldm5_np=2_ng=0_[1,60].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)
+
+# Test on stationary, constrained window, nonoverlapping
+h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/ffnonoverlaptest/predictions/worldm5_np=2_ng=0_nonoverlap_[1,10].h5'
+visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)
