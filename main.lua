@@ -18,56 +18,25 @@ local D = require 'DataLoader'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
--- torch.setdefaulttensortype('torch.FloatTensor')
-
 ------------------------------------- Init -------------------------------------
--- Best val: 1/29/16: baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.005_batch_size_260.out
-
--- mp = lapp[[
---    -e,--mode          (default "exp")           exp | pred
---    -d,--root          (default "logslink")      	subdirectory to save logs
---    -m,--model         (default "ff")   		type of model tor train: lstm | ff
---    -n,--name          (default "save3")
---    -p,--plot          (default true)                    	plot while training
---    -j,--traincfgs     (default "[:-2:2-:]")
---    -k,--testcfgs      (default "[:-2:2-:]")
---    -b,--batch_size    (default 60)
---    -l,--accel         (default false)
---    -o,--opt           (default "optimrmsprop")       rmsprop | adam | optimrmsprop
---    -c,--server		  (default "op")			pc=personal | op = openmind
---    -t,--relative      (default "true")           relative state vs abs state
---    -s,--shuffle  	  (default "false")
---    -r,--lr            (default 0.005)      	   learning rate
---    -a,--lrdecay       (default 0.9)            annealing rate
---    -h,--sharpen       (default 1)               sharpen exponent
---    -f,--lrdecayafter  (default 50)              number of epochs before turning down lr
---    -i,--max_epochs    (default 1000)           	maximum nb of iterations per batch, for LBFGS
---    --diff             (default "true")
---    --rnn_dim          (default 50)
---    --layers           (default 1)
---    --seed             (default "true")
---    --print_every      (default 100)
---    --save_every       (default 1)
--- ]]
-
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ff", 'ff | lstmobj | lstmtime')
-cmd:option('-name', "lstmtest", 'experiment name')
+cmd:option('-name', "ffnonoverlaptest", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
-cmd:option('-batch_size', 60, 'batch size')
+cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-lr', 0.005, 'learning rate')
+cmd:option('-lr', 0.001, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
-cmd:option('-lrdecayafter', 100, 'number of epochs before turning down lr')
+cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
 cmd:option('-max_epochs', 1000, 'max number of epochs')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
@@ -83,13 +52,13 @@ mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
     mp.root = 'logs'
-    mp.winsize = 10  -- total number of frames
+    mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/9'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/nonoverlaptest'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 60 --1
+	mp.batch_size = 10 --1
     mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -99,10 +68,10 @@ if mp.server == 'pc' then
 	mp.cunn = false
     -- mp.max_epochs = 5
 else
-	mp.winsize = 20  -- total number of frames
+	mp.winsize = 10  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/9'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/11'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -257,6 +226,10 @@ function test(dataloader, params_, saveoutput)
         local batch = dataloader:sample_sequential_batch()
         local test_loss, prediction = model:fp(params_, batch)
 
+        -- print(test_loss)
+        -- -- print(prediction)
+        -- assert(false)
+
         -- hacky for backwards compatability
         local this, context, y, mask, config, start, finish, context_future = unpack(batch)
         context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
@@ -332,7 +305,12 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
 
-            local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
+            local modified_batch = {this, context, y, mask, config, start,
+                                        finish, context_future_orig}
+
+            local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
+
+            -- local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
             prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
@@ -516,7 +494,7 @@ function getLastSnapshot(network_name)
 end
 
 function predict()
-    local snapshot = getLastSnapshot('stattestpos2')
+    local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
     mp = checkpoint.mp
@@ -532,12 +510,12 @@ function predict_simulate()
     -- print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
 
 
-    local snapshot = getLastSnapshot('stattestpos2')
+    local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
     print(snapshot)
     mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(simulate(test_loader, checkpoint.model.theta.params, true, 15))
+    print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
 end
 
 

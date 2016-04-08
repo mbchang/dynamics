@@ -353,7 +353,7 @@ function model:bp(batch)
     return self.theta.grad_params
 end
 
-return model 
+return model
 
 
 -- function test_splitter()

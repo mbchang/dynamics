@@ -162,14 +162,17 @@ function model.create(mp_, preload, model_path)
 end
 
 
-function model:fp(params_, batch)
+function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
 
     local this, context, y, mask = unpack(batch)
     local x = {this=this,context=context}
 
-    y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})
+    if not sim then
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
+                            {2,mp.num_future})
+    end
 
     -- unpack inputs
     local this_past     = model_utils.transfer_data(x.this:clone(), self.mp.cuda)
