@@ -58,11 +58,11 @@ function dataloader.create(dataset_name, dataset_folder, shuffle, cuda)
 end
 
 function dataloader:sample_priority_batch(pow)
-    -- return self:sample_sequential_batch()  -- or sample_random_batch
+    -- return self:sample_random_batch()  -- or sample_random_batch
     --
     if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1
-        return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
-        -- return self:sample_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
+        -- return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
+        return self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
         return self:sample_sequential_batch()  -- or sample_random_batch
     end

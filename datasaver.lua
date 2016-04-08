@@ -20,7 +20,7 @@ datasaver.__index = datasaver
 
 local object_dim = 9  -- change to 9
 local max_other_objects = 10
-local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4'}  -- all_worlds[1] should correspond to worldm1
+local all_worlds = {'worldm1', 'worldm2', 'worldm3', 'worldm4', 'worldm5'}  -- all_worlds[1] should correspond to worldm1
 local world_range = {1,4}
 local particle_range = {1,6}
 local goo_range = {0,5}
@@ -112,7 +112,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.relative = relative
     self.num_past = num_past
     self.winsize = winsize
-    self.incremental = true -- TODO: add to main. This means predict next timestep
+    self.incremental = false -- TODO: add to main. This means predict next timestep
 
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
@@ -141,7 +141,7 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     -- hacky: I basically get the correct value of self.num_batches when I
     -- actually process the configs
 
-    self.num_batches = 30 -- TODO hardcoded!
+    -- self.num_batches = 30 -- TODO hardcoded!
 
     collectgarbage()
     return self
@@ -539,7 +539,7 @@ function datasaver:save_sequential_batches()
         num_samples = num_samples + config_data[k][1]:size(1)
     end
     self.num_batches = num_samples/self.batch_size  -- mutates self.num_batches to the correct size?
-    self.num_batches = 30
+    -- self.num_batches = 30
 
     for i = 1,self.num_batches do
         local batch, ishard = self:get_batch(i, config_data)
