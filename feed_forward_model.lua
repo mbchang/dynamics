@@ -151,8 +151,8 @@ function model.create(mp_, preload, model_path)
         self.network = checkpoint.model.network:clone()
     else
         self.network = init_network(self.mp)
+         if self.mp.cuda then self.network:cuda() end
     end
-    if self.mp.cuda then self.network:cuda() end
 
     self.theta = {}
     self.theta.params, self.theta.grad_params = self.network:getParameters()
