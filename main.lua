@@ -91,6 +91,12 @@ else
 end
 
 
+-- world constants
+local G_w_width, G_w_height = 384.0, 288.0
+local G_max_velocity, G_min_velocity = 2*3000,-2*3000
+local subsamp = 5
+
+
 if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
 if mp.accel then mp.object_dim = mp.object_dim+2 end
 mp.input_dim = mp.object_dim*mp.num_past
@@ -116,7 +122,6 @@ elseif mp.opt == 'adam' then
 end
 
 local model, train_loader, test_loader, modelfile
-print(mp)
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -169,7 +174,7 @@ function inittest(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.shuffle,
                               mp.cuda}
-    test_loader = D.create('trainset', unpack(data_loader_args))  -- TODO: Testing on trainset
+    test_loader = D.create('testset', unpack(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
     if preload then mp = torch.load(model_path).mp end
     modelfile = model_path
@@ -264,6 +269,33 @@ function test(dataloader, params_, saveoutput)
     return avg_loss
 end
 
+-- this: (mp.batch_size, mp.num_past, mp.object_dim)
+-- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
+function update_position(this, pred)
+    local this, pred = this:clone(), pred:clone()
+    local lastpos = (this[{{},{-1},{1,2}}]:clone()*G_w_width)
+    local lastvel = (this[{{},{-1},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
+    local currpos = (pred[{{},{},{1,2}}]:clone()*G_w_width)
+    local currvel = (pred[{{},{},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
+
+    -- this is length n+1
+    local pos = torch.cat({lastpos, currpos},2)
+    local vel = torch.cat({lastvel, currvel},2)
+
+    -- take the last part (future)
+    for i = 1,pos:size(2)-1 do
+        pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
+    end
+
+    -- normalize again
+    pos = pos/G_w_width
+    assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
+
+    pred[{{},{},{1,2}}] = pos[{{},{1},{}}]  -- reassign back to pred
+    return pred
+end
+
+
 -- test on dataset
 -- assumption: that you predict 1 out
 --[[
@@ -320,6 +352,10 @@ function simulate(dataloader, params_, saveoutput, numsteps)
                 -- prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.  -- TODO RESIZE THIS
                 prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
             end
+
+            -- here you want to add velocity to position
+            -- prediction: (batchsize, mp.num_future, mp.object_dim)
+            prediction = update_position(this, prediction)
 
             -- update this and context
             -- chop off first time step and then add in next one
@@ -508,7 +544,6 @@ end
 function predict_simulate()
     -- inittest(true, mp.savedir ..'/'..'network.t7')
     -- print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
-
 
     local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)

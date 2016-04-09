@@ -182,5 +182,9 @@ from convert_data import *
 # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)
 
 # Test on stationary, constrained window, nonoverlapping
-h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/ffnonoverlaptest/predictions/worldm5_np=2_ng=0_nonoverlap_[1,10].h5'
-visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/ffnonoverlaptest/predictions/worldm5_np=2_ng=0_nonoverlap_[1,10].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)
+
+# Test on stationary, constrained window, nonoverlapping, openmind
+h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/16__layers_4_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm5_np=2_ng=0_nonoverlap_[351,400].h5'
+visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)  # can do object bounces! (batch 8)

@@ -755,13 +755,11 @@ def recover_path(this, other):
     """
     num_samples = this.shape[0]
     samples = []
-    # print(this.shape[0])
-    # assert False
     for s in xrange(this.shape[0]):
         # get it to (numObjects, winsize, [pos vel] [x y])
         sample_particles = []
         this_particle = Context_Particle(this[s,:,:])
-        if s == 0: print(this_particle.path)
+        if s == 7: print(this_particle.path)
         # assert(False)
         this_particle_reshaped_path = this_particle.reshape_path(this_particle.path)
         assert this_particle_reshaped_path.shape == (this.shape[1],2,2)

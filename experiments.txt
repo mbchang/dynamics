@@ -178,6 +178,13 @@ experimet 16:
     non-overlapping particles, so won't have problem of 15
     no sharpening
 
+    Seems to work in predicting next time-step
+
+    16__layers_3_sharpen_1.5_lr_0.0003_lrdecay_0.99.out  -- deleted
+    16__layers_3_sharpen_1_lr_0.0003_lrdecay_0.99.out  -- deleted
+    16__layers_4_sharpen_1.5_lr_0.0003_lrdecay_0.99.out  -- best hardest
+    16__layers_4_sharpen_1_lr_0.0003_lrdecay_0.99.out  -- best val
+
 experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
 
 experiment: 7: 8_1i1o
