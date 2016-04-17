@@ -113,6 +113,11 @@ function datasaver.create(dataset_name, specified_configs, dataset_folder, batch
     self.num_past = num_past
     self.winsize = winsize
     self.incremental = false -- TODO: add to main. This means predict next timestep
+    if self.incremental then
+        self.extension = '_incremental'
+    else
+        self.extension = ''
+    end
 
     -------------------------------- Get Dataset -----------------------------
     self.dataset = load_data(dataset_name..'.h5', dataset_folder)  -- table of all the data
@@ -356,9 +361,9 @@ function datasaver:process_config(current_config)
                 context_future:size(4) == object_dim)
 
         if self.relative then
+            -- you want to do it wrt each past input!
             this_future[{{},{},{1,4}}] = this_future[{{},{},{1,4}}]
-                                        - this_past[{{},{-1},{1,4}}]
-                                        :expandAs(this_future[{{},{},{1,4}}])
+                                        - this_past[{{},{},{1,4}}]
         end
 
         if mp.accel then
@@ -528,7 +533,8 @@ function datasaver:get_batch_info(current_config, current_batch_in_config)
 end
 
 function datasaver:save_sequential_batches()
-    local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
+    local savefolder = self.dataset_folder..'/'..'batches'..
+                        self.extension..'/'..self.dataset_name
     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
 
     local config_data = self:get_config_data()
