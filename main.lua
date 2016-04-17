@@ -23,7 +23,7 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ff", 'ff | lstmobj | lstmtime')
-cmd:option('-name', "ffnonoverlaptest", 'experiment name')
+cmd:option('-name', "ff_sim_test", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
@@ -37,7 +37,7 @@ cmd:option('-lr', 0.001, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
-cmd:option('-max_epochs', 1000, 'max number of epochs')
+cmd:option('-max_epochs', 100, 'max number of epochs')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
@@ -55,7 +55,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/nonoverlaptest'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/nonstationary_lite'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
@@ -71,7 +71,7 @@ else
 	mp.winsize = 10  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/11'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/12'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -231,27 +231,45 @@ function test(dataloader, params_, saveoutput)
         local batch = dataloader:sample_sequential_batch()
         local test_loss, prediction = model:fp(params_, batch)
 
-        -- print(test_loss)
-        -- -- print(prediction)
-        -- assert(false)
-
         -- hacky for backwards compatability
         local this, context, y, mask, config, start, finish, context_future = unpack(batch)
-        context_future = crop_future(context_future, {context_future:size(1), mp.seq_length, mp.winsize-mp.num_past, mp.object_dim}, {3,mp.num_future})
 
-        -- reshape to -- (num_samples x num_future x 8)
-        prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
-        this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
-        y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
-        -- take care of relative position
-        if mp.relative then
-            prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
-            y[{{},{},{1,4}}] = y[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}]) -- add back because relative  -- TODO RESIZE THIS?
+        if mp.model == 'lstmtime' then
+            -- print(this:size())  -- (bsize, mp.winsize-1, mp.object_dim)
+            -- print(context:size())  -- (bsize, mp.seq_length, mp.winsize-1, mp.object_dim)
+            -- print(y:size())  -- (bsize, mp.winsize-1, mp.object_dim)
+            -- print(context_future:size())  -- (bsize, mp.seq_length mp.winsize-1, mp.object_dim)
 
-            -- prediction = prediction + this[{{},{-1}}]:expandAs(prediction)  -- TODO RESIZE THIS?
-            -- y = y - this[{{},{-1}}]:expandAs(y) -- add back because relative  -- TODO RESIZE THIS?
+            -- take care of relative position
+            if mp.relative then
+                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
+                                                this[{{},{},{1,4}}]  -- TODO RESIZE THIS?
+                y[{{},{},{1,4}}] = y[{{},{},{1,4}}] + this[{{},{},{1,4}}] -- add back because relative  -- TODO RESIZE THIS?
+            end
+        else
+            context_future = crop_future(context_future,
+                                        {context_future:size(1), mp.seq_length,
+                                        mp.winsize-mp.num_past, mp.object_dim},
+                                        {3,mp.num_future})
+            context_future:reshape(context_future:size(1),
+                        context_future:size(2), mp.num_future, mp.object_dim)
+            context = context:reshape(context:size(1), context:size(2),
+                                        mp.num_past, mp.object_dim)
+
+            -- reshape to -- (num_samples x num_future x 8)
+            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
+            y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
+            y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+
+            -- take care of relative position
+            if mp.relative then
+                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
+                    this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
+                y[{{},{},{1,4}}] = y[{{},{},{1,4}}] +
+                    this[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}]) -- add back because relative  -- TODO RESIZE THIS?
+            end
         end
 
         -- save
@@ -272,26 +290,57 @@ end
 -- this: (mp.batch_size, mp.num_past, mp.object_dim)
 -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
 function update_position(this, pred)
+    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+    print('update pos')
     local this, pred = this:clone(), pred:clone()
+    print('this')
+    print(this[{{1}}])
+    print('pred')
+    print(pred[{{1}}])
     local lastpos = (this[{{},{-1},{1,2}}]:clone()*G_w_width)
     local lastvel = (this[{{},{-1},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
     local currpos = (pred[{{},{},{1,2}}]:clone()*G_w_width)
     local currvel = (pred[{{},{},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
 
+    print('lastpos')
+    print(lastpos[{{1}}])
+    print('lastvel')
+    print(lastvel[{{1}}])
+    print('currpos')
+    print(currpos[{{1}}])
+    print('currvel')
+    print(currvel[{{1}}])
+
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
     local vel = torch.cat({lastvel, currvel},2)
 
+    print('pos')
+    print(pos[{{1}}])
+    print('vel')
+    print(vel[{{1}}])
+
+    -- there may be a bug here
     -- take the last part (future)
     for i = 1,pos:size(2)-1 do
         pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
     end
 
+    print('pos after add vel')
+    print(pos[{{1}}])
+
     -- normalize again
     pos = pos/G_w_width
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
 
-    pred[{{},{},{1,2}}] = pos[{{},{1},{}}]  -- reassign back to pred
+    print('pos after normalize')
+    print(pos[{{1}}])
+
+    pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred this should be: pos[{{},{2,-1},{}}]
+
+    print('pred after assign')
+    print(pred[{{1}}])
+    print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
     return pred
 end
 
@@ -332,13 +381,34 @@ function simulate(dataloader, params_, saveoutput, numsteps)
 
         -- allocate space, already assume reshape
         local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, numsteps, mp.object_dim), mp.cuda)  -- TODO RESIZE THIS
+
+        print('before')
+        print('this_orig')
+        print(this_orig[{{1}}])
+        print('context_orig')
+        print(context_orig[{{1}}])
+        print('pred_sim')
+        print(pred_sim[{{1}}])
+
         for t = 1,numsteps do
+            print('===========================================================')
+            print('step'..t)
             -- the t-th timestep in the future
             y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
 
             local modified_batch = {this, context, y, mask, config, start,
                                         finish, context_future_orig}
+
+            print('batch')
+            print('this')
+            print(this[{{1}}])
+            -- print('context')
+            -- print(context[{{1}}])
+            print('y')
+            print(y[{{1}}])
+            -- print('context_future_orig')
+            -- print(context_future_orig[{{1}}])
 
             local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
@@ -348,14 +418,31 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
 
+            print('prediction before add')
+            print(prediction[{{1}}])
+
             if mp.relative then
-                -- prediction = prediction + this[{{},{-1}}]:expandAs(prediction) -- should this be ground truth? During test time no.  -- TODO RESIZE THIS
                 prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
             end
+
+            -- restore object properties
+            prediction[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
+
+            print('prediction after add')
+            print(prediction[{{1}}])
+            print('y after add')
+            -- print(y:size())
+            -- print(this[{{},{-1},{}}]:squeeze():size())
+            local y_add = y[{{1},{1,4}}] + this[{{1},{-1},{1,4}}]:squeeze()
+            print(y_add)
 
             -- here you want to add velocity to position
             -- prediction: (batchsize, mp.num_future, mp.object_dim)
             prediction = update_position(this, prediction)
+
+            print('prediciton after update position')
+            print(prediction[{{1}}])
+
 
             -- update this and context
             -- chop off first time step and then add in next one
@@ -373,11 +460,19 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
 
             pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
+
+            print('after concat')
+            print('this')
+            print(this[{{1}}])
+            print('pred_sim')
+            print(pred_sim[{{1}}])
             sum_loss = sum_loss + test_loss
         end
+        -- assert(false)
 
         -- reshape to -- (num_samples x num_future x 8)
         this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
+        context_orig = context_orig:reshape(context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
         y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future  -- TODO RESIZE THIS
         context_future_orig = context_future_orig:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
@@ -410,6 +505,9 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
 
         will save to something like:
             logs/<experiment-name>/predictions/<config.h5>
+
+
+        -- the reshaping should not happen here!
     --]]
 
     --unpack
@@ -418,7 +516,8 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
 
     local subfolder = mp.savedir .. '/' .. 'predictions/'
     if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
-    local save_path = mp.savedir .. '/' .. 'predictions/' .. config..'_['..start..','..finish..'].h5'
+    local save_path = mp.savedir .. '/' .. 'predictions/' ..
+                                config..'_['..start..','..finish..'].h5'
 
     if mp.cuda then
         prediction = prediction:float()
@@ -429,22 +528,8 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
     end
 
     -- For now, just save it as hdf5. You can feed it back in later if you'd like
-    save_to_hdf5(save_path,
-        {pred=prediction,
-        this=this:reshape(this:size(1), -- TODO RESIZE THIS
-                    mp.num_past,
-                    mp.object_dim),
-        context=context:reshape(context:size(1),
-                    context:size(2),
-                    mp.num_past,
-                    mp.object_dim),
-        y=y:reshape(y:size(1),  -- TODO RESIZE THIS (Probably reshaping y is unnecessary)
-                    numsteps,
-                    mp.object_dim),
-        context_future=context_future:reshape(context_future:size(1),
-                    context_future:size(2),
-                    numsteps,
-                    mp.object_dim)})
+    save_to_hdf5(save_path, {pred=prediction, this=this, context=context,
+                                y=y, context_future=context_future})
 end
 
 -- runs experiment
@@ -515,12 +600,9 @@ end
 
 
 function getLastSnapshot(network_name)
-    -- print(os.execute("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1"))
-    -- assert(false)
     local res_file = io.popen("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1")
     local status, result = pcall(function() return res_file:read():match( "^%s*(.-)%s*$" ) end)
     print(result)
-    -- assert(false)
     res_file:close()
     if not status then
         return false
@@ -550,7 +632,7 @@ function predict_simulate()
     print(snapshot)
     mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
+    print(simulate(test_loader, checkpoint.model.theta.params, true, 2))
 end
 
 
