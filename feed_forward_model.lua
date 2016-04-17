@@ -149,6 +149,8 @@ function model.create(mp_, preload, model_path)
 
         local checkpoint = torch.load(model_path)
         self.network = checkpoint.model.network:clone()
+        -- self.network:float()
+        if self.mp.cuda then self.network:cuda() end
     else
         self.network = init_network(self.mp)
          if self.mp.cuda then self.network:cuda() end

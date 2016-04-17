@@ -185,6 +185,19 @@ from convert_data import *
 # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/ffnonoverlaptest/predictions/worldm5_np=2_ng=0_nonoverlap_[1,10].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)
 
-# Test on stationary, constrained window, nonoverlapping, openmind
-h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/16__layers_4_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm5_np=2_ng=0_nonoverlap_[351,400].h5'
-visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)  # can do object bounces! (batch 8)
+# # Test on stationary, constrained window, nonoverlapping, openmind
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/16__layers_4_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm5_np=2_ng=0_nonoverlap_[351,400].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=True)  # can do object bounces! (batch 8)
+
+# Test on nonstationary, constrained window, nonoverlapping, openmind
+h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=True)  # can bounce!
+visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # can bounce!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=46, vidsave=False, imgsave=False)  # can bounce!
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm1_np=2_ng=0_nonstationary_[51,100].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=12, vidsave=True, imgsave=False)  # can bounce!
+
+
+# Trying to debug the nonstationary on pc
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/ff_sim_test/predictions/worldm1_np=2_ng=0_nonstationary_lite_[1,10].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)  # this signifies a bug!

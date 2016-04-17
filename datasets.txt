@@ -115,8 +115,17 @@ nonoverlaptest
     Contiguous: True
 
 11
-    (w=384, h=288), stationary, winsize 10, om
+    (w=384, h=288), worldm5, winsize 10, om
     Dataset_files_folder: /om/data/public/mbchang/physics-data/11
+    Trainset: 1500 examples per config 70 examples per video
+    Valset: 250 examples per config 70 examples per video
+    Testset: 250 examples per config 70 examples per video
+    Windowsize: 10
+    Contiguous: True
+
+12  (BALLS BOUNCE)
+    (w=384, h=288), worldm1, winsize 10, om
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/12
     Trainset: 1500 examples per config 70 examples per video
     Valset: 250 examples per config 70 examples per video
     Testset: 250 examples per config 70 examples per video

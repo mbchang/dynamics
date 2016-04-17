@@ -290,35 +290,15 @@ end
 -- this: (mp.batch_size, mp.num_past, mp.object_dim)
 -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
 function update_position(this, pred)
-    print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-    print('update pos')
     local this, pred = this:clone(), pred:clone()
-    print('this')
-    print(this[{{1}}])
-    print('pred')
-    print(pred[{{1}}])
     local lastpos = (this[{{},{-1},{1,2}}]:clone()*G_w_width)
     local lastvel = (this[{{},{-1},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
     local currpos = (pred[{{},{},{1,2}}]:clone()*G_w_width)
     local currvel = (pred[{{},{},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
 
-    print('lastpos')
-    print(lastpos[{{1}}])
-    print('lastvel')
-    print(lastvel[{{1}}])
-    print('currpos')
-    print(currpos[{{1}}])
-    print('currvel')
-    print(currvel[{{1}}])
-
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
     local vel = torch.cat({lastvel, currvel},2)
-
-    print('pos')
-    print(pos[{{1}}])
-    print('vel')
-    print(vel[{{1}}])
 
     -- there may be a bug here
     -- take the last part (future)
@@ -326,21 +306,11 @@ function update_position(this, pred)
         pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
     end
 
-    print('pos after add vel')
-    print(pos[{{1}}])
-
     -- normalize again
     pos = pos/G_w_width
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
 
-    print('pos after normalize')
-    print(pos[{{1}}])
-
     pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred this should be: pos[{{},{2,-1},{}}]
-
-    print('pred after assign')
-    print(pred[{{1}}])
-    print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
     return pred
 end
 
@@ -382,33 +352,13 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         -- allocate space, already assume reshape
         local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, numsteps, mp.object_dim), mp.cuda)  -- TODO RESIZE THIS
 
-        print('before')
-        print('this_orig')
-        print(this_orig[{{1}}])
-        print('context_orig')
-        print(context_orig[{{1}}])
-        print('pred_sim')
-        print(pred_sim[{{1}}])
-
         for t = 1,numsteps do
-            print('===========================================================')
-            print('step'..t)
             -- the t-th timestep in the future
             y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
 
             local modified_batch = {this, context, y, mask, config, start,
                                         finish, context_future_orig}
-
-            print('batch')
-            print('this')
-            print(this[{{1}}])
-            -- print('context')
-            -- print(context[{{1}}])
-            print('y')
-            print(y[{{1}}])
-            -- print('context_future_orig')
-            -- print(context_future_orig[{{1}}])
 
             local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
@@ -418,9 +368,6 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
 
-            print('prediction before add')
-            print(prediction[{{1}}])
-
             if mp.relative then
                 prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
             end
@@ -428,21 +375,9 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             -- restore object properties
             prediction[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
 
-            print('prediction after add')
-            print(prediction[{{1}}])
-            print('y after add')
-            -- print(y:size())
-            -- print(this[{{},{-1},{}}]:squeeze():size())
-            local y_add = y[{{1},{1,4}}] + this[{{1},{-1},{1,4}}]:squeeze()
-            print(y_add)
-
             -- here you want to add velocity to position
             -- prediction: (batchsize, mp.num_future, mp.object_dim)
             prediction = update_position(this, prediction)
-
-            print('prediciton after update position')
-            print(prediction[{{1}}])
-
 
             -- update this and context
             -- chop off first time step and then add in next one
@@ -460,15 +395,8 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
 
             pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
-
-            print('after concat')
-            print('this')
-            print(this[{{1}}])
-            print('pred_sim')
-            print(pred_sim[{{1}}])
             sum_loss = sum_loss + test_loss
         end
-        -- assert(false)
 
         -- reshape to -- (num_samples x num_future x 8)
         this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
@@ -632,7 +560,7 @@ function predict_simulate()
     print(snapshot)
     mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(simulate(test_loader, checkpoint.model.theta.params, true, 2))
+    print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
 end
 
 

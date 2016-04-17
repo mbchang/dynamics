@@ -39,8 +39,6 @@ def convert_file(path, subsample):
     configuration   = eval(fixInputSyntax(data[0]))
     forces          = np.array(configuration[0])
     particles       = [{attr[0]: attr[1] for attr in p} for p in configuration[1]]  # configuration is what it originally was
-    # print(particles)
-    # assert(False)
     goos            = np.array(configuration[2])
     initial_pos     = np.array(eval(fixInputSyntax(data[1])))  # (numObjects, [px, py])
     initial_vel     = np.array(eval(fixInputSyntax(data[2])))  # (numObjects, [vx, vy])
@@ -382,22 +380,22 @@ def save_all_datasets(dryrun):
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
 
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/11'  # (w=384, h=288)
-    if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
-    data_root = '/om/data/public/mbchang/physics-data/data'
-    windowsize = 10  # 2  -- TODO 1in1out
-    num_train_samples_per = (1500, 70)  # 3
-    num_val_samples_per = (250, 70)  # 1
-    num_test_samples_per = (250, 70)  # 1
-    contiguous = True
-
-    # dataset_files_folder = 'hey'
-    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
-    # windowsize = 2  # 20
-    # num_train_samples_per = (32, 60)  # 30
-    # num_val_samples_per = (32, 60)  # 10
-    # num_test_samples_per = (32, 60)  # 10
+    # dataset_files_folder = '/om/data/public/mbchang/physics-data/12'  # (w=384, h=288)
+    # if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
+    # data_root = '/om/data/public/mbchang/physics-data/data'
+    # windowsize = 10  # 2  -- TODO 1in1out
+    # num_train_samples_per = (1500, 70)  # 3
+    # num_val_samples_per = (250, 70)  # 1
+    # num_test_samples_per = (250, 70)  # 1
     # contiguous = True
+
+    dataset_files_folder = '../data'
+    data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/physics-data'
+    windowsize = 20  # 20
+    num_train_samples_per = (14, 60)  # 30
+    num_val_samples_per = (3, 60)  # 10
+    num_test_samples_per = (3, 60)  # 10
+    contiguous = True
 
     trainset, valset, testset = create_datasets(data_root,
                                                 num_train_samples_per,
@@ -405,7 +403,7 @@ def save_all_datasets(dryrun):
                                                 num_test_samples_per,
                                                 windowsize,
                                                 contiguous,
-                                                'worldm5_np=2_ng=0_nonoverlap')
+                                                'worldm1_np=2_ng=0_nonstationary_lite')
 
     # # save
     if not dryrun:
@@ -601,7 +599,6 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
                             len(str(movieFrame+start_frame))] + \
                             str(movieFrame+start_frame)
             imagefile = movie_folder + "/" + movieName + '-' + imageName + ".png"
-            # print imagefile
             pygame.image.save(screen, imagefile)
             movieFrame += 1
             if movieFrame == len(observed_path): done = True
@@ -759,8 +756,6 @@ def recover_path(this, other):
         # get it to (numObjects, winsize, [pos vel] [x y])
         sample_particles = []
         this_particle = Context_Particle(this[s,:,:])
-        if s == 7: print(this_particle.path)
-        # assert(False)
         this_particle_reshaped_path = this_particle.reshape_path(this_particle.path)
         assert this_particle_reshaped_path.shape == (this.shape[1],2,2)
         sample_particles.append(this_particle_reshaped_path)
@@ -912,7 +907,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
         save: true if want to save vid
     """
-    framerate = 1
+    framerate = 5
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
@@ -980,5 +975,5 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
                 os.system('rm ' + imgfile)
 
 if __name__ == "__main__":
-     save_all_datasets(True)
+     save_all_datasets(False)
     # print(subsample_range(80, 10, 70))
