@@ -481,19 +481,22 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
 
         -- good up to here
 
+        local pred_sim = model_utils.transfer_data(
+                            torch.zeros(mp.batch_size, mp.seq_length+1,
+                                        numsteps, mp.object_dim),
+                            mp.cuda)
+        local num_particles = torch.find(mask,1)[1] + 1
+
         print(future[{{1}}])
 
         -- loop through time
         for t = 1, numsteps do
 
+            print('))))))))))))))))))))))))))))))))')
+            print('t'..t)
+
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
-
-            local pred_sim = model_utils.transfer_data(
-                                torch.zeros(mp.batch_size, mp.seq_length+1,
-                                            numsteps, mp.object_dim),
-                                mp.cuda)
-            local num_particles = torch.find(mask,1)[1] + 1
 
             for j = 1, num_particles do
                 print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
@@ -573,8 +576,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                 print(pred_sim[{{1}}])
                 print('<<<<<<<<<<<<<<<<<<<<<<<<')
             end
-            -- good up to here for two balls
-            assert(false)
+            print('pred sim '..t)
+            print(pred_sim[{{1},{1,2}}])
 
             -- update past for next timestep
             -- update future for next timestep:
@@ -582,6 +585,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
             -- so we can just keep future stale
             past = past:reshape(mp.batch_size, mp.seq_length+1,
                                 mp.num_past, mp.object_dim)
+            print('past '..t..' before update')
+            print(past[{{1},{1,2}}])
             if mp.num_past > 1 then
                 past = torch.cat({past[{{},{},{2,-1},{}}],
                                     pred_sim[{{},{},{t},{}}]}, 3)
@@ -589,13 +594,25 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                 assert(mp.num_past == 1)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
+            print('past '..t..' after update')
+            print(past[{{1},{1,2}}])
+
+            past = past:reshape(mp.batch_size, mp.seq_length+1,
+                                mp.num_past*mp.object_dim)
+
+            print('((((((((((((((((((((((((')
         end
 
         -- at this point, pred_sim should be all filled out
         -- break pred_sim into this and context_future
         -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
-        local context_pred = pred_sim[{{},{},{2,-1}}]
+        local context_pred = pred_sim[{{},{2,-1}}]
+
+        print('this_pred')
+        print(this_pred[{{1}}])
+        print('context_pred')
+        print(context_pred[{{1}}])
 
         -- reshape things
         this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
@@ -609,6 +626,12 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         -- crop the number of timesteps
         y_orig = y_orig[{{},{1,numsteps},{}}]
 
+        print(this_orig:size())
+        print(context_orig:size())
+        print(y_orig:size())
+        print(this_pred:size())
+        print(context_pred:size())
+        -- assert(false)
         -- when you save, you will replace context_future_orig
         if saveoutput then
             save_example_prediction({this_orig, context_orig, y_orig,
