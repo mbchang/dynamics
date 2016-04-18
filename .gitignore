@@ -1,5 +1,12 @@
 results*
 demo_results*
+scratch
+logs
+oplogs
+hey*
+*.sh
+*.h5
+*.hdf5
 *.pyc
 *.svg
 *.dot
