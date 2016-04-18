@@ -190,9 +190,9 @@ from convert_data import *
 # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=True)  # can do object bounces! (batch 8)
 
 # Test on nonstationary, constrained window, nonoverlapping, openmind
-h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
-# visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=True)  # can bounce!
-visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # can bounce!
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
+# # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=True)  # can bounce!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # can bounce!
 # visualize_results(training_samples_hdf5=h5_file, sample_num=46, vidsave=False, imgsave=False)  # can bounce!
 # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions/worldm1_np=2_ng=0_nonstationary_[51,100].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=12, vidsave=True, imgsave=False)  # can bounce!
@@ -201,3 +201,11 @@ visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, im
 # Trying to debug the nonstationary on pc
 # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/ff_sim_test/predictions/worldm1_np=2_ng=0_nonstationary_lite_[1,10].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)  # this signifies a bug!
+
+# Test on nonstationary, constrained window, nonoverlapping, openmind, 78
+# h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions_very_long/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # can bounce!
+#
+# Test on nonstationary, constrained window, nonoverlapping, openmind, 78, both
+h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions_very_long_both/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
+visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # can bounce!

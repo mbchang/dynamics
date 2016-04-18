@@ -944,11 +944,11 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
     windowsize = np.array(samples_past[2][2]).shape[0]
 
-    print 'render past'
-    render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
-    print 'render future gt'
-    render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
-    make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
+    # print 'render past'
+    # render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
+    # print 'render future gt'
+    # render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
+    # make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
 
     print 'render past'
     render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
