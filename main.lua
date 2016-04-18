@@ -356,16 +356,31 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
 
+            print('this')
+            print(this[{{1}}])
+            print('context')
+            print(context[{{1}}])
+            print('y')
+            print(y[{{1}}])
+
             local modified_batch = {this, context, y, mask, config, start,
                                         finish, context_future_orig}
 
             local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
+
+            print('pred')
+            print(prediction[{{1}}])
             -- local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
             prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
+
+            print(prediction:size())
+            print(this:size())
+            print(context:size())
+            assert(false)
 
             if mp.relative then
                 prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
@@ -437,6 +452,16 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         -- get data
         local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
 
+        -- print('this_orig')
+        -- print(this_orig[{{1}}])
+        -- print('context_orig')
+        -- print(context_orig[{{1}}])
+        -- print('y_orig')
+        -- print(y_orig[{{1}}])
+        -- print('context_future_orig')
+        -- print(context_future_orig[{{1}}])
+
+
         -- past: (bsize, mp.seq_length+1, mp.numpast*mp.objdim)
         -- future: (bsize, mp.seq_length+1, (mp.winsize-mp.numpast), mp.objdim)
         local past = torch.cat({this_orig:reshape(
@@ -444,9 +469,19 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         local future = torch.cat({y_orig:reshape(
                     y_orig:size(1),1,y_orig:size(2)), context_future_orig},2)
 
+        -- print('past')
+        -- print(past[{{1}}])
+        -- print('future')
+        -- print(future[{{1}}])
+
+
         -- reshape future
         future = future:reshape(mp.batch_size, mp.seq_length+1,
                                 mp.winsize-mp.num_past, mp.object_dim)
+
+        -- good up to here
+
+        print(future[{{1}}])
 
         -- loop through time
         for t = 1, numsteps do
@@ -460,19 +495,40 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                                 mp.cuda)
             local num_particles = torch.find(mask,1)[1] + 1
 
-            -- -- container to hold updates for each particle
-            -- local past_temp = model_utils.transfer_data(
-            --                     torch.zeros(mp.batch_size,mp.seq_length+1,
-            --                     mp.numpast, mp.object_dim), mp.cuda)
-
             for j = 1, num_particles do
+                print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+                print('particle'..j)
                 -- construct batch
-                local this = past[{{},{j}}]
-                local context = torch.cat({past[{{},{1,j-1}}],
-                                                    past[{{},{j+1,-1}}]},2)
-                local y = future[{{},{j},{t}}]
-                local context_future = torch.cat({future[{{},{1,j-1},{t}}],
-                                                future[{{},{j+1,-1},{t}}]},2)
+                local this = torch.squeeze(past[{{},{j}}])
+
+                local context
+                if j == 1 then
+                    context = past[{{},{j+1,-1}}]
+                elseif j == mp.seq_length+1 then
+                    -- tricky thing here: num_particles may not
+                    -- be the same as mp.seq_length+1!
+                    context = past[{{},{1,-2}}]
+                else
+                    context = torch.cat({past[{{},{1,j-1}}],
+                                                        past[{{},{j+1,-1}}]},2)
+                end
+
+                local y = torch.squeeze(future[{{},{j},{t}}])
+
+                -- local context_future = torch.cat({future[{{},{1,j-1},{t}}],
+                --                                 future[{{},{j+1,-1},{t}}]},2)
+
+                -- consistent to simulate() up to here for the first particle
+
+                print('this')
+                print(this[{{1}}])
+                print('context')
+                print(context[{{1}}])
+                print('y')
+                print(y[{{1}}])
+                print(this:size())
+                print(context:size())
+                print(y:size())
 
                 local batch = {this, context, y, mask, config, start,
                                 finish, _}
@@ -480,28 +536,45 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                 -- predict
                 local _, pred = model:fp(params_,batch,true)
 
+                -- good up to here for first particle
+
+                print('pred')
+                print(pred[{{1}}])
+                -- assert(false)
+
+
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
                 context = context:reshape(mp.batch_size, mp.seq_length,
                                             mp.num_past, mp.object_dim)
 
+                print(pred:size())
+                print(this:size())
+                print(context:size())
+
                 -- relative coords
                 if mp.relative then
                     pred[{{},{},{1,4}}] = pred[{{},{},{1,4}}] +
                                             this[{{},{-1},{1,4}}]:expandAs(
-                                            prediction[{{},{},{1,4}}])
+                                            pred[{{},{},{1,4}}])
                 end
 
                 -- restore object properties
                 pred[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
 
+                print(pred[{{1}}])
                 -- update position
                 pred = update_position(this, pred)
+                print(pred[{{1}}])
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
                 -- sum_loss = sum_loss + test_loss
+                print(pred_sim[{{1}}])
+                print('<<<<<<<<<<<<<<<<<<<<<<<<')
             end
+            -- good up to here for two balls
+            assert(false)
 
             -- update past for next timestep
             -- update future for next timestep:
@@ -522,7 +595,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         -- break pred_sim into this and context_future
         -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
-        local context_pred = pred_sim[{}{},{2,-1}}]
+        local context_pred = pred_sim[{{},{},{2,-1}}]
 
         -- reshape things
         this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
@@ -689,7 +762,7 @@ function predict_simulate()
 
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     print(mp.winsize)
-    print(simulate(test_loader, checkpoint.model.theta.params, true, 20))
+    print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
 end
 
 function predict_simulate_all()
