@@ -73,7 +73,7 @@ function plot_training_losses(logfile, savefile)
     plot_tensor(data,
                 {savefile,
                  'batch (every '..subsamplerate..')',
-                 'Log MSE Loss',
+                 'Log Euclidean Distance',
                  'Losses On Training Set'},
                  subsamplerate)
 end
@@ -83,8 +83,8 @@ function plot_experiment(logfile, savefile)
     local subsamplerate = 1
     plot_tensor(data,
                 {savefile,
-                 'batch (every '..subsamplerate..')',
-                 'Log MSE Train vs Val Loss',
+                 'Epoch',-- (every '..subsamplerate..')',
+                 'Log Euclidean Distance',
                  'Losses'},
                  subsamplerate)
  end

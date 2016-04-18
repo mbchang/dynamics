@@ -82,6 +82,7 @@ def crop_to_window(boxes):
     return boxes
 
 def construct_example(particles, goos, observedPath, starttime, windowsize):
+    # TODO Change this!
     """
         input
             :particles: list of dictionaries (each dictionary is a particle)
@@ -96,12 +97,12 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
             :starttime + windowsize < 400
 
         output
-            :path_slice: np array (numObjects, numSteps, [px, py, vx, vy, [onehot mass]])
+            :path_slice: np array (numObjects, numSteps, [px, py, vx, vy, [onehot mass], objectid])
             :goos: np array [cx, cy, width, height, [onehot goo strength], objectid]
             :mask? TODO
 
-        masses: [0.33, 1.0, 3.0]
-        gooStrength: [0, -5, -20]
+        masses: [0.33, 1.0, 3.0, 1e30]
+        gooStrength: [0, -5, -20, -100.0]
 
         object id: 1 if particle, 0 if goo
 
@@ -122,15 +123,15 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     # get masses
     masses = tuple(np.array([p['mass'] for p in particles]) for i in xrange(num_steps))
     masses = np.column_stack(masses)  # (numObjects, numSteps)
-    masses = num_to_one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)
+    masses = num_to_one_hot(masses, G_mass_values)  # (numObjects, numSteps, 3)  # TODO: stationary
 
-    # turn it into (numObjects, numSteps, [px, py, vx, vy, [one-hot-mass]]) = (numObjects, numSteps, 7)
+    # turn it into (numObjects, numSteps, [px, py, vx, vy, [one-hot-mass]]) = (numObjects, numSteps,97)
     path_slice = np.dstack((path_slice, masses))
     path_slice = np.dstack((path_slice, np.ones((num_objects, num_steps))))  # object ids: particle = 1
     path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
     assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
-    assert path_slice.shape == (num_objects, num_steps, 8)
+    assert path_slice.shape == (num_objects, num_steps, 4+len(G_mass_values)+1)
 
     goos = np.array([[goo[0][0],goo[0][1], goo[1][0], goo[1][1], goo[2]] for goo in goos])  # (numGoos, [left, top, right, bottom, gooStrength])
     num_goos = goos.shape[0]
@@ -145,7 +146,8 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
         goos[:,:4] = ltrb2xywh(goos[:,:4])  # convert [left, top, right, bottom] to [cx, cy, w, h]
         goos[:,:4] = goos[:,:4]/G_w_width  # normalize coordinates
         assert np.all(goos[:,:4] >= 0) and np.all(goos[:,:4] <= 1)
-        assert goos.shape == (num_goos, 8)
+        assert goos.shape == (num_goos, 4+len(G_goo_strength_values)+1)
+        assert(len(G_goo_strength_values) == len(G_mass_values))  # should be same mass. TODO: there must be a better way of representing this
 
     path_slice = np.asarray(path_slice, dtype=np.float64)
     goos = np.asarray(goos, dtype=np.float64)
@@ -377,21 +379,23 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/4'
+
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/13'  # (w=384, h=288)
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
-    windowsize = 20  # 2  -- TODO 1in1out
-    num_train_samples_per = (400, 60)  # 3
-    num_val_samples_per = (50, 60)  # 1
-    num_test_samples_per = (50, 60)  # 1
+    filtername = 'worldm1_np=2_ng=0_nonstationary'
+    windowsize = 79  # 2  -- TODO 1in1out
+    num_train_samples_per = (1500, 1)  # 3
+    num_val_samples_per = (250, 1)  # 1
+    num_test_samples_per = (250, 1)  # 1
     contiguous = True
 
-    # dataset_files_folder = 'hey'
-    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data'
-    # windowsize = 2  # 20
-    # num_train_samples_per = (32, 60)  # 30
-    # num_val_samples_per = (32, 60)  # 10
-    # num_test_samples_per = (32, 60)  # 10
+    # dataset_files_folder = '../data'
+    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/physics-data'
+    # windowsize = 20  # 20
+    # num_train_samples_per = (14, 60)  # 30
+    # num_val_samples_per = (3, 60)  # 10
+    # num_test_samples_per = (3, 60)  # 10
     # contiguous = True
 
     trainset, valset, testset = create_datasets(data_root,
@@ -400,7 +404,7 @@ def save_all_datasets(dryrun):
                                                 num_test_samples_per,
                                                 windowsize,
                                                 contiguous,
-                                                'np=2_ng=0')
+                                                filtername)
 
     # # save
     if not dryrun:
@@ -411,6 +415,7 @@ def save_all_datasets(dryrun):
         save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
     print '####################################################################'
     print 'Dataset_files_folder:', dataset_files_folder
+    print 'Data source folder:', data_root+'/'+filtername
     print 'Trainset:', num_train_samples_per[0], 'examples per config', num_train_samples_per[1], 'examples per video'
     print 'Valset:', num_val_samples_per[0], 'examples per config', num_val_samples_per[1], 'examples per video'
     print 'Testset:', num_test_samples_per[0], 'examples per config', num_test_samples_per[1], 'examples per video'
@@ -506,12 +511,15 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
     ## and each PARTICLE consists of (x, y).
     ## So, for example, in order to get the x-coordinates of particle 1 in time-step 3, we would do data[3][1][0]
 
-    WINSIZE = 640,480
+    # WINSIZE = 640,480
+    WINSIZE = 384,288
+    width, height = WINSIZE
+
     pygame.init()
     screen = pygame.display.set_mode(WINSIZE)
     clock = pygame.time.Clock()
     screen.fill(THECOLORS["white"])
-    pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)
+    pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)
 
     # Set up masses, their number, color, and size
     numberOfParticles   = len(particles)
@@ -543,6 +551,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
     basicString = '0'*frameAllocation
 
     maxPath = len(observed_path)
+    print(maxPath)
 
     done = False
     while not done:
@@ -555,7 +564,7 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
 
         clock.tick(float(framerate))
         screen.fill(THECOLORS["white"])
-        pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
+        pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)  # draw border
 
 
         # fill the background with goo, if there is any
@@ -576,9 +585,12 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
         for i in range(numberOfParticles):
             if (eval('particle' + str(i) + '.frame >=' + str(maxPath-1))):
                 exec('particle' + str(i) + '.frame = ' + str(maxPath-1))
-            exec('particle' + str(i) + '.draw()')
+            if (eval('particle' + str(i) + ".fieldcolor == THECOLORS['green']") or eval('particle' + str(i) + ".fieldcolor == THECOLORS['hotpink1']")):
+                exec('particle' + str(i) + '.draw(True)')
+            else:
+                exec('particle' + str(i) + '.draw(False)')
 
-        pygame.draw.rect(screen, THECOLORS["black"], (3,1,639,481), 45)  # draw border
+        pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)  # draw border
 
         # Drawing finished this iteration?  Update the screen
         pygame.display.flip()
@@ -589,9 +601,9 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
                             len(str(movieFrame+start_frame))] + \
                             str(movieFrame+start_frame)
             imagefile = movie_folder + "/" + movieName + '-' + imageName + ".png"
-            print imagefile
             pygame.image.save(screen, imagefile)
             movieFrame += 1
+            if movieFrame == len(observed_path): done = True
         elif movieFrame > (len(observed_path)-1):
             done = True
 
@@ -617,13 +629,13 @@ def create_all_videos(root, movie_root):
 
 def separate_context(context, config):
     """
-    context:    (num_samples, G_num_objects, winsize/2, 8)
-        8: [[4 number description], [3 number type], [1 number id]]
+    context:    (num_samples, G_num_objects, winsize/2, 9)
+        0: [[4 number description], [4 number type], [1 number id]]
     config: something like: worldm1_np=1_ng=1
 
     Return
-        other: (num_samples, num_other_particles, winsize/2, 8)
-        goos: (num_samples, num_goos, winsize/2, 8)
+        other: (num_samples, num_other_particles, winsize/2, 9)
+        goos: (num_samples, num_goos, winsize/2, 9)
 
         Note that num_other_particles and num_goos could be 0
     """
@@ -635,11 +647,8 @@ def separate_context(context, config):
 
     # find number of goos
     start = config.find('_ng=')+len('_ng=')
-    num_goos = int(config[start:])
-
-    print 'num_particles', num_particles
-    print 'num_goos', num_goos
-    print 'num_other', num_other
+    end = start + config[start:].find('_')
+    num_goos = int(config[start:end])
 
     # Thus, the RNN should only run for num_particles + num_goos iterations
     if num_particles + num_goos != G_num_objects+1:  # TODO: shouldn't this be G_num_objects + 1?
@@ -649,10 +658,10 @@ def separate_context(context, config):
     begin_goos_here = begin_zeros_here - num_goos
     assert num_other == begin_goos_here
 
-    # other_particles should be: (num_samples, num_other, winsize/2, 8)
+    # other_particles should be: (num_samples, num_other, winsize/2, 9)
     other = context[:, :begin_goos_here, :, :]  # take care of the case when other is nothing
 
-    # goos should be: (num_samples, num_goos, winsize/2, 8)
+    # goos should be: (num_samples, num_goos, winsize/2, 9)
     goos = context[:,begin_goos_here:begin_zeros_here,:,:]
 
     # as a check, the object ids for goos should be 0 and for other should be 1
@@ -664,7 +673,7 @@ def separate_context(context, config):
 
 def recover_goos(goos):
     """
-        goos: (num_samples, num_goos, winsize/2, 8)
+        goos: (num_samples, num_goos, winsize/2, 9)
 
         The winsize/2 dimension doesn't matter, so goos[:,:,0,:] should
         equal goos[:,:,1,:], etc
@@ -681,7 +690,7 @@ def recover_goos(goos):
                  [[530, 393] [617, 598] 0 'darkmagenta']
                  [[171, 36] [389, 149] 0 'darkmagenta']]
     """
-    unduplicated_goos = goos[:,:,0,:]  # (num_samples, num_goos, 8)
+    unduplicated_goos = goos[:,:,0,:]  # (num_samples, num_goos, 9)
 
     # Double check that the winsize/2 dimension doesn't matter
     for i in range(1, goos.shape[2]):
@@ -697,12 +706,12 @@ def recover_goos(goos):
 
     return all_sample_goos
 
-def recover_particles(this, other):
+def recover_particles(this, other, accel):
     """
         Just recovers the particle attributes not the paths
 
-        this:     (num_samples, winsize/2, 8)
-        other:    (num_samples, num_other_particles, winsize/2, 8)
+        this:     (num_samples, winsize/2, 9)
+        other:    (num_samples, num_other_particles, winsize/2, 9)
 
         this:
                 {'color': 'red',
@@ -725,19 +734,19 @@ def recover_particles(this, other):
     samples = []  # each element is a list of particles for that sample
     for s in xrange(this.shape[0]): # iterate over samples
         sample_particles = []
-        this_particle = hardcode_attributes(Context_Particle(this[s,:,:]).to_dict(), True)
+        this_particle = hardcode_attributes(Context_Particle(this[s,:,:]).to_dict(accel), True)
         sample_particles.append(this_particle)
 
         for o in xrange(other.shape[1]):  # iterate through other particles
-            other_particle = hardcode_attributes(Context_Particle(other[s,o,:,:]).to_dict(), False)
+            other_particle = hardcode_attributes(Context_Particle(other[s,o,:,:]).to_dict(accel), False)
             sample_particles.append(other_particle)
         samples.append(sample_particles)
     return samples
 
 def recover_path(this, other):
     """
-            this:     (num_samples, winsize/2, 8) -- TODO 1in1out
-            other:    (num_samples, num_other_particles, winsize/2, 8) -- TODO 1in1out
+            this:     (num_samples, winsize/2, 9) -- TODO 1in1out
+            other:    (num_samples, num_other_particles, winsize/2, 9) -- TODO 1in1out
 
         output
             a list of paths, each like
@@ -764,18 +773,23 @@ def recover_path(this, other):
         samples.append(sample_particles)
     return samples
 
-def recover_state(this, context, this_pred, config):
+def recover_state(this, context, this_pred, config, velocityonly=True, accel=True, subsamp=5):
     """
+        if accel then object_dim should be 10
+
         input
-            this:       (num_samples, winsize/2, 8)
+            this:       (num_samples, winsize/2, 9)
                 past
-            context:    (num_samples, G_num_objects, winsize/2, 8)
+            context:    (num_samples, G_num_objects, winsize/2, 9)
                 may be future or past
-            this_pred:       (num_samples, winsize/2, 8)
+            this_pred:       (num_samples, winsize/2, 9)
                 must match the time of context
                     can be ground truth if you want to render ground truth
                     or prediction if you want to render prediction
             config:     something like: worldm1_np=1_ng=1
+            velocityonly: boolean for whether you want to extrapolate from velocity
+            accel: boolean for whether you are using accel data
+            subsamp: subsample rate
 
         output
             observedPath    = (winsize, [pos, vel], numObjects, [x, y])
@@ -799,18 +813,45 @@ def recover_state(this, context, this_pred, config):
     num_samples = len(this)
 
     # First separate out context
-    # other: (num_samples, num_other_particles, winsize/2, 8)
-    # goos: (num_samples, num_goos, winsize/2, 8)
+    # other: (num_samples, num_other_particles, winsize/2, 9)
+    # goos: (num_samples, num_goos, winsize/2, 9)
     other, goos =  separate_context(context, config)
 
     # Next recover goos
     recovered_goos_all_samples = recover_goos(goos)
 
     # Next recover particles
-    recovered_particles_all_samples = recover_particles(this, other)
+    recovered_particles_all_samples = recover_particles(this, other, accel)  # this just gets state information
+
+    # Take care of velocity only
+    if velocityonly:
+        # here you have to unnormalize first
+        lastpos = np.copy(this[:,-1,:2])*G_w_width  # (num_samples, winsize/2 [px,py])
+        lastvel = np.copy(this[:,-1,2:4])*G_max_velocity/1000*subsamp
+        thispos = np.copy(this_pred[:,:,:2])*G_w_width  # note that "this" can mean gt or pred
+        thisvel = np.copy(this_pred[:,:,2:4])*G_max_velocity/1000*subsamp  # TODO this depends
+
+        lastpos = lastpos.reshape(num_samples,1,lastpos.shape[-1])
+        lastvel = lastvel.reshape(num_samples,1,lastvel.shape[-1])
+
+        # this is length n+1
+        pos = np.hstack((lastpos,thispos))
+        vel = np.hstack((lastvel, thisvel))
+
+        # take the last part (future)
+        # print(pos.shape[1])
+        for i in range(pos.shape[1]-1):
+            pos[:,i+1,:] = pos[:,i,:] + vel[:,i,:]  # last dimension is 2
+
+        # normalize again
+        pos = pos/G_w_width
+
+        assert pos[:,1:,:].shape[1] == this_pred.shape[1]
+
+        this_pred[:,:,:2] = pos[:,1:,:]  # reassign back to this_pred
 
     # Next recover path
-    recoverd_path_all_samples = recover_path(this_pred, other)
+    recoverd_path_all_samples = recover_path(this_pred, other)  # future TODO you need positional information from past
 
     assert len(recovered_goos_all_samples) \
             == len(recovered_particles_all_samples) \
@@ -868,7 +909,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
         save: true if want to save vid
     """
-    framerate = 10
+    framerate = 5
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
@@ -879,17 +920,37 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
     d = load_dict_from_hdf5(training_samples_hdf5)
     config_name = training_samples_hdf5[:training_samples_hdf5.rfind('_')]
 
-    samples_past = recover_state(d['this'], d['context'], d['this'], config_name)
-    samples_future_gt = recover_state(d['this'], d['context_future'], d['y'], config_name)
-    samples_future_pred = recover_state(d['this'], d['context_future'], d['pred'], config_name)
+    accel = False
+
+    print('past')
+    samples_past = recover_state(this=d['this'],
+                                 context=d['context'],
+                                 this_pred=d['this'],
+                                 config=config_name,
+                                 velocityonly=False, # TODO velocityonly should not apply for the past!
+                                 accel=accel)
+    print('gt')
+    samples_future_gt = recover_state(this=d['this'],
+                                      context=d['context_future'],
+                                      this_pred=d['y'],
+                                      config=config_name,
+                                      velocityonly=True,
+                                      accel=accel)
+    print('pred')
+    samples_future_pred = recover_state(this=d['this'],
+                                        context=d['context_future'],
+                                        this_pred=d['pred'],
+                                        config=config_name,
+                                        velocityonly=True,
+                                        accel=accel)
 
     windowsize = np.array(samples_past[2][2]).shape[0]
 
-    print 'render past'
-    render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
-    print 'render future gt'
-    render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
-    make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
+    # print 'render past'
+    # render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
+    # print 'render future gt'
+    # render_output(samples_future_gt, sample_num, framerate, movie_folder, movieName, vidsave, windowsize)
+    # make_video(images_root, framerate, 'gndtruth', vidsave, imgsave)
 
     print 'render past'
     render_output(samples_past, sample_num, framerate, movie_folder, movieName, imgsave, 0)
@@ -911,157 +972,10 @@ def make_video(images_root, framerate, mode, savevid, saveimgs):
         print 'Removing images from', images_root.replace('=', '\\=')
         for i in os.listdir(os.path.dirname(images_root)):
             if os.path.basename(images_root) in i and '.png' in i:
-                os.system('rm ' + os.path.join(os.path.dirname(images_root), i))
+                imgfile = os.path.join(os.path.dirname(images_root), i)
+                imgfile = imgfile.replace(' ','\ ').replace('(','\(').replace(')','\)')
+                os.system('rm ' + imgfile)
 
 if __name__ == "__main__":
-    # save_all_datasets(True)
-
-    # create_all_videos('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data', 'movie_root_debug')
-    # assert False
-
-    # visualize_results('worldm1_np=6_ng=5_[15,15].h5', 0)
-    # visualize_results('model_predictions/worldm1_np=6_ng=5_[3,3].h5', 0)
-
-
-    # FOR THIS EXAMPLE:
-    # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetwork/predictions/lr=0.0005_worldm3_np=3_ng=1_[101,200].h5'
-
-    # visualize_results(h5_file, 2)  # fail
-    # visualize_results(h5_file, 99)  # okay
-    # visualize_results(h5_file, 98)  # bounce off wall: knows boundaries
-    # visualize_results(h5_file, 96)  # moves in space, but noisily: it'd be nice to have crisp movement
-    # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
-    # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
-    # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS! (predicted after bounce though)
-    # visualize_results(h5_file, 65)  # KNOWS HOW TO BOUNCE OFF WALLS! (almost)
-    # visualize_results(h5_file, 55)  # particle-particle fail
-    # visualize_results(h5_file, 4)  # particle-particle fail
-
-    # # FOR THIS EXAMPLE:
-    # h5_file = 'openmind/results_batch_size=100_seq_length=10_layers=2_rnn_dim=100_max_epochs=20floatnetworkcurriculum/predictions/lr=0.0005_worldm3_np=2_ng=2_[101,200].h5'
-    #
-    # # visualize_results(h5_file, 2)  # fail
-    # # visualize_results(h5_file, 99)  # okay
-    # # visualize_results(h5_file, 98)  # bounce off wall: knows boundaries
-    # visualize_results(h5_file, 96)  # moves in space, but noisily: it'd be nice to have crisp movement
-    # # visualize_results(h5_file, 93)  # moves in space, but there is a slight glitch
-    # visualize_results(h5_file, 89)  # wobbles around: pure noise. Knows to stay close to where it's supposed to be
-    # visualize_results(h5_file, 79)  # KNOWS HOW TO BOUNCE OFF WALLS!
-
-    # 1/20/16: in summary: it can handle going straight, but it cannot bounce off objects
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=5_ng=4_[1,50].h5'
-    # visualize_results(h5_file, 1)  # can bounce off walls
-    # visualize_results(h5_file, 2)  # does not learn to bounce off other objects
-    # visualize_results(h5_file, 3)  # does not learn to bounce off other objects Need a crisper way to model collisions
-    # visualize_results(h5_file, 4)  # can definitely bounce off walls. I think we just need more training examples of particle collisions
-    # visualize_results(h5_file, 5)    # soft "bounce"
-    # visualize_results(h5_file, 6)    # reproduces linear motion very nicely
-    # visualize_results(h5_file, 7)    # bounces off imaginary wall, soft bounce. Note though that a lot of the ground truth also have soft bounces
-    # visualize_results(h5_file, 8)    # instead of bouncing, it slows down
-    # visualize_results(h5_file, 9)    # no obj-obj bouncing interaction
-    # visualize_results(h5_file, 10)    # bounces off imaginary wall
-    # visualize_results(h5_file, 11)     # bounces off imaginary wall. How do something that is crisp?
-    # visualize_results(h5_file, 12)     # bounces off imaginary wall. How do something that is crisp?
-    # visualize_results(h5_file, 15)     #  GREAT EXAMPLE OF BOUNCING OFF WALL
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=False, imgsave=False)     #  did not bounce against other object; good example
-    # visualize_results(h5_file, 18)     #  definitive example of NOT BOUNCING OFF OBJECTS
-    # visualize_results(h5_file, 19)     # GREAT EXAMPLE OF BOUNCING OFF WALL
-    # visualize_results(h5_file, 26)     # DOES NOT BOUNCE OFF OTHER OBJECTS
-    # visualize_results(h5_file, 27)     # Bounces off corner
-    # visualize_results(h5_file, 34)     # Example of a bad ground truth rendering
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=1_ng=4_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=16, vidsave=False, imgsave=False)     #  moved slower
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)     #  bounces well off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=True, imgsave=False)     #  straight line
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)       # soft bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=True, imgsave=False)        # moves straight
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=6, vidsave=False, imgsave=False)        # moves wrong direction
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=True, imgsave=False)         # CANNOT BOUNCE               # SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=18, vidsave=False, imgsave=False)         # Great bounce
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=20, vidsave=False, imgsave=False)         # moves wrong direction
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm1_np=3_ng=0_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=True, imgsave=False)       # CANNOT BOUNCE                 # SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)       # CANNOT BOUNCE                # SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)       # CANNOT BOUNCE
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs2/baselinesubsampled_opt_adam_lr_0.001/predictions/worldm4_np=5_ng=4_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=False, imgsave=False)       # Stays stationary if stationary
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)       # Friction seems to have an effect?
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)       # Cannot bounce off objects
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=11, vidsave=False, imgsave=False)       # An example that performs well
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=12, vidsave=False, imgsave=False)       # Cannot bounce off objects
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=True, imgsave=False)       # CANNOT BOUNCE OFF OBJECTS    # SAVED
-
-
-    # 1/25/16 only 2 balls
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[1,50].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=34, vidsave=False, imgsave=False)        # inertia good
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)        # CANNOT BOUNCE
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)        # Bad bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=13, vidsave=False, imgsave=False)        # Soft bounce off corner
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=29, vidsave=True, imgsave=False)        # Great bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=33, vidsave=False, imgsave=False)        # can bounce off objects (maybe?)
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=False, imgsave=False)           # cannot bounce off objects (it seems to tweak physics such that it doesn't have to bounce off the other guy)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[51,100].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)        # bad bounce off wall
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=True, imgsave=False)        # CANNOT BOUNCE          # Saved
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=22, vidsave=True, imgsave=False)       # Knows that there was an obj obj bounce in past    #SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=True, imgsave=False)       # Remembers one wall, but not really the other    #SAVED
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=32, vidsave=False, imgsave=False)       # Switches direction somehow
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=38, vidsave=True, imgsave=False)       # DEFINITIVE CANNOT BOUNCE      # SAVED  # SHOW THIS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=46, vidsave=True, imgsave=False)       # cannot bounce
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=49, vidsave=False, imgsave=False)       # knows that there is a corner
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense_opt_adam_testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001_batch_size_260/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense2_opt_adam_traincfgs_[:-2:2-:]_shuffle_false_lrdecay_1_batch_size_260_testcfgs_[:-2:2-:]_lr_0.001/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=14, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=True, imgsave=False)        # Fast movement
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=30, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=43, vidsave=True, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-
-
-    # h5_file ='/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampledcontigdense3_opt_adam_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_260_testcfgs_[:-2:2-:]_lr_0.005/predictions/worldm1_np=2_ng=0_[1,260].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)
-    # for i in range(1, 20):
-        # print(len(subsample_range(80, 2, i))), subsample_range(80, 20, i)
-    # print(len(subsample_range(80, 2, 60))), subsample_range(80, 2, 60)
-    # render_from_scheme_output('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/physics-data/worldm1_np=1_ng=0/worldm1_np=1_ng=0_324.ss', 3, 'heyhey', 'hihi', False)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/5_Sl1BCELinearReLU_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=14, vidsave=False, imgsave=False)   # CANNOT BOUNCE OFF OBJECTS
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/2_TanhReLU_opt_optimrmsprop_layers_2_traincfgs_[:-2:2-:]_shuffle_true_lrdecay_0.99_batch_size_65_testcfgs_[:-2:2-:]_lr_0.001_max_epochs_20/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-
-    #
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/4_SL1TanhReLU_opt_adam_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS
-
-    # print subsample_range(80, 20, 60)
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/6_SL1BCELinearReLURel_opt_optimrmsprop_lr_0.001/predictions/worldm1_np=2_ng=0_[1,65].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=15, vidsave=False, imgsave=False)        # CANNOT BOUNCE OFF OBJECTS ON TRAINING DATA
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/9_opt_optimrmsprop_layers_2_lr_0.005/predictions/worldm1_np=2_ng=0_[1,80].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)
-
-    h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/10_opt_optimrmsprop_layers_2_rnn_dim_256_lr_0.0005/predictions/worldm1_np=2_ng=0_[1,400].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)    # weird movement
-    visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)    # cannot bounce
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=130, vidsave=False, imgsave=False)    # cannot bounce
-
-    # running simulation
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[1,80].h5'
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=20, vidsave=False, imgsave=False)  # possible bounce? look at 20, 21, 22
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=53, vidsave=False, imgsave=False)  # very soft bounce off wall
-
-    # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/11_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.001/predictions/worldm1_np=2_ng=0_[81,160].h5'
-    # # visualize_results(training_samples_hdf5=h5_file, sample_num=40, vidsave=False, imgsave=False)  # inertia, simulation
-    # visualize_results(training_samples_hdf5=h5_file, sample_num=50, vidsave=False, imgsave=False)
+     save_all_datasets(False)
+    # print(subsample_range(80, 80, 1))

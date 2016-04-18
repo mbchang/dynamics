@@ -91,7 +91,113 @@ experiment 11c: dataset 3, feedforward, 10 in 10 out, ff_runner.py, run on the c
 
 experiment 11d: dataset 3, feedforward, 10 in 1 out, runner.py, run on the cpu, SoftSign in FF, 50 epcs, lr=0.95, bsize=80
 
+experiment 12: priority sampling (no sharpening), dataset 3, 10 in 10 out, bsize 30
+    12b: sharpening with exponent 2
+    12c: different learning rates (0.9 and 0.97), no sharpening, start at 1 epoch, 1 or 2 layers
+        Killed
+            12c_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005_lrdecay_0.97.out
+            12c_opt_optimrmsprop_layers_1_rnn_dim_256_lr_0.005_lrdecay_0.9.out
+    12d: 2 in 1 out, 0.9 lr, no sharp, start at 1 epoch, 1 or 2 layers
 
+    Observations
+        2 layers is the way to go, 0.001 is good
+
+experiment 13: priority sampling, dataset 3, 10 in 10 out, bsize 60, velocity only
+    lrdeacy 0.90, lr [1e-4,5e-4,1e-3], 1, 2, 3 layers
+
+    Observations
+        killed the 1e-4 jobs, killed 5e-4 jobs, killed 1e-3 jobs
+        also killed jobs with 3e-4 + lr=0.99
+        THe one with the best validation loss did not work model obj-obj bouncing
+
+    Converged:
+        13_layers_1_sharpen_1_lr_0.005
+        13_layers_1_sharpen_2_lr_0.005
+        13_layers_2_sharpen_1_lr_0.005
+        13_layers_2_sharpen_2_lr_0.005
+        13_layers_3_sharpen_1_lr_0.005
+        13_layers_3_sharpen_2_lr_0.005
+        13_layers_1_sharpen_1_lr_0.01
+        13_layers_1_sharpen_2_lr_0.01
+        13_layers_2_sharpen_1_lr_0.01
+        13_layers_2_sharpen_2_lr_0.01
+        13_layers_3_sharpen_1_lr_0.01
+        13_layers_3_sharpen_2_lr_0.01
+
+
+experiment 14: accel
+    This experiment will try to reexamine the model. If need be instead of
+    feedforward we will try lstm through time. What I will do is to do all
+    internal activations as ReLU and the output activation will be linear.
+    This way the ReLU will turn on or off some neurons. And you want your
+    output to be positive or negative. So basically the internal layers will
+    do the logic computation of which weights to turn on or off in the output
+    layer, which will do the work of figure out positive or negative. We know
+    that the model is capable of switching velocities, because it can switch
+    directions.
+
+    exp: 1e-3, layers 1 2 3 4, sharpen 1 2, dataset 3. lrdecay 0.95
+
+    accel_after: use lrdecay after of 50
+        * as well as use 1000 epochs, sharpen 1, 1.3, 1.6
+
+        Observations:
+            smaller model has better val loss (3 layers, less sharpen)
+            complexer model has better loss on hardest example (4 layers, sharpen 1.6)
+            lr = 0.003 seems good.
+
+    sharpen: 4 layers, sharpen 3/10, 0.003/0.005
+    sharpengradual: 4 layers, gradual sharpen 1-100, 0.003
+
+    Turns out that all of these are failures because my data is wrong;
+    I don't give it positional information.
+
+
+experiment 15:
+    stationary dataset with smaller window
+    2 in 1 out
+    dataset 9
+
+    Tested:
+        15_stat_layers_1_sharpen_1_lr_0.0003_lrdecay_0.99.out
+        15_stat_layers_1_sharpen_1_lr_0.003_lrdecay_0.99.out
+        15_stat_layers_2_sharpen_1_lr_0.0003_lrdecay_0.99.out
+        15_stat_layers_2_sharpen_1_lr_0.003_lrdecay_0.99.out
+        15_stat_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99.out  - does best
+        15_stat_layers_3_sharpen_1_lr_0.003_lrdecay_0.99.out
+
+    Observations
+        - examples with extremely high velocity. I should change the dataset to
+        reduce velocity
+        -
+
+experimet 16:
+    worldm5 stationary dataset with smaller window
+    2 in 1 out
+    dataset 11
+    non-overlapping particles, so won't have problem of 15
+    no sharpening
+
+    Seems to work in predicting next time-step
+
+    16__layers_3_sharpen_1.5_lr_0.0003_lrdecay_0.99.out  -- deleted
+    16__layers_3_sharpen_1_lr_0.0003_lrdecay_0.99.out  -- deleted
+    16__layers_4_sharpen_1.5_lr_0.0003_lrdecay_0.99.out  -- best hardest
+    16__layers_4_sharpen_1_lr_0.0003_lrdecay_0.99.out  -- best val
+
+experimet 17:
+    worldm1 dataset with smaller window, nonstationary
+    2 in 1 out
+    dataset 12
+    non-overlapping particles, so won't have problem of 15
+    no sharpening
+
+    17_layers_3_sharpen_1.5_lr_0.0003_lrdecay_0.99.out  - deleted
+    17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99.out - best val
+    17_layers_4_sharpen_1.5_lr_0.0003_lrdecay_0.99.out -- deleted
+    17_layers_4_sharpen_1_lr_0.0003_lrdecay_0.99.out  -- deleted
+
+experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
 
 experiment: 7: 8_1i1o
     Goal: comapre the best from experiment 7 with 1 in 1 out
@@ -111,3 +217,11 @@ experiment: 7
 
 experiment: 8 Huge Feedforward baseline
     Goal: compare
+
+
+
+NOTE
+    - predpos[0,i+1,:] = predpos[0,i,:] + vel[0,i+1,:]  # so this method is not completely correct because of subsampling.
+        - for now you can just use this dataset to debug, but for the real thing you need to regenerate data.
+        - note that you should do a threshold that sets velocities to 0 if they are less than e-10
+            (you should check numpy's precision though)

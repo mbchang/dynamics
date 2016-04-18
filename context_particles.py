@@ -2,12 +2,12 @@ import numpy as np
 from utils import *
 
 # Hardcoded Global Variables
-G_w_width, G_w_height = 640.0,480.0
-G_max_velocity, G_min_velocity = 2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies
-G_mass_values = [0.33, 1.0, 3.0]  # hardcoded
-G_goo_strength_values = [0.0, -5.0, -20.0]  # hardcoded
-G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen"}
-G_particle_mass2color = {0.33: "yellow", 1.0: "red", 3.0: "blue"}
+G_w_width, G_w_height = 384.0, 288.0 #640.0,480.0
+G_max_velocity, G_min_velocity = 2*3000,-2*3000#2*3000.0, -2*3000.0 #2*4500.0, -2*4500.0  # make this double the max initial velocity, there may be some velocities that go over, but those are anomalies (this is normalizing factor)
+G_mass_values = [0.33, 1.0, 3.0, 1e30]  # hardcoded  TODO: add 1e30
+G_goo_strength_values = [0.0, -5.0, -20.0, -100.0]  # hardcoded the -100 is a dummy
+G_goo_strength2color = {0.0: "darkmagenta", -5.0: "brown", -20.0: "yellowgreen", -100.0: "pink"}
+G_particle_mass2color = {0.33: "yellow", 1.0: "red", 3.0: "blue", 1e30: "green"}  # TODO: add 1e30
 
 class Context_Goo():
     def __init__(self, goo_vector):
@@ -42,10 +42,10 @@ class Context_Goo():
         """
             goo_vector: [cx, cy, width, height, [onehot strength], id]
         """
-        assert goo_vector.shape == (8,)
+        assert goo_vector.shape == (9,)
         cx_cy_w_h = goo_vector[:4]
-        one_hot_strength = goo_vector[4:7]
-        object_id = goo_vector[7]
+        one_hot_strength = goo_vector[4:8]
+        object_id = goo_vector[8]
         assert object_id == 0
 
         return cx_cy_w_h, one_hot_strength
@@ -85,11 +85,14 @@ class Context_Particle():
     def __str__(self):
         return "Particle: color: %s" %(self.color)
 
-    def to_dict(self):
+    def to_dict(self, accel):
+        start,end = (6,10) if accel else (4,8)
+        assert(end-start == len(G_mass_values))
+
         # Get mass
-        one_hot = self.particle_path[0, 4:7]  # should be the same for all timesteps, so we just use the first one
+        one_hot = self.particle_path[0, start:end]  # should be the same for all timesteps, so we just use the first one
         self.mass = one_hot_to_num(one_hot, G_mass_values)
-        assert np.allclose(self.particle_path[:, 7], 1)  # object id
+        assert np.allclose(self.particle_path[:, end], 1)  # object id
         self.color = G_particle_mass2color[self.mass]
         return {'color': self.color, 'mass': self.mass}
 

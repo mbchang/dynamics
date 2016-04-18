@@ -27,11 +27,11 @@ def create_jobs(dry_run, mode, ext):
     base_networks = {
         }
 
-    jobs = [{'lr': r, 'opt': o, 'layers':l, 'rnn_dim': d}
-                for r in [1e-3, 5e-3, 5e-4]
-                    for o in ['adam', 'optimrmsprop']
-                        for l in [1,2]
-                            for d in [128, 256]]
+    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d}
+                for r in [3e-4]
+                    for l in [3,4]
+                        for s in [1,1.5]
+                            for d in [0.99]]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -39,7 +39,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = '11d'
+        jobname = '16_'
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):
@@ -89,6 +89,8 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH -p gpu\n")
         slurmfile.write("#SBATCH --gres=gpu:1\n")
         slurmfile.write("#SBATCH --mem=5000\n")
+        slurmfile.write("#SBATCH --time=6-23:00:00\n")
+        # slurmfile.write("#SBATCH -x node027\n")
         slurmfile.write(jobcommand)
 
     if not dry_run:

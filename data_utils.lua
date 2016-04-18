@@ -97,3 +97,64 @@ function concatenate_table(table)
     end
     return container
 end
+
+function convert_type(x, should_cuda)
+    if should_cuda then
+        return x:cuda()
+    else
+        return x:double()
+    end
+end
+
+
+-- tensor (batchsize, winsize*obj_dim)
+-- reshapesize (batchsize, winsize, obj_dim)
+-- cropdim (dim, amount_to_take) == (dim, mp.num_future)
+function crop_future(tensor, reshapesize, cropdim)
+    local crop = tensor:clone()
+    crop = crop:reshape(unpack(reshapesize))
+    --hacky
+    if crop:dim() == 3 then
+        assert(cropdim[1]==2)
+        crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+        crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
+    else
+        assert(crop:dim()==4 and cropdim[1] == 3)
+        crop = crop[{{},{},{1,cropdim[2]},{}}]
+        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
+    end
+    return crop
+end
+
+-- dim will be where the one is, and the dimensions after will be shifted right
+function broadcast(tensor, dim)
+    local ndim = tensor:dim()
+
+    if dim == 1 then
+        return tensor:reshape(1,unpack(torch.totable(tensor:size())))
+    elseif dim == ndim + 1 then
+        local dims = {unpack(torch.totable(tensor:size())),1}
+        return tensor:reshape(unpack(dims))
+    elseif dim > 1 and dim <= ndim then
+        local before = torch.Tensor(torch.totable(tensor:size()))[{{1,dim-1}}]
+        local after = torch.Tensor(torch.totable(tensor:size()))[{{dim,-1}}]
+        print(before)
+        print(after)
+        print(unpack(torch.totable(before)))
+        local a = {unpack(torch.totable(before)),1,unpack(torch.totable(after))}
+        local b = {unpack(torch.totable(before)),1}
+        print(a)
+        print(b)
+        return tensor:reshape(unpack(torch.totable(before)),
+                                1,
+                                unpack(torch.totable(after)))
+    else
+        error('invalid dim')
+    end
+end
+
+-- local t = torch.rand(2,3,4)
+-- print(broadcast(t,1):size())
+-- print(broadcast(t,2):size())
+-- -- print(broadcast(t,3):size())
+-- print(broadcast(t,4):size())

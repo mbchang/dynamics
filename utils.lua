@@ -85,12 +85,14 @@ end
 function all_args_exist(args_table, num_args)
     if not(#args_table == num_args) then return false end
     local exist = true
-    for _,a in pairs(args_table) do
+    local pasti = 0
+    for i,a in pairs(args_table) do
         if a == nil then
             exist = false
         end
+        if not(i == pasti+1) then return false end  -- turns out that if an arg isn't there, then the key is not there either
+        pasti = i
     end
-    -- assert(false)
     return exist
 end
 
@@ -105,10 +107,10 @@ end
 -- from http://lua-users.org/wiki/FunctionalLibrary
 -- map(function, table)
 -- e.g: map(double, {1,2,3})    -> {2,4,6}
-function map(func, tbl)
+function map(func, tbl, args)  -- args are for the func
     local newtbl = {}
     for i,v in pairs(tbl) do
-        newtbl[i] = func(v)
+        newtbl[i] = func(v, args)
     end
     return newtbl
 end
@@ -190,9 +192,98 @@ function range (i, to, inc)
     -- step back (once) before we start
     i = i - inc
 
-    return function () if i == to then return nil end i = i + inc return i, i end
+    local d = function ()
+                i = i + inc
+                if i >= to then
+                    return nil
+                end
+                return i, i
+            end
+
+    return d
 end
 
+function range_list(i, to, inc)
+    return iterator_to_table(range (i, to, inc))
+end
+
+function iterator_to_table(iterator)
+  local arr = {}
+  for v in iterator do
+    arr[#arr + 1] = v
+  end
+  return arr
+end
 -- print(merge_tables_by_value({['a']=1}, {['b'] = 2, ['c'] = 5}))
 
 -- print(intersect({'a','b','c'}, {'d','b','c'}))
+
+-- print(range_list(1,100,11))
+
+
+function factorial(n)
+    if n == 0 or n == 1 then
+        return n
+    elseif n < 0 then
+        assert(false, "n must be nonnegative")
+    else
+        return n * factorial(n-1)
+    end
+end
+
+-- given a number, return a list from 1 to n
+function permute_helper(n)
+
+end
+
+-- given a table 1 to n, return table of permutations
+function permute(t)
+    local n = #t
+    assert(n>=1)
+    if n == 1 then
+        return t
+    else
+        local x = {}
+        for i = 1, n do
+
+            local first = {{i}}
+
+            local rest
+            if i == 1 then
+                rest = subrange(t,i+1,n)
+            elseif i == n then
+                rest = subrange(t,1,n-1)
+            else
+                rest = merge_tables_by_value(subrange(t,1,i-1), subrange(t,i+1,n))
+            end
+
+            local mergei = merge_tables_by_value(first, permute(rest))
+            x = merge_tables_by_value(x,mergei)
+        end
+        return x
+    end
+end
+
+-- print('hi')
+-- print(permute(range_list(1,4,1)))
+
+function alleq(tableoftables)
+    local sizes
+    local reftable
+    for index,subtable in pairs(tableoftables) do
+        if index == 1 then
+            sizes = #subtable
+            reftable = T.deepcopy(subtable)
+        end
+        if not(#subtable == sizes) then return false end
+    end
+    -- if we get here that means all have same size
+    for k,v in pairs(reftable) do
+        for index, subtable in pairs(tableoftables) do
+            if index > 1 then
+                if not(subtable[k] == reftable[k]) then return false end
+            end
+        end
+    end
+    return true
+end
