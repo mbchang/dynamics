@@ -907,7 +907,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
 
         save: true if want to save vid
     """
-    framerate = 5
+    framerate = 10
     exp_root = os.path.dirname(os.path.dirname(training_samples_hdf5))
     movie_folder = os.path.join(exp_root, 'videos')
     if not os.path.exists(movie_folder): os.mkdir(movie_folder)
@@ -943,7 +943,7 @@ def visualize_results(training_samples_hdf5, sample_num, vidsave, imgsave):
                                         accel=accel)
 
     windowsize = np.array(samples_past[2][2]).shape[0]
-
+    #
     # print 'render past'
     # render_output(samples_past, sample_num, framerate, movie_folder, movieName, vidsave, 0)
     # print 'render future gt'

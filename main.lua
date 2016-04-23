@@ -310,7 +310,7 @@ function update_position(this, pred)
     pos = pos/G_w_width
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
 
-    pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred this should be: pos[{{},{2,-1},{}}]
+    pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
     return pred
 end
 
@@ -338,9 +338,13 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         -- get data
-        local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
+        local this_orig, context_orig, y_orig, mask,
+                config, start, finish, context_future_orig =
+                unpack(dataloader:sample_sequential_batch())
+
         local this, context = this_orig:clone(), context_orig:clone()
-        context_future = context_future_orig:clone():reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
+        context_future = context_future_orig:clone():reshape(
+            mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
         -- at this point:
         -- this (bsize, numpast*objdim)  -- TODO RESIZE THIS
@@ -349,38 +353,23 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         -- context_future (bsize, mp.seqlength, (mp.winsize-mp.num_past)*mp.objdim)
 
         -- allocate space, already assume reshape
-        local pred_sim = model_utils.transfer_data(torch.zeros(mp.batch_size, numsteps, mp.object_dim), mp.cuda)  -- TODO RESIZE THIS
+        local pred_sim = model_utils.transfer_data(torch.zeros(
+                        mp.batch_size, numsteps, mp.object_dim), mp.cuda)
 
         for t = 1,numsteps do
             -- the t-th timestep in the future
-            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past, mp.object_dim)[{{},{t},{}}]  -- increment time in y; may need to reshape  -- TODO RESIZE THIS
+            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past,
+                        mp.object_dim)[{{},{t},{}}]  -- increment time in y
             y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
-
-            print('this')
-            print(this[{{1}}])
-            print('context')
-            print(context[{{1}}])
-            print('y')
-            print(y[{{1}}])
 
             local modified_batch = {this, context, y, mask, config, start,
                                         finish, context_future_orig}
 
             local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
-
-            print('pred')
-            print(prediction[{{1}}])
-            -- local test_loss, prediction = model:fp(params_, {this=this,context=context}, y, mask)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
-
             prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
             context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
-
-            print(prediction:size())
-            print(this:size())
-            print(context:size())
-            assert(false)
 
             if mp.relative then
                 prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
@@ -444,23 +433,12 @@ end
 -- there is no concept of ground truth here?
 -- or you can make the ground truth go as far as there are timesteps available
 function simulate_all(dataloader, params_, saveoutput, numsteps)
-    print('hahahaha')
     assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         -- get data
         local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
-
-        -- print('this_orig')
-        -- print(this_orig[{{1}}])
-        -- print('context_orig')
-        -- print(context_orig[{{1}}])
-        -- print('y_orig')
-        -- print(y_orig[{{1}}])
-        -- print('context_future_orig')
-        -- print(context_future_orig[{{1}}])
-
 
         -- past: (bsize, mp.seq_length+1, mp.numpast*mp.objdim)
         -- future: (bsize, mp.seq_length+1, (mp.winsize-mp.numpast), mp.objdim)
@@ -469,17 +447,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         local future = torch.cat({y_orig:reshape(
                     y_orig:size(1),1,y_orig:size(2)), context_future_orig},2)
 
-        -- print('past')
-        -- print(past[{{1}}])
-        -- print('future')
-        -- print(future[{{1}}])
-
-
         -- reshape future
         future = future:reshape(mp.batch_size, mp.seq_length+1,
                                 mp.winsize-mp.num_past, mp.object_dim)
-
-        -- good up to here
 
         local pred_sim = model_utils.transfer_data(
                             torch.zeros(mp.batch_size, mp.seq_length+1,
@@ -487,20 +457,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                             mp.cuda)
         local num_particles = torch.find(mask,1)[1] + 1
 
-        -- print(future[{{1}}])
-
         -- loop through time
         for t = 1, numsteps do
-
-            -- print('))))))))))))))))))))))))))))))))')
-            -- print('t'..t)
 
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
 
             for j = 1, num_particles do
-                -- print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-                -- print('particle'..j)
                 -- construct batch
                 local this = torch.squeeze(past[{{},{j}}])
 
@@ -518,42 +481,16 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
 
                 local y = torch.squeeze(future[{{},{j},{t}}])
 
-                -- local context_future = torch.cat({future[{{},{1,j-1},{t}}],
-                --                                 future[{{},{j+1,-1},{t}}]},2)
-
-                -- consistent to simulate() up to here for the first particle
-
-                -- print('this')
-                -- print(this[{{1}}])
-                -- print('context')
-                -- print(context[{{1}}])
-                -- print('y')
-                -- print(y[{{1}}])
-                -- print(this:size())
-                -- print(context:size())
-                -- print(y:size())
-
                 local batch = {this, context, y, mask, config, start,
                                 finish, _}
 
                 -- predict
                 local _, pred = model:fp(params_,batch,true)
 
-                -- good up to here for first particle
-
-                -- print('pred')
-                -- print(pred[{{1}}])
-                -- assert(false)
-
-
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
                 context = context:reshape(mp.batch_size, mp.seq_length,
                                             mp.num_past, mp.object_dim)
-
-                -- print(pred:size())
-                -- print(this:size())
-                -- print(context:size())
 
                 -- relative coords
                 if mp.relative then
@@ -565,19 +502,12 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                 -- restore object properties
                 pred[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
 
-                -- print(pred[{{1}}])
                 -- update position
                 pred = update_position(this, pred)
-                -- print(pred[{{1}}])
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
-                -- sum_loss = sum_loss + test_loss
-                -- print(pred_sim[{{1}}])
-                -- print('<<<<<<<<<<<<<<<<<<<<<<<<')
             end
-            -- print('pred sim '..t)
-            -- print(pred_sim[{{1},{1,2}}])
 
             -- update past for next timestep
             -- update future for next timestep:
@@ -585,8 +515,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
             -- so we can just keep future stale
             past = past:reshape(mp.batch_size, mp.seq_length+1,
                                 mp.num_past, mp.object_dim)
-            -- print('past '..t..' before update')
-            -- print(past[{{1},{1,2}}])
             if mp.num_past > 1 then
                 past = torch.cat({past[{{},{},{2,-1},{}}],
                                     pred_sim[{{},{},{t},{}}]}, 3)
@@ -594,13 +522,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
                 assert(mp.num_past == 1)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
-            -- print('past '..t..' after update')
-            -- print(past[{{1},{1,2}}])
 
             past = past:reshape(mp.batch_size, mp.seq_length+1,
                                 mp.num_past*mp.object_dim)
-
-            -- print('((((((((((((((((((((((((')
         end
 
         -- at this point, pred_sim should be all filled out
@@ -608,11 +532,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
         local context_pred = pred_sim[{{},{2,-1}}]
-        --
-        -- print('this_pred')
-        -- print(this_pred[{{1}}])
-        -- print('context_pred')
-        -- print(context_pred[{{1}}])
 
         -- reshape things
         this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
@@ -625,13 +544,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
 
         -- crop the number of timesteps
         y_orig = y_orig[{{},{1,numsteps},{}}]
-        --
-        -- print(this_orig:size())
-        -- print(context_orig:size())
-        -- print(y_orig:size())
-        -- print(this_pred:size())
-        -- print(context_pred:size())
-        -- assert(false)
+
         -- when you save, you will replace context_future_orig
         if saveoutput then
             save_example_prediction({this_orig, context_orig, y_orig,
@@ -705,10 +618,8 @@ function experiment()
         test_losses[#test_losses+1] = test_loss
 
         if i % mp.save_every == 0 then
-            -- checkpoint(mp.savedir .. '/network'..'epc'..i..'.t7', model.network, mp) -- model.rnns[1]?
-            -- checkpoint(mp.savedir .. '/params'..'epc'..i..'.t7', model.theta.params, mp)
-
-            local model_file = string.format('%s/epoch%.2f_%.4f.t7', mp.savedir, i, val_loss)
+            local model_file = string.format('%s/epoch%.2f_%.4f.t7',
+                                                    mp.savedir, i, val_loss)
             print('saving checkpoint to ' .. model_file)
             local checkpoint = {}
             checkpoint.model = model
@@ -764,16 +675,13 @@ function predict()
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
     mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-
-    -- inittest(true, mp.savedir ..'/'..'network.t7')  -- assuming the mp.savedir doesn't change
-    -- print(test(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true))
     print(test(test_loader,checkpoint.model.theta.params, true))
 end
 
-function predict_simulate()
-    -- inittest(true, mp.savedir ..'/'..'network.t7')
-    -- print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
 
+-- Note that this one does not do the ground truth. In fact, you might be able
+-- to run this for arbitrary number of time-steps
+function predict_simulate()
     local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
     print(snapshot)
