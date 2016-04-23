@@ -22,7 +22,7 @@ require 'logging_utils'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('-model', "ff", 'ff | lstmobj | lstmtime')
+cmd:option('-model', "lstmobj", 'ff | lstmobj | lstmtime')
 cmd:option('-name', "ff_sim_test", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
@@ -33,7 +33,7 @@ cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-lr', 0.001, 'learning rate')
+cmd:option('-lr', 0.00001, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
@@ -63,7 +63,7 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
-    mp.plot = false--true
+    mp.plot = true--true
 	mp.cuda = false
 	mp.cunn = false
 else

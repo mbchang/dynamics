@@ -2,6 +2,8 @@ require 'nn'
 require 'torch'
 require 'nngraph'
 require 'Base'
+require 'IdentityCriterion'
+require 'data_utils'
 local model_utils = require 'model_utils'
 
 nngraph.setDebug(true)
@@ -28,15 +30,14 @@ function lstm(x, prev_c, prev_h, params)
       nn.CMulTable()({in_gate,     in_transform})
     })
     local next_h           = nn.CMulTable()({out_gate, nn.Tanh()(next_c)})
-
     return next_c, next_h
 end
 
 
 function init_object_encoder(input_dim, rnn_inp_dim)
     assert(rnn_inp_dim % 2 == 0)
-    local thisp     = nn.Identity()() -- (batch_size, input_dim)
-    local contextp  = nn.Identity()() -- (batch_size, partilce_dim)
+    local thisp     = nn.Identity()():annotate{name="thisp_enc"} -- (batch_size, input_dim)
+    local contextp  = nn.Identity()():annotate{name="contextp_enc"} -- (batch_size, partilce_dim)
 
     -- (batch_size, rnn_inp_dim/2)
     local thisp_out     = nn.ReLU()
@@ -54,8 +55,7 @@ end
 
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
-    local rnn_out = nn.Identity()()
-    -- local decoder_out = nn.Tanh()(nn.Linear(rnn_hid_dim, out_dim)(rnn_out))
+    local rnn_out = nn.Identity()():annotate{name="rnn_out"}
     local out_dim = num_future * object_dim
     local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
@@ -91,7 +91,6 @@ function init_network(params)
     -- Initialize encoder and decoder
     local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
     local decoder = init_object_decoder(params.rnn_dim, params.num_future, params.object_dim)
-
     -- Input to netowrk
     local thisp_past    = nn.Identity()() -- this particle of interest, past
     local contextp      = nn.Identity()() -- the context particle
@@ -122,6 +121,7 @@ function init_network(params)
 
     local prediction = decoder({next_h})  -- next_h is the output of the last layer
 
+    local POSVELDIM = 4
     -- -- split criterion: I know that this works
     local world_state, obj_prop = split_tensor(3,
         {params.num_future,params.object_dim},{{1,4},{5,params.object_dim}})
@@ -145,8 +145,8 @@ function init_network(params)
     local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})
     local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))
 
-    return nn.gModule({thisp_past, contextp, thisp_future},
-                    {err, prediction})  -- last output should be prediction
+    return nn.gModule({thisp_past, contextp, prev_s, thisp_future},
+                        {err, nn.Identity()(next_s), prediction})
 end
 
 
@@ -201,7 +201,6 @@ function model.create(mp_, preload, model_path)
     return self
 end
 
-
 function model:reset_state(s, seq_len, num_layers)
     for j = 0, seq_len do
         for d = 1, 2 * num_layers do
@@ -211,14 +210,12 @@ function model:reset_state(s, seq_len, num_layers)
     return s
 end
 
-
 function model:reset_ds(ds)
     for d = 1, #self.ds do
         ds[d]:zero()
     end
     return ds
 end
-
 
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
@@ -254,7 +251,6 @@ function model:fp(params_, batch, sim)
         -- Note that I'm feeding in this_future every time
         loss[i], self.s[i], preds[i] = unpack(self.rnns[i]:
             forward({this_past, context[{{},i}], sim1, this_future}))
-
     end
 
     local pred = preds[torch.find(mask,1)[1]] -- (1, num_future)
@@ -263,7 +259,6 @@ function model:fp(params_, batch, sim)
     return loss:sum(), pred -- we sum the losses through time!
 
 end
-
 
 function model:bp(batch)
     local state = self.s
