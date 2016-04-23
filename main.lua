@@ -66,7 +66,6 @@ if mp.server == 'pc' then
     mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
-    -- mp.max_epochs = 5
 else
 	mp.winsize = 80  -- total number of frames
     mp.num_past = 2 -- total number of past frames

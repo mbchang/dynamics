@@ -87,7 +87,6 @@ function dataloader:load_batch_id(id)
     local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     local batchname = savefolder..'/'..'batch'..id
     if not paths.filep(batchname) then batchname = batchname..'_hard' end -- this is a hard example. TODO: maybe put in a binary value as input
-    -- print(batchname)
     local nextbatch = torch.load(batchname)
     local this, context, y, mask, config, start, finish, context_future = unpack(nextbatch)
 
