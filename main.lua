@@ -22,8 +22,8 @@ require 'logging_utils'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('-model', "gruobj", 'ff | ffobj | lstmobj | gruobj')
-cmd:option('-name', "ff_var_obj_test", 'experiment name')
+cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
+cmd:option('-name', "ffobj2_3balls", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
@@ -55,7 +55,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/nonstationary_lite'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/2_3_balls'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
@@ -79,7 +79,7 @@ else
 end
 
 local M
-if mp.model == 'var_obj' or mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
+if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
 elseif mp.model == 'lstmtime' then
     M = require 'lstm_model'
@@ -654,6 +654,15 @@ end
 
 function run_experiment()
     inittrain(false)
+    experiment()
+end
+
+function run_experiment_load()
+    local snapshot = getLastSnapshot(mp.name)
+    print(snapshot)
+    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    mp = checkpoint.mp
+    inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     experiment()
 end
 

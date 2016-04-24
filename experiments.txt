@@ -190,12 +190,19 @@ experimet 17:
     2 in 1 out
     dataset 12
     non-overlapping particles, so won't have problem of 15
-    no sharpening
 
     17_layers_3_sharpen_1.5_lr_0.0003_lrdecay_0.99.out  - deleted
     17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99.out - best val
     17_layers_4_sharpen_1.5_lr_0.0003_lrdecay_0.99.out -- deleted
     17_layers_4_sharpen_1_lr_0.0003_lrdecay_0.99.out  -- deleted
+
+experiment 18:
+    worldm1 dataset with smaller window, nonstationary
+    2 in 1 out
+    dataset 12
+    models: lstmobj, gruobj, ffobj
+    2 balls
+
 
 experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
 

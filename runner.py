@@ -27,11 +27,12 @@ def create_jobs(dry_run, mode, ext):
     base_networks = {
         }
 
-    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d}
+    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m}
                 for r in [3e-4]
-                    for l in [3,4]
-                        for s in [1,1.5]
-                            for d in [0.99]]
+                    for l in [3]
+                        for s in [1]
+                            for d in [0.99]
+                                for m in ['ffobj', 'lstmobj', 'gruobj']]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -39,7 +40,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = '16_'
+        jobname = '18_'
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):

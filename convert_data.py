@@ -379,23 +379,24 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/13'  # (w=384, h=288)
-    if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
-    data_root = '/om/data/public/mbchang/physics-data/data'
-    filtername = 'worldm1_np=2_ng=0_nonstationary'
-    windowsize = 79  # 2  -- TODO 1in1out
-    num_train_samples_per = (1500, 1)  # 3
-    num_val_samples_per = (250, 1)  # 1
-    num_test_samples_per = (250, 1)  # 1
-    contiguous = True
-
-    # dataset_files_folder = '../data'
-    # data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/physics-data'
-    # windowsize = 20  # 20
-    # num_train_samples_per = (14, 60)  # 30
-    # num_val_samples_per = (3, 60)  # 10
-    # num_test_samples_per = (3, 60)  # 10
+    # dataset_files_folder = '/om/data/public/mbchang/physics-data/13'  # (w=384, h=288)
+    # if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
+    # data_root = '/om/data/public/mbchang/physics-data/data'
+    # filtername = 'worldm1_np=2_ng=0_nonstationary'
+    # windowsize = 79  # 2  -- TODO 1in1out
+    # num_train_samples_per = (1500, 1)  # 3
+    # num_val_samples_per = (250, 1)  # 1
+    # num_test_samples_per = (250, 1)  # 1
     # contiguous = True
+
+    dataset_files_folder = '../data/2_3_balls'
+    data_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/opdata/physics-data'
+    filtername = 'nonstationarylite'
+    windowsize = 20  # 20
+    num_train_samples_per = (14, 60)  # 30
+    num_val_samples_per = (3, 60)  # 10
+    num_test_samples_per = (3, 60)  # 10
+    contiguous = True
 
     trainset, valset, testset = create_datasets(data_root,
                                                 num_train_samples_per,
