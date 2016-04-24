@@ -61,22 +61,37 @@ end
 function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
+
+    local layer, sequencer_type, dcoef
+    if params.model == 'lstmobj' then
+        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)
+        sequencer_type = nn.BiSequencer
+        dcoef = 2
+    elseif params.model == 'ffobj' then
+        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
+        sequencer_type = nn.Sequencer
+        dcoef = 1
+    else
+        error('unknown model')
+    end
+
     local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
-    local decoder = init_object_decoder(2*params.rnn_dim, params.num_future,
+    local decoder = init_object_decoder(dcoef*params.rnn_dim, params.num_future,
                                                             params.object_dim)
 
-    local net = nn.Sequential()
-
-    -- note you can just replace LSTM with Linear!
-    local lstm_step = nn.Sequential()
-    lstm_step:add(encoder)
-    lstm_step:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
-    lstm_step:add(nn.ReLU())
-    for i = 2,params.layers do
-        lstm_step:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
-        lstm_step:add(nn.ReLU())
+    local step = nn.Sequential()
+    step:add(encoder)
+    for i = 1,params.layers do
+        step:add(layer:clone())  -- same param initial, but weights not shared
+        step:add(nn.ReLU())
     end
-    net:add(nn.BiSequencer(lstm_step))
+
+    local sequencer = sequencer_type(step)
+    sequencer:remember('neither')
+    --
+    local net = nn.Sequential()
+    net:add(sequencer)
+
     -- input table of (bsize, 2*d_hid) of length seq_length
     -- output: tensor (bsize, 2*d_hid)
     net:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
