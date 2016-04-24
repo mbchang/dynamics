@@ -1,4 +1,5 @@
 require 'nn'
+require 'rnn'
 require 'torch'
 require 'nngraph'
 require 'Base'
@@ -56,7 +57,7 @@ function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
     local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
-    local decoder = init_object_decoder(2*params.rnn_dim, params.num_future,
+    local decoder = init_object_decoder(params.rnn_dim, params.num_future,
                                                             params.object_dim)
 
     local net = nn.Sequential()
@@ -65,41 +66,21 @@ function init_network(params)
     lstm_step:add(encoder)
     lstm_step:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
     lstm_step:add(nn.ReLU())
-    for i = 2,numlayers do
+    for i = 2,params.layers do
         lstm_step:add(nn.LSTM(2*params.rnn_dim,params.rnn_dim))
         lstm_step:add(nn.ReLU())
     end
     net:add(nn.BiSequencer(lstm_step))
     -- input table of (bsize, 2*d_hid) of length seq_length
     -- output: tensor (bsize, 2*d_hid)
-    net:add(CAddTable())  -- add across the "timesteps" to sum the contributions
+    net:add(nn.CAddTable())  -- add across the "timesteps" to sum the contributions
     net:add(decoder)
     return net
 end
 
-function split_output(params)
-    local prediction = nn.Identity()()
-    local thisp_future = nn.Identity()()
-
-    local world_state, obj_prop = split_tensor(3,
-        {params.num_future,params.object_dim},{{1,4},{5,params.object_dim}})
-        ({prediction}):split(2)
-    local gtworld_state, gtobj_prop = split_tensor(3,
-        {params.num_future,params.object_dim},{{1,4},{5,params.object_dim}})
-        ({thisp_future}):split(2)
-
-    -- split state: only pass gradients on velocity
-    local pos, vel = split_tensor(3,
-        {params.num_future, POSVELDIM},{{1,2},{3,4}})
-        ({world_state}):split(2) -- split world_state in half on last dim
-    local gt_pos, gt_vel = split_tensor(3,
-        {params.num_future, POSVELDIM},{{1,2},{3,4}})
-        ({gtworld_state}):split(2)
-    return nn.gModule({prediction, thisp_future},
-                        {pos, vel, obj_prop, gt_pos, gt_vel, gtobj_prop})
-end
 
 function split_output(params)
+    local POSVELDIM = 4
     local future = nn.Identity()()
 
     local world_state, obj_prop = split_tensor(3,
@@ -111,19 +92,6 @@ function split_output(params)
         {params.num_future, POSVELDIM},{{1,2},{3,4}})
         ({world_state}):split(2) -- split world_state in half on last dim
     return nn.gModule({future},{pos, vel, obj_prop})
-end
-
-function VelocityCriterion()
-    -- don't pass gradients on position or object properties
-    -- MSE Criterion for velocity
-    local err0 = nn.IdentityCriterion()({pos, gt_pos})
-    local err1 = nn.MSECriterion()({vel, gt_vel})
-    local err2 = nn.IdentityCriterion()({obj_prop, gtobj_prop})
-    local err = nn.MulConstant(1)(nn.CAddTable()({err0,err1,err2}))
-
-    return nn.gModule({prediction, thisp_future},{err})
-
-    -- TODO how do we implement forward and backward?
 end
 
 -- boundaries: {{l1,r1},{l2,r2},{l3,r3},etc}
@@ -199,9 +167,15 @@ function model:fp(params_, batch, sim)
     assert(this_future:size(1) == self.mp.batch_size and
             this_future:size(2) == self.mp.out_dim)  -- TODO RESIZE THIS
 
-    -- figure out how much of context you should take
-    -- TODO: reshape to get a table for the sequence
-    local prediction = self.network:forward{this_table, context_table}
+    -- here you have to create a table of tables
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local input = {}
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+        table.insert(table, {this_past,context[{{},{t}}]})
+    end
+
+    local prediction = self.network:forward(input)
 
     local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
     local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
@@ -226,6 +200,11 @@ function model:bp(batch, prediction)
     local context       = convert_type(x.context:clone(), self.mp.cuda)
     local this_future   = convert_type(y:clone(), self.mp.cuda)
 
+    local input = {}
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+        table.insert(table, {this_past,context[{{},{t}}]})
+    end
+
     local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
     local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
 
@@ -234,7 +213,7 @@ function model:bp(batch, prediction)
     local d_obj_prop = nn.IdentityCriterion():backward{p_obj_prop, gt_obj_prop}
     local d_pred = split_output(params):backward({prediction},
                                                     {d_pos, d_vel, d_obj_prop})
-    self.network:backward({this_table, context_table})  -- updates grad_params
+    self.network:backward(input,d_pred)  -- updates grad_params
     collectgarbage()
     return self.theta.grad_params
 end

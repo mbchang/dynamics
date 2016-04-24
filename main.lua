@@ -80,7 +80,8 @@ end
 
 local M
 if mp.model == 'lstmobj' then
-    M = require 'model_new'
+    -- M = require 'model_new'
+    M = require 'lstm_obj_model'
 elseif mp.model == 'lstmtime' then
     M = require 'lstm_model'
 elseif mp.model == 'ff' then
@@ -136,6 +137,8 @@ function inittrain(preload, model_path)
     test_loader = D.create('testset', unpack(data_loader_args))
     train_test_loader = D.create('trainset', unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
+    print(model.network)
+    assert(false)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
