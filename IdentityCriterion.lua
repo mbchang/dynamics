@@ -4,7 +4,7 @@ require 'nn'
 
 local IdentityCriterion, parent = torch.class('nn.IdentityCriterion', 'nn.Criterion')
 
-function IdentityCriterion:__init(motionScale)
+function IdentityCriterion:__init()
    parent.__init(self)
 end
 

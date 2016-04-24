@@ -41,7 +41,7 @@ cmd:option('-max_epochs', 100, 'max number of epochs')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
-cmd:option('-layers', 3, 'layers in network')
+cmd:option('-layers', 2, 'layers in network')
 cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-print_every', 100, 'print every number of batches')
 cmd:option('-save_every', 20, 'save every number of epochs')
@@ -63,7 +63,7 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
-    mp.plot = true--true
+    mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
 else
