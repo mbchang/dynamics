@@ -22,7 +22,7 @@ require 'logging_utils'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('-model', "lstmobj", 'ff | lstmobj | lstmtime')
+cmd:option('-model', "var_obj", 'ff | var_obj | lstmtime')
 cmd:option('-name', "ff_sim_test", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
@@ -33,7 +33,7 @@ cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-lr', 0.00001, 'learning rate')
+cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
@@ -41,7 +41,7 @@ cmd:option('-max_epochs', 100, 'max number of epochs')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
-cmd:option('-layers', 2, 'layers in network')
+cmd:option('-layers', 3, 'layers in network')
 cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-print_every', 100, 'print every number of batches')
 cmd:option('-save_every', 20, 'save every number of epochs')
@@ -79,9 +79,9 @@ else
 end
 
 local M
-if mp.model == 'lstmobj' then
+if mp.model == 'var_obj' then
     -- M = require 'model_new'
-    M = require 'lstm_obj_model'
+    M = require 'variable_obj_model'
 elseif mp.model == 'lstmtime' then
     M = require 'lstm_model'
 elseif mp.model == 'ff' then
@@ -138,7 +138,6 @@ function inittrain(preload, model_path)
     train_test_loader = D.create('trainset', unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
     print(model.network)
-    assert(false)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
@@ -188,8 +187,8 @@ end
 function feval_train(params_)  -- params_ should be first argument
 
     local batch = train_loader:sample_priority_batch(mp.sharpen)
-    local loss, _ = model:fp(params_, batch)
-    local grad = model:bp(batch)
+    local loss, prediction = model:fp(params_, batch)
+    local grad = model:bp(batch,prediction)
 
     train_loader.priority_sampler:update_batch_weight(train_loader.current_sampled_id, loss)
     collectgarbage()

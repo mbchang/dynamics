@@ -28,21 +28,26 @@ end
 
 
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
-    local rnn_out = nn.Identity()()  -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
+    -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
+    local rnn_out = nn.Identity()()
 
     local out_dim = num_future * object_dim
     -- -- ok, here we will have to split up the output
     local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     if mp.accel then
-        local pos_vel_pre, accel_prop_pre = split_tensor(3,{num_future, object_dim},{{1,4},{5,object_dim+2}})(decoder_preout):split(2)
+        local pos_vel_pre, accel_prop_pre = split_tensor(3,
+                    {num_future, object_dim},{{1,4},{5,object_dim+2}})
+                    (decoder_preout):split(2)
         local accel_prop = nn.Sigmoid()(accel_prop_pre)
         local pos_vel = pos_vel_pre
         local dec_out_reshaped = nn.JoinTable(3)({pos_vel, accel_prop})
         local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
         return nn.gModule({rnn_out}, {decoder_out})
     else
-        local world_state_pre, obj_prop_pre = split_tensor(3,{num_future, object_dim},{{1,4},{5,object_dim}})(decoder_preout):split(2)   -- contains info about object dim!
+        local world_state_pre, obj_prop_pre = split_tensor(3,
+                    {num_future, object_dim},{{1,4},{5,object_dim}})
+                    (decoder_preout):split(2)  -- contains info about objectdim!
         local obj_prop = nn.Sigmoid()(obj_prop_pre)
         local world_state = world_state_pre -- linear
         local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
@@ -57,23 +62,24 @@ function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
     local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
-    local decoder = init_object_decoder(params.rnn_dim, params.num_future,
+    local decoder = init_object_decoder(2*params.rnn_dim, params.num_future,
                                                             params.object_dim)
 
     local net = nn.Sequential()
 
+    -- note you can just replace LSTM with Linear!
     local lstm_step = nn.Sequential()
     lstm_step:add(encoder)
     lstm_step:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
     lstm_step:add(nn.ReLU())
     for i = 2,params.layers do
-        lstm_step:add(nn.LSTM(2*params.rnn_dim,params.rnn_dim))
+        lstm_step:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
         lstm_step:add(nn.ReLU())
     end
     net:add(nn.BiSequencer(lstm_step))
     -- input table of (bsize, 2*d_hid) of length seq_length
     -- output: tensor (bsize, 2*d_hid)
-    net:add(nn.CAddTable())  -- add across the "timesteps" to sum the contributions
+    net:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
     net:add(decoder)
     return net
 end
@@ -106,7 +112,6 @@ function split_tensor(dim, reshape, boundaries)
     end
     return nn.gModule({tensor},chunks)
 end
-
 
 --------------------------------------------------------------------------------
 --############################################################################--
@@ -172,47 +177,57 @@ function model:fp(params_, batch, sim)
     -- context: (bsize, mp.seq_length, dim)
     local input = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(table, {this_past,context[{{},{t}}]})
+        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
     end
 
     local prediction = self.network:forward(input)
 
-    local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
-    local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
+    local p_pos, p_vel, p_obj_prop =
+                        unpack(split_output(self.mp):forward(prediction))
+    local gt_pos, gt_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(this_future))
 
-    local loss = self.criterion:forward{p_vel, gt_vel}
+    local loss = self.criterion:forward(p_vel, gt_vel)
 
     collectgarbage()
-    return loss:sum(), prediction  -- we sum the losses through time!  -- the loss:sum() just converts the doubleTensor into a number
+    return loss, prediction
 end
 
 
 -- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
 -- local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
 -- a lot of instantiations of split_output
-function model:bp(batch, prediction)
+function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
     local this, context, y, mask = unpack(batch)
     local x = {this=this,context=context}
+
+    if not sim then
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
+                            {2,mp.num_future})
+    end
 
     -- unpack inputs. All of these have been CUDAed already if need be
     local this_past     = convert_type(x.this:clone(), self.mp.cuda)
     local context       = convert_type(x.context:clone(), self.mp.cuda)
     local this_future   = convert_type(y:clone(), self.mp.cuda)
 
+
     local input = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(table, {this_past,context[{{},{t}}]})
+        table.insert(input, {this_past,context[{{},{t}}]})
     end
 
-    local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
-    local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
+    local splitter = split_output(self.mp)
 
-    local d_pos = nn.IdentityCriterion():backward{p_pos, gt_pos}
-    local d_vel = self.criterion:backward{p_vel, gt_vel}
-    local d_obj_prop = nn.IdentityCriterion():backward{p_obj_prop, gt_obj_prop}
-    local d_pred = split_output(params):backward({prediction},
-                                                    {d_pos, d_vel, d_obj_prop})
+    local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
+    local gt_pos, gt_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(this_future))
+
+    local d_pos = nn.IdentityCriterion():backward(p_pos, gt_pos)
+    local d_vel = self.criterion:backward(p_vel, gt_vel)
+    local d_obj_prop = nn.IdentityCriterion():backward(p_obj_prop, gt_obj_prop)
+    local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
     self.network:backward(input,d_pred)  -- updates grad_params
     collectgarbage()
     return self.theta.grad_params
