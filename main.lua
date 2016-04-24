@@ -22,7 +22,7 @@ require 'logging_utils'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('-model', "lstmobj", 'ff | var_obj | lstmtime')
+cmd:option('-model', "gruobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "ff_var_obj_test", 'experiment name')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
@@ -79,7 +79,7 @@ else
 end
 
 local M
-if mp.model == 'var_obj' or mp.model == 'lstmobj' or mp.model == 'ffobj' then
+if mp.model == 'var_obj' or mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
 elseif mp.model == 'lstmtime' then
     M = require 'lstm_model'

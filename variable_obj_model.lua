@@ -67,6 +67,10 @@ function init_network(params)
         layer = nn.LSTM(params.rnn_dim,params.rnn_dim)
         sequencer_type = nn.BiSequencer
         dcoef = 2
+    elseif params.model == 'gruobj' then
+        layer = nn.GRU(params.rnn_dim,params.rnn_dim)
+        sequencer_type = nn.BiSequencer
+        dcoef = 2
     elseif params.model == 'ffobj' then
         layer = nn.Linear(params.rnn_dim, params.rnn_dim)
         sequencer_type = nn.Sequencer
