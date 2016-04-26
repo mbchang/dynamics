@@ -23,7 +23,8 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
-cmd:option('-name', "ffobj2_3balls", 'experiment name')
+cmd:option('-name', "ffobj_3balls_load2balls", 'experiment name')
+cmd:option('-dataset_folder', '14_4balls', 'dataset folder')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
@@ -55,7 +56,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/2_3_balls'--dataset_files_subsampled_dense_np2' --'hoho'
+	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
@@ -67,10 +68,10 @@ if mp.server == 'pc' then
 	mp.cuda = false
 	mp.cunn = false
 else
-	mp.winsize = 80  -- total number of frames
+	mp.winsize = 20  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder--14_3balls'
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -79,6 +80,9 @@ else
 end
 
 local M
+
+
+
 if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
 elseif mp.model == 'lstmtime' then
@@ -661,7 +665,7 @@ function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    mp = checkpoint.mp
+    -- mp = checkpoint.mp
     inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     experiment()
 end
@@ -724,6 +728,8 @@ end
 -- ------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
     run_experiment()
+elseif mp.mode == 'expload' then
+    run_experiment_load()
 elseif mp.mode == 'sim' then
     -- predict_simulate()
     predict_simulate_all()

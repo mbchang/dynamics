@@ -27,12 +27,13 @@ def create_jobs(dry_run, mode, ext):
     base_networks = {
         }
 
-    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m}
+    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m, 'dataset_folder':b}
                 for r in [3e-4]
                     for l in [3]
                         for s in [1]
                             for d in [0.99]
-                                for m in ['ffobj', 'lstmobj', 'gruobj']]
+                                for m in ['ffobj', 'lstmobj', 'gruobj']
+                                    for b in ['14_2balls', '14_3balls']]#, '14_4balls']]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -40,7 +41,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = '18_'
+        jobname = '18'
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):
@@ -87,8 +88,8 @@ def to_slurm(jobname, jobcommand, dry_run):
         # slurmfile.write("#SBATCH --error=slurm_logs/" + jobname + ".err\n")
         slurmfile.write("#SBATCH -N 1\n")
         slurmfile.write("#SBATCH -c 1\n")
-        slurmfile.write("#SBATCH -p gpu\n")
-        slurmfile.write("#SBATCH --gres=gpu:1\n")
+        # slurmfile.write("#SBATCH -p gpu\n")
+        slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=5000\n")
         slurmfile.write("#SBATCH --time=6-23:00:00\n")
         # slurmfile.write("#SBATCH -x node027\n")

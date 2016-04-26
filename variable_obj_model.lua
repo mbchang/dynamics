@@ -116,7 +116,13 @@ function split_output(params)
     local pos, vel = split_tensor(3,
         {params.num_future, POSVELDIM},{{1,2},{3,4}})
         ({world_state}):split(2) -- split world_state in half on last dim
-    return nn.gModule({future},{pos, vel, obj_prop})
+
+    local net = nn.gModule({future},{pos, vel, obj_prop})
+    if mp.cuda then
+        return net:cuda()
+    else
+        return net
+    end
 end
 
 -- boundaries: {{l1,r1},{l2,r2},{l3,r3},etc}
@@ -129,7 +135,12 @@ function split_tensor(dim, reshape, boundaries)
         local left,right = unpack(boundaries[cb])
         chunks[#chunks+1] = nn.JoinTable(dim)(nn.NarrowTable(left,right)(splitted))
     end
-    return nn.gModule({tensor},chunks)
+    local net = nn.gModule({tensor},chunks)
+    if mp.cuda then
+        return net:cuda()
+    else
+        return net
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -147,16 +158,20 @@ function model.create(mp_, preload, model_path)
 
     assert(self.mp.input_dim == self.mp.object_dim * self.mp.num_past)
     assert(self.mp.out_dim == self.mp.object_dim * self.mp.num_future)
-
+    self.criterion = nn.MSECriterion()
+    self.identitycriterion = nn.IdentityCriterion()
     if preload then
         print('Loading saved model.')
         local checkpoint = torch.load(model_path)
         self.network = checkpoint.model.network:clone()
     else
         self.network = init_network(self.mp)
-         if self.mp.cuda then self.network:cuda() end
+         if self.mp.cuda then
+             self.network:cuda()
+             self.criterion:cuda()
+             self.identitycriterion:cuda()
+         end
     end
-    self.criterion = nn.MSECriterion()
 
     self.theta = {}
     self.theta.params, self.theta.grad_params = self.network:getParameters()
@@ -243,9 +258,9 @@ function model:bp(batch, prediction, sim)
     local gt_pos, gt_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    local d_pos = nn.IdentityCriterion():backward(p_pos, gt_pos)
+    local d_pos = self.identitycriterion:backward(p_pos, gt_pos)
     local d_vel = self.criterion:backward(p_vel, gt_vel)
-    local d_obj_prop = nn.IdentityCriterion():backward(p_obj_prop, gt_obj_prop)
+    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
     self.network:backward(input,d_pred)  -- updates grad_params
     collectgarbage()

@@ -201,7 +201,7 @@ experiment 18:
     2 in 1 out
     dataset 12
     models: lstmobj, gruobj, ffobj
-    2 balls
+    2 balls, 3 balls, 4 balls
 
 
 experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
