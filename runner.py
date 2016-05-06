@@ -24,16 +24,15 @@ def create_jobs(dry_run, mode, ext):
         os.makedirs("slurm_scripts")
 
 
-    base_networks = {
-        }
-
-    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m, 'dataset_folder':b}
+    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m, 'dataset_folder':b, 'L2': l2, 'test_dataset_folder': t}
                 for r in [3e-4]
                     for l in [3]
                         for s in [1]
                             for d in [0.99]
-                                for m in ['ffobj', 'lstmobj', 'gruobj']
-                                    for b in ['14_235balls']]#, '14_4balls']]
+                                for m in ['ffobj', 'lstmobj' 'gruobj']
+                                    for b in ['14_235balls']
+                                        for t in ['14_4balls']]
+                                            # for l2 in [1e-3,1e-4]]#, '14_4balls']]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -90,7 +89,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH -c 1\n")
         # slurmfile.write("#SBATCH -p gpu\n")
         slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
-        slurmfile.write("#SBATCH --mem=5000\n")
+        slurmfile.write("#SBATCH --mem=3000\n")
         slurmfile.write("#SBATCH --time=6-23:00:00\n")
         slurmfile.write(jobcommand)
 

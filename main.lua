@@ -35,7 +35,8 @@ cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-L2', 0, 'L2 regularization')
+cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
+cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
@@ -138,7 +139,7 @@ function inittrain(preload, model_path)
                               mp.shuffle,
                               mp.cuda}
     -- hardcoded this for testing on 4 balls
-    local test_args = {'/om/data/public/mbchang/physics-data/14_5balls',
+    local test_args = {'/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder,--14_5balls',
                         mp.shuffle,mp.cuda}
     train_loader = D.create('trainset', unpack(data_loader_args))
     val_loader =  D.create('valset', unpack(test_args))  -- using testcfgs
