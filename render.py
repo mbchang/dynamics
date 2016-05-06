@@ -205,10 +205,39 @@ from convert_data import *
 # Test on nonstationary, constrained window, nonoverlapping, openmind, 78
 # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions_very_long/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # can bounce!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # can bounce!
+
+# look at recover particles to get context vs this
+
+
 #
 # Test on nonstationary, constrained window, nonoverlapping, openmind, 78, both
 # h5_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/17_layers_3_sharpen_1_lr_0.0003_lrdecay_0.99/predictions_very_long_both/worldm1_np=2_ng=0_nonstationary_[1,50].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=10, vidsave=False, imgsave=False)  # diverged trajectories
-# visualize_results(training_samples_hdf5=h5_file, sample_num=46, vidsave=False, imgsave=False)  # good example
-# visualize_results(training_samples_hdf5=h5_file, sample_num=33, vidsave=False, imgsave=False)  # good example
-# visualize_results(training_samples_hdf5=h5_file, sample_num=49, vidsave=False, imgsave=False)  # good example
+# visualize_results(training_samples_hdf5=h5_file, sample_num=44, vidsave=False, imgsave=False)  # good example
+# visualize_results(training_samples_hdf5=h5_file, sample_num=33, vidsave=False, imgsave=True)  # good example
+# visualize_results(training_samples_hdf5=h5_file, sample_num=49, vidsave=False, imgsave=True)  # good example
+
+# 14_2balls (it needs more data)
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_2balls_lr_0.0003_sharpen_1_model_ffobj/predictions/worldm1_np=2_ng=0window75_[151,200].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=17, vidsave=False, imgsave=False)  # good example
+
+# 14_3balls
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_3balls_lr_0.0003_sharpen_1_model_ffobj/predictions/worldm1_np=3_ng=0window75_[151,200].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=17, vidsave=False, imgsave=False)  # good example
+
+# 14_4balls
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_ffobj/predictions/worldm1_np=4_ng=0window75_[151,200].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=23, vidsave=False, imgsave=False)  # SUDDEN ACCELERATION! OUT OF CONTROL!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=26, vidsave=False, imgsave=False)  #invisible wall
+# visualize_results(training_samples_hdf5=h5_file, sample_num=5, vidsave=False, imgsave=False)  # good example
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)
+
+# 14_235 balls test on 14_4balls
+h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_235balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=4_ng=0window75_[1,50].h5'
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_235balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=4_ng=0window75_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)  # generalizes!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=True)  # generalizes!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=False, imgsave=False)  # generalizes!
+visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # generalizes!
+#

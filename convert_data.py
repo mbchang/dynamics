@@ -512,7 +512,8 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
     ## So, for example, in order to get the x-coordinates of particle 1 in time-step 3, we would do data[3][1][0]
 
     # WINSIZE = 640,480
-    WINSIZE = 384,288
+    # WINSIZE = 384,288
+    WINSIZE = 480, 360
     width, height = WINSIZE
 
     pygame.init()
@@ -646,8 +647,13 @@ def separate_context(context, config):
     num_other = num_particles - 1
 
     # find number of goos
+    print config
     start = config.find('_ng=')+len('_ng=')
-    end = start + config[start:].find('_')
+    end = start
+    while end < len(config) and config[end].isdigit():
+        end += 1
+    # end = start + config[start:].find('_')
+    print config[start:end]
     num_goos = int(config[start:end])
 
     # Thus, the RNN should only run for num_particles + num_goos iterations
@@ -727,7 +733,7 @@ def recover_particles(this, other, accel):
     """
 
     def hardcode_attributes(particle_dict, pred=False):
-        particle_dict['field-color'] = 'green' if pred else 'black'
+        particle_dict['field-color'] = 'green' #if pred else 'black'  #THIS IS HARD-CODED!
         particle_dict['size'] = 40.0
         return particle_dict
 

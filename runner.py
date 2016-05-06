@@ -33,7 +33,7 @@ def create_jobs(dry_run, mode, ext):
                         for s in [1]
                             for d in [0.99]
                                 for m in ['ffobj', 'lstmobj', 'gruobj']
-                                    for b in ['14_2balls', '14_3balls']]#, '14_4balls']]
+                                    for b in ['14_235balls']]#, '14_4balls']]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -92,7 +92,6 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=5000\n")
         slurmfile.write("#SBATCH --time=6-23:00:00\n")
-        # slurmfile.write("#SBATCH -x node027\n")
         slurmfile.write(jobcommand)
 
     if not dry_run:

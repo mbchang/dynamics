@@ -25,6 +25,7 @@ cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "ffobj_3balls_load2balls", 'experiment name')
 cmd:option('-dataset_folder', '14_4balls', 'dataset folder')
+cmd:option('-test_dataset_folder', '14_4balls', 'dataset folder')
 cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
@@ -34,6 +35,7 @@ cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-shuffle', false, 'shuffle batches')
+cmd:option('-L2', 0, 'L2 regularization')
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
@@ -135,9 +137,12 @@ function inittrain(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.shuffle,
                               mp.cuda}
+    -- hardcoded this for testing on 4 balls
+    local test_args = {'/om/data/public/mbchang/physics-data/14_5balls',
+                        mp.shuffle,mp.cuda}
     train_loader = D.create('trainset', unpack(data_loader_args))
-    val_loader =  D.create('valset', unpack(data_loader_args))  -- using testcfgs
-    test_loader = D.create('testset', unpack(data_loader_args))
+    val_loader =  D.create('valset', unpack(test_args))  -- using testcfgs
+    test_loader = D.create('testset', unpack(test_args))
     train_test_loader = D.create('trainset', unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
     print(model.network)
@@ -435,9 +440,9 @@ end
 -- actually you should make this more general.
 -- there is no concept of ground truth here?
 -- or you can make the ground truth go as far as there are timesteps available
-function simulate_all(dataloader, params_, saveoutput, numsteps)
+function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
-    assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
+    -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
@@ -550,6 +555,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps)
         y_orig = y_orig[{{},{1,numsteps},{}}]
 
         -- when you save, you will replace context_future_orig
+        if gt then
+            context_pred = context_future_orig  -- only saving ground truth
+            context_pred = context_pred:reshape(context_pred:size(1),mp.seq_length,mp.winsize-mp.num_past,mp.object_dim)
+        end
+
         if saveoutput then
             save_example_prediction({this_orig, context_orig, y_orig,
                                     this_pred, context_pred},
@@ -610,6 +620,16 @@ function experiment()
         local test_loss = test(test_loader, model.theta.params, false)
         print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 
+        if mp.L2 > 0 then
+            print('regularize')
+            -- Loss:
+            train_loss = train_loss + mp.L2 * self.model.theta.params:norm(2)^2/2
+            -- Gradients:
+            -- grad_params:add( params:clone():mul(opt.L2) )
+
+            self.model.theta.grad_params:add(self.model.theta.params:clone():mul(mp.L2) )
+        end
+
         -- Save logs
         experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
                              ['log MSE loss (val set)'] =  torch.log(val_loss),
@@ -641,6 +661,7 @@ function experiment()
         if i >= mp.lrdecayafter then
             optim_state.learningRate =optim_state.learningRate*mp.lrdecay
         end
+
         collectgarbage()
     end
 end
@@ -716,11 +737,13 @@ function predict_simulate_all()
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
     print(snapshot)
     mp = checkpoint.mp
-    mp.winsize = 80  -- total number of frames
-    mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
+    -- mp.winsize = 80  -- total number of frames
+    -- mp.winsize = 20
+    -- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    mp.winsize = 80  -- total number of frames
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
+    -- mp.winsize = 80  -- total number of frames
+    -- mp.winsize = 20
+	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
     print(simulate_all(test_loader, checkpoint.model.theta.params, true, 78))
 end
 

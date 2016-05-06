@@ -186,3 +186,75 @@ worldm1_np=3_ng=0nonstationarylite (3 balls)
     Testset: 250 examples per config 60 examples per video
     Windowsize: 20
     Contiguous: True
+
+14_4balls (op, 5 balls, (w=480,h=360))
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_5balls
+    Data source folder: /om/data/public/mbchang/physics-data/data/worldm1_np=5_ng=0window75
+    Trainset: 1500 examples per config 60 examples per video
+    Valset: 250 examples per config 60 examples per video
+    Testset: 250 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
+
+14_235balls (op, 235 balls, (w=480,h=360))
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_235balls
+    Data source folder: /om/data/public/mbchang/physics-data/data/window75group
+    Trainset: 1500 examples per config 60 examples per video
+    Valset: 250 examples per config 60 examples per video
+    Testset: 250 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
+
+14_23balls (op, 23 balls, (w=480,h=360))
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_23balls
+    Data source folder: /om/data/public/mbchang/physics-data/data/window75group
+    Trainset: 1500 examples per config 60 examples per video
+    Valset: 250 examples per config 60 examples per video
+    Testset: 250 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
+
+14_34balls (op, 23 balls, (w=480,h=360))
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_34balls
+    Data source folder: /om/data/public/mbchang/physics-data/data/window75group
+    Trainset: 1500 examples per config 60 examples per video
+    Valset: 250 examples per config 60 examples per video
+    Testset: 250 examples per config 60 examples per video
+    Windowsize: 20
+    Contiguous: True
+
+14_2balls80 (op, 2 balls, (w=480,h=360) winsize 80)
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_2balls80
+    Data source folder: /om/data/public/mbchang/physics-data/data/worldm1_np=2_ng=0window75
+    Trainset: 1500 examples per config 1 examples per video
+    Valset: 250 examples per config 1 examples per video
+    Testset: 250 examples per config 1 examples per video
+    Windowsize: 80
+    Contiguous: True
+
+14_3balls80 (op, 3 balls, (w=480,h=360) winsize 80)
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_3balls80
+    Data source folder: /om/data/public/mbchang/physics-data/data/worldm1_np=3_ng=0window75
+    Trainset: 1500 examples per config 1 examples per video
+    Valset: 250 examples per config 1 examples per video
+    Testset: 250 examples per config 1 examples per video
+    Windowsize: 80
+    Contiguous: True
+
+14_4balls80 (op, 4 balls, (w=480,h=360) winsize 80)
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_4balls80
+    Data source folder: /om/data/public/mbchang/physics-data/data/worldm1_np=4_ng=0window75
+    Trainset: 1500 examples per config 1 examples per video
+    Valset: 250 examples per config 1 examples per video
+    Testset: 250 examples per config 1 examples per video
+    Windowsize: 80
+    Contiguous: True
+
+14_5balls80 (op, 5 balls, (w=480,h=360) winsize 80)
+    Dataset_files_folder: /om/data/public/mbchang/physics-data/14_5balls80
+    Data source folder: /om/data/public/mbchang/physics-data/data/worldm1_np=5_ng=0window75
+    Trainset: 1500 examples per config 1 examples per video
+    Valset: 250 examples per config 1 examples per video
+    Testset: 250 examples per config 1 examples per video
+    Windowsize: 80
+    Contiguous: True
