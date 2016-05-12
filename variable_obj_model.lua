@@ -263,7 +263,7 @@ function model:bp(batch, prediction, sim)
     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
     self.network:backward(input,d_pred)  -- updates grad_params
-    
+
     collectgarbage()
     return self.theta.grad_params
 end

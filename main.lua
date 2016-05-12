@@ -1,4 +1,4 @@
-s-- Michael B Chang
+-- Michael B Chang
 
 -- Third Party Imports
 require 'torch'
@@ -8,7 +8,6 @@ require 'image'
 require 'xlua'
 require 'Base'
 require 'sys'
-require 'rmsprop'
 require 'pl'
 require 'data_utils'
 
@@ -23,7 +22,7 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
-cmd:option('-name', "ffobj_3balls_load2balls", 'experiment name')
+cmd:option('-name', "refactortest", 'experiment name')
 cmd:option('-dataset_folder', '14_4balls', 'dataset folder')
 cmd:option('-test_dataset_folder', '14_4balls', 'dataset folder')
 cmd:option('-plot', true, 'turn on/off plot')
@@ -60,7 +59,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
+    mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
@@ -115,17 +114,14 @@ if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
 
 local optimizer, optim_state
-if mp.opt == 'rmsprop' then
-    optimizer = rmsprop
-    optim_state = {learningRate   = mp.lr,
-                   momentumDecay  = 0.1,
-                   updateDecay    = 0.01}
-elseif mp.opt == 'optimrmsprop' then
+if mp.opt == 'optimrmsprop' then
     optimizer = optim.rmsprop
     optim_state = {learningRate   = mp.lr}
 elseif mp.opt == 'adam' then
     optimizer = optim.adam
     optim_state = {learningRate   = mp.lr}
+else
+    error('unknown optimizer')
 end
 
 local model, train_loader, test_loader, modelfile
@@ -143,8 +139,8 @@ function inittrain(preload, model_path)
     local test_args = {'/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder,--14_5balls',
                         mp.shuffle,mp.cuda}
     train_loader = D.create('trainset', unpack(data_loader_args))
-    val_loader =  D.create('valset', unpack(test_args))  -- using testcfgs
-    test_loader = D.create('testset', unpack(test_args))
+    val_loader =  D.create('valset', unpack(data_loader_args))  -- using testcfgs
+    test_loader = D.create('testset', unpack(data_loader_args))
     train_test_loader = D.create('trainset', unpack(data_loader_args))
     model = M.create(mp, preload, model_path)
     print(model.network)
