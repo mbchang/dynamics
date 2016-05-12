@@ -234,10 +234,41 @@ from convert_data import *
 # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)
 
 # 14_235 balls test on 14_4balls
-h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_235balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=4_ng=0window75_[1,50].h5'
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_235balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=4_ng=0window75_[1,50].h5'
 # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_235balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=4_ng=0window75_[1,50].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=False)  # generalizes!
 # visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=True)  # generalizes!
 # visualize_results(training_samples_hdf5=h5_file, sample_num=1, vidsave=False, imgsave=False)  # generalizes!
-visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # generalizes!
-#
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # generalizes!
+
+# 14_34 balls  test on 14_5 balls
+# pred
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=5_ng=0window75_[1,50].h5'
+# # gt
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=5_ng=0window75_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # generalizes!
+
+
+# 14_3 balls  test on 14_3 balls lstm
+# pred
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_3balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=3_ng=0window75_[1,50].h5'
+# # gt
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_3balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=3_ng=0window75_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # generalizes!
+
+# 14_3 balls  test on 14_3 balls lstm
+# pred
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_2balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=2_ng=0window75_[1,50].h5'
+# # gt
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_2balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=2_ng=0window75_[1,50].h5'
+# # visualize_results(training_samples_hdf5=h5_file, sample_num=9, vidsave=False, imgsave=False)  #  #bad!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=18, vidsave=False, imgsave=True)  #  # okay
+
+
+# 14_3 balls  test on 14_3 balls lstm
+# pred
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=4_ng=0window75_[1,50].h5'
+# gt
+h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=4_ng=0window75_[1,50].h5'
+# visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)  # bad
+visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # bad

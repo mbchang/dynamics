@@ -29,10 +29,10 @@ def create_jobs(dry_run, mode, ext):
                     for l in [3]
                         for s in [1]
                             for d in [0.99]
-                                for m in ['ffobj', 'lstmobj' 'gruobj']
-                                    for b in ['14_235balls']
-                                        for t in ['14_4balls']]
-                                            # for l2 in [1e-3,1e-4]]#, '14_4balls']]
+                                for m in ['ffobj', 'lstmobj', 'gruobj']
+                                    for b in ['14_34balls']
+                                        for t in ['14_5balls']
+                                            for l2 in [1e-3,1e-4]]#, '14_4balls']]
 
     if dry_run:
         print "NOT starting jobs:"

@@ -1,4 +1,4 @@
--- Michael B Chang
+s-- Michael B Chang
 
 -- Third Party Imports
 require 'torch'
@@ -30,6 +30,7 @@ cmd:option('-plot', true, 'turn on/off plot')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
 cmd:option('-batch_size', 50, 'batch size')
+cmd:option('-ps', true, 'turn on priority sampling')
 cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
@@ -199,6 +200,15 @@ function feval_train(params_)  -- params_ should be first argument
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
 
+    -- L2 stuff
+
+    if mp.L2 > 0 then
+        -- Loss:
+        loss = loss + mp.L2 * model.theta.params:norm(2)^2/2
+        -- Gradients:
+        model.theta.grad_params:add(model.theta.params:clone():mul(mp.L2) )
+    end
+
     train_loader.priority_sampler:update_batch_weight(train_loader.current_sampled_id, loss)
     collectgarbage()
     return loss, grad -- f(x), df/dx
@@ -214,7 +224,9 @@ function train(epoch_num)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
         if t % mp.print_every == 0 then
-            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f\tgradnorm = %6.4e\tbatch = %4d\thardest batch: %4d \twith loss %6.8f lr = %6.4e",
+            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f"..
+                                "\tgradnorm = %6.4e\tbatch = %4d\t"..
+                                "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
                     epoch_num, t, train_loss[1],
                     model.theta.grad_params:norm(),
                     train_loader.current_sampled_id,
@@ -620,16 +632,6 @@ function experiment()
         local val_loss = test(val_loader, model.theta.params, false)
         local test_loss = test(test_loader, model.theta.params, false)
         print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
-
-        if mp.L2 > 0 then
-            print('regularize')
-            -- Loss:
-            train_loss = train_loss + mp.L2 * self.model.theta.params:norm(2)^2/2
-            -- Gradients:
-            -- grad_params:add( params:clone():mul(opt.L2) )
-
-            self.model.theta.grad_params:add(self.model.theta.params:clone():mul(mp.L2) )
-        end
 
         -- Save logs
         experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
