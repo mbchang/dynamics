@@ -72,7 +72,7 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
-    mp.plot = true--true
+    mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
 else
