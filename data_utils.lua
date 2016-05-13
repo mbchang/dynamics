@@ -153,6 +153,39 @@ function broadcast(tensor, dim)
     end
 end
 
+function unpack_batch(batch, sim)
+    local this, context, y, mask = unpack(batch)
+    local x = {this=this,context=context}
+
+    if not sim then
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
+                            {2,mp.num_future})
+    end
+
+    -- unpack inputs
+    local this_past     = convert_type(x.this:clone(), mp.cuda)
+    local context       = convert_type(x.context:clone(), mp.cuda)
+    local this_future   = convert_type(y:clone(), mp.cuda)
+
+    assert(this_past:size(1) == mp.batch_size and
+            this_past:size(2) == mp.input_dim)  -- TODO RESIZE THIS
+    assert(context:size(1) == mp.batch_size and
+            context:size(2)==mp.seq_length
+            and context:size(3) == mp.input_dim)
+    assert(this_future:size(1) == mp.batch_size and
+            this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
+
+    -- here you have to create a table of tables
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local input = {}
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
+    end
+
+    return input, this_future
+end
+
 -- local t = torch.rand(2,3,4)
 -- print(broadcast(t,1):size())
 -- print(broadcast(t,2):size())

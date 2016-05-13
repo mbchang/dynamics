@@ -17,6 +17,8 @@ local D = require 'DataLoader'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
+-- torch.setdefaulttensortype('torch.FloatTensor')
+
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
@@ -40,18 +42,25 @@ cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
-cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
-cmd:option('-max_epochs', 1000, 'max number of epochs')
+-- cmd:option('-max_epochs', 1000, 'max number of epochs')
 cmd:option('-max_iter', 1000*1800, 'max number of iterations')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-seed', true, 'manual seed or not')
+
 cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 252, 'save every number of iterations')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+-- cmd:option('-save_every', 1800*20, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+-- cmd:option('-val_every',1800,'val every number of batches')
+-- cmd:option('-lrdecay_every',1800,'val every number of batches')
+-- cmd:option('-lrdecayafter', 50*1800, 'number of epochs before turning down lr')
+
+cmd:option('-save_every', 252, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
 cmd:option('-val_every',252,'val every number of batches')
 cmd:option('-lrdecay_every',252,'val every number of batches')
+cmd:option('-lrdecayafter', 252, 'number of epochs before turning down lr')
+
 cmd:text()
 
 -- parse input params
@@ -66,7 +75,7 @@ if mp.server == 'pc' then
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
-    mp.max_epochs = 5
+    -- mp.max_epochs = 5
     mp.max_iter = 5*252
     mp.lrdecay = 0.99
 	mp.seq_length = 10
@@ -217,14 +226,13 @@ function feval_train(params_)  -- params_ should be first argument
     return loss, grad -- f(x), df/dx
 end
 
--- trains for one epoch
 function train()
-    local new_params, train_loss
     local epoch_num = 1
     for t = 1,mp.max_iter do
 
-        train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
-        new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
+        train_loader.priority_sampler:set_epcnum(epoch_num)
+        local new_params, train_loss = optimizer(feval_train,
+                                model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
 
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
@@ -284,7 +292,6 @@ function train()
     end
 end
 
--- test on dataset
 function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
@@ -349,9 +356,11 @@ function test(dataloader, params_, saveoutput)
     return avg_loss
 end
 
--- this: (mp.batch_size, mp.num_past, mp.object_dim)
--- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
 function update_position(this, pred)
+    -- this: (mp.batch_size, mp.num_past, mp.object_dim)
+    -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
+    ----------------------------------------------------------------------------
+
     local this, pred = this:clone(), pred:clone()
     local lastpos = (this[{{},{-1},{1,2}}]:clone()*G_w_width)
     local lastvel = (this[{{},{-1},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
@@ -376,24 +385,23 @@ function update_position(this, pred)
     return pred
 end
 
-
--- test on dataset
--- assumption: that you predict 1 out
---[[
-    Want:
-        the data given to still have windowsize of 20.
-        But we want to only predict for 1 timestep,
-        But we want the context to have full windowsize. Perhaps we can
-            have a flag to set? The full context, starting at the time prediction
-            starts until the end of the window, should be passed through
-        But also you need the full context and context_future to be passed in.
-            Where to do the processing?
-        Given the pred (batch_size, num_future, obj_dim) we will take the
-        first time slice: [{{},{1}}] of that
-
--- ]]
---
 function simulate(dataloader, params_, saveoutput, numsteps)
+    -- test on dataset
+    -- assumption: that you predict 1 out
+    --[[
+        Want:
+            the data given to still have windowsize of 20.
+            But we want to only predict for 1 timestep,
+            But we want the context to have full windowsize. Perhaps we can
+                have a flag to set? The full context, starting at the time prediction
+                starts until the end of the window, should be passed through
+            But also you need the full context and context_future to be passed in.
+                Where to do the processing?
+            Given the pred (batch_size, num_future, obj_dim) we will take the
+            first time slice: [{{},{1}}] of that
+
+    -- ]]
+    ----------------------------------------------------------------------------
     assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
@@ -489,11 +497,14 @@ function simulate(dataloader, params_, saveoutput, numsteps)
     return avg_loss
 end
 
--- simulate two balls for now, but this should be made more general
--- actually you should make this more general.
--- there is no concept of ground truth here?
--- or you can make the ground truth go as far as there are timesteps available
+
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
+    -- simulate two balls for now, but this should be made more general
+    -- actually you should make this more general.
+    -- there is no concept of ground truth here?
+    -- or you can make the ground truth go as far as there are timesteps available
+    ----------------------------------------------------------------------------
+
 
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1,dataloader.num_batches do
