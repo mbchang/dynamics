@@ -218,17 +218,15 @@ function feval_train(params_)  -- params_ should be first argument
 end
 
 -- trains for one epoch
-function train(epoch_num)
+function train()
     local new_params, train_loss
-    local loss_run_avg = 0
-    for t = 1,train_loader.num_batches do
-    -- for t = 1,mp.max_iter do
+    local epoch_num = 1
+    for t = 1,mp.max_iter do
+
         train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
-        -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
 
-        loss_run_avg = loss_run_avg + train_loss[1]
         trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
 
@@ -246,7 +244,7 @@ function train(epoch_num)
         end
 
         -- validate
-        if ((epoch_num-1)*train_loader.num_batches + t) % mp.val_every == 0 then
+        if t % mp.val_every == 0 then
             v_train_loss, v_val_loss, v_tets_loss = validate()
             train_losses[#train_losses+1] = v_train_loss
             val_losses[#val_losses+1] = v_val_loss
@@ -255,7 +253,7 @@ function train(epoch_num)
                     mp.val_every % mp.save_every == 0)
 
             -- save
-            if ((epoch_num-1)*train_loader.num_batches + t) % mp.save_every == 0 then
+            if t % mp.save_every == 0 then
                 local model_file = string.format('%s/epoch%.2f_%.4f.t7',
                                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
@@ -271,17 +269,19 @@ function train(epoch_num)
 
         -- lr decay
         -- here you can adjust the learning rate based on val loss
-        if (epoch_num-1)*train_loader.num_batches + t >= mp.lrdecayafter and
-            ((epoch_num-1)*train_loader.num_batches + t) % mp.lrdecay_every == 0 then
+        if t >= mp.lrdecayafter and t % mp.lrdecay_every == 0 then
             optim_state.learningRate =optim_state.learningRate*mp.lrdecay
             print('Learning rate is now '..optim_state.learningRate)
+        end
+
+        if t % train_loader.num_batches == 0 then
+            epoch_num = t / train_loader.num_batches + 1
         end
 
         if mp.plot then trainLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
-    return loss_run_avg/train_loader.num_batches -- running avg of training loss.
 end
 
 -- test on dataset
@@ -673,6 +673,7 @@ function validate()
     experimentLogger:style{['log MSE loss (train set)'] = '~',
                            ['log MSE loss (val set)'] = '~',
                            ['log MSE loss (test set)'] = '~'}
+   if mp.plot then experimentLogger:plot() end
     return train_loss, val_loss, test_loss
 end
 
@@ -680,13 +681,7 @@ end
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
-    -- local train_losses, val_losses, test_losses = {},{},{}
-    for i = 1, mp.max_epochs do
-        train(i)
-        if mp.plot then experimentLogger:plot() end
-        if mp.cuda then cutorch.synchronize() end
-        collectgarbage()
-    end
+    train()
 end
 
 function checkpoint(savefile, data, mp_)
