@@ -41,14 +41,17 @@ cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
-cmd:option('-max_epochs', 100, 'max number of epochs')
+cmd:option('-max_epochs', 1000, 'max number of epochs')
+cmd:option('-max_iter', 1000*1800, 'max number of iterations')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 20, 'save every number of epochs')
+cmd:option('-save_every', 252, 'save every number of iterations')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+cmd:option('-val_every',252,'val every number of batches')
+cmd:option('-lrdecay_every',252,'val every number of batches')
 cmd:text()
 
 -- parse input params
@@ -63,11 +66,13 @@ if mp.server == 'pc' then
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
+    mp.max_epochs = 5
+    mp.max_iter = 5*252
     mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
-    mp.plot = false--true
+    mp.plot = true--true
 	mp.cuda = false
 	mp.cunn = false
 else
@@ -125,6 +130,8 @@ else
 end
 
 local model, train_loader, test_loader, modelfile
+local train_losses, val_losses, test_losses = {},{},{}
+
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -215,10 +222,17 @@ function train(epoch_num)
     local new_params, train_loss
     local loss_run_avg = 0
     for t = 1,train_loader.num_batches do
+    -- for t = 1,mp.max_iter do
         train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
         -- xlua.progress(t, train_loader.num_batches)
         new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
+
+        loss_run_avg = loss_run_avg + train_loss[1]
+        trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
+        trainLogger:style{['log MSE loss (train set)'] = '~'}
+
+        -- print
         if t % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f"..
                                 "\tgradnorm = %6.4e\tbatch = %4d\t"..
@@ -230,9 +244,39 @@ function train(epoch_num)
                     train_loader.priority_sampler:get_hardest_batch()[1],
                     optim_state.learningRate))
         end
-        loss_run_avg = loss_run_avg + train_loss[1]
-        trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
-        trainLogger:style{['log MSE loss (train set)'] = '~'}
+
+        -- validate
+        if ((epoch_num-1)*train_loader.num_batches + t) % mp.val_every == 0 then
+            v_train_loss, v_val_loss, v_tets_loss = validate()
+            train_losses[#train_losses+1] = v_train_loss
+            val_losses[#val_losses+1] = v_val_loss
+            test_losses[#test_losses+1] = v_test_loss
+            assert(mp.save_every % mp.val_every == 0 or
+                    mp.val_every % mp.save_every == 0)
+
+            -- save
+            if ((epoch_num-1)*train_loader.num_batches + t) % mp.save_every == 0 then
+                local model_file = string.format('%s/epoch%.2f_%.4f.t7',
+                                            mp.savedir, epoch_num, v_val_loss)
+                print('saving checkpoint to ' .. model_file)
+                local checkpoint = {}
+                checkpoint.model = model
+                checkpoint.mp = mp
+                checkpoint.train_losses = train_losses
+                checkpoint.val_losses = val_losses
+                torch.save(model_file, checkpoint)
+                print('Saved model')
+            end
+        end
+
+        -- lr decay
+        -- here you can adjust the learning rate based on val loss
+        if (epoch_num-1)*train_loader.num_batches + t >= mp.lrdecayafter and
+            ((epoch_num-1)*train_loader.num_batches + t) % mp.lrdecay_every == 0 then
+            optim_state.learningRate =optim_state.learningRate*mp.lrdecay
+            print('Learning rate is now '..optim_state.learningRate)
+        end
+
         if mp.plot then trainLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
@@ -616,51 +660,31 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
                                 y=y, context_future=context_future})
 end
 
+function validate()
+    local train_loss = test(train_test_loader, model.theta.params, false)
+    local val_loss = test(val_loader, model.theta.params, false)
+    local test_loss = test(test_loader, model.theta.params, false)
+    print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
+
+    -- Save logs
+    experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
+                         ['log MSE loss (val set)'] =  torch.log(val_loss),
+                         ['log MSE loss (test set)'] =  torch.log(test_loss)}
+    experimentLogger:style{['log MSE loss (train set)'] = '~',
+                           ['log MSE loss (val set)'] = '~',
+                           ['log MSE loss (test set)'] = '~'}
+    return train_loss, val_loss, test_loss
+end
+
 -- runs experiment
 function experiment()
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
-    local train_losses, val_losses, test_losses = {},{},{}
+    -- local train_losses, val_losses, test_losses = {},{},{}
     for i = 1, mp.max_epochs do
-        print('Learning rate is now '..optim_state.learningRate)
         train(i)
-        local train_loss = test(train_test_loader, model.theta.params, false)
-        local val_loss = test(val_loader, model.theta.params, false)
-        local test_loss = test(test_loader, model.theta.params, false)
-        print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
-
-        -- Save logs
-        experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
-                             ['log MSE loss (val set)'] =  torch.log(val_loss),
-                             ['log MSE loss (test set)'] =  torch.log(test_loss)}
-        experimentLogger:style{['log MSE loss (train set)'] = '~',
-                               ['log MSE loss (val set)'] = '~',
-                               ['log MSE loss (test set)'] = '~'}
-        train_losses[#train_losses+1] = train_loss
-        val_losses[#val_losses+1] = val_loss
-        test_losses[#test_losses+1] = test_loss
-
-        if i % mp.save_every == 0 then
-            local model_file = string.format('%s/epoch%.2f_%.4f.t7',
-                                                    mp.savedir, i, val_loss)
-            print('saving checkpoint to ' .. model_file)
-            local checkpoint = {}
-            checkpoint.model = model
-            checkpoint.mp = mp
-            checkpoint.train_losses = train_losses
-            checkpoint.val_losses = val_losses
-            torch.save(model_file, checkpoint)
-
-            print('Saved model')
-        end
         if mp.plot then experimentLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
-
-        -- here you can adjust the learning rate based on val loss
-        if i >= mp.lrdecayafter then
-            optim_state.learningRate =optim_state.learningRate*mp.lrdecay
-        end
-
         collectgarbage()
     end
 end
