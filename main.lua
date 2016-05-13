@@ -40,7 +40,7 @@ cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-sharpen', 1, 'sharpen exponent')
-cmd:option('-lrdecayafter', 50, 'number of epochs before turning down lr')
+cmd:option('-lrdecayafter', 1, 'number of epochs before turning down lr')
 cmd:option('-max_epochs', 100, 'max number of epochs')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
@@ -64,6 +64,7 @@ if mp.server == 'pc' then
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
     mp.lrdecay = 0.99
+    mp.max_epochs = 5
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
