@@ -1,4 +1,7 @@
 require 'hdf5'
+require 'nn'
+require 'nngraph'
+require 'torchx'
 
 function get_keys(table)
     local keyset={}
@@ -186,8 +189,31 @@ function unpack_batch(batch, sim)
     return input, this_future
 end
 
--- local t = torch.rand(2,3,4)
--- print(broadcast(t,1):size())
--- print(broadcast(t,2):size())
--- -- print(broadcast(t,3):size())
--- print(broadcast(t,4):size())
+
+function preprocess_input(mask)
+    -- in: {(bsize, input_dim), (bsize, mp.seq_length, input_dim)}
+    -- out: table of length torch.find(mask,1)[1] of pairs {(bsize, input_dim), (bsize, input_dim)}
+
+
+    local this_past = nn.Identity()()
+    local context = nn.Identity()()
+
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local input = {}
+    for t = 1, torch.find(mask,1)[1] do
+        table.insert(input, nn.Identity()({this_past, nn.Squeeze()(nn.Select(2,t)(context))}))
+    end
+    input = nn.Identity()(input)
+    return nn.gModule({this_past, context}, {input})
+end
+
+mask = torch.Tensor({0,0,1,0,0,0,0,0,0,0})
+p = preprocess_input(mask)
+
+bsize = 3
+tp = torch.rand(bsize,10)
+c = torch.rand(bsize,10,10)
+x = p:forward({tp, c})
+p:backward({tp,c},x)
+print(p.gradInput[1])

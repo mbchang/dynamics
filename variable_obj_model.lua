@@ -186,38 +186,6 @@ end
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
-
-    -- local this, context, y, mask = unpack(batch)
-    -- local x = {this=this,context=context}
-    --
-    -- if not sim then
-    --     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-    --                         {2,mp.num_future})
-    -- end
-    --
-    -- -- unpack inputs
-    -- local this_past     = convert_type(x.this:clone(), self.mp.cuda)
-    -- local context       = convert_type(x.context:clone(), self.mp.cuda)
-    -- local this_future   = convert_type(y:clone(), self.mp.cuda)
-    --
-    -- assert(this_past:size(1) == self.mp.batch_size and
-    --         this_past:size(2) == self.mp.input_dim)  -- TODO RESIZE THIS
-    -- assert(context:size(1) == self.mp.batch_size and
-    --         context:size(2)==self.mp.seq_length
-    --         and context:size(3) == self.mp.input_dim)
-    -- assert(this_future:size(1) == self.mp.batch_size and
-    --         this_future:size(2) == self.mp.out_dim)  -- TODO RESIZE THIS
-    --
-    -- -- here you have to create a table of tables
-    -- -- this: (bsize, input_dim)
-    -- -- context: (bsize, mp.seq_length, dim)
-    -- local input = {}
-    -- for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-    --     table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
-    -- end
-
-
-
     local input, this_future = unpack_batch(batch, sim)
 
     local prediction = self.network:forward(input)
@@ -239,25 +207,6 @@ end
 -- a lot of instantiations of split_output
 function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
-    -- local this, context, y, mask = unpack(batch)
-    -- local x = {this=this,context=context}
-    --
-    -- if not sim then
-    --     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-    --                         {2,mp.num_future})
-    -- end
-    --
-    -- -- unpack inputs. All of these have been CUDAed already if need be
-    -- local this_past     = convert_type(x.this:clone(), self.mp.cuda)
-    -- local context       = convert_type(x.context:clone(), self.mp.cuda)
-    -- local this_future   = convert_type(y:clone(), self.mp.cuda)
-    --
-    --
-    -- local input = {}
-    -- for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-    --     table.insert(input, {this_past,context[{{},{t}}]})
-    -- end
-
     local input, this_future = unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
@@ -277,34 +226,9 @@ function model:bp(batch, prediction, sim)
 end
 
 function model:backprop2input(batch, sim)
-    local this, context, y, mask = unpack(batch)
-    local x = {this=this,context=context}
+    self.network.gradInput:zero()
 
-    if not sim then
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-                            {2,mp.num_future})
-    end
-
-    -- unpack inputs
-    local this_past     = convert_type(x.this:clone(), self.mp.cuda)
-    local context       = convert_type(x.context:clone(), self.mp.cuda)
-    local this_future   = convert_type(y:clone(), self.mp.cuda)
-
-    assert(this_past:size(1) == self.mp.batch_size and
-            this_past:size(2) == self.mp.input_dim)  -- TODO RESIZE THIS
-    assert(context:size(1) == self.mp.batch_size and
-            context:size(2)==self.mp.seq_length
-            and context:size(3) == self.mp.input_dim)
-    assert(this_future:size(1) == self.mp.batch_size and
-            this_future:size(2) == self.mp.out_dim)  -- TODO RESIZE THIS
-
-    -- here you have to create a table of tables
-    -- this: (bsize, input_dim)
-    -- context: (bsize, mp.seq_length, dim)
-    local input = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
-    end
+    local input, this_future = unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
 

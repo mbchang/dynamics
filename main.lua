@@ -205,6 +205,84 @@ function inittest(preload, model_path)
 end
 
 
+
+function backprop2input()
+    -- get batch
+    local batch = train_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
+
+    local this, context, y, mask = unpack(batch)
+    local x = {this=this,context=context}
+
+    if not sim then
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
+                            {2,mp.num_future})
+    end
+    -- convert_type
+
+    -- unpack inputs
+    local this_past     = convert_type(x.this:clone(), mp.cuda)
+    local context       = convert_type(x.context:clone(), mp.cuda)
+    local this_future   = convert_type(y:clone(), mp.cuda)
+
+    function feval_back2mass(inp)
+        -- inp is this_past
+        -- model.network.gradInput:zero()
+        -- forward
+        local splitter = split_output(mp)
+        local preproc = preprocess_input(mask)
+        local input = preproc:forward{inp,context}  -- this changes, context doesn't
+
+        local prediction = model.network:forward(input)
+        local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
+        local gt_pos, gt_vel, gt_obj_prop =
+                            unpack(split_output(mp):forward(this_future))
+        local loss = model.criterion:forward(p_vel, gt_vel)
+
+        -- backward
+        local d_pos = model.identitycriterion:backward(p_pos, gt_pos)
+        local d_vel = model.criterion:backward(p_vel, gt_vel)
+        local d_obj_prop = model.identitycriterion:backward(p_obj_prop, gt_obj_prop)
+        local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
+
+        local g_input = model.network:backward(input, d_pred)
+        preproc:updateGradInput(inp, g_input)
+
+        collectgarbage()
+        return loss, preproc.gradInput[1]  -- this should have been updated
+    end
+
+    local b2i_optimstate = {learningRate = 0.1}
+
+    -- infer the masses of ALL THE BALLS (or just you?)
+    -- for now let's just infer the mass of you
+
+    -- or should I preface the network with a wrapper that selects the input, because rmsprop expects a tensor!
+
+    print('initial input')
+    print(this_past)
+    t = 1
+    while t <= 1000 do
+        -- pass in input to rmsprop
+        new_input, _ = optim.rmsprop(feval_back2mass,this_past, b2i_optimstate)
+
+        -- modify only the mass
+        this_past = new_input -- TODO CHANGE
+
+        print(this_past)
+        if t % 10 == 0 then
+            b2i_optimstate.learningRate = b2i_optimstate.learningRate * 0.99
+        end
+        -- if (this_past-target_input):norm() < 1e-5 then
+        --     break
+        -- end
+        t = t + 1
+    end
+    print ('final input after '..t..' iterations')
+    print (this_past)
+
+end
+
+
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
@@ -787,9 +865,14 @@ elseif mp.mode == 'sim' then
     predict_simulate_all()
 elseif mp.mode == 'save' then
     initsavebatches(false)
+elseif mp.mode == 'b2i' then
+    inittrain(false)
+    backprop2input()
 else
     predict()
 end
+
+
 
 
 -- inittest(false, mp.savedir ..'/'..'network.t7')
