@@ -207,12 +207,38 @@ function preprocess_input(mask)
     return nn.gModule({this_past, context}, {input})
 end
 
--- mask = torch.Tensor({0,0,1,0,0,0,0,0,0,0})
--- p = preprocess_input(mask)
---
--- bsize = 3
--- tp = torch.rand(bsize,10)
--- c = torch.rand(bsize,10,10)
--- x = p:forward({tp, c})
--- p:backward({tp,c},x)
--- print(p.gradInput[1])
+
+function checkpointtofloat(checkpoint)
+    -- just mutates checkpoint though
+    checkpoint.model.network:clearState()
+    checkpoint.model.network:float()
+    checkpoint.model.criterion:float()
+    checkpoint.model.identitycriterion:float()
+    checkpoint.model.theta.params = checkpoint.model.theta.params:float()
+    checkpoint.model.theta.grad_params = checkpoint.model.theta.grad_params:float()
+    return checkpoint
+end
+
+function checkpointtocuda(checkpoint)
+    -- just mutates checkpoint though
+    checkpoint.model.network:clearState()
+    checkpoint.model.network:cuda()
+    checkpoint.model.criterion:cuda()
+    checkpoint.model.identitycriterion:cuda()
+    checkpoint.model.theta.params = checkpoint.model.theta.params:cuda()
+    checkpoint.model.theta.grad_params = checkpoint.model.theta.grad_params:cuda()
+    return checkpoint
+end
+
+mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
+p = preprocess_input(mask)
+
+bsize = 3
+tp = torch.rand(bsize,10)
+c = torch.rand(bsize,10,10)
+x = p:forward({tp, c})
+
+print(x)
+
+p:backward({tp,c},x)
+print(p.gradInput[1])

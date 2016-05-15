@@ -210,8 +210,7 @@ function backprop2input()
     -- for one input
 
     -- get batch
-    local batch = train_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
-
+    local batch = test_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
     local this, context, y, mask = unpack(batch)
     local x = {this=this,context=context}
 
@@ -228,11 +227,12 @@ function backprop2input()
 
     function feval_back2mass(inp)
         -- inp is this_past
-        -- model.network.gradInput:zero()
         -- forward
         local splitter = split_output(mp)
         local preproc = preprocess_input(mask)
+        if mp.cuda then preproc:cuda() end
         local input = preproc:forward{inp,context}  -- this changes, context doesn't
+        if torch.find(mask,1)[1] == 1 then input = {input} end
 
         local prediction = model.network:forward(input)
         local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
@@ -247,6 +247,7 @@ function backprop2input()
         local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
 
         local g_input = model.network:backward(input, d_pred)
+        if torch.find(mask,1)[1] == 1 then g_input = g_input[1] end
         preproc:updateGradInput(inp, g_input)
 
         collectgarbage()
@@ -260,6 +261,10 @@ function backprop2input()
     -- for now let's just infer the mass of you
 
     -- or should I preface the network with a wrapper that selects the input, because rmsprop expects a tensor!
+
+    this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
+    this_past[{{},{},{5}}]:fill(1)
+    this_past[{{},{},{6,8}}]:fill(0)
 
     print('initial input')
     print(this_past)
@@ -800,6 +805,8 @@ function run_experiment()
     experiment()
 end
 
+
+-- UPDATE
 function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
@@ -825,6 +832,7 @@ function predict()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    -- checkpoint = tofloat(checkpoint)
     mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     print(test(test_loader,checkpoint.model.theta.params, true))
@@ -848,8 +856,6 @@ function predict_simulate()
 end
 
 function predict_simulate_all()
-    -- inittest(true, mp.savedir ..'/'..'network.t7')
-    -- print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
 
     local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
@@ -865,8 +871,19 @@ function predict_simulate_all()
     print(simulate_all(test_loader, checkpoint.model.theta.params, true, 78))
 end
 
+function predict_b2i()
+    local snapshot = getLastSnapshot(mp.name)
+    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    checkpoint = checkpointtocuda(checkpoint)
+    print(checkpoint)
+    mp = checkpoint.mp
+    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
+    backprop2input()
+end
 
--- ------------------------------------- Main -------------------------------------
+
+
+------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
     run_experiment()
 elseif mp.mode == 'expload' then
@@ -879,12 +896,7 @@ elseif mp.mode == 'save' then
 elseif mp.mode == 'b2i' then
     inittrain(false)
     backprop2input()
+    -- predict_b2i()
 else
     predict()
 end
-
-
-
-
--- inittest(false, mp.savedir ..'/'..'network.t7')
--- print(simulate(test_loader, model.theta.params, false, 3))

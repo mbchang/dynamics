@@ -158,19 +158,21 @@ function model.create(mp_, preload, model_path)
 
     assert(self.mp.input_dim == self.mp.object_dim * self.mp.num_past)
     assert(self.mp.out_dim == self.mp.object_dim * self.mp.num_future)
-    self.criterion = nn.MSECriterion()
-    self.identitycriterion = nn.IdentityCriterion()
     if preload then
         print('Loading saved model.')
         local checkpoint = torch.load(model_path)
         self.network = checkpoint.model.network:clone()
+        self.criterion = checkpoint.model.criterion:clone()
+        self.identitycriterion = checkpoin.model.identitycriterion:clone()
     else
+        self.criterion = nn.MSECriterion()
+        self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
-         if self.mp.cuda then
-             self.network:cuda()
-             self.criterion:cuda()
-             self.identitycriterion:cuda()
-         end
+        if self.mp.cuda then
+            self.network:cuda()
+            self.criterion:cuda()
+            self.identitycriterion:cuda()
+        end
     end
 
     self.theta = {}
