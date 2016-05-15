@@ -207,6 +207,8 @@ end
 
 
 function backprop2input()
+    -- for one input
+
     -- get batch
     local batch = train_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
 
@@ -248,6 +250,7 @@ function backprop2input()
         preproc:updateGradInput(inp, g_input)
 
         collectgarbage()
+        print(loss)
         return loss, preproc.gradInput[1]  -- this should have been updated
     end
 
@@ -262,13 +265,21 @@ function backprop2input()
     print(this_past)
     t = 1
     while t <= 1000 do
-        -- pass in input to rmsprop
-        new_input, _ = optim.rmsprop(feval_back2mass,this_past, b2i_optimstate)
+        local old_this = this_past:clone()
+
+        -- pass in input to rmsprop: automatically modifies this_past
+        optim.rmsprop(feval_back2mass, this_past, b2i_optimstate)  -- not getting updates! (or implicilty updated)
 
         -- modify only the mass
-        this_past = new_input -- TODO CHANGE
+        old_this:resize(mp.batch_size, mp.num_past, mp.object_dim)
+        this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
 
-        print(this_past)
+        -- [{{5,8}}] is the one-hot mass
+        this_past[{{},{},{1,4}}] = old_this[{{},{},{1,4}}]
+        this_past[{{},{},{9}}] = old_this[{{},{},{9}}]
+
+        this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
+
         if t % 10 == 0 then
             b2i_optimstate.learningRate = b2i_optimstate.learningRate * 0.99
         end
@@ -278,7 +289,7 @@ function backprop2input()
         t = t + 1
     end
     print ('final input after '..t..' iterations')
-    print (this_past)
+    print (this_past[{{1}}])
 
 end
 
