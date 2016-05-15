@@ -163,7 +163,7 @@ function model.create(mp_, preload, model_path)
         local checkpoint = torch.load(model_path)
         self.network = checkpoint.model.network:clone()
         self.criterion = checkpoint.model.criterion:clone()
-        self.identitycriterion = checkpoin.model.identitycriterion:clone()
+        self.identitycriterion = checkpoint.model.identitycriterion:clone()
     else
         self.criterion = nn.MSECriterion()
         self.identitycriterion = nn.IdentityCriterion()

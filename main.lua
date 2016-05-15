@@ -251,29 +251,30 @@ function backprop2input()
         preproc:updateGradInput(inp, g_input)
 
         collectgarbage()
-        print(loss)
         return loss, preproc.gradInput[1]  -- this should have been updated
     end
 
-    local b2i_optimstate = {learningRate = 0.1}
+    local b2i_optimstate = {learningRate = 0.01}
 
     -- infer the masses of ALL THE BALLS (or just you?)
     -- for now let's just infer the mass of you
 
     -- or should I preface the network with a wrapper that selects the input, because rmsprop expects a tensor!
 
-    this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
-    this_past[{{},{},{5}}]:fill(1)
-    this_past[{{},{},{6,8}}]:fill(0)
+    -- perturb
+    -- this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
+    -- this_past[{{},{},{5}}]:fill(1)
+    -- this_past[{{},{},{6,8}}]:fill(0)
+    -- this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
 
     print('initial input')
-    print(this_past)
+    print(this_past[{{1},{1,9}}])
     t = 1
-    while t <= 1000 do
+    while t <= 10000 do
         local old_this = this_past:clone()
 
         -- pass in input to rmsprop: automatically modifies this_past
-        optim.rmsprop(feval_back2mass, this_past, b2i_optimstate)  -- not getting updates! (or implicilty updated)
+        local _, loss = optim.rmsprop(feval_back2mass, this_past, b2i_optimstate)  -- not getting updates! (or implicilty updated)
 
         -- modify only the mass
         old_this:resize(mp.batch_size, mp.num_past, mp.object_dim)
@@ -285,8 +286,16 @@ function backprop2input()
 
         this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
 
-        if t % 10 == 0 then
+        if t % 100 == 0 then
             b2i_optimstate.learningRate = b2i_optimstate.learningRate * 0.99
+        end
+
+        if t % 100 == 0 then
+            print(this_past[{{1},{1,9}}])
+        end
+
+        if t % 100 == 0 then
+            print(loss[1])
         end
         -- if (this_past-target_input):norm() < 1e-5 then
         --     break
@@ -294,8 +303,7 @@ function backprop2input()
         t = t + 1
     end
     print ('final input after '..t..' iterations')
-    print (this_past[{{1}}])
-
+    print(this_past[{{1},{1,9}}])
 end
 
 
@@ -894,9 +902,9 @@ elseif mp.mode == 'sim' then
 elseif mp.mode == 'save' then
     initsavebatches(false)
 elseif mp.mode == 'b2i' then
-    inittrain(false)
-    backprop2input()
-    -- predict_b2i()
+    -- inittrain(false)
+    -- backprop2input()
+    predict_b2i()
 else
     predict()
 end

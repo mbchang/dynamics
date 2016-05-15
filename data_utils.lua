@@ -230,15 +230,15 @@ function checkpointtocuda(checkpoint)
     return checkpoint
 end
 
-mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
-p = preprocess_input(mask)
-
-bsize = 3
-tp = torch.rand(bsize,10)
-c = torch.rand(bsize,10,10)
-x = p:forward({tp, c})
-
-print(x)
-
-p:backward({tp,c},x)
-print(p.gradInput[1])
+-- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
+-- p = preprocess_input(mask)
+--
+-- bsize = 3
+-- tp = torch.rand(bsize,10)
+-- c = torch.rand(bsize,10,10)
+-- x = p:forward({tp, c})
+--
+-- print(x)
+--
+-- p:backward({tp,c},x)
+-- print(p.gradInput[1])
