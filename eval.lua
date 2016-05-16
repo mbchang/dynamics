@@ -64,7 +64,6 @@ else
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
 	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder
-    -- mp.test_dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder
 	mp.seq_length = 10
 	mp.num_threads = 4
 	mp.cuda = true
@@ -72,18 +71,6 @@ else
 end
 
 local M
-
---
--- if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
---     M = require 'variable_obj_model'
--- elseif mp.model == 'lstmtime' then
---     M = require 'lstm_model'
--- elseif mp.model == 'ff' then
---     M = require 'feed_forward_model'
--- else
---     error('Unrecognized model')
--- end
-
 
 -- world constants
 local G_w_width, G_w_height = 480.0, 360.0 --384.0, 288.0
@@ -684,16 +671,12 @@ end
 
 
 ------------------------------------- Main -------------------------------------
-if mp.mode == 'exp' then
-    run_experiment()
-elseif mp.mode == 'expload' then
-    run_experiment_load()
-elseif mp.mode == 'sim' then
+if mp.mode == 'sim' then
     predict_simulate_all()
-elseif mp.mode == 'save' then
-    initsavebatches(false)
 elseif mp.mode == 'b2i' then
     predict_b2i()
-else
+elseif mp.mode == 'pred'
     predict()
+else
+    error('unknown mode')
 end
