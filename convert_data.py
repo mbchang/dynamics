@@ -129,7 +129,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     path_slice = np.dstack((path_slice, masses))
     path_slice = np.dstack((path_slice, np.ones((num_objects, num_steps))))  # object ids: particle = 1
     path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
-    assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)
+    assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)  # make sure that everybody is within max range
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
     assert path_slice.shape == (num_objects, num_steps, 4+len(G_mass_values)+1)
 
@@ -379,10 +379,10 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/14_234balls'  # (w=384, h=288)
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/m2_5balls'  # (w=384, h=288)
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
-    filtername = 'window75'
+    filtername = 'worldm2_np=5_ng=0window75'
     windowsize = 20  # 2  -- TODO 1in1out
     num_train_samples_per = (1500, 60)  # 3
     num_val_samples_per = (250, 60)  # 1
@@ -513,8 +513,8 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
 
     # WINSIZE = 640,480
     # WINSIZE = 384,288
-    WINSIZE = 480, 360
-    width, height = WINSIZE
+    # WINSIZE = G_w_width, G_w_height
+    width, height = G_w_width, G_w_height
 
     pygame.init()
     screen = pygame.display.set_mode(WINSIZE)

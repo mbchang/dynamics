@@ -24,15 +24,15 @@ def create_jobs(dry_run, mode, ext):
         os.makedirs("slurm_scripts")
 
 
-    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m, 'dataset_folder':b, 'L2': l2, 'test_dataset_folder': t}
+    jobs = [{'lr': r,'layers':l, 'sharpen':s, 'lrdecay': d, 'model': m, 'dataset_folder':b, 'test_dataset_folder': t}#, 'L2': l2}
                 for r in [3e-4]
                     for l in [3]
                         for s in [1]
                             for d in [0.99]
-                                for m in ['ffobj', 'lstmobj', 'gruobj']
-                                    for b in ['14_34balls']
-                                        for t in ['14_5balls']
-                                            for l2 in [1e-3,1e-4]]#, '14_4balls']]
+                                for m in ['lstmobj','ffobj']
+                                    for b in ['m2_5balls']
+                                        for t in ['m2_5balls']]
+                                            # for l2 in [0]]#, '14_4balls']]
 
     if dry_run:
         print "NOT starting jobs:"
@@ -40,7 +40,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = '18'
+        jobname = '19'
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):
@@ -96,6 +96,6 @@ def to_slurm(jobname, jobcommand, dry_run):
     if not dry_run:
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
-dryrun = False
+dryrun = True
 run_experiment(dryrun)
 # predict(dryrun)

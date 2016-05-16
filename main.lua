@@ -22,44 +22,55 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
+cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "refactortest", 'experiment name')
-cmd:option('-dataset_folder', '14_4balls', 'dataset folder')
-cmd:option('-test_dataset_folder', '14_4balls', 'dataset folder')
-cmd:option('-plot', true, 'turn on/off plot')
+cmd:option('-seed', true, 'manual seed or not')
+
+-- dataset
+cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
+cmd:option('-test_dataset_folder', 'm2_5balls', 'dataset folder')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
-cmd:option('-batch_size', 50, 'batch size')
-cmd:option('-ps', true, 'turn on priority sampling')
-cmd:option('-accel', false, 'use acceleration data')
-cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
-cmd:option('-server', "op", 'pc = personal | op = openmind')
-cmd:option('-relative', true, 'relative state vs absolute state')
-cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
-cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-lr', 0.0003, 'learning rate')
-cmd:option('-lrdecay', 0.99, 'learning rate annealing')
-cmd:option('-sharpen', 1, 'sharpen exponent')
--- cmd:option('-max_epochs', 1000, 'max number of epochs')
-cmd:option('-max_iter', 1000*1800, 'max number of iterations')
-cmd:option('-diff', false, 'use relative context position and velocity state')
+
+-- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
-cmd:option('-seed', true, 'manual seed or not')
+cmd:option('-relative', true, 'relative state vs absolute state')
+cmd:option('-diff', false, 'use relative context position and velocity state')
+cmd:option('-accel', false, 'use acceleration data')
 
+-- training options
+cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
+cmd:option('-batch_size', 50, 'batch size')
+cmd:option('-shuffle', false, 'shuffle batches')
+cmd:option('-max_iter', 1000*1800, 'max number of iterations')
+cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
+cmd:option('-lr', 0.0003, 'learning rate')
+cmd:option('-lrdecay', 0.99, 'learning rate annealing')
+-- cmd:option('-max_epochs', 1000, 'max number of epochs')
+
+-- priority sampling
+cmd:option('-ps', true, 'turn on priority sampling')
+cmd:option('-sharpen', 1, 'sharpen exponent')
+
+-- experiment options
+cmd:option('-plot', true, 'turn on/off plot')
+cmd:option('-gt', false, 'saving ground truth')  -- 0.001
+
+-- every options
 cmd:option('-print_every', 100, 'print every number of batches')
--- cmd:option('-save_every', 1800*20, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
--- cmd:option('-val_every',1800,'val every number of batches')
--- cmd:option('-lrdecay_every',1800,'val every number of batches')
--- cmd:option('-lrdecayafter', 50*1800, 'number of epochs before turning down lr')
+cmd:option('-save_every', 1800*20, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+cmd:option('-val_every',10*1800,'val every number of batches')
+cmd:option('-lrdecay_every',1800,'decay lr every number of batches')
+cmd:option('-lrdecayafter', 50*1800, 'number of epochs before turning down lr')
 
-cmd:option('-save_every', 252, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
-cmd:option('-val_every',252,'val every number of batches')
-cmd:option('-lrdecay_every',252,'val every number of batches')
-cmd:option('-lrdecayafter', 252, 'number of epochs before turning down lr')
+-- cmd:option('-save_every', 252, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+-- cmd:option('-val_every',252,'val every number of batches')
+-- cmd:option('-lrdecay_every',252,'val every number of batches')
+-- cmd:option('-lrdecayafter', 252, 'number of epochs before turning down lr')
 
 cmd:text()
 
@@ -88,7 +99,8 @@ else
 	mp.winsize = 20  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder--14_3balls'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder
+    mp.test_dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -112,7 +124,7 @@ end
 
 
 -- world constants
-local G_w_width, G_w_height = 384.0, 288.0
+local G_w_width, G_w_height = 480.0, 360.0 --384.0, 288.0
 local G_max_velocity, G_min_velocity = 2*3000,-2*3000
 local subsamp = 5
 
@@ -367,6 +379,10 @@ function train()
                 local model_file = string.format('%s/epoch%.2f_%.4f.t7',
                                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
+                model.network:clearState()
+                model.criterion:clearState()
+                model.identitycriterion:clearState()
+
                 local checkpoint = {}
                 checkpoint.model = model
                 checkpoint.mp = mp
@@ -610,7 +626,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1,dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        -- if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        xlua.progress(i, dataloader.num_batches)
 
         -- get data
         local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
@@ -799,9 +816,9 @@ end
 
 function checkpoint(savefile, data, mp_)
     if mp_.cuda then
-        -- data = data:float()
+        data = data:float()
         torch.save(savefile, data)
-        -- data = data:cuda()
+        data = data:cuda()
     else
         torch.save(savefile, data)
     end
