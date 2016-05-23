@@ -124,7 +124,8 @@ function crop_future(tensor, reshapesize, cropdim)
     else
         assert(crop:dim()==4 and cropdim[1] == 3)
         crop = crop[{{},{},{1,cropdim[2]},{}}]
-        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
+        crop = crop:reshape(reshapesize[1], mp.seq_length,
+                            cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
     end
     return crop
 end
@@ -148,8 +149,7 @@ function broadcast(tensor, dim)
         local b = {unpack(torch.totable(before)),1}
         print(a)
         print(b)
-        return tensor:reshape(unpack(torch.totable(before)),
-                                1,
+        return tensor:reshape(unpack(torch.totable(before)), 1,
                                 unpack(torch.totable(after)))
     else
         error('invalid dim')
@@ -201,7 +201,8 @@ function preprocess_input(mask)
     -- context: (bsize, mp.seq_length, dim)
     local input = {}
     for t = 1, torch.find(mask,1)[1] do
-        table.insert(input, nn.Identity()({this_past, nn.Squeeze()(nn.Select(2,t)(context))}))
+        table.insert(input, nn.Identity()
+                        ({this_past, nn.Squeeze()(nn.Select(2,t)(context))}))
     end
     input = nn.Identity()(input)
     return nn.gModule({this_past, context}, {input})
@@ -215,7 +216,7 @@ function checkpointtofloat(checkpoint)
     checkpoint.model.criterion:float()
     checkpoint.model.identitycriterion:float()
     checkpoint.model.theta.params = checkpoint.model.theta.params:float()
-    checkpoint.model.theta.grad_params = checkpoint.model.theta.grad_params:float()
+    checkpoint.model.theta.grad_params=checkpoint.model.theta.grad_params:float()
     return checkpoint
 end
 
@@ -226,7 +227,7 @@ function checkpointtocuda(checkpoint)
     checkpoint.model.criterion:cuda()
     checkpoint.model.identitycriterion:cuda()
     checkpoint.model.theta.params = checkpoint.model.theta.params:cuda()
-    checkpoint.model.theta.grad_params = checkpoint.model.theta.grad_params:cuda()
+    checkpoint.model.theta.grad_params=checkpoint.model.theta.grad_params:cuda()
     return checkpoint
 end
 

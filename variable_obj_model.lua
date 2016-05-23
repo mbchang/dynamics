@@ -133,7 +133,8 @@ function split_tensor(dim, reshape, boundaries)
     local chunks = {}
     for cb = 1,#boundaries do
         local left,right = unpack(boundaries[cb])
-        chunks[#chunks+1] = nn.JoinTable(dim)(nn.NarrowTable(left,right)(splitted))
+        chunks[#chunks+1] = nn.JoinTable(dim)
+                                (nn.NarrowTable(left,right)(splitted))
     end
     local net = nn.gModule({tensor},chunks)
     if mp.cuda then
@@ -227,34 +228,34 @@ function model:bp(batch, prediction, sim)
     return self.theta.grad_params
 end
 
-function model:backprop2input(batch, sim)
-    self.network.gradInput:zero()
-
-    local input, this_future = unpack_batch(batch, sim)
-
-    local splitter = split_output(self.mp)
-
-    local prediction = self.network:forward(input)
-
-    local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
-
-    local gt_pos, gt_vel, gt_obj_prop =
-                        unpack(split_output(self.mp):forward(this_future))
-
-    local loss = self.criterion:forward(p_vel, gt_vel)
-
-    ----------------------------------------------------------------------------
-    -- backward to input
-
-    local d_pos = self.identitycriterion:backward(p_pos, gt_pos)
-    local d_vel = self.criterion:backward(p_vel, gt_vel)
-    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
-    local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
-
-    self.network:updateGradInput(input,d_pred)  -- updates self.gradInput
-
-    collectgarbage()
-    return self.network.gradInput  -- this should have been updated
-end
+-- function model:backprop2input(batch, sim)
+--     self.network.gradInput:zero()
+--
+--     local input, this_future = unpack_batch(batch, sim)
+--
+--     local splitter = split_output(self.mp)
+--
+--     local prediction = self.network:forward(input)
+--
+--     local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
+--
+--     local gt_pos, gt_vel, gt_obj_prop =
+--                         unpack(split_output(self.mp):forward(this_future))
+--
+--     local loss = self.criterion:forward(p_vel, gt_vel)
+--
+--     ----------------------------------------------------------------------------
+--     -- backward to input
+--
+--     local d_pos = self.identitycriterion:backward(p_pos, gt_pos)
+--     local d_vel = self.criterion:backward(p_vel, gt_vel)
+--     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
+--     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
+--
+--     self.network:updateGradInput(input,d_pred)  -- updates self.gradInput
+--
+--     collectgarbage()
+--     return self.network.gradInput  -- this should have been updated
+-- end
 
 return model

@@ -216,7 +216,8 @@ function feval_train(params_)  -- params_ should be first argument
         model.theta.grad_params:add(model.theta.params:clone():mul(mp.L2) )
     end
 
-    train_loader.priority_sampler:update_batch_weight(train_loader.current_sampled_id, loss)
+    train_loader.priority_sampler:update_batch_weight(
+                                        train_loader.current_sampled_id, loss)
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
@@ -230,14 +231,14 @@ function train()
                                 model.theta.params, optim_state)  -- next batch
         assert(new_params == model.theta.params)
 
-        trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
+        trainLogger:add{['log MSE loss (train set)'] = torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
 
         -- print
         if t % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f"..
-                                "\tgradnorm = %6.4e\tbatch = %4d\t"..
-                                "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
+                            "\tgradnorm = %6.4e\tbatch = %4d\t"..
+                            "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
                     epoch_num, t, train_loss[1],
                     model.theta.grad_params:norm(),
                     train_loader.current_sampled_id,
@@ -261,8 +262,6 @@ function train()
                                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
                 model.network:clearState()
-                model.criterion:clearState()
-                model.identitycriterion:clearState()
 
                 local checkpoint = {}
                 checkpoint.model = model
@@ -300,7 +299,8 @@ function test(dataloader, params_, saveoutput)
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
-        local this, context, y, mask, config, start, finish, context_future = unpack(batch)
+        local this, context, y, mask, config,
+                                start, finish, context_future = unpack(batch)
 
 
         if mp.model == 'lstmtime' then
@@ -326,9 +326,12 @@ function test(dataloader, params_, saveoutput)
                                         mp.num_past, mp.object_dim)
 
             -- reshape to -- (num_samples x num_future x 8)
-            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+            prediction = prediction:reshape(
+                                    mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-            y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
+            y = crop_future(y, {y:size(1),
+                                mp.winsize-mp.num_past, mp.object_dim},
+                                {2,mp.num_future})  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
             -- take care of relative position
@@ -342,7 +345,7 @@ function test(dataloader, params_, saveoutput)
 
         -- save
         if saveoutput then
-            save_example_prediction({this, context, y, prediction, context_future},
+            save_ex_pred({this, context, y, prediction, context_future},
                                     {config, start, finish},
                                     modelfile,
                                     dataloader,
@@ -356,7 +359,7 @@ function test(dataloader, params_, saveoutput)
 end
 
 
-function save_example_prediction(example, description, modelfile_, dataloader, numsteps)
+function save_ex_pred(example, description, modelfile_, dataloader, numsteps)
     --[[
         example: {this, context, y, prediction, context_future}
         description: {config, start, finish}
@@ -394,7 +397,8 @@ function validate()
     local train_loss = test(train_test_loader, model.theta.params, false)
     local val_loss = test(val_loader, model.theta.params, false)
     local test_loss = test(test_loader, model.theta.params, false)
-    print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
+    print('train loss\t'..train_loss..
+            '\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 
     -- Save logs
     experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
@@ -436,14 +440,16 @@ function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    -- mp = checkpoint.mp
+    mp = checkpoint.mp
     inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     experiment()
 end
 
 function getLastSnapshot(network_name)
-    local res_file = io.popen("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1")
-    local status, result = pcall(function() return res_file:read():match( "^%s*(.-)%s*$" ) end)
+    local res_file = io.popen("ls -t "..mp.root..'/'..network_name..
+                        " | grep -i epoch | head -n 1")
+    local status, result = pcall(function()
+        return res_file:read():match( "^%s*(.-)%s*$" ) end)
     print(result)
     res_file:close()
     if not status then

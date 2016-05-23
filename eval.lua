@@ -29,13 +29,10 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
--- cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "refactortest", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
-
 -- dataset
 cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
-
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-ns', 3, 'number of test samples')
@@ -49,11 +46,11 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-    mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
+    mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
+                        'SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
-    -- mp.max_epochs = 5
     mp.max_iter = 5*252
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -63,7 +60,7 @@ else
 	mp.winsize = 20  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder
+	mp.dataset_folder='/om/data/public/mbchang/physics-data/'..mp.dataset_folder
 	mp.seq_length = 10
 	mp.num_threads = 4
 	mp.cuda = true
@@ -143,8 +140,10 @@ function backprop2input()
         -- backward
         local d_pos = model.identitycriterion:backward(p_pos, gt_pos)
         local d_vel = model.criterion:backward(p_vel, gt_vel)
-        local d_obj_prop = model.identitycriterion:backward(p_obj_prop, gt_obj_prop)
-        local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
+        local d_obj_prop = model.identitycriterion:backward(p_obj_prop,
+                                                            gt_obj_prop)
+        local d_pred = splitter:backward({prediction},
+                                        {d_pos, d_vel, d_obj_prop})
 
         local g_input = model.network:backward(input, d_pred)
         if torch.find(mask,1)[1] == 1 then g_input = g_input[1] end
@@ -154,7 +153,7 @@ function backprop2input()
         return loss, preproc.gradInput[1]  -- this should have been updated
     end
 
-    local b2i_optimstate = {learningRate = 0.01}
+    local b2i_optstate = {learningRate = 0.01}
 
     -- infer the masses of ALL THE BALLS (or just you?)
     -- for now let's just infer the mass of you
@@ -174,7 +173,7 @@ function backprop2input()
         local old_this = this_past:clone()
 
         -- pass in input to rmsprop: automatically modifies this_past
-        local _, loss = optim.rmsprop(feval_back2mass, this_past, b2i_optimstate)  -- not getting updates! (or implicilty updated)
+        local _, loss = optim.rmsprop(feval_back2mass, this_past, b2i_optstate)  -- not getting updates! (or implicilty updated)
 
         -- modify only the mass
         old_this:resize(mp.batch_size, mp.num_past, mp.object_dim)
@@ -187,7 +186,7 @@ function backprop2input()
         this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
 
         if t % 10 == 0 then
-            b2i_optimstate.learningRate = b2i_optimstate.learningRate * 0.99
+            b2i_optstate.learningRate = b2i_optstate.learningRate * 0.99
         end
 
         if t % 10 == 0 then
@@ -216,7 +215,8 @@ function test(dataloader, params_, saveoutput)
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
-        local this, context, y, mask, config, start, finish, context_future = unpack(batch)
+        local this, context, y, mask, config,
+                                start, finish, context_future = unpack(batch)
 
 
         if mp.model == 'lstmtime' then
@@ -242,9 +242,12 @@ function test(dataloader, params_, saveoutput)
                                         mp.num_past, mp.object_dim)
 
             -- reshape to -- (num_samples x num_future x 8)
-            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+            prediction = prediction:reshape(
+                                    mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-            y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
+            y = crop_future(y, {y:size(1),
+                                mp.winsize-mp.num_past, mp.object_dim},
+                                {2,mp.num_future})  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
             -- take care of relative position
@@ -258,7 +261,7 @@ function test(dataloader, params_, saveoutput)
 
         -- save
         if saveoutput then
-            save_example_prediction({this, context, y, prediction, context_future},
+            save_ex_pred({this, context, y, prediction, context_future},
                                     {config, start, finish},
                                     modelfile,
                                     dataloader,
@@ -351,12 +354,15 @@ function simulate(dataloader, params_, saveoutput, numsteps)
                                         finish, context_future_orig}
             local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
 
-            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
+            prediction = prediction:reshape(
+                                    mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
-            context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
+            context = context:reshape(
+                    mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
 
             if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
+                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
+                    this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
             end
 
             -- restore object properties
@@ -370,7 +376,8 @@ function simulate(dataloader, params_, saveoutput, numsteps)
             -- chop off first time step and then add in next one
             if mp.num_past > 1 then
                 this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)  -- you can add y in here  -- TODO RESIZE THIS
-                context = torch.cat({context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{t},{}}]:clone()},3)
+                context = torch.cat({context[{{},{},{2,-1},{}}]:clone(),
+                                    context_future[{{},{},{t},{}}]:clone()},3)
             else
                 assert(mp.num_past == 1)
                 this = prediction:clone()  -- just use prev prediction as input
@@ -379,17 +386,22 @@ function simulate(dataloader, params_, saveoutput, numsteps)
 
             -- reshape it back
             this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)  -- TODO RESIZE THIS
-            context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
+            context = context:reshape(mp.batch_size, mp.seq_length,
+                                                    mp.num_past*mp.object_dim)
 
             pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
             sum_loss = sum_loss + test_loss
         end
 
         -- reshape to -- (num_samples x num_future x 8)
-        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
-        context_orig = context_orig:reshape(context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
-        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future  -- TODO RESIZE THIS
-        context_future_orig = context_future_orig:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
+        this_orig = this_orig:reshape(
+            this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
+        context_orig = context_orig:reshape(
+            context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
+        y_orig = y_orig:reshape(
+            y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future  -- TODO RESIZE THIS
+        context_future_orig = context_future_orig:reshape(
+            mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
 
         if mp.relative then
             y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
@@ -400,11 +412,9 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         context_future_orig = context_future_orig[{{},{},{1,numsteps},{}}]
 
         if saveoutput then
-            save_example_prediction({this_orig, context_orig, y_orig, pred_sim, context_future_orig},
-                                    {config, start, finish},
-                                    modelfile,
-                                    dataloader,
-                                    numsteps)
+            save_ex_pred({this_orig, context_orig, y_orig,
+                    pred_sim, context_future_orig}, {config, start, finish},
+                    modelfile, dataloader, numsteps)
         end
     end
     local avg_loss = sum_loss/dataloader.num_batches/numsteps
@@ -430,7 +440,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
 
         -- get data
-        local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
+        local this_orig, context_orig, y_orig, mask, config, start, finish,
+            context_future_orig = unpack(dataloader:sample_sequential_batch())
 
         -- past: (bsize, mp.seq_length+1, mp.numpast*mp.objdim)
         -- future: (bsize, mp.seq_length+1, (mp.winsize-mp.numpast), mp.objdim)
@@ -526,9 +537,12 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local context_pred = pred_sim[{{},{2,-1}}]
 
         -- reshape things
-        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
-        context_orig = context_orig:reshape(context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
-        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
+        this_orig = this_orig:reshape(
+                this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
+        context_orig = context_orig:reshape(
+                context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
+        y_orig = y_orig:reshape(
+                y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
 
         if mp.relative then
             y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
@@ -538,13 +552,15 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         y_orig = y_orig[{{},{1,numsteps},{}}]
 
         -- when you save, you will replace context_future_orig
-        if gt then
+        if mp.gt then
             context_pred = context_future_orig  -- only saving ground truth
-            context_pred = context_pred:reshape(context_pred:size(1),mp.seq_length,mp.winsize-mp.num_past,mp.object_dim)
+            context_pred = context_pred:reshape(
+                            context_pred:size(1),mp.seq_length,
+                            mp.winsize-mp.num_past,mp.object_dim)
         end
 
         if saveoutput then
-            save_example_prediction({this_orig, context_orig, y_orig,
+            save_ex_pred({this_orig, context_orig, y_orig,
                                     this_pred, context_pred},
                                     {config, start, finish},
                                     modelfile,
@@ -556,7 +572,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 end
 
 
-function save_example_prediction(example, description, modelfile_, dataloader, numsteps)
+function save_ex_pred(example, description, modelfile_, dataloader, numsteps)
     --[[
         example: {this, context, y, prediction, context_future}
         description: {config, start, finish}
@@ -591,8 +607,10 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
 end
 
 function getLastSnapshot(network_name)
-    local res_file = io.popen("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1")
-    local status, result = pcall(function() return res_file:read():match( "^%s*(.-)%s*$" ) end)
+    local res_file = io.popen("ls -t "..mp.root..'/'..network_name..
+                                " | grep -i epoch | head -n 1")
+    local status, result = pcall(function()
+                return res_file:read():match( "^%s*(.-)%s*$" ) end)
     print(result)
     res_file:close()
     if not status then
@@ -636,9 +654,6 @@ function predict_simulate_all()
     print(snapshot)
     mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
-    -- mp.winsize = 80  -- total number of frames
-    -- mp.winsize = 20
-    -- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     -- mp.winsize = 80  -- total number of frames
     -- mp.winsize = 20
@@ -658,7 +673,9 @@ function predict_b2i()
 end
 
 function model_deps(modeltype)
-    if modeltype == 'lstmobj' or modeltype == 'ffobj' or modeltype == 'gruobj' then
+    if modeltype == 'lstmobj' or
+            modeltype == 'ffobj' or
+                    modeltype == 'gruobj' then
         M = require 'variable_obj_model'
     elseif modeltype == 'lstmtime' then
         M = require 'lstm_model'
