@@ -184,8 +184,6 @@ function model.create(mp_, preload, model_path)
 end
 
 
-
-
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient

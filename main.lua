@@ -107,8 +107,6 @@ end
 
 local M
 
-
-
 if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
 elseif mp.model == 'lstmtime' then
@@ -222,9 +220,12 @@ function feval_train(params_)  -- params_ should be first argument
     return loss, grad -- f(x), df/dx
 end
 
-function train()
-    local epoch_num = 1
-    for t = 1,mp.max_iter do
+function train(start_iter, epoch_num)
+    local epoch_num = epoch_num or 1  -- TODO!
+    local start_iter = start_iter or 1
+    print('Start iter:', start_iter)
+    print('Start epoch num:', epoch_num)
+    for t = start_iter,mp.max_iter do
 
         train_loader.priority_sampler:set_epcnum(epoch_num)
         local new_params, train_loss = optimizer(feval_train,
@@ -268,6 +269,8 @@ function train()
                 checkpoint.mp = mp
                 checkpoint.train_losses = train_losses
                 checkpoint.val_losses = val_losses
+                checkpoint.test_losses = test_losses
+                checkpoint.iters = t
                 torch.save(model_file, checkpoint)
                 print('Saved model')
             end
@@ -412,10 +415,10 @@ function validate()
 end
 
 -- runs experiment
-function experiment()
+function experiment(start_iter, epoch_num)
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
-    train()
+    train(start_iter, epoch_num)
 end
 
 function checkpoint(savefile, data, mp_)
@@ -440,9 +443,16 @@ function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    mp = checkpoint.mp
+    mp = checkpoint.mp  -- completely overwrite
     inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    experiment()
+
+    -- These are things you have to set; although priority sampler might not be reset
+    local iters = mp.val_every * #checkpoint.val_losses + 1
+    local epoch_num = math.floor(iters / train_loader.num_batches) + 1
+    mp.lr = 1.077384359378e-05
+    optim_state = {learningRate   = mp.lr}
+
+    experiment(iters, epoch_num)
 end
 
 function getLastSnapshot(network_name)
