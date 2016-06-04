@@ -59,6 +59,15 @@ Hockey.create = function(options) {
 
 
 Hockey.init = function(self) {  // hockey is like self here
+    // world boundaries
+    var offset = 5;  // world offset
+    World.add(self.engine.world, [
+        Bodies.rectangle(self.params.cx, -offset, 2*self.params.cx + 2*offset, 2*offset, { isStatic: true, restitution: 1 }),
+        Bodies.rectangle(self.params.cx, 600+offset, 2*self.params.cx + 2*offset, 2*offset, { isStatic: true, restitution: 1 }),
+        Bodies.rectangle(2*self.params.cx + offset, self.params.cy, 2*offset, 2*self.params.cy + 2*offset, { isStatic: true, restitution: 1 }),
+        Bodies.rectangle(-offset, self.params.cy, 2*offset, 2*self.params.cy + 2*offset, { isStatic: true, restitution: 1 })
+    ]);
+
     var i; // iterator
 
     self.v0 = [];  // initial velocities

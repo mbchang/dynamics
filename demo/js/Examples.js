@@ -1987,7 +1987,7 @@ if (!_isBrowser) {
 
             // these should not be mutated
             var params = {show: false,
-                          num_obj: 10,
+                          num_obj: 20,
                           cx: 400,
                           cy: 300,
                           max_v0: 20,
@@ -2034,10 +2034,7 @@ if (!_isBrowser) {
                     // true if overlaps
                     while ((function(){
                             for (var j = 0; j < self.p0.length; j++) {
-                                // console.log('Comparing with', j, 'distance:', euc_dist(proposed_pos, self.p0[j]))
                                 if (euc_dist(proposed_pos, self.p0[j]) < 1.5*self.params.obj_radius) {
-                                    // console.log('doing it again')
-                                    // console.log(euc_dist(proposed_pos, self.p0[j]))
                                     return true;
                                 }
                             }
