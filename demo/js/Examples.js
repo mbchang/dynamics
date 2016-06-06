@@ -1918,7 +1918,8 @@ if (!_isBrowser) {
 
     var World = Matter.World,
         Bodies = Matter.Bodies,
-        Composites = Matter.Composites;
+        Composites = Matter.Composites,
+        Body = Matter.Body;;
 
     Example.simpleHockey = function(demo) {
 
@@ -1938,16 +1939,22 @@ if (!_isBrowser) {
             }
         console.log(world.bounds)
 
-        var stack = Composites.stack(0, 100, 10, 1, 20, 0, function(x, y) {
-            return Bodies.circle(x, y, 50, { restitution: 1,
+        var stack = Composites.stack(0, 100, 5, 1, 20, 0, function(x, y) {
+            var body = Bodies.circle(x, y, 50, { restitution: 1,
                                              friction: 0,
                                              frictionAir: 0,
                                              frictionStatic: 0,
                                              inertia: Infinity,
-                                             inverseInertia: 0,
-                                             velocity: {x: 5, y: 5}});  // I initialize the velocity, but they don't continue?
+                                             inverseInertia: 0});  // I initialize the velocity, but they don't continue?
+            // Body.setVelocity(body, {x: 5, y: 5});  // this takes out a ball?  If you have more balls than can fit, then this will start moving the balls before all of them fit!
+            return body
         });
         World.add(world, stack);
+
+        // doing it this way makes it so that all the balls have initial positions first, and then they move
+        engine.world.composites[0].bodies.map(function(elem) {
+            Body.setVelocity(elem,{x: 5, y: 5});
+        })
     };
 
 })();
@@ -1956,7 +1963,8 @@ if (!_isBrowser) {
 
     var World = Matter.World,
         Bodies = Matter.Bodies,
-        Composites = Matter.Composites;
+        Composites = Matter.Composites,
+        Body = Matter.Body;
 
     Example.hockey = function(demo) {
 
@@ -1987,7 +1995,7 @@ if (!_isBrowser) {
 
             // these should not be mutated
             var params = {show: false,
-                          num_obj: 20,
+                          num_obj: 10,
                           cx: 400,
                           cy: 300,
                           max_v0: 20,
@@ -2053,9 +2061,17 @@ if (!_isBrowser) {
                                                              frictionAir: 0,
                                                              frictionStatic: 0,
                                                              inertia: Infinity,
-                                                             inverseInertia: 0,
-                                                             velocity: self.v0[i]}));
+                                                             inverseInertia: 0}));
             }
+
+            // set velocities
+            _.each(_.zip(self.engine.world.bodies
+                        .filter(function(elem) {
+                                    return elem.label === 'Circle Body';
+                                }), self.v0),
+                        function(pair){
+                            Body.setVelocity(pair[0],pair[1]); // pair[1] is object, pair[2] is velocity
+                        });
         };
 
         var hockey = Hockey.create()

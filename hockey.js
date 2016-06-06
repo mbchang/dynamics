@@ -1,5 +1,6 @@
 var Matter = require('matter-js')
 var jsonfile = require('jsonfile')
+var _ = require('underscore')
 
 // common functions
 euc_dist = function(p1, p2) {
@@ -23,7 +24,8 @@ rand_pos = function(x_bounds, y_bounds) {
 // module aliases
 var Engine = Matter.Engine,
     World = Matter.World,
-    Bodies = Matter.Bodies;
+    Bodies = Matter.Bodies,
+    Body = Matter.Body;
 
 // I could have something like RBD.create() (Rigid Body Dynamics)
 var Hockey = {}
@@ -34,8 +36,8 @@ Hockey.create = function(options) {
     // these should not be mutated
     var params = {show: false,
                   num_obj: 3,
-                  cx: 400,
-                  cy: 300,
+                  cx: 400,  // 640
+                  cy: 300,  // 480
                   max_v0: 20,
                   obj_radius: 50 };
     self.params = params;
@@ -99,8 +101,16 @@ Hockey.init = function(self) {  // hockey is like self here
                                                      frictionAir: 0,
                                                      frictionStatic: 0,
                                                      inertia: Infinity,
-                                                     inverseInertia: 0,
-                                                     velocity: self.v0[i]}));
+                                                     inverseInertia: 0}));
+
+         // set velocities
+         _.each(_.zip(self.engine.world.bodies
+                     .filter(function(elem) {
+                                 return elem.label === 'Circle Body';
+                             }), self.v0),
+                     function(pair){
+                         Body.setVelocity(pair[0],pair[1]); // pair[1] is object, pair[2] is velocity
+                     });
     }
 
     // world boundaries. This is okay because we the circles don't depend on the boundaries
@@ -157,13 +167,18 @@ simulate = function(scenario, numsteps) {
         // This could be a design choice, but I want the velocities to persist! Given initial velocities, I want them to keep going!
         // I can do this on Demo and ask about it.
     }
-    jsonfile.writeFileSync(sim_file, trajectory);
+    console.log(trajectory[0])
+    jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});
 };
 
 simulate(hockey, 5);
 
 
 })();
+
+
+
+
 
 
 
