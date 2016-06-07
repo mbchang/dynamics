@@ -1,3 +1,4 @@
+
 var _isBrowser = typeof window !== 'undefined' && window.location,
     // Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
     Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
@@ -6,6 +7,9 @@ var Example = {};
 Matter.Example = Example;
 
 if (!_isBrowser) {
+    var _ = require('underscore')
+    // var common = require('../../common.js')
+    require('../../common.js')()
     module.exports = Example;
 }
 
@@ -1761,7 +1765,7 @@ if (!_isBrowser) {
         var engine = demo.engine,
             world = engine.world,
             sceneEvents = demo.sceneEvents,
-            mouseConstraint = demo.mouseConstraint;
+            mouseConstraint = dsemo.mouseConstraint;
 
         var stack = Composites.stack(20, 20, 15, 4, 0, 0, function(x, y) {
             switch (Math.round(Common.random(0, 1))) {
@@ -1921,7 +1925,7 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Body = Matter.Body;;
 
-    Example.simpleHockey = function(demo) {
+    Example.m_simpleHockey = function(demo) {
 
         var engine = demo.engine,
             world = engine.world;
@@ -1966,49 +1970,27 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Body = Matter.Body;
 
-    Example.hockey = function(demo) {
+    Example.m_hockey = function(demo) {
 
-        // common functions
-        euc_dist = function(p1, p2) {
-            var x2 = Math.pow(p1.x - p2.x, 2),
-                y2 = Math.pow(p1.y - p2.y, 2);
-            return Math.sqrt(x2 + y2);
-        };
-
-        rand_pos = function(x_bounds, y_bounds) {
-
-            var xrange = x_bounds.hi - x_bounds.lo,
-                yrange = y_bounds.hi - y_bounds.lo;
-            var px = Math.floor((Math.random()*(xrange))) + x_bounds.lo,
-                py = Math.floor((Math.random()*(yrange))) + y_bounds.lo;
-            return {x: px, y: py};
-        };
-
-        // Define everything within the scope of this file
-        (function () {
-
-        // I could have something like RBD.create() (Rigid Body Dynamics)
         var Hockey = {}
 
         Hockey.create = function(options) {
             var self = {}; // instance of the Hockey class
 
             // these should not be mutated
-            var params = {show: false,
-                          num_obj: 10,
+            params = {num_obj: 10,
                           cx: 400,
                           cy: 300,
                           max_v0: 20,
-                          obj_radius: 50 };
+                          obj_radius: 60 };
             self.params = params;
 
             // var engine = Engine.create();
-            var engine = demo.engine;
-            engine.world.gravity.y = 0;
-            engine.world.gravity.x = 0;
-            engine.world.bounds = { min: { x: 0, y: 0 },
-                                    max: { x: 2*params.cx, y: 2*params.cy }}
-            self.engine = engine;
+            self.engine = demo.engine;
+            self.engine.world.gravity.y = 0;
+            self.engine.world.gravity.x = 0;
+            self.engine.world.bounds = { min: { x: 0, y: 0 },
+                                        max: { x: 2*params.cx, y: 2*params.cy }}
 
             // function
             self.rand_pos = function() {
@@ -2027,7 +2009,6 @@ if (!_isBrowser) {
             self.p0 = [];  // initial positions
 
             for (i = 0; i < self.params.num_obj; i++) {
-                // console.log('object', i)
 
                 // generate random initial velocities b/w 0 and max_v0 inclusive
                 var vx = Math.floor(Math.random()*self.params.max_v0+1)
@@ -2066,19 +2047,135 @@ if (!_isBrowser) {
 
             // set velocities
             _.each(_.zip(self.engine.world.bodies
-                        .filter(function(elem) {
-                                    return elem.label === 'Circle Body';
-                                }), self.v0),
+                            .filter(function(elem) {
+                                        return elem.label === 'Circle Body';
+                                    }),
+                        self.v0),
                         function(pair){
-                            Body.setVelocity(pair[0],pair[1]); // pair[1] is object, pair[2] is velocity
+                            Body.setVelocity(pair[0],pair[1]); // pair[0] is object, pair[1] is velocity
                         });
         };
 
-        var hockey = Hockey.create()
-        Hockey.init(hockey)
+        var hockey = Hockey.create();
+        Hockey.init(hockey);
+        return hockey;
+    };
 
-        })();
+})();
+(function() {
 
+    var World = Matter.World,
+        Body = Matter.Body,
+        Composites = Matter.Composites;
+
+    Example.m_newtonsCradle = function(demo) {
+
+        var Cradle = {}
+        Cradle.create = function(){
+            var self = {}
+            // these should not be mutated
+            self.params = {num_obj: 5};
+            self.engine = demo.engine,
+            self.world = self.engine.world;
+
+            if (_isBrowser) {
+                var renderOptions = demo.render.options;
+                renderOptions.showVelocity = true;
+            }
+            return self;
+        }
+        Cradle.init = function(self){
+
+            var cradle = Composites.newtonsCradle(280, 100, self.params.num_obj, 30, 200);
+            World.add(self.world, cradle);
+            Body.translate(cradle.bodies[0], { x: -180, y: -100 });
+        }
+
+        var cradle = Cradle.create();
+        Cradle.init(cradle);
+        return cradle;
+    };
+
+})();
+(function() {
+
+    var World = Matter.World,
+        Body = Matter.Body,
+        Composites = Matter.Composites;
+
+    Example.m_tower = function(demo) {
+        // TODO: you should sample the positions as a tight Gaussian around the center of the block below
+
+
+        var Tower = {}
+        Tower.create = function(){
+            var self = {}
+            // these should not be mutated
+            self.params = {num_obj: 5};
+            self.engine = demo.engine,
+            self.world = self.engine.world;
+            return self;
+        }
+        Tower.init = function(self){
+
+            // TODO center this thing and jiggle the positions!
+            var stack = Composites.stack(100, 380, 1, 5, 0, 0, function(x, y) {
+                return Bodies.rectangle(x, y, 40, 40);
+            });
+
+            World.add(self.world, stack);
+        }
+
+        var tower = Tower.create();
+        Tower.init(tower);
+        return tower;
+    };
+
+})();
+(function() {
+
+    var World = Matter.World,
+        Bodies = Matter.Bodies,
+        Body = Matter.Body,
+        Composite = Matter.Composite,
+        Composites = Matter.Composites,
+        Constraint = Matter.Constraint;
+
+    // TODO!
+    Example.m_chain = function(demo) {
+        var engine = demo.engine,
+            world = engine.world,
+            group = Body.nextGroup(true);
+
+        var ropeA = Composites.stack(200, 100, 5, 2, 10, 10, function(x, y) {
+            return Bodies.rectangle(x, y, 50, 20, { collisionFilter: { group: group } });
+        });
+
+        Composites.chain(ropeA, 0.5, 0, -0.5, 0, { stiffness: 0.8, length: 2 });
+        Composite.add(ropeA, Constraint.create({
+            bodyB: ropeA.bodies[0],
+            pointB: { x: -25, y: 0 },
+            pointA: { x: 200, y: 100 },
+            stiffness: 0.5
+        }));
+
+        World.add(world, ropeA);
+
+        // group = Body.nextGroup(true);
+        //
+        // var ropeB = Composites.stack(500, 100, 5, 2, 10, 10, function(x, y) {
+        //     return Bodies.circle(x, y, 20, { collisionFilter: { group: group } });
+        // });
+        //
+        // Composites.chain(ropeB, 0.5, 0, -0.5, 0, { stiffness: 0.8, length: 2 });
+        // Composite.add(ropeB, Constraint.create({
+        //     bodyB: ropeB.bodies[0],
+        //     pointB: { x: -20, y: 0 },
+        //     pointA: { x: 500, y: 100 },
+        //     stiffness: 0.5
+        // }));
+        //
+        // World.add(world, ropeB);
     };
 
 })();
