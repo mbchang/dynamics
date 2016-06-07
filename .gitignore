@@ -6,3 +6,9 @@ demo/js/DemoMobile.js
 demo/js/lib/
 demo/mobile.html
 demo/svg/
+
+# these are scratch work
+hi.json
+out.json
+velocity_debug.js
+minimal.js
