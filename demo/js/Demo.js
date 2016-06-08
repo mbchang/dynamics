@@ -396,6 +396,7 @@
             }
         }
     };
+
     Demo.simulate = function(demo, scenarioName, numsteps) {
         var scenario = Example[scenarios[scenarioName]](demo)
         var sim_file = scenarioName + '.json',
@@ -403,7 +404,7 @@
             i, id, k;
 
         // initialize trajectory conatiner
-        for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+        for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!  // we need a num_obj parameter!
             trajectory[id] = [];
         }
 
@@ -422,11 +423,15 @@
             }
             Engine.update(scenario.engine);
         }
+
+        // save to file
         jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});
     };
 
     if (!_isBrowser) {
         var demo = Demo.init()  // don't set the scene name yet
+
+        // can put a for loop here if you want to save logs
         Demo.simulate(demo, env, 2000);
     }
 })();

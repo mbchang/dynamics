@@ -8,8 +8,8 @@ Matter.Example = Example;
 
 if (!_isBrowser) {
     var _ = require('underscore')
-    // var common = require('../../common.js')
     require('../../common.js')()
+    var gaussian = require('gaussian');
     module.exports = Example;
 }
 
@@ -2042,13 +2042,14 @@ if (!_isBrowser) {
                                                              frictionAir: 0,
                                                              frictionStatic: 0,
                                                              inertia: Infinity,
-                                                             inverseInertia: 0}));
+                                                             inverseInertia: 0,
+                                                             label: "Entity"}));
                 }
 
             // set velocities
             _.each(_.zip(self.engine.world.bodies
                             .filter(function(elem) {
-                                        return elem.label === 'Circle Body';
+                                        return elem.label === 'Entity';
                                     }),
                         self.v0),
                         function(pair){
@@ -2089,6 +2090,8 @@ if (!_isBrowser) {
             var cradle = Composites.newtonsCradle(280, 100, self.params.num_obj, 30, 200);
             World.add(self.world, cradle);
             Body.translate(cradle.bodies[0], { x: -180, y: -100 });
+
+            // TODO: For each body in newton's cradle, label it an entity
         }
 
         var cradle = Cradle.create();
@@ -2111,19 +2114,32 @@ if (!_isBrowser) {
         Tower.create = function(){
             var self = {}
             // these should not be mutated
-            self.params = {num_obj: 5};
+            self.params = {num_obj: 5,
+                          cx: 400,
+                          cy: 300,
+                          size: 40 };
             self.engine = demo.engine,
             self.world = self.engine.world;
             return self;
         }
         Tower.init = function(self){
+            // set the first object
+            // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
+            var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
+                                {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
+            var y = 2*self.params.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
+            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity"})
+            World.add(self.world, lastBlock)
 
-            // TODO center this thing and jiggle the positions!
-            var stack = Composites.stack(100, 380, 1, 5, 0, 0, function(x, y) {
-                return Bodies.rectangle(x, y, 40, 40);
-            });
-
-            World.add(self.world, stack);
+            // // set the rest of the objects
+            var variance = 50
+            for (var i = 1; i < self.params.num_obj; i ++) {
+                x = gaussian(x, variance).ppf(Math.random())
+                y = y - self.params.size
+                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity"})  // stack upwards
+                lastBlock = block;
+                World.add(self.world, lastBlock)
+            }
         }
 
         var tower = Tower.create();
@@ -2143,6 +2159,7 @@ if (!_isBrowser) {
 
     // TODO!
     Example.m_chain = function(demo) {
+        self.params = {num_obj: 5};
         var engine = demo.engine,
             world = engine.world,
             group = Body.nextGroup(true);
@@ -2160,22 +2177,6 @@ if (!_isBrowser) {
         }));
 
         World.add(world, ropeA);
-
-        // group = Body.nextGroup(true);
-        //
-        // var ropeB = Composites.stack(500, 100, 5, 2, 10, 10, function(x, y) {
-        //     return Bodies.circle(x, y, 20, { collisionFilter: { group: group } });
-        // });
-        //
-        // Composites.chain(ropeB, 0.5, 0, -0.5, 0, { stiffness: 0.8, length: 2 });
-        // Composite.add(ropeB, Constraint.create({
-        //     bodyB: ropeB.bodies[0],
-        //     pointB: { x: -20, y: 0 },
-        //     pointA: { x: 500, y: 100 },
-        //     stiffness: 0.5
-        // }));
-        //
-        // World.add(world, ropeB);
     };
 
 })();
