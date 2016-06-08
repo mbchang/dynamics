@@ -1978,11 +1978,11 @@ if (!_isBrowser) {
             var self = {}; // instance of the Hockey class
 
             // these should not be mutated
-            params = {num_obj: 10,
-                          cx: 400,
-                          cy: 300,
-                          max_v0: 20,
-                          obj_radius: 60 };
+            params = {num_obj: 2,
+                      cx: 400,
+                      cy: 300,
+                      max_v0: 20,
+                      obj_radius: 60 };
             self.params = params;
 
             // var engine = Engine.create();
@@ -2043,7 +2043,7 @@ if (!_isBrowser) {
                                                              frictionStatic: 0,
                                                              inertia: Infinity,
                                                              inverseInertia: 0}));
-            }
+                }
 
             // set velocities
             _.each(_.zip(self.engine.world.bodies

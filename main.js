@@ -24,9 +24,9 @@ env.engine = Engine.create(engine_options);
 
 
 var scenarios = {
-    hockey: Example.m_hockey(env),
-    cradle: Example.m_newtonsCradle(env),
-    tower: Example.m_tower(env)
+    hockey: "m_hockey",
+    cradle: "m_cradle",
+    tower: "m_tower"
 }
 
 
@@ -47,6 +47,9 @@ simulate = function(scenario, numsteps) {
         trajectory[id] = [];
     }
 
+    console.log(scenario.engine.world)
+    assert(false)
+
     // run the engine
     for (i = 0; i < numsteps; i++) {
         for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -66,9 +69,10 @@ simulate = function(scenario, numsteps) {
 };
 
 // NOTE! are you sure you are getting the correct object ids?
+// NOTE that in main, you don't actually have any borders
 
 
-simulate(scenarios.cradle, 5);
+simulate(Example[scenarios.hockey](env), 5);
 
 
 

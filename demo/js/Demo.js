@@ -6,13 +6,6 @@
 * @class Demo
 */
 
-// comment thee out if you are in browser?
-// var path = require('path');
-// var Matter = require('matter-js')
-// var Example = require(path.resolve( __dirname, "./Examples.js" ));
-// console.log(window.Matter.Example.beachBalls) // how do we get window.Example?
-// assert(false)
-
 (function() {
 
     var _isBrowser = typeof window !== 'undefined' && window.location,
@@ -20,27 +13,34 @@
         _isMobile = _isBrowser && /(ipad|iphone|ipod|android)/gi.test(navigator.userAgent),
         _isAutomatedTest = !_isBrowser || window._phantom;
 
-    // var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
-    var Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
-    // var Matter = require('../../build/matter-dev.js');
-    // console.log(Matter.Example.beachBalls)
-    // assert(false)
+    // var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
+    var Matter = _isBrowser ? window.Matter : require('matter-js');
 
     var Demo = {};
     Matter.Demo = Demo;
 
     if (!_isBrowser) {
+        var jsonfile = require('jsonfile')
+        require('./Examples')
+        var env = process.argv.slice(2)[0]
         module.exports = Demo;
         window = {};
     }
 
+    // possible scenarios
+    var scenarios = {
+        hockey: "m_hockey",
+        cradle: "m_cradle",
+        tower: "m_tower"
+    }
+
     // Matter aliases
     var Body = Matter.Body,
-        Example = Matter.Example,  // this is where all the examples are
-        // Example = require('Examples.js'),  maybe you can make this window.Example?
+        Example = Matter.Example,
         Engine = Matter.Engine,
         World = Matter.World,
         Common = Matter.Common,
+        Composite = Matter.Composite,
         Bodies = Matter.Bodies,
         Events = Matter.Events,
         Mouse = Matter.Mouse,
@@ -64,48 +64,50 @@
         return Common.extend(defaults, options);
     };
 
-    Demo.init = function() {
-        var demo = Demo.create();
+    Demo.init = function(options) {
+        var demo = Demo.create(options);
         Matter.Demo._demo = demo;
-
-        // get container element for the canvas
-        demo.container = document.getElementById('canvas-container');  // this reques a browser
 
         // create an example engine (see /examples/engine.js)
         demo.engine = Example.engine(demo);
 
-        // run the engine
-        demo.runner = Engine.run(demo.engine);
+        if (_isBrowser) {
+            // run the engine
+            demo.runner = Engine.run(demo.engine);  // actually, do I want to run this?
 
-        // create a debug renderer
-        demo.render = Render.create({
-            element: demo.container,
-            engine: demo.engine
-        });
+            // get container element for the canvas
+            demo.container = document.getElementById('canvas-container');  // this requires a browser
 
-        // run the renderer
-        Render.run(demo.render);
+            // create a debug renderer
+            demo.render = Render.create({
+                element: demo.container,
+                engine: demo.engine
+            });
 
-        // add a mouse controlled constraint
-        demo.mouseConstraint = MouseConstraint.create(demo.engine, {
-            element: demo.render.canvas
-        });
+            // run the renderer
+            Render.run(demo.render);
 
-        World.add(demo.engine.world, demo.mouseConstraint);
+            // add a mouse controlled constraint
+            demo.mouseConstraint = MouseConstraint.create(demo.engine, {
+                element: demo.render.canvas
+            });
 
-        // pass mouse to renderer to enable showMousePosition
-        demo.render.mouse = demo.mouseConstraint.mouse;
+            World.add(demo.engine.world, demo.mouseConstraint);
 
-        // get the scene function name from hash
-        if (window.location.hash.length !== 0)
-            demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
+            // pass mouse to renderer to enable showMousePosition
+            demo.render.mouse = demo.mouseConstraint.mouse;
+
+            // set up demo interface (see end of this file)
+            Demo.initControls(demo);
+
+            // get the scene function name from hash
+            if (window.location.hash.length !== 0)
+                demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
+        }
 
         // set up a scene with bodies
         Demo.reset(demo);
         Demo.setScene(demo, demo.sceneName);
-
-        // set up demo interface (see end of this file)
-        Demo.initControls(demo);
 
         // pass through runner as timing for debug rendering
         demo.engine.metrics.timing = demo.runner;
@@ -126,7 +128,6 @@
     Demo.setScene = function(demo, sceneName) {
         Example[sceneName](demo);  // this is where you set the scene! It's not referencing where I want for some reason
     };
-
 
     // the functions for the demo interface and controls below
     Demo.initControls = function(demo) {
@@ -345,7 +346,7 @@
         }
 
         demo.engine.enableSleeping = false;
-        demo.engine.world.gravity.y = 1;
+        demo.engine.world.gravity.y = 1;    // default
         demo.engine.world.gravity.x = 0;
         demo.engine.timing.timeScale = 1;
 
@@ -355,18 +356,16 @@
         demo.w_cx = 400;
         demo.w_cy = 300;
 
-        World.add(world, [
-            // Bodies.rectangle(400, -offset, 800.5 + 2 * offset, 50.5, { isStatic: true }),
-            // Bodies.rectangle(400, 600 + offset, 800.5 + 2 * offset, 50.5, { isStatic: true }),
-            // Bodies.rectangle(800 + offset, 300, 50.5, 600.5 + 2 * offset, { isStatic: true }),
-            // Bodies.rectangle(-offset, 300, 50.5, 600.5 + 2 * offset, { isStatic: true })
+        var world_border = Composite.create({label:'Border'});
 
-            // ok these boundaries make
+        Composite.add(world_border, [
             Bodies.rectangle(demo.w_cx, -demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(demo.w_cx, 600+demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(2*demo.w_cx + demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(-demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 })
         ]);
+
+        World.add(world, world_border)
 
         if (demo.mouseConstraint) {
             World.add(world, demo.mouseConstraint);
@@ -397,4 +396,37 @@
             }
         }
     };
+    Demo.simulate = function(demo, scenarioName, numsteps) {
+        var scenario = Example[scenarios[scenarioName]](demo)
+        var sim_file = scenarioName + '.json',
+            trajectory = [],
+            i, id, k;
+
+        // initialize trajectory conatiner
+        for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+            trajectory[id] = [];
+        }
+
+        // run the engine
+        for (i = 0; i < numsteps; i++) {
+            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+                // Now it is a design choice of whether to use keys or to use numbers
+                trajectory[id][i] = {};
+                for (k of ['position', 'velocity', 'mass']){
+                    if (typeof scenario.engine.world.bodies[id][k] === 'object') {
+                        trajectory[id][i][k] = Matter.Common.clone(scenario.engine.world.bodies[id][k], true); // can only clone objects, not primitives
+                    } else {
+                        trajectory[id][i][k] = scenario.engine.world.bodies[id][k]; // can only clone objects, not primitives
+                    }
+                }
+            }
+            Engine.update(scenario.engine);
+        }
+        jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});
+    };
+
+    if (!_isBrowser) {
+        var demo = Demo.init()  // don't set the scene name yet
+        Demo.simulate(demo, env, 2000);
+    }
 })();
