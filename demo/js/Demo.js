@@ -19,19 +19,21 @@
     var Demo = {};
     Matter.Demo = Demo;
 
-    if (!_isBrowser) {
-        var jsonfile = require('jsonfile')
-        require('./Examples')
-        var env = process.argv.slice(2)[0]
-        module.exports = Demo;
-        window = {};
-    }
-
     // possible scenarios
     var scenarios = {
         hockey: "m_hockey",
         cradle: "m_cradle",
         tower: "m_tower"
+    }
+
+    if (!_isBrowser) {
+        var jsonfile = require('jsonfile')
+        require('./Examples')
+        var env = process.argv.slice(2)[0]
+        if (env == null)
+            throw('Please provide an enviornment, e.g. node Demo.js hockey')
+        module.exports = Demo;
+        window = {};
     }
 
     // Matter aliases

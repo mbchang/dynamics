@@ -2127,12 +2127,13 @@ if (!_isBrowser) {
             // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
             var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
                                 {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
+            x = self.params.cx
             var y = 2*self.params.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
             var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity"})
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
-            var variance = 50
+            var variance = 40
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 y = y - self.params.size
