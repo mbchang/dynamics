@@ -1970,7 +1970,7 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Body = Matter.Body;
 
-    Example.m_hockey = function(demo) {
+    Example.m_balls = function(demo) {
 
         var Hockey = {}
 
@@ -2160,12 +2160,12 @@ if (!_isBrowser) {
 
     // TODO!
     Example.m_chain = function(demo) {
-        self.params = {num_obj: 5};
+        self.params = {num_obj: 3};
         var engine = demo.engine,
             world = engine.world,
             group = Body.nextGroup(true);
 
-        var ropeA = Composites.stack(200, 100, 5, 2, 10, 10, function(x, y) {
+        var ropeA = Composites.stack(200, 100, self.params.num_obj, 1, 10, 10, function(x, y) {
             return Bodies.rectangle(x, y, 50, 20, { collisionFilter: { group: group } });
         });
 

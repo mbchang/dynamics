@@ -21,7 +21,7 @@
 
     // possible scenarios
     var scenarios = {
-        hockey: "m_hockey",
+        balls: "m_balls",
         cradle: "m_cradle",
         tower: "m_tower"
     }
@@ -109,7 +109,9 @@
 
         // set up a scene with bodies
         Demo.reset(demo);
-        Demo.setScene(demo, demo.sceneName);
+
+        if (_isBrowser)
+            Demo.setScene(demo, demo.sceneName);
 
         // pass through runner as timing for debug rendering
         demo.engine.metrics.timing = demo.runner;
@@ -367,7 +369,9 @@
             Bodies.rectangle(-demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 })
         ]);
 
-        World.add(world, world_border)
+        World.add(world, world_border)  // its parent is a circular reference!
+        // console.log(world_border.parent)
+        // assert(false)
 
         if (demo.mouseConstraint) {
             World.add(world, demo.mouseConstraint);
@@ -410,6 +414,16 @@
             trajectory[id] = [];
         }
 
+        // Now iterate through all ids to find which ones have the "Entity" label, store those ids
+        var entities = Composite.allBodies(scenario.engine.world)
+                        .filter(function(elem) {
+                                    return elem.label === 'Entity';
+                                })
+        // Now somehow I have to get iterate through the entity ids in the inner loop
+        console.log(entities)
+        assert(false)
+
+        // TODO: filter out the objects that have the "Entity" label
         // run the engine
         for (i = 0; i < numsteps; i++) {
             for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -430,8 +444,11 @@
         jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});
     };
 
+    // main
     if (!_isBrowser) {
         var demo = Demo.init()  // don't set the scene name yet
+        // console.log(demo.engine.world)
+        // assert(false)
 
         // can put a for loop here if you want to save logs
         Demo.simulate(demo, env, 2000);
