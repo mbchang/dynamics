@@ -13,8 +13,8 @@
         _isMobile = _isBrowser && /(ipad|iphone|ipod|android)/gi.test(navigator.userAgent),
         _isAutomatedTest = !_isBrowser || window._phantom;
 
-    var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
-    // var Matter = _isBrowser ? window.Matter : require('matter-js');
+    // var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
+    var Matter = _isBrowser ? window.Matter : require('matter-js');
 
     var Demo = {};
     Matter.Demo = Demo;
@@ -49,20 +49,14 @@
         Bodies = Matter.Bodies,
         Events = Matter.Events,
         Mouse = Matter.Mouse,
-        MouseConstraint = Matter.MouseConstraint,
+        // MouseConstraint = Matter.MouseConstraint,
         Runner = Matter.Runner,
         Render = Matter.Render;
-
-    // MatterTools aliases
-    if (window.MatterTools) {
-        var Gui = MatterTools.Gui,
-            Inspector = MatterTools.Inspector;
-    }
 
     Demo.create = function(options) {
         var defaults = {
             isManual: false,
-            sceneName: 'mixed',
+            sceneName: 'm_balls',
             sceneEvents: []
         };
 
@@ -86,21 +80,11 @@
             // create a debug renderer
             demo.render = Render.create({
                 element: demo.container,
-                engine: demo.engine,
+                engine: demo.engine
             });
 
             // run the renderer
             Render.run(demo.render);
-
-            // add a mouse controlled constraint
-            demo.mouseConstraint = MouseConstraint.create(demo.engine, {
-                element: demo.render.canvas
-            });
-
-            World.add(demo.engine.world, demo.mouseConstraint);
-
-            // pass mouse to renderer to enable showMousePosition
-            demo.render.mouse = demo.mouseConstraint.mouse;
 
             // set up demo interface (see end of this file)
             Demo.initControls(demo);
@@ -141,68 +125,6 @@
         var demoSelect = document.getElementById('demo-select'),
             demoReset = document.getElementById('demo-reset');
 
-        // create a Matter.Gui
-        if (!_isMobile && Gui) {
-            demo.gui = Gui.create(demo.engine, demo.runner, demo.render);
-
-            // need to add mouse constraint back in after gui clear or load is pressed
-            Events.on(demo.gui, 'clear load', function() {
-                demo.mouseConstraint = MouseConstraint.create(demo.engine, {
-                    element: demo.render.canvas
-                });
-
-                World.add(demo.engine.world, demo.mouseConstraint);
-            });
-        }
-
-        // create a Matter.Inspector
-        if (!_isMobile && Inspector && _useInspector) {
-            demo.inspector = Inspector.create(demo.engine, demo.runner, demo.render);
-
-            Events.on(demo.inspector, 'import', function() {
-                demo.mouseConstraint = MouseConstraint.create(demo.engine);
-                World.add(demo.engine.world, demo.mouseConstraint);
-            });
-
-            Events.on(demo.inspector, 'play', function() {
-                demo.mouseConstraint = MouseConstraint.create(demo.engine);
-                World.add(demo.engine.world, demo.mouseConstraint);
-            });
-
-            Events.on(demo.inspector, 'selectStart', function() {
-                demo.mouseConstraint.constraint.render.visible = false;
-            });
-
-            Events.on(demo.inspector, 'selectEnd', function() {
-                demo.mouseConstraint.constraint.render.visible = true;
-            });
-        }
-
-        // go fullscreen when using a mobile device
-        if (_isMobile) {
-            var body = document.body;
-
-            body.className += ' is-mobile';
-            demo.render.canvas.addEventListener('touchstart', Demo.fullscreen);
-
-            var fullscreenChange = function() {
-                var fullscreenEnabled = document.fullscreenEnabled || document.mozFullScreenEnabled || document.webkitFullscreenEnabled;
-
-                // delay fullscreen styles until fullscreen has finished changing
-                setTimeout(function() {
-                    if (fullscreenEnabled) {
-                        body.className += ' is-fullscreen';
-                    } else {
-                        body.className = body.className.replace('is-fullscreen', '');
-                    }
-                }, 2000);
-            };
-
-            document.addEventListener('webkitfullscreenchange', fullscreenChange);
-            document.addEventListener('mozfullscreenchange', fullscreenChange);
-            document.addEventListener('fullscreenchange', fullscreenChange);
-        }
-
         // keyboard controls
         document.onkeypress = function(keys) {
             // shift + a = toggle manual
@@ -219,42 +141,6 @@
                 Runner.tick(demo.runner, demo.engine);
             }
         };
-
-        // initialise demo selector
-        demoSelect.value = demo.sceneName;
-        Demo.setUpdateSourceLink(demo.sceneName);
-
-        demoSelect.addEventListener('change', function(e) {
-            Demo.reset(demo);
-            Demo.setScene(demo,demo.sceneName = e.target.value);
-
-            if (demo.gui) {
-                Gui.update(demo.gui);
-            }
-
-            var scrollY = window.scrollY;
-            window.location.hash = demo.sceneName;
-            window.scrollY = scrollY;
-            Demo.setUpdateSourceLink(demo.sceneName);
-        });
-
-        demoReset.addEventListener('click', function(e) {
-            Demo.reset(demo);
-            Demo.setScene(demo, demo.sceneName);
-
-            if (demo.gui) {
-                Gui.update(demo.gui);
-            }
-
-            Demo.setUpdateSourceLink(demo.sceneName);
-        });
-    };
-
-    Demo.setUpdateSourceLink = function(sceneName) {
-        var demoViewSource = document.getElementById('demo-view-source'),
-            sourceUrl = 'https://github.com/liabru/matter-js/blob/master/examples';  // ah, it goes to the github. Let's reference your demo locally
-            // sourceUrl = '../../examples';  // ah, it goes to the github. Let's reference your demo locally
-        demoViewSource.setAttribute('href', sourceUrl + '/' + sceneName + '.js');  // it's not even looking here!
     };
 
     Demo.setManualControl = function(demo, isManual) {
@@ -267,31 +153,20 @@
         if (demo.isManual) {
             Runner.stop(runner);
 
+            // TODO YOU SHOULD UPDATE THOUGH!
             // continue rendering but not updating
             (function render(time){
                 runner.frameRequestId = window.requestAnimationFrame(render);
                 Events.trigger(engine, 'beforeUpdate');
                 Events.trigger(engine, 'tick');
-                engine.render.controller.world(engine);  // should be called every time a scene changes
+                // console.log(engine.world.bodies[0].position)
+                engine.render.controller.world(engine);
                 Events.trigger(engine, 'afterUpdate');
             })();
         } else {
             Runner.stop(runner);
             Runner.start(runner, engine);
-        }
-    };
-
-    Demo.fullscreen = function(demo) {
-        var _fullscreenElement = demo.render.canvas;
-
-        if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement) {
-            if (_fullscreenElement.requestFullscreen) {
-                _fullscreenElement.requestFullscreen();
-            } else if (_fullscreenElement.mozRequestFullScreen) {
-                _fullscreenElement.mozRequestFullScreen();
-            } else if (_fullscreenElement.webkitRequestFullscreen) {
-                _fullscreenElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-            }
+            console.log('hi')
         }
     };
 
@@ -313,11 +188,6 @@
         if (demo.engine.events) {
             for (i = 0; i < demo.sceneEvents.length; i++)
                 Events.off(demo.engine, demo.sceneEvents[i]);
-        }
-
-        if (demo.mouseConstraint && demo.mouseConstraint.events) {
-            for (i = 0; i < demo.sceneEvents.length; i++)
-                Events.off(demo.mouseConstraint, demo.sceneEvents[i]);
         }
 
         if (world.events) {
@@ -346,12 +216,6 @@
         // reset random seed
         Common._seed = 0;
 
-        // reset mouse offset and scale (only required for Demo.views)
-        if (demo.mouseConstraint) {
-            Mouse.setScale(demo.mouseConstraint.mouse, { x: 1, y: 1 });
-            Mouse.setOffset(demo.mouseConstraint.mouse, { x: 0, y: 0 });
-        }
-
         demo.engine.enableSleeping = false;
         demo.engine.world.gravity.y = 1;    // default
         demo.engine.world.gravity.x = 0;
@@ -373,10 +237,6 @@
         ]);
 
         World.add(world, world_border)  // its parent is a circular reference!
-
-        if (demo.mouseConstraint) {
-            World.add(world, demo.mouseConstraint);
-        }
 
         if (demo.render) {
             var renderOptions = demo.render.options;
@@ -440,8 +300,6 @@
             Engine.update(scenario.engine);
             // I should also put a render.update here too
         }
-        // console.log(trajectory[id-1])
-        // assert(false)
 
         // save to file
         jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});

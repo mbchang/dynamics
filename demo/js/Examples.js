@@ -1,7 +1,7 @@
 
 var _isBrowser = typeof window !== 'undefined' && window.location,
-    // Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
-    Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
+    Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
+    // Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
 
 var Example = {};
 Matter.Example = Example;
@@ -585,7 +585,7 @@ if (!_isBrowser) {
 
     var Engine = Matter.Engine;
 
-    Example.engine = function(demo) {
+    Example.engine = function(demo) {   // add the option to add options here, perhaps Engine.extend?
         // some example engine options
         var options = {
             positionIterations: 6,
@@ -2107,14 +2107,13 @@ if (!_isBrowser) {
         Composites = Matter.Composites;
 
     Example.m_tower = function(demo) {
-        // TODO: you should sample the positions as a tight Gaussian around the center of the block below
-
+        // TODO: make the bodies inelastic
 
         var Tower = {}
         Tower.create = function(){
             var self = {}
             // these should not be mutated
-            self.params = {num_obj: 5,
+            self.params = {num_obj: 3,
                           cx: 400,
                           cy: 300,
                           size: 40 };
@@ -2125,11 +2124,11 @@ if (!_isBrowser) {
         Tower.init = function(self){
             // set the first object
             // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
-            var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
-                                {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
+            // var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
+            //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
             x = self.params.cx
             var y = 2*self.params.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity"})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1})
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
@@ -2137,7 +2136,7 @@ if (!_isBrowser) {
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity"})  // stack upwards
+                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1})  // stack upwards
                 lastBlock = block;
                 World.add(self.world, lastBlock)
             }

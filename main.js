@@ -24,7 +24,7 @@ env.engine = Engine.create(engine_options);
 
 
 var scenarios = {
-    hockey: "m_hockey",
+    balls: "m_balls",
     cradle: "m_cradle",
     tower: "m_tower"
 }
@@ -47,9 +47,6 @@ simulate = function(scenario, numsteps) {
         trajectory[id] = [];
     }
 
-    console.log(scenario.engine.world)
-    assert(false)
-
     // run the engine
     for (i = 0; i < numsteps; i++) {
         for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -68,20 +65,4 @@ simulate = function(scenario, numsteps) {
     jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});
 };
 
-// NOTE! are you sure you are getting the correct object ids?
-// NOTE that in main, you don't actually have any borders
-
-
-simulate(Example[scenarios.hockey](env), 5);
-
-
-
-// note that Hockey is outside the scope now!
-
-// So for all scenarios, you just do
-// var scenario = Scenario.create()  -- for this you'd return Hockey, rather than hockey, but then the Demo wouldn't work.
-// Scenario.init(scenario)
-// simulate(scenario, numsteps)
-
-// this is outside the Hockey scope!
-// // TODO: in the "main" scope, should I make Engine, World, Composites, etc global?
+simulate(Example[scenarios.balls](env), 5);
