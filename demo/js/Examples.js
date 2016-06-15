@@ -2003,37 +2003,14 @@ if (!_isBrowser) {
         };
 
         Hockey.init = function(self) {  // hockey is like self here
-            var i; // iterator
+            // generate positions
+            self.p0 = initialize_positions(self.params.num_obj, self.params.obj_radius, self.rand_pos)
 
-            self.v0 = [];  // initial velocities
-            self.p0 = [];  // initial positions
+            // generate random velocities
+            self.v0 = initialize_velocities(self.params.num_obj,self.params.max_v0)
 
+            // set positions
             for (i = 0; i < self.params.num_obj; i++) {
-
-                // generate random initial velocities b/w -max_v0 and max_v0 inclusive
-                var vx = Math.floor(Math.random()*2*self.params.max_v0+1-self.params.max_v0)
-                var vy = Math.floor(Math.random()*2*self.params.max_v0+1-self.params.max_v0)
-                self.v0.push({x: vx, y: vy})
-
-                // generate random initial positions by rejection sampling
-                if (self.p0.length == 0) {  // assume that num_obj > 0
-                    self.p0.push(self.rand_pos());
-                } else {
-                    var proposed_pos = self.rand_pos();
-                    // true if overlaps
-                    while ((function(){
-                            for (var j = 0; j < self.p0.length; j++) {
-                                if (euc_dist(proposed_pos, self.p0[j]) < 1.5*self.params.obj_radius) {
-                                    return true;
-                                }
-                            }
-                            return false;
-                        })()){
-                        // keep trying until you get a match
-                        proposed_pos = self.rand_pos();
-                    }
-                    self.p0.push(proposed_pos);
-                }
                 // add body to world
                 World.add(self.engine.world,
                     Bodies.circle(self.p0[i].x, self.p0[i].y, self.params.obj_radius,
@@ -2044,7 +2021,7 @@ if (!_isBrowser) {
                                                              inertia: Infinity,
                                                              inverseInertia: 0,
                                                              label: "Entity"}));
-                }
+             }
 
             // set velocities
             _.each(_.zip(self.engine.world.bodies

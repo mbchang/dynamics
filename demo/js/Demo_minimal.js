@@ -73,6 +73,7 @@
 
 
 
+
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
@@ -80,8 +81,35 @@
         function f() {
             console.log( i );
 
+            ////////////////////////////////////////////////////////////////////
             // here you can manually set the postion.
             // Let's try it. Let's manually reset the position
+
+            // HACKY, possibly can pass this into the Example[scenName](demo) as params
+            var num_obj = 2
+            var obj_radius = 60
+            rand_pos_fn = function() {
+                return rand_pos(
+                    {hi: 2*demo.w_cx - obj_radius - 1, lo: obj_radius + 1},
+                    {hi: 2*demo.w_cy - obj_radius - 1, lo: obj_radius + 1});
+                };
+            var p0 = initialize_positions(num_obj, obj_radius, rand_pos_fn)
+
+            var entities = Composite.allBodies(demo.engine.world)
+                .filter(function(elem) {
+                            return elem.label === 'Entity';
+                        })
+            var entity_ids = entities.map(function(elem) {
+                                return elem.id});
+
+            for (id = 0; id < num_obj; id++) { //id = 0 corresponds to world!
+                var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
+                // set the position here
+                Body.setPosition(body, p0[id])
+            }
+            ////////////////////////////////////////////////////////////////////
+
+
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( true ){  // here you could replace true with a stopping condition
