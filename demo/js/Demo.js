@@ -76,6 +76,9 @@
         // create an example engine (see /examples/engine.js)
         demo.engine = Example.engine(demo);
 
+        // console.log(demo.engine)
+        // assert(false)
+
         if (_isBrowser) {
             // run the engine
             demo.runner = Engine.run(demo.engine);
@@ -217,6 +220,7 @@
                 }
 
                 Runner.tick(demo.runner, demo.engine);
+                console.log(demo.engine.world.bodies)
             }
         };
 

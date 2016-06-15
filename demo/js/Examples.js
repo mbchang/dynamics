@@ -2010,9 +2010,9 @@ if (!_isBrowser) {
 
             for (i = 0; i < self.params.num_obj; i++) {
 
-                // generate random initial velocities b/w 0 and max_v0 inclusive
-                var vx = Math.floor(Math.random()*self.params.max_v0+1)
-                var vy = Math.floor(Math.random()*self.params.max_v0+1)
+                // generate random initial velocities b/w -max_v0 and max_v0 inclusive
+                var vx = Math.floor(Math.random()*2*self.params.max_v0+1-self.params.max_v0)
+                var vy = Math.floor(Math.random()*2*self.params.max_v0+1-self.params.max_v0)
                 self.v0.push({x: vx, y: vy})
 
                 // generate random initial positions by rejection sampling
