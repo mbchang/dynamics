@@ -19,18 +19,11 @@
     var Demo = {};
     Matter.Demo = Demo;
 
-    // possible scenarios
-    var scenarios = {
-        balls: "m_balls",
-        cradle: "m_newtonsCradle",
-        tower: "m_tower",
-        chain: "m_chain"
-    }
-
     if (!_isBrowser) {
         var jsonfile = require('jsonfile')
         var assert = require('assert')
         var utils = require('../../utils')
+        var sleep = require('sleep')
         require('./Examples')
         var env = process.argv.slice(2)[0]
         if (env == null)
@@ -77,6 +70,26 @@
 
         var sceneName = 'm_balls'
         Example[sceneName](demo);
+
+
+
+        // Ok, now let's manually update
+        Runner.stop(demo.runner)
+
+        var i = 0, howManyTimes = 100;
+        function f() {
+            console.log( i );
+
+            // here you can manually set the postion.
+            // Let's try it. Let's manually reset the position
+            Runner.tick(demo.runner, demo.engine);
+            i++;
+            if( true ){  // here you could replace true with a stopping condition
+                setTimeout( f, 1000 );
+            }
+        }
+        f();
+
     }
 
     // call init when the page has loaded fully
