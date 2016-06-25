@@ -39,6 +39,7 @@ function data_process.create(args)
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
     self.bsize = args.batch_size
+    self.shuffle = args.shuffle
 
     -- here you can also include have world parameters
     -- not that object id includes whether it is stationary or not
@@ -70,7 +71,7 @@ function data_process:unnormalize(normalized_trajectories)
     unnormalized[{{},{},{},{px,py}}] = unnormalized[{{},{},{},{px,py}}]*self.pnc
 
     -- normalize velocity
-    unnormalized[{{},{},{},{px,py}}] = unnormalized[{{},{},{},{px,py}}]*self.vnc
+    unnormalized[{{},{},{},{vx,vy}}] = unnormalized[{{},{},{},{vx,vy}}]*self.vnc
 
     return unnormalized
 end
@@ -208,6 +209,7 @@ end
 function data_process:condense(focus, context)
     -- duplicates may exist, they may not
     focus = nn.Unsqueeze(2, 3):forward(focus:clone())
+    -- TODO: get rid of duplicates!
     return torch.cat({focus, context},2)
 end
 
@@ -230,6 +232,8 @@ function data_process:split2datasets(examples)
 
     -- shuffle examples
     local ridxs = torch.randperm(#examples)
+    print(ridxs)
+    assert(false)
     for i = 1, ridxs:size(1) do
         xlua.progress(i, ridxs:size(1))
         local batch = examples[ridxs[i]]
@@ -281,11 +285,15 @@ end
 function data_process:record_trajectories(batch, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
+    print(trajectories[{{1},{1},{1}}])
+    -- assert(false)
 
     -- onehotall2mass
     local trajectories = self:onehot2massall(trajectories)
+    print(trajectories[{{1},{1},{1}}])
     local unnormalized = self:unnormalize(trajectories)
-     dump_data_json(unnormalized, jsonfile)
+    print(unnormalized[{{1},{1},{1}}])
+    dump_data_json(unnormalized, jsonfile)
 end
 
 
