@@ -1,6 +1,4 @@
-[{
-
-    }]-- Michael B Chang
+-- Michael B Chang
 
 -- Third Party Imports
 require 'torch'
@@ -50,7 +48,6 @@ cmd:option('-max_iter', 1000*1800, 'max number of iterations')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
--- cmd:option('-max_epochs', 1000, 'max number of epochs')
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
@@ -61,15 +58,10 @@ cmd:option('-plot', true, 'turn on/off plot')
 
 -- every options
 cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 1800*20, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+cmd:option('-save_every', 1800*20, 'save every number of batches')
 cmd:option('-val_every',10*1800,'val every number of batches')
 cmd:option('-lrdecay_every',1800,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50*1800, 'number of epochs before turning down lr')
-
--- cmd:option('-save_every', 252, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
--- cmd:option('-val_every',252,'val every number of batches')
--- cmd:option('-lrdecay_every',252,'val every number of batches')
--- cmd:option('-lrdecayafter', 252, 'number of epochs before turning down lr')
 
 cmd:text()
 
