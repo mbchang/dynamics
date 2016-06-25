@@ -28,7 +28,8 @@ def convert_file(path, subsample):
     """
         input
             :type path: string
-            :param path: path of particular instance of a configuration of a world file
+            :param path: path of particular instance of a configuration of a
+                        world file
         output
             write a hdf5 file of data
     """
@@ -129,7 +130,7 @@ def construct_example(particles, goos, observedPath, starttime, windowsize):
     path_slice = np.dstack((path_slice, masses))
     path_slice = np.dstack((path_slice, np.ones((num_objects, num_steps))))  # object ids: particle = 1
     path_slice[:,:,:2] = path_slice[:,:,:2]/G_w_width  # normalize position
-    assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)
+    assert np.all(path_slice[:,:,:2] >= 0) and np.all(path_slice[:,:,:2] <= 1)  # make sure that everybody is within max range
     path_slice[:,:,2:4] = path_slice[:,:,2:4]/G_max_velocity  # normalize velocity
     assert path_slice.shape == (num_objects, num_steps, 4+len(G_mass_values)+1)
 
@@ -249,7 +250,7 @@ def get_examples_for_config(config_path, config_sample_idxs, num_samples_per_vid
 
     return config_sample_particles, config_sample_goos
 
-def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous, filterconfig):
+def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_test_samples_per, windowsize, contiguous, filters):
     """
         ACTUALLY IT IS 36 configs! (1-6)p, (0-5)g
 
@@ -266,7 +267,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
 
         samples_per: (per_config, per_video)
 
-        filter: a keyword substring that is in the world config that you want.
+        filters: a list of keyword substrings that are in the world config that you want.
                 empty string if you want all the data
 
         # Train: 50 5 = 250 --> 4 worlds * 30 configs * 3 particles * 50 videos * 5 timesteps = 90,000
@@ -305,7 +306,8 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     # data_root = '/Users/MichaelChang/Documents/SuperUROPlink/Code/tomer_pe/physics-andreas/saved-worlds/'
     for world_config in os.listdir(data_root):
         print world_config
-        if filterconfig in world_config:  # TAKEOUT
+        # if filterconfig in world_config:  # TAKEOUT
+        if any(f in world_config for f in filters):
             print '\n########################################################################'
             print 'WORLD CONFIG:', world_config
             config_path = os.path.join(data_root, world_config)
@@ -379,10 +381,10 @@ def save_all_datasets(dryrun):
 
     Although, it turns out that I ended up sampling 13 samples per video. TODO FIX
     """
-    dataset_files_folder = '/om/data/public/mbchang/physics-data/14_234balls'  # (w=384, h=288)
+    dataset_files_folder = '/om/data/public/mbchang/physics-data/m2_5balls'  # (w=384, h=288)
     if not os.path.exists(dataset_files_folder): os.mkdir(dataset_files_folder)
     data_root = '/om/data/public/mbchang/physics-data/data'
-    filtername = 'window75'
+    filters = ['worldm2_np=5_ng=0window75']
     windowsize = 20  # 2  -- TODO 1in1out
     num_train_samples_per = (1500, 60)  # 3
     num_val_samples_per = (250, 60)  # 1
@@ -404,7 +406,7 @@ def save_all_datasets(dryrun):
                                                 num_test_samples_per,
                                                 windowsize,
                                                 contiguous,
-                                                filtername)
+                                                filters)
 
     # # save
     if not dryrun:
@@ -415,7 +417,7 @@ def save_all_datasets(dryrun):
         save_dict_to_hdf5(testset, 'testset', dataset_files_folder)
     print '####################################################################'
     print 'Dataset_files_folder:', dataset_files_folder
-    print 'Data source folder:', data_root+'/'+filtername
+    # print 'Data source folder:', data_root+'/'+'_'.join(filters)
     print 'Trainset:', num_train_samples_per[0], 'examples per config', num_train_samples_per[1], 'examples per video'
     print 'Valset:', num_val_samples_per[0], 'examples per config', num_val_samples_per[1], 'examples per video'
     print 'Testset:', num_test_samples_per[0], 'examples per config', num_test_samples_per[1], 'examples per video'
@@ -513,11 +515,11 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
 
     # WINSIZE = 640,480
     # WINSIZE = 384,288
-    WINSIZE = 480, 360
-    width, height = WINSIZE
+    # WINSIZE = int(G_w_width), int(G_w_height)
+    width, height = int(G_w_width), int(G_w_height)
 
     pygame.init()
-    screen = pygame.display.set_mode(WINSIZE)
+    screen = pygame.display.set_mode((width, height))
     clock = pygame.time.Clock()
     screen.fill(THECOLORS["white"])
     pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)

@@ -1,4 +1,6 @@
--- Michael B Chang
+[{
+
+    }]-- Michael B Chang
 
 -- Third Party Imports
 require 'torch'
@@ -20,35 +22,55 @@ require 'logging_utils'
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
+cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "refactortest", 'experiment name')
-cmd:option('-dataset_folder', '14_4balls', 'dataset folder')
-cmd:option('-test_dataset_folder', '14_4balls', 'dataset folder')
-cmd:option('-plot', true, 'turn on/off plot')
+cmd:option('-seed', true, 'manual seed or not')
+
+-- dataset
+cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
+cmd:option('-test_dataset_folder', 'm2_5balls', 'dataset folder')
 cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
 cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
-cmd:option('-batch_size', 50, 'batch size')
-cmd:option('-ps', true, 'turn on priority sampling')
-cmd:option('-accel', false, 'use acceleration data')
-cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
-cmd:option('-server', "op", 'pc = personal | op = openmind')
-cmd:option('-relative', true, 'relative state vs absolute state')
-cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
-cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-lr', 0.0003, 'learning rate')
-cmd:option('-lrdecay', 0.99, 'learning rate annealing')
-cmd:option('-sharpen', 1, 'sharpen exponent')
-cmd:option('-lrdecayafter', 1, 'number of epochs before turning down lr')
-cmd:option('-max_epochs', 100, 'max number of epochs')
-cmd:option('-diff', false, 'use relative context position and velocity state')
+
+-- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
-cmd:option('-seed', true, 'manual seed or not')
+cmd:option('-relative', true, 'relative state vs absolute state')
+cmd:option('-diff', false, 'use relative context position and velocity state')
+cmd:option('-accel', false, 'use acceleration data')
+
+-- training options
+cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
+cmd:option('-batch_size', 50, 'batch size')
+cmd:option('-shuffle', false, 'shuffle batches')
+cmd:option('-max_iter', 1000*1800, 'max number of iterations')
+cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
+cmd:option('-lr', 0.0003, 'learning rate')
+cmd:option('-lrdecay', 0.99, 'learning rate annealing')
+-- cmd:option('-max_epochs', 1000, 'max number of epochs')
+
+-- priority sampling
+cmd:option('-ps', true, 'turn on priority sampling')
+cmd:option('-sharpen', 1, 'sharpen exponent')
+
+-- experiment options
+cmd:option('-plot', true, 'turn on/off plot')
+
+-- every options
 cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 20, 'save every number of epochs')
+cmd:option('-save_every', 1800*20, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+cmd:option('-val_every',10*1800,'val every number of batches')
+cmd:option('-lrdecay_every',1800,'decay lr every number of batches')
+cmd:option('-lrdecayafter', 50*1800, 'number of epochs before turning down lr')
+
+-- cmd:option('-save_every', 252, 'save every number of batches')  -- used to be 20 epochs. Change to num_iters? Or keep it by epoch? You should make it epoch if you are training until max_iters
+-- cmd:option('-val_every',252,'val every number of batches')
+-- cmd:option('-lrdecay_every',252,'val every number of batches')
+-- cmd:option('-lrdecayafter', 252, 'number of epochs before turning down lr')
+
 cmd:text()
 
 -- parse input params
@@ -63,6 +85,8 @@ if mp.server == 'pc' then
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 10 --1
+    -- mp.max_epochs = 5
+    mp.max_iter = 5*252
     mp.lrdecay = 0.99
     mp.max_epochs = 5
 	mp.seq_length = 10
@@ -75,7 +99,8 @@ else
 	mp.winsize = 20  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder--14_3balls'
+	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder
+    mp.test_dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder
 	mp.seq_length = 10
 	mp.num_threads = 4
     mp.plot = false
@@ -84,8 +109,6 @@ else
 end
 
 local M
-
-
 
 if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
@@ -99,7 +122,7 @@ end
 
 
 -- world constants
-local G_w_width, G_w_height = 384.0, 288.0
+local G_w_width, G_w_height = 480.0, 360.0 --384.0, 288.0
 local G_max_velocity, G_min_velocity = 2*3000,-2*3000
 local subsamp = 5
 
@@ -126,6 +149,8 @@ else
 end
 
 local model, train_loader, test_loader, modelfile
+local train_losses, val_losses, test_losses = {},{},{}
+
 
 ------------------------------- Helper Functions -------------------------------
 
@@ -176,20 +201,6 @@ function initsavebatches(preload, model_path)
     test_loader:save_sequential_batches()
 end
 
-function inittest(preload, model_path)
-    print("Network parameters:")
-    print(mp)
-    local data_loader_args = {mp.dataset_folder,
-                              mp.shuffle,
-                              mp.cuda}
-    test_loader = D.create('testset', unpack(data_loader_args))  -- TODO: Testing on trainset
-    model = M.create(mp, preload, model_path)
-    if preload then mp = torch.load(model_path).mp end
-    modelfile = model_path
-    print("Initialized Network")
-end
-
-
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
@@ -206,24 +217,34 @@ function feval_train(params_)  -- params_ should be first argument
         model.theta.grad_params:add(model.theta.params:clone():mul(mp.L2) )
     end
 
-    train_loader.priority_sampler:update_batch_weight(train_loader.current_sampled_id, loss)
+    train_loader.priority_sampler:update_batch_weight(
+                                        train_loader.current_sampled_id, loss)
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
 
--- trains for one epoch
-function train(epoch_num)
-    local new_params, train_loss
-    local loss_run_avg = 0
-    for t = 1,train_loader.num_batches do
-        train_loader.priority_sampler:set_epcnum(epoch_num)--set_epcnum
-        -- xlua.progress(t, train_loader.num_batches)
-        new_params, train_loss = optimizer(feval_train, model.theta.params, optim_state)  -- next batch
+function train(start_iter, epoch_num)
+    local epoch_num = epoch_num or 1  -- TODO!
+    local start_iter = start_iter or 1
+    print('Start iter:', start_iter)
+    print('Start epoch num:', epoch_num)
+    for t = start_iter,mp.max_iter do
+
+        train_loader.priority_sampler:set_epcnum(epoch_num)
+        local new_params, train_loss = optimizer(feval_train,
+                                model.theta.params, optim_state)  -- next batch
+
+        -- print('norm',train_loader.priority_sampler.batch_weights:norm())
         assert(new_params == model.theta.params)
-        if t % mp.print_every == 0 then
+
+        trainLogger:add{['log MSE loss (train set)'] = torch.log(train_loss[1])}
+        trainLogger:style{['log MSE loss (train set)'] = '~'}
+
+        -- print
+        if (t-start_iter+1) % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f"..
-                                "\tgradnorm = %6.4e\tbatch = %4d\t"..
-                                "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
+                            "\tgradnorm = %6.4e\tbatch = %4d\t"..
+                            "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
                     epoch_num, t, train_loss[1],
                     model.theta.grad_params:norm(),
                     train_loader.current_sampled_id,
@@ -231,17 +252,52 @@ function train(epoch_num)
                     train_loader.priority_sampler:get_hardest_batch()[1],
                     optim_state.learningRate))
         end
-        loss_run_avg = loss_run_avg + train_loss[1]
-        trainLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss[1])}
-        trainLogger:style{['log MSE loss (train set)'] = '~'}
+
+        -- validate
+        if (t-start_iter+1) % mp.val_every == 0 then
+            v_train_loss, v_val_loss, v_tets_loss = validate()
+            train_losses[#train_losses+1] = v_train_loss
+            val_losses[#val_losses+1] = v_val_loss
+            test_losses[#test_losses+1] = v_test_loss
+            assert(mp.save_every % mp.val_every == 0 or
+                    mp.val_every % mp.save_every == 0)
+
+            -- save
+            if (t-start_iter+1) % mp.save_every == 0 then
+                local model_file = string.format('%s/epoch%.2f_%.4f.t7',
+                                            mp.savedir, epoch_num, v_val_loss)
+                print('saving checkpoint to ' .. model_file)
+                model.network:clearState()
+
+                local checkpoint = {}
+                checkpoint.model = model
+                checkpoint.mp = mp
+                checkpoint.train_losses = train_losses
+                checkpoint.val_losses = val_losses
+                checkpoint.test_losses = test_losses
+                checkpoint.iters = t
+                torch.save(model_file, checkpoint)
+                print('Saved model')
+            end
+        end
+
+        -- lr decay
+        -- here you can adjust the learning rate based on val loss
+        if t >= mp.lrdecayafter and (t-start_iter+1) % mp.lrdecay_every == 0 then
+            optim_state.learningRate =optim_state.learningRate*mp.lrdecay
+            print('Learning rate is now '..optim_state.learningRate)
+        end
+
+        if (t-start_iter+1) % train_loader.num_batches == 0 then
+            epoch_num = t / train_loader.num_batches + 1
+        end
+
         if mp.plot then trainLogger:plot() end
         if mp.cuda then cutorch.synchronize() end
         collectgarbage()
     end
-    return loss_run_avg/train_loader.num_batches -- running avg of training loss.
 end
 
--- test on dataset
 function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
@@ -251,7 +307,8 @@ function test(dataloader, params_, saveoutput)
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
-        local this, context, y, mask, config, start, finish, context_future = unpack(batch)
+        local this, context, y, mask, config,
+                                start, finish, context_future = unpack(batch)
 
 
         if mp.model == 'lstmtime' then
@@ -277,9 +334,12 @@ function test(dataloader, params_, saveoutput)
                                         mp.num_past, mp.object_dim)
 
             -- reshape to -- (num_samples x num_future x 8)
-            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+            prediction = prediction:reshape(
+                                    mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-            y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim}, {2,mp.num_future})  -- TODO RESIZE THIS
+            y = crop_future(y, {y:size(1),
+                                mp.winsize-mp.num_past, mp.object_dim},
+                                {2,mp.num_future})  -- TODO RESIZE THIS
             y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
             -- take care of relative position
@@ -293,7 +353,7 @@ function test(dataloader, params_, saveoutput)
 
         -- save
         if saveoutput then
-            save_example_prediction({this, context, y, prediction, context_future},
+            save_ex_pred({this, context, y, prediction, context_future},
                                     {config, start, finish},
                                     modelfile,
                                     dataloader,
@@ -306,284 +366,8 @@ function test(dataloader, params_, saveoutput)
     return avg_loss
 end
 
--- this: (mp.batch_size, mp.num_past, mp.object_dim)
--- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
-function update_position(this, pred)
-    local this, pred = this:clone(), pred:clone()
-    local lastpos = (this[{{},{-1},{1,2}}]:clone()*G_w_width)
-    local lastvel = (this[{{},{-1},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
-    local currpos = (pred[{{},{},{1,2}}]:clone()*G_w_width)
-    local currvel = (pred[{{},{},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
 
-    -- this is length n+1
-    local pos = torch.cat({lastpos, currpos},2)
-    local vel = torch.cat({lastvel, currvel},2)
-
-    -- there may be a bug here
-    -- take the last part (future)
-    for i = 1,pos:size(2)-1 do
-        pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
-    end
-
-    -- normalize again
-    pos = pos/G_w_width
-    assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
-
-    pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
-    return pred
-end
-
-
--- test on dataset
--- assumption: that you predict 1 out
---[[
-    Want:
-        the data given to still have windowsize of 20.
-        But we want to only predict for 1 timestep,
-        But we want the context to have full windowsize. Perhaps we can
-            have a flag to set? The full context, starting at the time prediction
-            starts until the end of the window, should be passed through
-        But also you need the full context and context_future to be passed in.
-            Where to do the processing?
-        Given the pred (batch_size, num_future, obj_dim) we will take the
-        first time slice: [{{},{1}}] of that
-
--- ]]
---
-function simulate(dataloader, params_, saveoutput, numsteps)
-    assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
-    local sum_loss = 0
-    for i = 1,dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-
-        -- get data
-        local this_orig, context_orig, y_orig, mask,
-                config, start, finish, context_future_orig =
-                unpack(dataloader:sample_sequential_batch())
-
-        local this, context = this_orig:clone(), context_orig:clone()
-        context_future = context_future_orig:clone():reshape(
-            mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
-
-        -- at this point:
-        -- this (bsize, numpast*objdim)  -- TODO RESIZE THIS
-        -- context (bsize, mp.seq_length, mp.numpast*mp.objdim)
-        -- y_orig (bsize, (mp.winsize-mp.num_past)*objdim)
-        -- context_future (bsize, mp.seqlength, (mp.winsize-mp.num_past)*mp.objdim)
-
-        -- allocate space, already assume reshape
-        local pred_sim = model_utils.transfer_data(torch.zeros(
-                        mp.batch_size, numsteps, mp.object_dim), mp.cuda)
-
-        for t = 1,numsteps do
-            -- the t-th timestep in the future
-            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past,
-                        mp.object_dim)[{{},{t},{}}]  -- increment time in y
-            y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
-
-            local modified_batch = {this, context, y, mask, config, start,
-                                        finish, context_future_orig}
-            local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
-
-            prediction = prediction:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
-            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
-            context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
-
-            if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] + this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
-            end
-
-            -- restore object properties
-            prediction[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
-
-            -- here you want to add velocity to position
-            -- prediction: (batchsize, mp.num_future, mp.object_dim)
-            prediction = update_position(this, prediction)
-
-            -- update this and context
-            -- chop off first time step and then add in next one
-            if mp.num_past > 1 then
-                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)  -- you can add y in here  -- TODO RESIZE THIS
-                context = torch.cat({context[{{},{},{2,-1},{}}]:clone(), context_future[{{},{},{t},{}}]:clone()},3)
-            else
-                assert(mp.num_past == 1)
-                this = prediction:clone()  -- just use prev prediction as input
-                context = context_future[{{},{},{t},{}}]:clone()
-            end
-
-            -- reshape it back
-            this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)  -- TODO RESIZE THIS
-            context = context:reshape(mp.batch_size, mp.seq_length, mp.num_past*mp.object_dim)
-
-            pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
-            sum_loss = sum_loss + test_loss
-        end
-
-        -- reshape to -- (num_samples x num_future x 8)
-        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
-        context_orig = context_orig:reshape(context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
-        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future  -- TODO RESIZE THIS
-        context_future_orig = context_future_orig:reshape(mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
-
-        if mp.relative then
-            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
-        end
-
-        -- now crop only the number of timesteps you need; pred_sim is also this many timesteps
-        y_orig = y_orig[{{},{1,numsteps},{}}]  -- TODO RESIZE THIS
-        context_future_orig = context_future_orig[{{},{},{1,numsteps},{}}]
-
-        if saveoutput then
-            save_example_prediction({this_orig, context_orig, y_orig, pred_sim, context_future_orig},
-                                    {config, start, finish},
-                                    modelfile,
-                                    dataloader,
-                                    numsteps)
-        end
-    end
-    local avg_loss = sum_loss/dataloader.num_batches/numsteps
-    collectgarbage()
-    return avg_loss
-end
-
--- simulate two balls for now, but this should be made more general
--- actually you should make this more general.
--- there is no concept of ground truth here?
--- or you can make the ground truth go as far as there are timesteps available
-function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
-
-    -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
-    for i = 1,dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-
-        -- get data
-        local this_orig, context_orig, y_orig, mask, config, start, finish, context_future_orig = unpack(dataloader:sample_sequential_batch())
-
-        -- past: (bsize, mp.seq_length+1, mp.numpast*mp.objdim)
-        -- future: (bsize, mp.seq_length+1, (mp.winsize-mp.numpast), mp.objdim)
-        local past = torch.cat({this_orig:reshape(
-                    this_orig:size(1),1,this_orig:size(2)), context_orig},2)
-        local future = torch.cat({y_orig:reshape(
-                    y_orig:size(1),1,y_orig:size(2)), context_future_orig},2)
-
-        -- reshape future
-        future = future:reshape(mp.batch_size, mp.seq_length+1,
-                                mp.winsize-mp.num_past, mp.object_dim)
-
-        local pred_sim = model_utils.transfer_data(
-                            torch.zeros(mp.batch_size, mp.seq_length+1,
-                                        numsteps, mp.object_dim),
-                            mp.cuda)
-        local num_particles = torch.find(mask,1)[1] + 1
-
-        -- loop through time
-        for t = 1, numsteps do
-
-            -- for each particle, update to the next timestep, given
-            -- the past configuration of everybody
-
-            for j = 1, num_particles do
-                -- construct batch
-                local this = torch.squeeze(past[{{},{j}}])
-
-                local context
-                if j == 1 then
-                    context = past[{{},{j+1,-1}}]
-                elseif j == mp.seq_length+1 then
-                    -- tricky thing here: num_particles may not
-                    -- be the same as mp.seq_length+1!
-                    context = past[{{},{1,-2}}]
-                else
-                    context = torch.cat({past[{{},{1,j-1}}],
-                                                        past[{{},{j+1,-1}}]},2)
-                end
-
-                local y = torch.squeeze(future[{{},{j},{t}}])
-
-                local batch = {this, context, y, mask, config, start,
-                                finish, _}
-
-                -- predict
-                local _, pred = model:fp(params_,batch,true)
-
-                pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-                this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
-                context = context:reshape(mp.batch_size, mp.seq_length,
-                                            mp.num_past, mp.object_dim)
-
-                -- relative coords
-                if mp.relative then
-                    pred[{{},{},{1,4}}] = pred[{{},{},{1,4}}] +
-                                            this[{{},{-1},{1,4}}]:expandAs(
-                                            pred[{{},{},{1,4}}])
-                end
-
-                -- restore object properties
-                pred[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
-
-                -- update position
-                pred = update_position(this, pred)
-
-                -- write into pred_sim
-                pred_sim[{{},{j},{t},{}}] = pred
-            end
-
-            -- update past for next timestep
-            -- update future for next timestep:
-            -- to be honest, future can be anything
-            -- so we can just keep future stale
-            past = past:reshape(mp.batch_size, mp.seq_length+1,
-                                mp.num_past, mp.object_dim)
-            if mp.num_past > 1 then
-                past = torch.cat({past[{{},{},{2,-1},{}}],
-                                    pred_sim[{{},{},{t},{}}]}, 3)
-            else
-                assert(mp.num_past == 1)
-                past = pred_sim[{{},{},{t},{}}]:clone()
-            end
-
-            past = past:reshape(mp.batch_size, mp.seq_length+1,
-                                mp.num_past*mp.object_dim)
-        end
-
-        -- at this point, pred_sim should be all filled out
-        -- break pred_sim into this and context_future
-        -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
-        local this_pred = torch.squeeze(pred_sim[{{},{1}}])
-        local context_pred = pred_sim[{{},{2,-1}}]
-
-        -- reshape things
-        this_orig = this_orig:reshape(this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
-        context_orig = context_orig:reshape(context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
-        y_orig = y_orig:reshape(y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
-
-        if mp.relative then
-            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
-        end
-
-        -- crop the number of timesteps
-        y_orig = y_orig[{{},{1,numsteps},{}}]
-
-        -- when you save, you will replace context_future_orig
-        if gt then
-            context_pred = context_future_orig  -- only saving ground truth
-            context_pred = context_pred:reshape(context_pred:size(1),mp.seq_length,mp.winsize-mp.num_past,mp.object_dim)
-        end
-
-        if saveoutput then
-            save_example_prediction({this_orig, context_orig, y_orig,
-                                    this_pred, context_pred},
-                                    {config, start, finish},
-                                    modelfile,
-                                    dataloader,
-                                    numsteps)
-        end
-    end
-    collectgarbage()
-end
-
-
-function save_example_prediction(example, description, modelfile_, dataloader, numsteps)
+function save_ex_pred(example, description, modelfile_, dataloader, numsteps)
     --[[
         example: {this, context, y, prediction, context_future}
         description: {config, start, finish}
@@ -617,60 +401,36 @@ function save_example_prediction(example, description, modelfile_, dataloader, n
                                 y=y, context_future=context_future})
 end
 
+function validate()
+    local train_loss = test(train_test_loader, model.theta.params, false)
+    local val_loss = test(val_loader, model.theta.params, false)
+    local test_loss = test(test_loader, model.theta.params, false)
+    print('train loss\t'..train_loss..
+            '\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
+
+    -- Save logs
+    experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
+                         ['log MSE loss (val set)'] =  torch.log(val_loss),
+                         ['log MSE loss (test set)'] =  torch.log(test_loss)}
+    experimentLogger:style{['log MSE loss (train set)'] = '~',
+                           ['log MSE loss (val set)'] = '~',
+                           ['log MSE loss (test set)'] = '~'}
+   if mp.plot then experimentLogger:plot() end
+    return train_loss, val_loss, test_loss
+end
+
 -- runs experiment
-function experiment()
+function experiment(start_iter, epoch_num)
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
-    local train_losses, val_losses, test_losses = {},{},{}
-    for i = 1, mp.max_epochs do
-        print('Learning rate is now '..optim_state.learningRate)
-        train(i)
-        local train_loss = test(train_test_loader, model.theta.params, false)
-        local val_loss = test(val_loader, model.theta.params, false)
-        local test_loss = test(test_loader, model.theta.params, false)
-        print('train loss\t'..train_loss..'\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
-
-        -- Save logs
-        experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
-                             ['log MSE loss (val set)'] =  torch.log(val_loss),
-                             ['log MSE loss (test set)'] =  torch.log(test_loss)}
-        experimentLogger:style{['log MSE loss (train set)'] = '~',
-                               ['log MSE loss (val set)'] = '~',
-                               ['log MSE loss (test set)'] = '~'}
-        train_losses[#train_losses+1] = train_loss
-        val_losses[#val_losses+1] = val_loss
-        test_losses[#test_losses+1] = test_loss
-
-        if i % mp.save_every == 0 then
-            local model_file = string.format('%s/epoch%.2f_%.4f.t7',
-                                                    mp.savedir, i, val_loss)
-            print('saving checkpoint to ' .. model_file)
-            local checkpoint = {}
-            checkpoint.model = model
-            checkpoint.mp = mp
-            checkpoint.train_losses = train_losses
-            checkpoint.val_losses = val_losses
-            torch.save(model_file, checkpoint)
-
-            print('Saved model')
-        end
-        if mp.plot then experimentLogger:plot() end
-        if mp.cuda then cutorch.synchronize() end
-
-        -- here you can adjust the learning rate based on val loss
-        if i >= mp.lrdecayafter then
-            optim_state.learningRate =optim_state.learningRate*mp.lrdecay
-        end
-
-        collectgarbage()
-    end
+    train(start_iter, epoch_num)
 end
 
 function checkpoint(savefile, data, mp_)
     if mp_.cuda then
-        -- data = data:float()
+        data = data:float()
         torch.save(savefile, data)
-        -- data = data:cuda()
+        data = data:cuda()
     else
         torch.save(savefile, data)
     end
@@ -682,18 +442,31 @@ function run_experiment()
     experiment()
 end
 
+
+-- UPDATE
 function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    -- mp = checkpoint.mp
+    mp = checkpoint.mp  -- completely overwrite
     inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    experiment()
+
+    -- These are things you have to set; although priority sampler might not be reset
+    local iters = mp.val_every * #checkpoint.val_losses + 1
+    -- local epoch_num = math.floor(iters / train_loader.num_batches) + 1
+    local epoch_num = 1
+
+    mp.lr = 1.077384359378e-05
+    optim_state = {learningRate   = mp.lr}
+
+    experiment(iters, epoch_num)
 end
 
 function getLastSnapshot(network_name)
-    local res_file = io.popen("ls -t "..mp.root..'/'..network_name.." | grep -i epoch | head -n 1")
-    local status, result = pcall(function() return res_file:read():match( "^%s*(.-)%s*$" ) end)
+    local res_file = io.popen("ls -t "..mp.root..'/'..network_name..
+                        " | grep -i epoch | head -n 1")
+    local status, result = pcall(function()
+        return res_file:read():match( "^%s*(.-)%s*$" ) end)
     print(result)
     res_file:close()
     if not status then
@@ -703,65 +476,13 @@ function getLastSnapshot(network_name)
     end
 end
 
-function predict()
-    local snapshot = getLastSnapshot(mp.name)
-    print(snapshot)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    mp = checkpoint.mp
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(test(test_loader,checkpoint.model.theta.params, true))
-end
-
-
--- Note that this one does not do the ground truth. In fact, you might be able
--- to run this for arbitrary number of time-steps
-function predict_simulate()
-    local snapshot = getLastSnapshot(mp.name)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    print(snapshot)
-    mp = checkpoint.mp
-
-    -- mp.winsize = 80  -- total number of frames
-	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(mp.winsize)
-    print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
-end
-
-function predict_simulate_all()
-    -- inittest(true, mp.savedir ..'/'..'network.t7')
-    -- print(simulate(test_loader, torch.load(mp.savedir..'/'..'params.t7'), true, 5))
-
-    local snapshot = getLastSnapshot(mp.name)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    print(snapshot)
-    mp = checkpoint.mp
-    -- mp.winsize = 80  -- total number of frames
-    -- mp.winsize = 20
-    -- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    -- mp.winsize = 80  -- total number of frames
-    -- mp.winsize = 20
-	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-    print(simulate_all(test_loader, checkpoint.model.theta.params, true, 78))
-end
-
-
--- ------------------------------------- Main -------------------------------------
+------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
     run_experiment()
 elseif mp.mode == 'expload' then
     run_experiment_load()
-elseif mp.mode == 'sim' then
-    -- predict_simulate()
-    predict_simulate_all()
 elseif mp.mode == 'save' then
     initsavebatches(false)
 else
-    predict()
+    error('unknown mode')
 end
-
-
--- inittest(false, mp.savedir ..'/'..'network.t7')
--- print(simulate(test_loader, model.theta.params, false, 3))

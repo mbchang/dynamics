@@ -212,6 +212,14 @@ experiment 18:
     18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj
     18_layers_3_lrdecay_0.99_dataset_folder_14_235balls_lr_0.0003_sharpen_1_model_ffobj
 
+experiment 19: different masses (worldm2)
+    2 in 1 out
+    models: lstmobj, ffobj
+
+    To continue running:
+        19_layers_3_lrdecay_0.99_dataset_folder_m2_345balls_lr_0.0003_test_dataset_folder_m2_5balls_sharpen_1_model_lstmobj
+
+
 
 experiment 15: lstm model (no acceleration? I have to figure out how the hard examples works; redo)
 

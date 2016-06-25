@@ -245,8 +245,11 @@ from convert_data import *
 # pred
 # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=5_ng=0window75_[1,50].h5'
 # # gt
-# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=5_ng=0window75_[1,50].h5'
+h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=5_ng=0window75_[1,50].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # generalizes!
+# visualize_results(training_samples_hdf5=h5_file, sample_num=2, vidsave=False, imgsave=False)  # generalizes!  (up to frame 30?)
+visualize_results(training_samples_hdf5=h5_file, sample_num=4, vidsave=False, imgsave=True)  # not bad, better than 3
+# visualize_results(training_samples_hdf5=h5_file, sample_num=7, vidsave=False, imgsave=False)  # not bad, better than 3
 
 
 # 14_3 balls  test on 14_3 balls lstm
@@ -269,6 +272,6 @@ from convert_data import *
 # pred
 # h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_lstmobj/predictions/worldm1_np=4_ng=0window75_[1,50].h5'
 # gt
-h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=4_ng=0window75_[1,50].h5'
+# h5_file = '/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_lstmobj/predictionsgt/worldm1_np=4_ng=0window75_[1,50].h5'
 # visualize_results(training_samples_hdf5=h5_file, sample_num=0, vidsave=False, imgsave=False)  # bad
-visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # bad
+# visualize_results(training_samples_hdf5=h5_file, sample_num=3, vidsave=False, imgsave=True)  # bad

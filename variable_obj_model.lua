@@ -133,7 +133,8 @@ function split_tensor(dim, reshape, boundaries)
     local chunks = {}
     for cb = 1,#boundaries do
         local left,right = unpack(boundaries[cb])
-        chunks[#chunks+1] = nn.JoinTable(dim)(nn.NarrowTable(left,right)(splitted))
+        chunks[#chunks+1] = nn.JoinTable(dim)
+                                (nn.NarrowTable(left,right)(splitted))
     end
     local net = nn.gModule({tensor},chunks)
     if mp.cuda then
@@ -158,19 +159,21 @@ function model.create(mp_, preload, model_path)
 
     assert(self.mp.input_dim == self.mp.object_dim * self.mp.num_past)
     assert(self.mp.out_dim == self.mp.object_dim * self.mp.num_future)
-    self.criterion = nn.MSECriterion()
-    self.identitycriterion = nn.IdentityCriterion()
     if preload then
         print('Loading saved model.')
         local checkpoint = torch.load(model_path)
         self.network = checkpoint.model.network:clone()
+        self.criterion = checkpoint.model.criterion:clone()
+        self.identitycriterion = checkpoint.model.identitycriterion:clone()
     else
+        self.criterion = nn.MSECriterion()
+        self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
-         if self.mp.cuda then
-             self.network:cuda()
-             self.criterion:cuda()
-             self.identitycriterion:cuda()
-         end
+        if self.mp.cuda then
+            self.network:cuda()
+            self.criterion:cuda()
+            self.identitycriterion:cuda()
+        end
     end
 
     self.theta = {}
@@ -184,35 +187,7 @@ end
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
-
-    local this, context, y, mask = unpack(batch)
-    local x = {this=this,context=context}
-
-    if not sim then
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-                            {2,mp.num_future})
-    end
-
-    -- unpack inputs
-    local this_past     = convert_type(x.this:clone(), self.mp.cuda)
-    local context       = convert_type(x.context:clone(), self.mp.cuda)
-    local this_future   = convert_type(y:clone(), self.mp.cuda)
-
-    assert(this_past:size(1) == self.mp.batch_size and
-            this_past:size(2) == self.mp.input_dim)  -- TODO RESIZE THIS
-    assert(context:size(1) == self.mp.batch_size and
-            context:size(2)==self.mp.seq_length
-            and context:size(3) == self.mp.input_dim)
-    assert(this_future:size(1) == self.mp.batch_size and
-            this_future:size(2) == self.mp.out_dim)  -- TODO RESIZE THIS
-
-    -- here you have to create a table of tables
-    -- this: (bsize, input_dim)
-    -- context: (bsize, mp.seq_length, dim)
-    local input = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
-    end
+    local input, this_future = unpack_batch(batch, sim)
 
     local prediction = self.network:forward(input)
 
@@ -233,24 +208,7 @@ end
 -- a lot of instantiations of split_output
 function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
-    local this, context, y, mask = unpack(batch)
-    local x = {this=this,context=context}
-
-    if not sim then
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-                            {2,mp.num_future})
-    end
-
-    -- unpack inputs. All of these have been CUDAed already if need be
-    local this_past     = convert_type(x.this:clone(), self.mp.cuda)
-    local context       = convert_type(x.context:clone(), self.mp.cuda)
-    local this_future   = convert_type(y:clone(), self.mp.cuda)
-
-
-    local input = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(input, {this_past,context[{{},{t}}]})
-    end
+    local input, this_future = unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
 

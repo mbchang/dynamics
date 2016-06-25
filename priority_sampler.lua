@@ -22,8 +22,8 @@ function normalize(tensor)
     local out = tensor:clone()
     if out:min() <= 0 then
         local m, am = torch.min(out,1)
-        print('min'..m)
-        print('amin'..am)
+        print('min',m)
+        print('amin',am)
     end
     assert(out:min() > 0)
     local result = out/out:sum()

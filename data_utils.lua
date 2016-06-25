@@ -1,4 +1,7 @@
 require 'hdf5'
+require 'nn'
+require 'nngraph'
+require 'torchx'
 
 function get_keys(table)
     local keyset={}
@@ -121,7 +124,8 @@ function crop_future(tensor, reshapesize, cropdim)
     else
         assert(crop:dim()==4 and cropdim[1] == 3)
         crop = crop[{{},{},{1,cropdim[2]},{}}]
-        crop = crop:reshape(reshapesize[1], mp.seq_length, cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
+        crop = crop:reshape(reshapesize[1], mp.seq_length,
+                            cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
     end
     return crop
 end
@@ -145,16 +149,97 @@ function broadcast(tensor, dim)
         local b = {unpack(torch.totable(before)),1}
         print(a)
         print(b)
-        return tensor:reshape(unpack(torch.totable(before)),
-                                1,
+        return tensor:reshape(unpack(torch.totable(before)), 1,
                                 unpack(torch.totable(after)))
     else
         error('invalid dim')
     end
 end
 
--- local t = torch.rand(2,3,4)
--- print(broadcast(t,1):size())
--- print(broadcast(t,2):size())
--- -- print(broadcast(t,3):size())
--- print(broadcast(t,4):size())
+function unpack_batch(batch, sim)
+    local this, context, y, mask = unpack(batch)
+    local x = {this=this,context=context}
+
+    if not sim then
+        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
+                            {2,mp.num_future})
+    end
+
+    -- unpack inputs
+    local this_past     = convert_type(x.this:clone(), mp.cuda)
+    local context       = convert_type(x.context:clone(), mp.cuda)
+    local this_future   = convert_type(y:clone(), mp.cuda)
+
+    assert(this_past:size(1) == mp.batch_size and
+            this_past:size(2) == mp.input_dim)  -- TODO RESIZE THIS
+    assert(context:size(1) == mp.batch_size and
+            context:size(2)==mp.seq_length
+            and context:size(3) == mp.input_dim)
+    assert(this_future:size(1) == mp.batch_size and
+            this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
+
+    -- here you have to create a table of tables
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local input = {}
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
+    end
+
+    return input, this_future
+end
+
+
+function preprocess_input(mask)
+    -- in: {(bsize, input_dim), (bsize, mp.seq_length, input_dim)}
+    -- out: table of length torch.find(mask,1)[1] of pairs {(bsize, input_dim), (bsize, input_dim)}
+
+    local this_past = nn.Identity()()
+    local context = nn.Identity()()
+
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local input = {}
+    for t = 1, torch.find(mask,1)[1] do
+        table.insert(input, nn.Identity()
+                        ({this_past, nn.Squeeze()(nn.Select(2,t)(context))}))
+    end
+    input = nn.Identity()(input)
+    return nn.gModule({this_past, context}, {input})
+end
+
+
+function checkpointtofloat(checkpoint)
+    -- just mutates checkpoint though
+    checkpoint.model.network:clearState()
+    checkpoint.model.network:float()
+    checkpoint.model.criterion:float()
+    checkpoint.model.identitycriterion:float()
+    checkpoint.model.theta.params = checkpoint.model.theta.params:float()
+    checkpoint.model.theta.grad_params=checkpoint.model.theta.grad_params:float()
+    return checkpoint
+end
+
+function checkpointtocuda(checkpoint)
+    -- just mutates checkpoint though
+    checkpoint.model.network:clearState()
+    checkpoint.model.network:cuda()
+    checkpoint.model.criterion:cuda()
+    checkpoint.model.identitycriterion:cuda()
+    checkpoint.model.theta.params = checkpoint.model.theta.params:cuda()
+    checkpoint.model.theta.grad_params=checkpoint.model.theta.grad_params:cuda()
+    return checkpoint
+end
+
+-- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
+-- p = preprocess_input(mask)
+--
+-- bsize = 3
+-- tp = torch.rand(bsize,10)
+-- c = torch.rand(bsize,10,10)
+-- x = p:forward({tp, c})
+--
+-- print(x)
+--
+-- p:backward({tp,c},x)
+-- print(p.gradInput[1])
