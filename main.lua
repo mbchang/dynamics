@@ -1,4 +1,6 @@
--- Michael B Chang
+[{
+
+    }]-- Michael B Chang
 
 -- Third Party Imports
 require 'torch'
@@ -230,13 +232,15 @@ function train(start_iter, epoch_num)
         train_loader.priority_sampler:set_epcnum(epoch_num)
         local new_params, train_loss = optimizer(feval_train,
                                 model.theta.params, optim_state)  -- next batch
+
+        -- print('norm',train_loader.priority_sampler.batch_weights:norm())
         assert(new_params == model.theta.params)
 
         trainLogger:add{['log MSE loss (train set)'] = torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
 
         -- print
-        if t % mp.print_every == 0 then
+        if (t-start_iter+1) % mp.print_every == 0 then
             print(string.format("epoch %2d\titeration %2d\tloss = %6.8f"..
                             "\tgradnorm = %6.4e\tbatch = %4d\t"..
                             "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
@@ -249,7 +253,7 @@ function train(start_iter, epoch_num)
         end
 
         -- validate
-        if t % mp.val_every == 0 then
+        if (t-start_iter+1) % mp.val_every == 0 then
             v_train_loss, v_val_loss, v_tets_loss = validate()
             train_losses[#train_losses+1] = v_train_loss
             val_losses[#val_losses+1] = v_val_loss
@@ -258,7 +262,7 @@ function train(start_iter, epoch_num)
                     mp.val_every % mp.save_every == 0)
 
             -- save
-            if t % mp.save_every == 0 then
+            if (t-start_iter+1) % mp.save_every == 0 then
                 local model_file = string.format('%s/epoch%.2f_%.4f.t7',
                                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
@@ -278,12 +282,12 @@ function train(start_iter, epoch_num)
 
         -- lr decay
         -- here you can adjust the learning rate based on val loss
-        if t >= mp.lrdecayafter and t % mp.lrdecay_every == 0 then
+        if t >= mp.lrdecayafter and (t-start_iter+1) % mp.lrdecay_every == 0 then
             optim_state.learningRate =optim_state.learningRate*mp.lrdecay
             print('Learning rate is now '..optim_state.learningRate)
         end
 
-        if t % train_loader.num_batches == 0 then
+        if (t-start_iter+1) % train_loader.num_batches == 0 then
             epoch_num = t / train_loader.num_batches + 1
         end
 
@@ -448,7 +452,9 @@ function run_experiment_load()
 
     -- These are things you have to set; although priority sampler might not be reset
     local iters = mp.val_every * #checkpoint.val_losses + 1
-    local epoch_num = math.floor(iters / train_loader.num_batches) + 1
+    -- local epoch_num = math.floor(iters / train_loader.num_batches) + 1
+    local epoch_num = 1
+
     mp.lr = 1.077384359378e-05
     optim_state = {learningRate   = mp.lr}
 

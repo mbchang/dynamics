@@ -21,6 +21,7 @@
 require 'torchx'
 require 'json_interface'
 require 'data_utils'
+require 'paths'
 
 local data_process = {}
 data_process.__index = data_process
@@ -55,7 +56,7 @@ function data_process:normalize(unnormalized_trajectories)
     normalized[{{},{},{},{px,py}}] = normalized[{{},{},{},{px,py}}]/self.pnc
 
     -- normalize velocity
-    normalized[{{},{},{},{px,py}}] = normalized[{{},{},{},{px,py}}]/self.vnc
+    normalized[{{},{},{},{vx,vy}}] = normalized[{{},{},{},{vx,vy}}]/self.vnc
 
     return normalized
 end
@@ -208,7 +209,19 @@ function data_process:split2datasets(examples)
             table.insert(test, batch)
         end
     end
-    return {train, val, test}
+    return {train=train, val=val, test=test}
+end
+
+function data_process:save_batches(datasets, savefolder)
+    if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
+    for k,v in pairs(datasets) do
+        local dataset_folder = savefolder..'/'..k
+        if not paths.dirp(dataset_folder) then paths.mkdir(dataset_folder) end
+        for i=1,#v do
+            local batch_file = dataset_folder..'/batch'..i
+            torch.save(batch_file,v[i])
+        end
+    end
 end
 
 -- main
@@ -226,10 +239,25 @@ function data_process:create_datasets()
         table.insert(all_batches, {focus_batches[b], context_batches[b]})
     end
     local datasets = self:split2datasets(all_batches)
-    
-    assert(false)
-    -- self:save(datasets, name)
+    self:save_batches(datasets, 'debug')
 end
+
+-- to be compatible with previous code, for now
+function regression_interface(datasets)
+    -- just need the mask as well as split into past and future
+end
+
+-- th> a
+-- {
+--   1 : FloatTensor - size: 50x2x9
+--   2 : FloatTensor - size: 50x10x2x9
+--   3 : FloatTensor - size: 50x2x9
+--   4 : FloatTensor - size: 10
+--   5 : "worldm5_np=2_ng=0_slow"
+--   6 : 1
+--   7 : 50
+--   8 : FloatTensor - size: 50x10x2x9
+-- }
 
 -- return data_process
 

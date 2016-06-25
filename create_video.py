@@ -133,4 +133,4 @@ if __name__ == '__main__':
     # create_grid_mutation(root + 'batch_60_input_1_along_16')
 
 
-    create_gif('/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_4balls_lr_0.0003_sharpen_1_model_lstmobj/videos')
+    create_gif('/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/videos')

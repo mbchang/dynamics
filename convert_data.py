@@ -307,7 +307,7 @@ def create_datasets(data_root, num_train_samples_per, num_val_samples_per, num_t
     for world_config in os.listdir(data_root):
         print world_config
         # if filterconfig in world_config:  # TAKEOUT
-        any(f in world_config for f in filters):
+        if any(f in world_config for f in filters):
             print '\n########################################################################'
             print 'WORLD CONFIG:', world_config
             config_path = os.path.join(data_root, world_config)
@@ -515,11 +515,11 @@ def render(goos, particles, observed_path, framerate, movie_folder, movieName, s
 
     # WINSIZE = 640,480
     # WINSIZE = 384,288
-    # WINSIZE = G_w_width, G_w_height
-    width, height = G_w_width, G_w_height
+    # WINSIZE = int(G_w_width), int(G_w_height)
+    width, height = int(G_w_width), int(G_w_height)
 
     pygame.init()
-    screen = pygame.display.set_mode(WINSIZE)
+    screen = pygame.display.set_mode((width, height))
     clock = pygame.time.Clock()
     screen.fill(THECOLORS["white"])
     pygame.draw.rect(screen, THECOLORS["black"], (3,1,width-1,height+1), 45)

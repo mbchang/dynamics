@@ -13,7 +13,6 @@ require 'utils'
 require 'pl.stringx'
 require 'pl.Set'
 local T = require 'pl.tablex'
-local PS = require 'priority_sampler'
 
 local datasaver = {}
 datasaver.__index = datasaver
