@@ -12,7 +12,6 @@
 
 -- group into batches?
 
-
 -- fields: relative, object_dim
 
 -- also need to split past/future? Or should that be in the computation?
@@ -22,6 +21,7 @@ require 'torchx'
 require 'json_interface'
 require 'data_utils'
 require 'paths'
+require 'nn'
 
 local data_process = {}
 data_process.__index = data_process
@@ -35,8 +35,8 @@ function data_process.create(args)
     self.vnc = args.velocity_normalize_cnstant
     self.relative = args.relative -- bool
     self.masses = args.masses -- {0.33, 1.0, 3.0, 1e30}
-    self.rsi = args.raw_state_indices -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
-    self.si = args.state_indices -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
+    self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
+    self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
     self.bsize = args.batch_size
 
@@ -85,7 +85,7 @@ end
 
 function data_process:onehot2mass(onehot)
     assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
-    return self.masses[torch.find(onehot, 1)]
+    return self.masses[torch.find(onehot, 1)[1]]
 end
 
 function data_process:mass2onehotall(trajectories)
@@ -110,6 +110,30 @@ function data_process:mass2onehotall(trajectories)
     local trajectoriesonehot = torch.cat({before, masses, after}, 4)
 
     return trajectoriesonehot
+end
+
+-- Do I need a onehot2massall method?
+function data_process:onehot2massall(trajectoriesonehot)
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.vy}}]:clone()
+    local after = trajectoriesonehot[{{},{},{},{self.si.m[2]+1,-1}}]:clone()
+    local onehot_masses = trajectoriesonehot[{{},{},{},{unpack(self.si.m)}}]:clone()
+
+    local num_ex = onehot_masses:size(1)
+    local num_obj = onehot_masses:size(2)
+    local num_steps = onehot_masses:size(3)
+
+    local masses = torch.zeros(num_ex*num_obj*num_steps, 1)
+    onehot_masses:resize(num_ex*num_obj*num_steps, #self.masses)
+
+    for row=1,onehot_masses:size(1) do
+        masses[{{row}}] = self:onehot2mass(torch.squeeze(onehot_masses[{{row}}]))
+    end
+    masses:resize(num_ex, num_obj, num_steps, 1)
+
+    -- join
+    local trajectories = torch.cat({before, masses, after}, 4)
+
+    return trajectories
 end
 
 --[[ Expands the number of examples per batch to have an example per particle
@@ -179,6 +203,14 @@ function data_process:expand_for_each_object(unfactorized)
     return focus, context
 end
 
+-- we also should have a method that divides the focus and context into past and future
+-- this assumes we are predicting for everybody
+function data_process:condense(focus, context)
+    -- duplicates may exist, they may not
+    focus = nn.Unsqueeze(2, 3):forward(focus:clone())
+    return torch.cat({focus, context},2)
+end
+
 function data_process:split2batches(data)
     local num_examples = data:size(1)
     assert(num_examples % self.bsize == 0)
@@ -224,7 +256,7 @@ function data_process:save_batches(datasets, savefolder)
     end
 end
 
--- main
+-- save datasets
 function data_process:create_datasets()
     -- each example is a (focus, context) pair
     local json_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json'
@@ -242,34 +274,56 @@ function data_process:create_datasets()
     self:save_batches(datasets, 'debug')
 end
 
+-- this method converts torch back to json file
+-- input: (bsize, num_obj, steps, dim) for focus and context, with onehotmass, and normalized
+-- batch size can be one
+-- assume that the trajectories are not sliced into past and future for now
+function data_process:record_trajectories(batch, jsonfile)
+    -- now I have to combine focus and context and remove duplicates?
+    local trajectories = self:condense(unpack(batch))
+
+    -- onehotall2mass
+    local trajectories = self:onehot2massall(trajectories)
+    local unnormalized = self:unnormalize(trajectories)
+     dump_data_json(unnormalized, jsonfile)
+end
+
+
+
+
+
+-- Now I need functions to sample batches
+-- that would require me to keep some internal state for the priority table though.
+-- when do I want to create that field? Or should I create a completely new file?
+-- I think I should create a new file, iniialize with
+
 -- to be compatible with previous code, for now
 function regression_interface(datasets)
     -- just need the mask as well as split into past and future
+
+    -- th> a
+    -- {
+    --   1 : FloatTensor - size: 50x2x9
+    --   2 : FloatTensor - size: 50x10x2x9
+    --   3 : FloatTensor - size: 50x2x9
+    --   4 : FloatTensor - size: 10
+    --   5 : "worldm5_np=2_ng=0_slow"
+    --   6 : 1
+    --   7 : 50
+    --   8 : FloatTensor - size: 50x10x2x9
+    -- }
 end
 
--- th> a
--- {
---   1 : FloatTensor - size: 50x2x9
---   2 : FloatTensor - size: 50x10x2x9
---   3 : FloatTensor - size: 50x2x9
---   4 : FloatTensor - size: 10
---   5 : "worldm5_np=2_ng=0_slow"
---   6 : 1
---   7 : 50
---   8 : FloatTensor - size: 50x10x2x9
--- }
+
 
 -- return data_process
 
-args = {position_normalize_constant=800,
-        velocity_normalize_cnstant=50,
-        relative=true,
-        masses={0.33, 1.0, 3.0, 1e30},
-        raw_state_indices={px=1, py=2, vx=3, vy=4, m=5, oid=6},
-        state_indices={px={1}, py={2}, vx={3}, vy={4}, m={5,8}, oid={9}},
-        permute_context=False,
-        batch_size=4}
 
+local args = require 'config'
 
 dp = data_process.create(args)
-dp:create_datasets()
+-- dp:create_datasets()
+
+-- now test if it can record
+batch1 = torch.load('debug/train/batch1')
+dp:record_trajectories(batch1, 'batch1.json')

@@ -39,7 +39,6 @@ function dump_data_json(data, jsonfile)
     local num_obj = data:size(2)
     local T = data:size(3)
 
-    -- perhaps we may come to realize that a better naming system would work?
     local trajectories = {}
     for e=1,num_examples do
         trajectories[e] = {}
@@ -61,8 +60,8 @@ function dump_data_json(data, jsonfile)
 end
 
 
-local d = load_data_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json')
-dump_data_json(d, '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls_dump.json')
-local d2 = load_data_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json')
-
-print((d-d2):sum())
+-- local d = load_data_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json')
+-- dump_data_json(d, '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls_dump.json')
+-- local d2 = load_data_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json')
+--
+-- print((d-d2):sum())
