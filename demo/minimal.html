@@ -20,6 +20,8 @@
         <script type="text/javascript" src="../node_modules/matter-js/build/matter.js"></script>
         <script type="text/javascript" src="../node_modules/underscore/underscore-min.js"></script>
         <script type="text/javascript" src="../node_modules/gaussian/lib/gaussian.js"></script>
+        <script type="text/javascript" src="../node_modules/requirejs/require.js"></script>
+        <!-- <script type="text/javascript" src="../node_modules/jsonfile/index.js"></script> -->
         <!-- <script type="text/javascript" src="../node_modules/sleep/index.js"></script> -->
         <script type="text/javascript" src="../common.js"></script>
 
@@ -32,6 +34,12 @@
 
         <!-- matter demo code -->
         <link rel="stylesheet" href="./css/style.css" type="text/css">
+        <script type="text/javascript" src="../balls.json"></script>
+        <!-- <script type="text/javascript">
+               $(document).ready(function(e) {
+                     alert(balls);
+               });
+            </script> -->
         <script type="text/javascript" src="./js/Examples.js"></script>
         <script type="text/javascript" src="./js/Demo_minimal.js"></script>
 
@@ -40,6 +48,7 @@
     <body>
         <div class="container">
             <h1>Matter.js Demo</h1>
+            <input type="file" onchange="loadFile(this.files[0])" />
             <div id="canvas-container"></div>
         </div>
     </body>

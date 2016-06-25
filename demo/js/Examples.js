@@ -1,7 +1,7 @@
 
 var _isBrowser = typeof window !== 'undefined' && window.location,
-    Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
-    // Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
+    // Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
+    Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
 
 var Example = {};
 Matter.Example = Example;
@@ -1978,7 +1978,7 @@ if (!_isBrowser) {
             var self = {}; // instance of the Hockey class
 
             // these should not be mutated
-            params = {num_obj: 2,
+            params = {num_obj: 3,
                       cx: 400,
                       cy: 300,
                       max_v0: 20,
@@ -2018,6 +2018,7 @@ if (!_isBrowser) {
                                                              friction: 0,
                                                              frictionAir: 0,
                                                              frictionStatic: 0,
+                                                             mass: 1.0,
                                                              inertia: Infinity,
                                                              inverseInertia: 0,
                                                              label: "Entity"}));

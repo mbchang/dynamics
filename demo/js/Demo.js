@@ -13,8 +13,8 @@
         _isMobile = _isBrowser && /(ipad|iphone|ipod|android)/gi.test(navigator.userAgent),
         _isAutomatedTest = !_isBrowser || window._phantom;
 
-    var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
-    // var Matter = _isBrowser ? window.Matter : require('matter-js');
+    // var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
+    var Matter = _isBrowser ? window.Matter : require('matter-js');
 
     var Demo = {};
     Matter.Demo = Demo;
@@ -408,47 +408,51 @@
         }
     };
 
-    Demo.simulate = function(demo, scenarioName, numsteps) {
+    Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
         var show = false  // this is a flag we will toggle
 
         var scenario = Example[scenarios[scenarioName]](demo)
         var sim_file = scenarioName + '.json',
-            trajectory = [],
+            trajectories = [],
             i, id, k;
 
-        // initialize trajectory conatiner
-        for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!  // we need a num_obj parameter!
-            trajectory[id] = [];
-        }
+        for (s = 0; s < numsamples; s ++) {
+            var trajectory = []
 
-        // Now iterate through all ids to find which ones have the "Entity" label, store those ids
-        var entities = Composite.allBodies(scenario.engine.world)
-                        .filter(function(elem) {
-                                    return elem.label === 'Entity';
-                                })
-
-        var entity_ids = entities.map(function(elem) {
-                            return elem.id});
-
-        assert(entity_ids.length == scenario.params.num_obj)
-
-        // run the engine
-        for (i = 0; i < numsteps; i++) {
-            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
-                trajectory[id][i] = {};
-                for (k of ['position', 'velocity', 'mass']){
-                    var body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
-                    trajectory[id][i][k] = utils.copy(body[k])
-                }
+            // initialize trajectory conatiner
+            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!  // we need a num_obj parameter!
+                trajectory[id] = [];
             }
-            Engine.update(scenario.engine);
-            // I should also put a render.update here too
-        }
-        // console.log(trajectory[id-1])
-        // assert(false)
 
-        // save to file
-        jsonfile.writeFileSync(sim_file, trajectory, {spaces: 2});
+            // Now iterate through all ids to find which ones have the "Entity" label, store those ids
+            var entities = Composite.allBodies(scenario.engine.world)
+                            .filter(function(elem) {
+                                        return elem.label === 'Entity';
+                                    })
+
+            var entity_ids = entities.map(function(elem) {
+                                return elem.id});
+
+            assert(entity_ids.length == scenario.params.num_obj)
+
+            // run the engine
+            for (i = 0; i < numsteps; i++) {
+                for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+                    trajectory[id][i] = {};
+                    for (k of ['position', 'velocity', 'mass']){
+                        var body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
+                        trajectory[id][i][k] = utils.copy(body[k])
+                    }
+                }
+                Engine.update(scenario.engine);
+                // I should also put a render.update here too
+            }
+
+            trajectories[s] = trajectory;
+        }
+
+        // save to file: (balls, timesteps, state)
+        jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
     };
 
     // main
@@ -456,6 +460,6 @@
         var demo = Demo.init()  // don't set the scene name yet
 
         // can put a for loop here if you want to save logs
-        Demo.simulate(demo, env, 50);
+        Demo.simulate(demo, env, 50, 20);
     }
 })();

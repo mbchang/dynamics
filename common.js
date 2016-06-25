@@ -1,3 +1,6 @@
+// if (!_isBrowser) {
+//     var jsonfile = require('jsonfile')
+// }
 
 // common functions (I could pass these in later)
 euc_dist = function(p1, p2) {
@@ -56,6 +59,12 @@ initialize_velocities = function(num_obj, max_v0) {
     return v0;
 }
 
+// load_trajectory = function(file_path) {
+//     var trajectory = jsonfile.readFileSync(file_path)
+//     console.log(trajectory)
+//     console.log(trajectory.length)
+// }
+
 
 // Export
 var _isBrowser = typeof window !== 'undefined' && window.location
@@ -68,3 +77,5 @@ if (!_isBrowser) {
         this.initialize_velocities = initialize_velocities
     };
 }
+
+// load_trajectory('balls.json')
