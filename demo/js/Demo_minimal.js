@@ -21,6 +21,7 @@
 
     if (!_isBrowser) {
         var jsonfile = require('jsonfile')
+        var CircularJSON = require('circular-json')
         var assert = require('assert')
         var utils = require('../../utils')
         var sleep = require('sleep')
@@ -46,9 +47,12 @@
 
     // Create the engine
     Demo.run = function(json_data) {
+
+        //TODO: note that here you should load the demo engine with the json file
+
         var demo = {}
         demo.engine = Engine.create()
-        demo.runner = Engine.run(demo.engine)  // should I do this?
+        demo.runner = Engine.run(demo.engine)
         demo.container = document.getElementById('canvas-container');
         demo.render = Render.create({element: demo.container, engine: demo.engine})
         Render.run(demo.render)
@@ -74,66 +78,30 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = json_data[0]
+        var trajectories = json_data[0]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 
-        // you need get their ids though, perhaps save their id too
-        // console.log(json_data[0])
-        // assert(false)
-
-
-
-        var i = 0, howManyTimes = 100;
+        var i = 0
         function f() {
             console.log( i );
-
-            ////////////////////////////////////////////////////////////////////
-            // here you can manually set the postion.
-            // Let's try it. Let's manually reset the position
-
-            // HACKY, possibly can pass this into the Example[scenName](demo) as params
-            // var num_obj = 2
-            // var obj_radius = 60
-            // rand_pos_fn = function() {
-            //     return rand_pos(
-            //         {hi: 2*demo.w_cx - obj_radius - 1, lo: obj_radius + 1},
-            //         {hi: 2*demo.w_cy - obj_radius - 1, lo: obj_radius + 1});
-            //     };
-            // var p0 = initialize_positions(num_obj, obj_radius, rand_pos_fn)
-            //
             var entities = Composite.allBodies(demo.engine.world)
                 .filter(function(elem) {
                             return elem.label === 'Entity';
                         })
             var entity_ids = entities.map(function(elem) {
                                 return elem.id});
-            //
-            // for (id = 0; id < num_obj; id++) { //id = 0 corresponds to world!
-            //     var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
-            //     // set the position here
-            //     Body.setPosition(body, p0[id])
-            // }
 
-
-            // here instead we use set the ball's position based on the trajectory given by the file
-
-            for (id = 0; id < num_obj; id++) { //id = 0 corresponds to world!
+            for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
                 Body.setPosition(body, trajectories[id][i].position)
             }
 
-
-
-
-            ////////////////////////////////////////////////////////////////////
-
-
             Runner.tick(demo.runner, demo.engine);
             i++;
-            if( i < num_steps ){  // here you could replace true with a stopping condition
-                setTimeout( f, 10 );  // change this to 0 and see what happens!
+            if( i < num_steps ){
+                setTimeout( f, 1000 );
             }
         }
         f();
@@ -142,19 +110,12 @@
 
     // call init when the page has loaded fully
     if (!_isAutomatedTest) {
-        // if (window.addEventListener) {
-        //     window.addEventListener('load', Demo.run);
-        // } else if (window.attachEvent) {
-        //     window.attachEvent('load', Demo.run);
-        // }
-    }
-
-    window.loadFile = function loadFile(file){
-        var fr = new FileReader();
-        fr.onload = function(){
-            Demo.run(JSON.parse(fr.result))
+        window.loadFile = function loadFile(file){
+            var fr = new FileReader();
+            fr.onload = function(){
+                Demo.run(window.CircularJSON.parse(fr.result))
+            }
+            fr.readAsText(file)
         }
-        fr.readAsText(file)
     }
-
 })();

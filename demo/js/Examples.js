@@ -1934,7 +1934,7 @@ if (!_isBrowser) {
         engine.world.gravity.x = 0;
 
         // now, can I make it generate random initial locations and velocities?
-        var num_obj = 3
+        var num_obj = 5
         // use demo.w_offset, demo.w_cx, demo.w_cy
 
         world.bounds = {
@@ -1978,7 +1978,7 @@ if (!_isBrowser) {
             var self = {}; // instance of the Hockey class
 
             // these should not be mutated
-            params = {num_obj: 3,
+            params = {num_obj: 3,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                       cx: 400,
                       cy: 300,
                       max_v0: 20,
@@ -1987,6 +1987,8 @@ if (!_isBrowser) {
 
             // var engine = Engine.create();
             self.engine = demo.engine;
+            // console.log('in example')
+            // console.log(self.engine)  // this is not the loaded engine!
             self.engine.world.gravity.y = 0;
             self.engine.world.gravity.x = 0;
             self.engine.world.bounds = { min: { x: 0, y: 0 },

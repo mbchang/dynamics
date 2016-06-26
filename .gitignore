@@ -6,9 +6,14 @@ demo/js/DemoMobile.js
 demo/js/lib/
 demo/mobile.html
 demo/svg/
+demo/js/require2.js
+demo/js/manual_control.js
 
 # these are scratch work
 hi.json
 out.json
 velocity_debug.js
 minimal.js
+*.json
+saved/
+matter-dev-github.js

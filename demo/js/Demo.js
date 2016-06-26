@@ -412,7 +412,7 @@
         var show = false  // this is a flag we will toggle
 
         var scenario = Example[scenarios[scenarioName]](demo)
-        var sim_file = scenarioName + '.json',
+        var sim_file = scenarioName + 'engine.json',
             trajectories = [],
             i, id, k;
 
@@ -451,8 +451,14 @@
             trajectories[s] = trajectory;
         }
 
+        console.log(scenario.engine.world)
+        console.log(scenario.engine.world.bodies[0].position)
+
+
         // save to file: (balls, timesteps, state)
-        jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
+        // jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
+        console.log('Wrote to file')
+        jsonfile.writeFileSync(sim_file, scenario.engine.world, {spaces: 2});
     };
 
     // main
