@@ -157,7 +157,7 @@ function broadcast(tensor, dim)
 end
 
 function unpack_batch(batch, sim)
-    local this, context, y, mask = unpack(batch)
+    local this, context, y, context_future, mask = unpack(batch)
     local x = {this=this,context=context}
 
     if not sim then
@@ -229,6 +229,30 @@ function checkpointtocuda(checkpoint)
     checkpoint.model.theta.params = checkpoint.model.theta.params:cuda()
     checkpoint.model.theta.grad_params=checkpoint.model.theta.grad_params:cuda()
     return checkpoint
+end
+
+function mj_interface(batch)
+    -- {
+    --   1 : FloatTensor - size: 50x2x9
+    --   2 : FloatTensor - size: 50x10x2x9
+    --   3 : FloatTensor - size: 50x2x9
+    --   4 : FloatTensor - size: 10
+    --   5 : "worldm5_np=2_ng=0_slow"
+    --   6 : 1
+    --   7 : 50
+    --   8 : FloatTensor - size: 50x10x2x9
+    -- }
+
+    local focus_past = batch[1]
+    local context_past = batch[2]
+    local focus_future = batch[3]
+    local mask = batch[4]
+    local config_name = batch[5]
+    local start = batch[6]
+    local finish = batch[7]
+    local context_future = batch[8]
+
+    return {focus_past, context_past, focus_future, context_future, mask}
 end
 
 -- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})

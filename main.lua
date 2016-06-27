@@ -23,7 +23,7 @@ cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
-cmd:option('-name', "refactortest", 'experiment name')
+cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 
 -- dataset
@@ -84,6 +84,8 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
+    mp.save_every = 100
+    mp.val_every = 100
     mp.plot = false--true
 	mp.cuda = false
 	mp.cunn = false
@@ -197,6 +199,7 @@ end
 function feval_train(params_)  -- params_ should be first argument
 
     local batch = train_loader:sample_priority_batch(mp.sharpen)
+    batch = mj_interface(batch) -- NOTE CHANGE BATCH HERE
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
 
@@ -296,11 +299,13 @@ function test(dataloader, params_, saveoutput)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         local batch = dataloader:sample_sequential_batch()
+        batch = mj_interface(batch)
+        -- NOTE CHANGE BATCH HERE
+
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
-        local this, context, y, mask, config,
-                                start, finish, context_future = unpack(batch)
+        local this, context, y, context_future, mask = unpack(batch)   -- NOTE CHANGE BATCH HERE
 
 
         if mp.model == 'lstmtime' then

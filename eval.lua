@@ -11,8 +11,8 @@ require 'sys'
 require 'pl'
 require 'data_utils'
 
-require 'nn'
-require 'rnn'
+-- require 'nn'
+require 'rnn'  -- also installs moses (https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md), like underscore.js
 require 'torch'
 require 'nngraph'
 require 'Base'
@@ -29,13 +29,13 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('-name', "refactortest", 'experiment name')
+cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 -- dataset
 cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-ns', 3, 'number of test samples')
+cmd:option('-ns', 3, 'number of test batches')
 cmd:text()
 
 -- parse input params
@@ -108,6 +108,7 @@ function backprop2input()
 
     -- get batch
     local batch = test_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
+    -- NOTE CHANGE BATCH HERE
     local this, context, y, mask = unpack(batch)
     local x = {this=this,context=context}
 
@@ -212,11 +213,12 @@ function test(dataloader, params_, saveoutput)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         local batch = dataloader:sample_sequential_batch()
+        batch = mj_interface(batch)
+        -- NOTE CHANGE BATCH HERE
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
-        local this, context, y, mask, config,
-                                start, finish, context_future = unpack(batch)
+        local this, context, y, context_future, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
 
 
         if mp.model == 'lstmtime' then
@@ -326,9 +328,11 @@ function simulate(dataloader, params_, saveoutput, numsteps)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         -- get data
-        local this_orig, context_orig, y_orig, mask,
-                config, start, finish, context_future_orig =
-                unpack(dataloader:sample_sequential_batch())
+        local batch = dataloader:sample_sequential_batch()
+        batch = mj_interface(batch)
+
+        -- get data
+        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
 
         local this, context = this_orig:clone(), context_orig:clone()
         context_future = context_future_orig:clone():reshape(
@@ -432,16 +436,19 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
 
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
-    -- for i = 1,dataloader.num_batches do
     for i = 1, mp.ns do
         -- if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
         -- xlua.progress(i, dataloader.num_batches)
         xlua.progress(i, mp.ns)
 
+        local batch = dataloader:sample_sequential_batch()
+        batch = mj_interface(batch)
+        -- print('simualte all')
+        -- print(batch)
+        -- assert(false)
 
         -- get data
-        local this_orig, context_orig, y_orig, mask, config, start, finish,
-            context_future_orig = unpack(dataloader:sample_sequential_batch())
+        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
 
         -- past: (bsize, mp.seq_length+1, mp.numpast*mp.objdim)
         -- future: (bsize, mp.seq_length+1, (mp.winsize-mp.numpast), mp.objdim)
@@ -484,11 +491,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 local y = torch.squeeze(future[{{},{j},{t}}])
 
-                local batch = {this, context, y, mask, config, start,
-                                finish, _}
+                local batch = {this, context, y, _, mask}
 
                 -- predict
-                local _, pred = model:fp(params_,batch,true)
+                local _, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
@@ -658,7 +664,7 @@ function predict_simulate_all()
     -- mp.winsize = 80  -- total number of frames
     -- mp.winsize = 20
 	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-    print(simulate_all(test_loader, checkpoint.model.theta.params, false, 18))
+    print(simulate_all(test_loader, checkpoint.model.theta.params, false, 7))
 end
 
 function predict_b2i()
@@ -692,7 +698,7 @@ if mp.mode == 'sim' then
     predict_simulate_all()
 elseif mp.mode == 'b2i' then
     predict_b2i()
-elseif mp.mode == 'pred'
+elseif mp.mode == 'pred' then
     predict()
 else
     error('unknown mode')
