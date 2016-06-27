@@ -93,7 +93,8 @@ function dataloader:load_batch_id(id)
     -- convert to cuda or double
     this,context,y,context_future = unpack(map(convert_type,{this,context,y,context_future},self.cuda))
 
-    nextbatch = {this, context, y, mask, config, start, finish, context_future}
+    -- nextbatch = {this, context, y, mask, config, start, finish, context_future}
+    nextbatch = {this, context, y, context_future, mask}
     collectgarbage()
     return nextbatch
 end

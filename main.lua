@@ -199,7 +199,7 @@ end
 function feval_train(params_)  -- params_ should be first argument
 
     local batch = train_loader:sample_priority_batch(mp.sharpen)
-    batch = mj_interface(batch) -- NOTE CHANGE BATCH HERE
+    -- batch = mj_interface(batch) -- NOTE CHANGE BATCH HERE
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
 
@@ -299,7 +299,7 @@ function test(dataloader, params_, saveoutput)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         local batch = dataloader:sample_sequential_batch()
-        batch = mj_interface(batch)
+        -- batch = mj_interface(batch)
         -- NOTE CHANGE BATCH HERE
 
         local test_loss, prediction = model:fp(params_, batch)

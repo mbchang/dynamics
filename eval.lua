@@ -213,8 +213,6 @@ function test(dataloader, params_, saveoutput)
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
         local batch = dataloader:sample_sequential_batch()
-        batch = mj_interface(batch)
-        -- NOTE CHANGE BATCH HERE
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
@@ -329,7 +327,7 @@ function simulate(dataloader, params_, saveoutput, numsteps)
 
         -- get data
         local batch = dataloader:sample_sequential_batch()
-        batch = mj_interface(batch)
+        -- batch = mj_interface(batch)
 
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
@@ -442,7 +440,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         xlua.progress(i, mp.ns)
 
         local batch = dataloader:sample_sequential_batch()
-        batch = mj_interface(batch)
+        -- batch = mj_interface(batch)
         -- print('simualte all')
         -- print(batch)
         -- assert(false)
