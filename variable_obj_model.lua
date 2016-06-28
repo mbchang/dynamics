@@ -183,10 +183,18 @@ function model.create(mp_, preload, model_path)
     return self
 end
 
-
+-- Input to fp
+-- {
+--   1 : DoubleTensor - size: 4x2x9
+--   2 : DoubleTensor - size: 4x2x2x9
+--   3 : DoubleTensor - size: 4x48x9
+--   4 : DoubleTensor - size: 4x2x48x9
+--   5 : DoubleTensor - size: 10
+-- }
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
+
     local input, this_future = unpack_batch(batch, sim)
 
     local prediction = self.network:forward(input)

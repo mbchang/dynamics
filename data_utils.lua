@@ -165,8 +165,6 @@ function unpack_batch(batch, sim)
     local this, context, y, context_future, mask = unpack(batch)
     local x = {this=this,context=context}
 
-    -- print(batch)
-
     -- TODO: you need to define winsize, numpast, object dim!
     -- print({y:size(1), mp.winsize-mp.num_past, mp.object_dim})
 
@@ -181,16 +179,23 @@ function unpack_batch(batch, sim)
     local context       = convert_type(x.context:clone(), mp.cuda)
     local this_future   = convert_type(y:clone(), mp.cuda)
 
+    -- print('hey')
+    -- print(this_past:size())
+
     -- reshape
     this_past:resize(this_past:size(1), this_past:size(2)*this_past:size(3))
     context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
     this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
+
+    -- print(mp.input_dim)
 
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim)  -- TODO RESIZE THIS
     assert(context:size(1) == mp.batch_size and
             context:size(2)==torch.find(mask,1)[1]
             and context:size(3) == mp.input_dim)
+
+
     assert(this_future:size(1) == mp.batch_size and
             this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
 

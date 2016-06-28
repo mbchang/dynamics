@@ -20,7 +20,8 @@ require 'IdentityCriterion'
 
 -- Local Imports
 local model_utils = require 'model_utils'
-local D = require 'DataLoader'
+-- local D = require 'DataLoader'
+local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
@@ -46,11 +47,13 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
+    -- mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
+    --                     'SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
-                        'SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
+                        'SuperUROP/Code/dynamics/debug'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 10 --1
+	mp.batch_size = 4 --1
     mp.max_iter = 5*252
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -439,31 +442,30 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- xlua.progress(i, dataloader.num_batches)
         xlua.progress(i, mp.ns)
 
-        local batch = dataloader:sample_sequential_batch()
-        -- batch = mj_interface(batch)
-        -- print('simualte all')
-        -- print(batch)
-        -- assert(false)
+        local batch = dataloader:sample_sequential_batch()  -- TODO: perhaps here I should tell it what my desired windowsize should be
 
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
+        -- crop to number of timestesp
+        y_orig = y_orig[{{},{1, numsteps}}]
+        context_future_orig = context_future_orig[{{},{},{1, numsteps}}]
 
-        -- past: (bsize, mp.seq_length+1, mp.numpast*mp.objdim)
-        -- future: (bsize, mp.seq_length+1, (mp.winsize-mp.numpast), mp.objdim)
-        local past = torch.cat({this_orig:reshape(
-                    this_orig:size(1),1,this_orig:size(2)), context_orig},2)
-        local future = torch.cat({y_orig:reshape(
-                    y_orig:size(1),1,y_orig:size(2)), context_future_orig},2)
+        local num_particles = torch.find(mask,1)[1] + 1
 
-        -- reshape future
-        future = future:reshape(mp.batch_size, mp.seq_length+1,
-                                mp.winsize-mp.num_past, mp.object_dim)
+        -- past: (bsize, num_particles, mp.numpast*mp.objdim)
+        -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
+
+        local past = torch.cat({nn.Unsqueeze(2,3):forward(this_orig:clone()), context_orig},2)
+        local future = torch.cat({nn.Unsqueeze(2,3):forward(y_orig:clone()), context_future_orig},2)
+
+        assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
         local pred_sim = model_utils.transfer_data(
-                            torch.zeros(mp.batch_size, mp.seq_length+1,
+                            torch.zeros(mp.batch_size, num_particles,
                                         numsteps, mp.object_dim),
                             mp.cuda)
-        local num_particles = torch.find(mask,1)[1] + 1
+
+        --- good up to here
 
         -- loop through time
         for t = 1, numsteps do
@@ -478,7 +480,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local context
                 if j == 1 then
                     context = past[{{},{j+1,-1}}]
-                elseif j == mp.seq_length+1 then
+                elseif j == num_particles then  -- TODO: correct this assumption!
                     -- tricky thing here: num_particles may not
                     -- be the same as mp.seq_length+1!
                     context = past[{{},{1,-2}}]
@@ -487,7 +489,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                                         past[{{},{j+1,-1}}]},2)
                 end
 
-                local y = torch.squeeze(future[{{},{j},{t}}])
+                local y = future[{{},{j},{t}}]
+                y:resize(mp.batch_size, mp.num_future, mp.object_dim)
 
                 local batch = {this, context, y, _, mask}
 
@@ -496,8 +499,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
-                context = context:reshape(mp.batch_size, mp.seq_length,
-                                            mp.num_past, mp.object_dim)
 
                 -- relative coords
                 if mp.relative then
@@ -506,22 +507,19 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                             pred[{{},{},{1,4}}])
                 end
 
+
                 -- restore object properties
                 pred[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
 
                 -- update position
                 pred = update_position(this, pred)
+                pred = nn.Unsqueeze(2,3):forward(pred)
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
             end
 
             -- update past for next timestep
-            -- update future for next timestep:
-            -- to be honest, future can be anything
-            -- so we can just keep future stale
-            past = past:reshape(mp.batch_size, mp.seq_length+1,
-                                mp.num_past, mp.object_dim)
             if mp.num_past > 1 then
                 past = torch.cat({past[{{},{},{2,-1},{}}],
                                     pred_sim[{{},{},{t},{}}]}, 3)
@@ -529,10 +527,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 assert(mp.num_past == 1)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
-
-            past = past:reshape(mp.batch_size, mp.seq_length+1,
-                                mp.num_past*mp.object_dim)
         end
+        --- to be honest I don't think we need to break into past and context future, but actually that might be good for coloriing past and future, but
+        -- actually I don't think so. For now let's just adapt it
 
         -- at this point, pred_sim should be all filled out
         -- break pred_sim into this and context_future
@@ -540,27 +537,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
         local context_pred = pred_sim[{{},{2,-1}}]
 
-        -- reshape things
-        this_orig = this_orig:reshape(
-                this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
-        context_orig = context_orig:reshape(
-                context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
-        y_orig = y_orig:reshape(
-                y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future
-
         if mp.relative then
             y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
         end
 
-        -- crop the number of timesteps
-        y_orig = y_orig[{{},{1,numsteps},{}}]
-
         -- when you save, you will replace context_future_orig
         if mp.gt then
             context_pred = context_future_orig  -- only saving ground truth
-            context_pred = context_pred:reshape(
-                            context_pred:size(1),mp.seq_length,
-                            mp.winsize-mp.num_past,mp.object_dim)
         end
 
         if saveoutput then

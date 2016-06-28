@@ -156,6 +156,8 @@ function inittrain(preload, model_path)
     local data_loader_args = {mp.dataset_folder,
                               mp.shuffle,
                               mp.cuda}
+
+    -- print(mp.dataset_folder)
     -- hardcoded this for testing on 4 balls
     local test_args = {'/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder,--14_5balls',
                         mp.shuffle,mp.cuda}

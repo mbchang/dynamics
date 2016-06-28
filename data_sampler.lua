@@ -47,11 +47,13 @@ function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
     local args = {winsize = 10,
                   num_past = 2,
                   num_future = 1,
-                  maxwinsize = 60}
+                  maxwinsize = 60,
+                  sim = true}
 
     self.winsize = args.winsize
     self.num_past = args.num_past
     self.num_future = args.num_future
+    self.sim = args.sim
     assert(self.num_past + self.num_future <= self.winsize)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
 
@@ -82,8 +84,14 @@ function datasampler:split_time(batch)
     assert(focus:size(2) >= self.winsize and context:size(3) >= self.winsize)
     local focus_past = focus[{{},{1, self.num_past}}]
     local context_past = context[{{},{}, {1, self.num_past}}]
-    local focus_future = focus[{{},{self.num_past+1, self.num_past+self.num_future}}]
-    local context_future = context[{{},{},{self.num_past+1, self.num_past+self.num_future}}]
+    local focus_future, context_future
+    if self.sim then
+        focus_future = focus[{{},{self.num_past+1, -1}}]
+        context_future = context[{{},{},{self.num_past+1, -1}}]
+    else
+        focus_future = focus[{{},{self.num_past+1, self.num_past+self.num_future}}]
+        context_future = context[{{},{},{self.num_past+1, self.num_past+self.num_future}}]
+    end
 
     return {focus_past, context_past, focus_future, context_future}
 end
@@ -122,7 +130,6 @@ function datasampler:load_batch_id(id)
     local nextbatch = torch.load(batchname)
 
     nextbatch = self:split_time(nextbatch)
-
 
     local this, context, y, context_future, mask = unpack(nextbatch)
 
