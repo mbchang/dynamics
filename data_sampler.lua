@@ -59,6 +59,10 @@ function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
 
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     -- local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
+    self.savefolder = 'debug_tower'..'/'..self.dataset_name  -- TODO: replace lat
+    self.savefolder = string.sub(self.savefolder, 1,-4)
+    -- print(self.savefolder)
+    -- assert(false)
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
     print(self.num_batches)
 
@@ -123,7 +127,7 @@ function datasampler:load_batch_id(id)
     -- local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
 
     local batchname = self.savefolder..'/'..'batch'..id
-    if not paths.filep(batchname) then batchname = batchname..'_hard' end -- this is a hard example. TODO: maybe put in a binary value as input
+    -- if not paths.filep(batchname) then batchname = batchname..'_hard' end -- this is a hard example. TODO: maybe put in a binary value as input
     local nextbatch = torch.load(batchname)
 
     nextbatch = self:split_time(nextbatch)

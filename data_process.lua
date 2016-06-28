@@ -232,8 +232,8 @@ function data_process:split2datasets(examples)
 
     -- shuffle examples
     local ridxs = torch.randperm(#examples)
-    print(ridxs)
-    assert(false)
+    -- print(ridxs)
+    -- assert(false)
     for i = 1, ridxs:size(1) do
         xlua.progress(i, ridxs:size(1))
         local batch = examples[ridxs[i]]
@@ -263,7 +263,7 @@ end
 -- save datasets
 function data_process:create_datasets()
     -- each example is a (focus, context) pair
-    local json_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json'
+    local json_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
     local data = load_data_json(json_file)
     data = self:normalize(data)
     data = self:mass2onehotall(data)
@@ -275,7 +275,7 @@ function data_process:create_datasets()
         table.insert(all_batches, {focus_batches[b], context_batches[b]})
     end
     local datasets = self:split2datasets(all_batches)
-    self:save_batches(datasets, 'debug')
+    self:save_batches(datasets, 'debug_tower')
 
 
     -- TODO: you should also save a sort of config file in the folder such that you can match the winsize and stuff in your dataloader, for example
@@ -334,8 +334,8 @@ end
 local args = require 'config'
 
 dp = data_process.create(args)
--- dp:create_datasets()
+dp:create_datasets()
 
 -- now test if it can record
-batch1 = torch.load('debug/train/batch1')
-dp:record_trajectories(batch1, 'batch1.json')
+-- batch1 = torch.load('debug/train/batch1')
+-- dp:record_trajectories(batch1, 'batch1.json')

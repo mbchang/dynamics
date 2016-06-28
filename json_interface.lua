@@ -18,6 +18,7 @@ function load_data_json(jsonfile)
             for t=1,T do
                 -- mutate the data itself
                 local state = tablex.deepcopy(data[e][i][t])
+                data[e][i][t] = {}
                 data[e][i][t][args.rsi.px] = state.position.x
                 data[e][i][t][args.rsi.py] = state.position.y
                 data[e][i][t][args.rsi.vx] = state.velocity.x

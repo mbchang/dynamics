@@ -305,7 +305,7 @@ function test(dataloader, params_, saveoutput)
         local test_loss, prediction = model:fp(params_, batch)
 
         -- hacky for backwards compatability
-        local this, context, y, context_future, mask = unpack(batch)  
+        local this, context, y, context_future, mask = unpack(batch)
 
 
         if mp.model == 'lstmtime' then
