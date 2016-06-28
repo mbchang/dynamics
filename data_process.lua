@@ -276,6 +276,10 @@ function data_process:create_datasets()
     end
     local datasets = self:split2datasets(all_batches)
     self:save_batches(datasets, 'debug')
+
+
+    -- TODO: you should also save a sort of config file in the folder such that you can match the winsize and stuff in your dataloader, for example
+
 end
 
 -- this method converts torch back to json file

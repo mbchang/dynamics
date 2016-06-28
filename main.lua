@@ -13,7 +13,8 @@ require 'data_utils'
 
 -- Local Imports
 local model_utils = require 'model_utils'
-local D = require 'DataLoader'
+-- local D = require 'DataLoader'
+local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
@@ -76,7 +77,7 @@ if mp.server == 'pc' then
     mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 10 --1
+	mp.batch_size = 4 --1
     -- mp.max_epochs = 5
     mp.max_iter = 5*252
     mp.lrdecay = 0.99
@@ -321,12 +322,17 @@ function test(dataloader, params_, saveoutput)
                 y[{{},{},{1,4}}] = y[{{},{},{1,4}}] + this[{{},{},{1,4}}] -- add back because relative  -- TODO RESIZE THIS?
             end
         else
-            context_future = crop_future(context_future,
-                                        {context_future:size(1), mp.seq_length,
-                                        mp.winsize-mp.num_past, mp.object_dim},
-                                        {3,mp.num_future})
-            context_future:reshape(context_future:size(1),
-                        context_future:size(2), mp.num_future, mp.object_dim)
+            -- do I need to crop future?
+            -- print('test')
+            -- print(context_future:size())
+            -- print(y:size())
+
+            -- context_future = crop_future(context_future,
+            --                             {context_future:size(1), mp.seq_length,
+            --                             mp.winsize-mp.num_past, mp.object_dim},
+            --                             {3,mp.num_future})
+            -- context_future:reshape(context_future:size(1),
+            --             context_future:size(2), mp.num_future, mp.object_dim)
             context = context:reshape(context:size(1), context:size(2),
                                         mp.num_past, mp.object_dim)
 
@@ -334,10 +340,10 @@ function test(dataloader, params_, saveoutput)
             prediction = prediction:reshape(
                                     mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
             this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-            y = crop_future(y, {y:size(1),
-                                mp.winsize-mp.num_past, mp.object_dim},
-                                {2,mp.num_future})  -- TODO RESIZE THIS
-            y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+            -- y = crop_future(y, {y:size(1),
+            --                     mp.winsize-mp.num_past, mp.object_dim},
+            --                     {2,mp.num_future})  -- TODO RESIZE THIS
+            -- y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
 
             -- take care of relative position
             if mp.relative then
