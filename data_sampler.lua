@@ -48,7 +48,7 @@ function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
                   num_past = 2,
                   num_future = 1,
                   maxwinsize = 60,
-                  sim = true}
+                  sim = true}  -- TODO: consider how you want to realize this (perhaps you pass this in from eval?)
 
     self.winsize = args.winsize
     self.num_past = args.num_past
@@ -59,9 +59,6 @@ function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
 
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     -- local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
-    self.savefolder = string.sub('debug'..'/'..self.dataset_name, 1, -4)
-    -- print(savefolder)
-    -- assert(false)
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
     print(self.num_batches)
 

@@ -480,9 +480,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local context
                 if j == 1 then
                     context = past[{{},{j+1,-1}}]
-                elseif j == num_particles then  -- TODO: correct this assumption!
-                    -- tricky thing here: num_particles may not
-                    -- be the same as mp.seq_length+1!
+                elseif j == num_particles then  
                     context = past[{{},{1,-2}}]
                 else
                     context = torch.cat({past[{{},{1,j-1}}],

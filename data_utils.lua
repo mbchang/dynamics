@@ -75,7 +75,6 @@ function save_to_hdf5(filename, data)
     -- data: dict of {datapath: data}
     local myFile = hdf5.open(filename, 'w')
     for k,v in pairs(data) do
-        -- print('writing'..k)
         myFile:write(k, v)  -- I can write many preds in here, indexed by the starting time?
     end
     myFile:close()
@@ -165,29 +164,15 @@ function unpack_batch(batch, sim)
     local this, context, y, context_future, mask = unpack(batch)
     local x = {this=this,context=context}
 
-    -- TODO: you need to define winsize, numpast, object dim!
-    -- print({y:size(1), mp.winsize-mp.num_past, mp.object_dim})
-
-    -- NOTE: for now we are not cropping the future
-    -- if not sim then
-    --     y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-    --                         {2,mp.num_future})
-    -- end
-
     -- unpack inputs
     local this_past     = convert_type(x.this:clone(), mp.cuda)
     local context       = convert_type(x.context:clone(), mp.cuda)
     local this_future   = convert_type(y:clone(), mp.cuda)
 
-    -- print('hey')
-    -- print(this_past:size())
-
     -- reshape
     this_past:resize(this_past:size(1), this_past:size(2)*this_past:size(3))
     context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
     this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
-
-    -- print(mp.input_dim)
 
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim)  -- TODO RESIZE THIS
