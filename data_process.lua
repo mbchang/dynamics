@@ -85,6 +85,7 @@ function data_process:mass2onehot(mass)
 end
 
 function data_process:onehot2mass(onehot)
+    -- print(onehot)
     assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
     return self.masses[torch.find(onehot, 1)[1]]
 end
@@ -126,7 +127,10 @@ function data_process:onehot2massall(trajectoriesonehot)
     local masses = torch.zeros(num_ex*num_obj*num_steps, 1)
     onehot_masses:resize(num_ex*num_obj*num_steps, #self.masses)
 
+    -- print(trajectoriesonehot[{{3}}])
+
     for row=1,onehot_masses:size(1) do
+        -- print(row)
         masses[{{row}}] = self:onehot2mass(torch.squeeze(onehot_masses[{{row}}]))
     end
     masses:resize(num_ex, num_obj, num_steps, 1)
@@ -207,6 +211,7 @@ end
 -- we also should have a method that divides the focus and context into past and future
 -- this assumes we are predicting for everybody
 function data_process:condense(focus, context)
+
     -- duplicates may exist, they may not
     focus = nn.Unsqueeze(2, 3):forward(focus:clone())
     -- TODO: get rid of duplicates!
@@ -289,14 +294,14 @@ end
 function data_process:record_trajectories(batch, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
-    print(trajectories[{{1},{1},{1}}])
+    -- print(trajectories[{{1},{1},{1}}])
     -- assert(false)
 
     -- onehotall2mass
     local trajectories = self:onehot2massall(trajectories)
-    print(trajectories[{{1},{1},{1}}])
+    -- print(trajectories[{{1},{1},{1}}])
     local unnormalized = self:unnormalize(trajectories)
-    print(unnormalized[{{1},{1},{1}}])
+    -- print(unnormalized[{{1},{1},{1}}])
     dump_data_json(unnormalized, jsonfile)
 end
 
@@ -328,13 +333,13 @@ end
 
 
 
--- return data_process
+return data_process
 
 
-local args = require 'config'
-
-dp = data_process.create(args)
-dp:create_datasets()
+-- local args = require 'config'
+--
+-- dp = data_process.create(args)
+-- dp:create_datasets()
 
 -- now test if it can record
 -- batch1 = torch.load('debug/train/batch1')

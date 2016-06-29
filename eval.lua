@@ -25,6 +25,12 @@ local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 require 'json_interface'
+-- local dp = require 'data_process'
+
+-- hacky for now, just to see if it works
+local args = require 'config'
+local data_process = require 'data_process'
+local dp = data_process.create(args)
 
 
 ------------------------------------- Init -------------------------------------
@@ -84,6 +90,8 @@ local subsamp = 5
 -- mp.input_dim = mp.object_dim*mp.num_past
 -- mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.root .. '/' .. mp.name
+-- print(mp.savedir)
+-- assert(false)
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then require 'cutorch' end
@@ -415,9 +423,12 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
         local context_pred = pred_sim[{{},{2,-1}}]
 
-        if mp.relative then
-            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
-        end
+        -- if mp.relative then
+        --     print(this_orig[{{},{-1}}]:size())
+        --     print(y_orig:size())
+        --     assert(false)
+        --     y_orig[{{},{},{}}] = y_orig + this_orig[{{},{-1}}]  -- TODO RESIZE THIS  -- NOTE YOU SHOULD USE THE DATA PROCESS ARGS HERE!
+        -- end
 
         -- when you save, you will replace context_future_orig
         if mp.gt then
@@ -435,7 +446,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                'debug_eval.json')
+                                'debug_eval_balls.json')
         end
     end
     collectgarbage()
@@ -449,16 +460,19 @@ function save_ex_pred_json(example, jsonfile)
             this_pred, context_pred = unpack(example)
 
     -- construct gnd truth (could move to this to a util function)
-    local this_pred_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_pred}, 2))
+    -- local this_pred_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_pred}, 2))
+    local this_pred_traj = torch.cat({this_past, this_pred}, 2)
     local context_pred_traj = torch.cat({context_past,context_pred}, 3)
-    local pred_traj = torch.cat({this_pred_traj, context_pred_traj}, 2)
-    dump_data_json(pred_traj, 'pred_' .. jsonfile)
+    -- local pred_traj = torch.cat({this_pred_traj, context_pred_traj}, 2)
+    dp:record_trajectories({this_pred_traj, context_pred_traj}, 'pred_' .. jsonfile)
 
+    -- print('hey')
     -- construct prediction
-    local this_gt_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_future}, 2))
+    -- local this_gt_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_future}, 2))
+    local this_gt_traj = torch.cat({this_past, this_future}, 2)
     local context_gt_traj = torch.cat({context_past, context_future}, 3)
-    local gt_traj = torch.cat({this_gt_traj, context_gt_traj}, 2)
-    dump_data_json(gt_traj, 'gt_' .. jsonfile)
+    -- local gt_traj = torch.cat({this_gt_traj, context_gt_traj}, 2)
+    dp:record_trajectories({this_gt_traj, context_gt_traj}, 'gt_' .. jsonfile)
 
     -- TODO: I have to have some mechanism to indicate when is past and when is future
 end

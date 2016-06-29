@@ -18,6 +18,11 @@ local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
+local args = require 'config'
+
+local args = require 'config'
+local data_process = require 'data_process'
+local dp = data_process.create(args)
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')

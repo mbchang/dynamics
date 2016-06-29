@@ -59,7 +59,7 @@ function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
 
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     -- local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
-    self.savefolder = 'debug_tower'..'/'..self.dataset_name  -- TODO: replace lat
+    self.savefolder = 'debug'..'/'..self.dataset_name  -- TODO: replace lat
     self.savefolder = string.sub(self.savefolder, 1,-4)
     -- print(self.savefolder)
     -- assert(false)

@@ -12,6 +12,9 @@ local args = {
         shuffle=False,
         maxwinsize=60
 
+
+        -- all the paths
+
     }
 
 return args
