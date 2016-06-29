@@ -24,6 +24,8 @@ local model_utils = require 'model_utils'
 local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
+require 'json_interface'
+
 
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
@@ -306,128 +308,6 @@ function update_position(this, pred)
     return pred
 end
 
-function simulate(dataloader, params_, saveoutput, numsteps)
-    -- test on dataset
-    -- assumption: that you predict 1 out
-    --[[
-        Want:
-            the data given to still have windowsize of 20.
-            But we want to only predict for 1 timestep,
-            But we want the context to have full windowsize. Perhaps we can
-                have a flag to set? The full context, starting at the time prediction
-                starts until the end of the window, should be passed through
-            But also you need the full context and context_future to be passed in.
-                Where to do the processing?
-            Given the pred (batch_size, num_future, obj_dim) we will take the
-            first time slice: [{{},{1}}] of that
-
-    -- ]]
-    ----------------------------------------------------------------------------
-    assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
-    local sum_loss = 0
-    for i = 1,dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-
-        -- get data
-        local batch = dataloader:sample_sequential_batch()
-        -- batch = mj_interface(batch)
-
-        -- get data
-        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
-
-        local this, context = this_orig:clone(), context_orig:clone()
-        context_future = context_future_orig:clone():reshape(
-            mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
-
-        -- at this point:
-        -- this (bsize, numpast*objdim)  -- TODO RESIZE THIS
-        -- context (bsize, mp.seq_length, mp.numpast*mp.objdim)
-        -- y_orig (bsize, (mp.winsize-mp.num_past)*objdim)
-        -- context_future (bsize, mp.seqlength, (mp.winsize-mp.num_past)*mp.objdim)
-
-        -- allocate space, already assume reshape
-        local pred_sim = model_utils.transfer_data(torch.zeros(
-                        mp.batch_size, numsteps, mp.object_dim), mp.cuda)
-
-        for t = 1,numsteps do
-            -- the t-th timestep in the future
-            y = y_orig:clone():reshape(mp.batch_size, mp.winsize-mp.num_past,
-                        mp.object_dim)[{{},{t},{}}]  -- increment time in y
-            y = y:reshape(mp.batch_size, 1*mp.object_dim)  -- TODO RESIZE THIS
-
-            local modified_batch = {this, context, y, mask, config, start,
-                                        finish, context_future_orig}
-            local test_loss, prediction = model:fp(params_, modified_batch, true)  -- TODO Does mask make sense here? Well, yes right? because mask only has to do with the objects
-
-            prediction = prediction:reshape(
-                                    mp.batch_size, mp.num_future, mp.object_dim)  -- TODO RESIZE THIS
-            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- TODO RESIZE THIS
-            context = context:reshape(
-                    mp.batch_size, mp.seq_length, mp.num_past, mp.object_dim)
-
-            if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
-                    this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
-            end
-
-            -- restore object properties
-            prediction[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
-
-            -- here you want to add velocity to position
-            -- prediction: (batchsize, mp.num_future, mp.object_dim)
-            prediction = update_position(this, prediction)
-
-            -- update this and context
-            -- chop off first time step and then add in next one
-            if mp.num_past > 1 then
-                this = torch.cat({this[{{},{2,-1},{}}]:clone(), prediction}, 2)  -- you can add y in here  -- TODO RESIZE THIS
-                context = torch.cat({context[{{},{},{2,-1},{}}]:clone(),
-                                    context_future[{{},{},{t},{}}]:clone()},3)
-            else
-                assert(mp.num_past == 1)
-                this = prediction:clone()  -- just use prev prediction as input
-                context = context_future[{{},{},{t},{}}]:clone()
-            end
-
-            -- reshape it back
-            this = this:reshape(mp.batch_size, mp.num_past*mp.object_dim)  -- TODO RESIZE THIS
-            context = context:reshape(mp.batch_size, mp.seq_length,
-                                                    mp.num_past*mp.object_dim)
-
-            pred_sim[{{},{t},{}}] = prediction  -- note that this is just one timestep  -- you can add y in here
-            sum_loss = sum_loss + test_loss
-        end
-
-        -- reshape to -- (num_samples x num_future x 8)
-        this_orig = this_orig:reshape(
-            this_orig:size(1), mp.num_past, mp.object_dim)  -- will render the original past  -- TODO RESIZE THIS
-        context_orig = context_orig:reshape(
-            context_orig:size(1),mp.seq_length,mp.num_past,mp.object_dim)
-        y_orig = y_orig:reshape(
-            y_orig:size(1), mp.winsize-mp.num_past, mp.object_dim) -- will render the original future  -- TODO RESIZE THIS
-        context_future_orig = context_future_orig:reshape(
-            mp.batch_size, mp.seq_length, mp.winsize-mp.num_past, mp.object_dim)
-
-        if mp.relative then
-            y_orig = y_orig + this_orig[{{},{-1}}]:expandAs(y_orig)  -- TODO RESIZE THIS
-        end
-
-        -- now crop only the number of timesteps you need; pred_sim is also this many timesteps
-        y_orig = y_orig[{{},{1,numsteps},{}}]  -- TODO RESIZE THIS
-        context_future_orig = context_future_orig[{{},{},{1,numsteps},{}}]
-
-        if saveoutput then
-            save_ex_pred({this_orig, context_orig, y_orig,
-                    pred_sim, context_future_orig}, {config, start, finish},
-                    modelfile, dataloader, numsteps)
-        end
-    end
-    local avg_loss = sum_loss/dataloader.num_batches/numsteps
-    collectgarbage()
-    return avg_loss
-end
-
-
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- simulate two balls for now, but this should be made more general
     -- actually you should make this more general.
@@ -480,7 +360,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local context
                 if j == 1 then
                     context = past[{{},{j+1,-1}}]
-                elseif j == num_particles then  
+                elseif j == num_particles then
                     context = past[{{},{1,-2}}]
                 else
                     context = torch.cat({past[{{},{1,j-1}}],
@@ -545,15 +425,42 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         end
 
         if saveoutput then
-            save_ex_pred({this_orig, context_orig, y_orig,
-                                    this_pred, context_pred},
-                                    {config, start, finish},
-                                    modelfile,
-                                    dataloader,
-                                    numsteps)
+            -- save_ex_pred({this_orig, context_orig, y_orig,
+            --                         this_pred, context_pred},
+            --                         {config, start, finish},
+            --                         modelfile,
+            --                         dataloader,
+            --                         numsteps)
+
+            save_ex_pred_json({this_orig, context_orig,
+                                y_orig, context_future_orig,
+                                this_pred, context_pred},
+                                'debug_eval.json')
         end
     end
     collectgarbage()
+end
+
+function save_ex_pred_json(example, jsonfile)
+    -- first join on the time axis
+    -- you should save context pred as well as context future
+    local this_past, context_past,
+            this_future, context_future,
+            this_pred, context_pred = unpack(example)
+
+    -- construct gnd truth (could move to this to a util function)
+    local this_pred_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_pred}, 2))
+    local context_pred_traj = torch.cat({context_past,context_pred}, 3)
+    local pred_traj = torch.cat({this_pred_traj, context_pred_traj}, 2)
+    dump_data_json(pred_traj, 'pred_' .. jsonfile)
+
+    -- construct prediction
+    local this_gt_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_future}, 2))
+    local context_gt_traj = torch.cat({context_past, context_future}, 3)
+    local gt_traj = torch.cat({this_gt_traj, context_gt_traj}, 2)
+    dump_data_json(gt_traj, 'gt_' .. jsonfile)
+
+    -- TODO: I have to have some mechanism to indicate when is past and when is future
 end
 
 
@@ -643,7 +550,7 @@ function predict_simulate_all()
     -- mp.winsize = 80  -- total number of frames
     -- mp.winsize = 20
 	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-    print(simulate_all(test_loader, checkpoint.model.theta.params, false, 7))
+    print(simulate_all(test_loader, checkpoint.model.theta.params, true, 7))
 end
 
 function predict_b2i()
