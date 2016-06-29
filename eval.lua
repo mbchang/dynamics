@@ -460,18 +460,14 @@ function save_ex_pred_json(example, jsonfile)
             this_pred, context_pred = unpack(example)
 
     -- construct gnd truth (could move to this to a util function)
-    -- local this_pred_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_pred}, 2))
     local this_pred_traj = torch.cat({this_past, this_pred}, 2)
     local context_pred_traj = torch.cat({context_past,context_pred}, 3)
-    -- local pred_traj = torch.cat({this_pred_traj, context_pred_traj}, 2)
     dp:record_trajectories({this_pred_traj, context_pred_traj}, 'pred_' .. jsonfile)
 
     -- print('hey')
     -- construct prediction
-    -- local this_gt_traj = nn.Unsqueeze(2,3):forward(torch.cat({this_past, this_future}, 2))
     local this_gt_traj = torch.cat({this_past, this_future}, 2)
     local context_gt_traj = torch.cat({context_past, context_future}, 3)
-    -- local gt_traj = torch.cat({this_gt_traj, context_gt_traj}, 2)
     dp:record_trajectories({this_gt_traj, context_gt_traj}, 'gt_' .. jsonfile)
 
     -- TODO: I have to have some mechanism to indicate when is past and when is future

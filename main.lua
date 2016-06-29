@@ -13,7 +13,6 @@ require 'data_utils'
 
 -- Local Imports
 local model_utils = require 'model_utils'
--- local D = require 'DataLoader'
 local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
@@ -42,7 +41,7 @@ cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
-cmd:option('-relative', true, 'relative state vs absolute state')
+cmd:option('-relative', false, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-accel', false, 'use acceleration data')
 
@@ -162,7 +161,6 @@ function inittrain(preload, model_path)
                               mp.shuffle,
                               mp.cuda}
 
-    -- print(mp.dataset_folder)
     -- hardcoded this for testing on 4 balls
     local test_args = {'/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder,--14_5balls',
                         mp.shuffle,mp.cuda}
