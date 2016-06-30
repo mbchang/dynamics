@@ -27,7 +27,7 @@ local data_process = {}
 data_process.__index = data_process
 
 
-function data_process.create(args)
+function data_process.create(jsonfile, outfolder, args) -- I'm not sure if this make sense in eval though
     local self = {}
     setmetatable(self, data_process)
 
@@ -40,6 +40,8 @@ function data_process.create(args)
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
     self.bsize = args.batch_size
     self.shuffle = args.shuffle
+    self.jsonfile = jsonfile
+    self.outfolder = outfolder -- save stuff to here.
 
     -- here you can also include have world parameters
     -- not that object id includes whether it is stationary or not
@@ -250,7 +252,7 @@ function data_process:split2datasets(examples)
             table.insert(test, batch)
         end
     end
-    return {train=train, val=val, test=test}
+    return {trainset=train, valset=val, testset=test}
 end
 
 function data_process:save_batches(datasets, savefolder)
@@ -268,7 +270,9 @@ end
 -- save datasets
 function data_process:create_datasets()
     -- each example is a (focus, context) pair
-    local json_file = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
+    local json_file = self.jsonfile --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
+    -- print(self.jsonfile)
+    -- assert(false)
     local data = load_data_json(json_file)
     data = self:normalize(data)
     data = self:mass2onehotall(data)
@@ -280,7 +284,7 @@ function data_process:create_datasets()
         table.insert(all_batches, {focus_batches[b], context_batches[b]})
     end
     local datasets = self:split2datasets(all_batches)
-    self:save_batches(datasets, 'debug_tower')
+    self:save_batches(datasets, self.outfolder)
 
 
     -- TODO: you should also save a sort of config file in the folder such that you can match the winsize and stuff in your dataloader, for example

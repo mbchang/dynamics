@@ -10,6 +10,7 @@ require 'Base'
 require 'sys'
 require 'pl'
 require 'data_utils'
+local tablex = require 'pl.tablex'
 
 -- Local Imports
 local model_utils = require 'model_utils'
@@ -17,11 +18,8 @@ local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
-local args = require 'config'
-
-local args = require 'config'
+local config_args = require 'config'
 local data_process = require 'data_process'
-local dp = data_process.create(args)
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
@@ -34,8 +32,6 @@ cmd:option('-seed', true, 'manual seed or not')
 -- dataset
 cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
 cmd:option('-test_dataset_folder', 'm2_5balls', 'dataset folder')
-cmd:option('-traincfgs', "[:-2:2-:]", 'which train configurations')
-cmd:option('-testcfgs', "[:-2:2-:]", 'which test configurations')
 
 -- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
@@ -46,7 +42,7 @@ cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-accel', false, 'use acceleration data')
 
 -- training options
-cmd:option('-opt', "optimrmsprop", 'rmsprop | adam | optimsrmsprop')
+cmd:option('-opt', "adam", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-shuffle', false, 'shuffle batches')
 cmd:option('-max_iter', 1000*1800, 'max number of iterations')
@@ -74,18 +70,14 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
-    mp.root = 'logs'
+    mp.data_root = 'mj_data'
+    mp.logs_root = 'logs'
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-    mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
-    mp.traincfgs = '[:-2:2-:]'
-    mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 4 --1
-    -- mp.max_epochs = 5
     mp.max_iter = 5*252
     mp.lrdecay = 0.99
-    mp.max_epochs = 5
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
@@ -119,13 +111,6 @@ else
     error('Unrecognized model')
 end
 
-
--- world constants
-local G_w_width, G_w_height = 480.0, 360.0 --384.0, 288.0
-local G_max_velocity, G_min_velocity = 2*3000,-2*3000
-local subsamp = 5
-
-
 if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
 if mp.accel then mp.object_dim = mp.object_dim+2 end
 mp.input_dim = mp.object_dim*mp.num_past
@@ -137,7 +122,7 @@ if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
 
 local optimizer, optim_state
-if mp.opt == 'optimrmsprop' then
+if mp.opt == 'rmsprop' then
     optimizer = optim.rmsprop
     optim_state = {learningRate   = mp.lr}
 elseif mp.opt == 'adam' then
@@ -157,17 +142,22 @@ local train_losses, val_losses, test_losses = {},{},{}
 function inittrain(preload, model_path)
     print("Network parameters:")
     print(mp)
-    local data_loader_args = {mp.dataset_folder,
-                              mp.shuffle,
-                              mp.cuda}
+    local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
+                              maxwinsize=config_args.maxwinsize,
+                              winsize=mp.winsize, -- not sure if this should be in mp
+                              num_past=mp.num_past,
+                              num_future=mp.num_future,
+                              sim=false,
+                              cuda=mp.cuda
+                            }
+    -- test_args is the same but with a different dataset_folder
+    local test_args = tablex.deepcopy(data_loader_args)
+    test_args.dataset_folder = mp.data_root..'/'..mp.test_dataset_folder
 
-    -- hardcoded this for testing on 4 balls
-    local test_args = {'/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder,--14_5balls',
-                        mp.shuffle,mp.cuda}
-    train_loader = D.create('trainset', unpack(data_loader_args))
-    val_loader =  D.create('valset', unpack(data_loader_args))  -- using testcfgs
-    test_loader = D.create('testset', unpack(data_loader_args))
-    train_test_loader = D.create('trainset', unpack(data_loader_args))
+    train_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
+    val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
+    test_loader = D.create('testset', tablex.deepcopy(test_args))
+    train_test_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     model = M.create(mp, preload, model_path)
     print(model.network)
 
@@ -180,25 +170,16 @@ function inittrain(preload, model_path)
     print("Initialized Network")
 end
 
-function initsavebatches(preload, model_path)
+function initsavebatches()
     mp.cuda = false
     mp.cunn = false
     mp.shuffle = false
     print("Network parameters:")
     print(mp)
-    local data_loader_args = {mp.dataset_folder,
-                              mp.batch_size,
-                              mp.shuffle,
-                              mp.relative,
-                              mp.num_past,
-                              mp.winsize}
-    train_loader = D2.create('trainset', mp.traincfgs, unpack(data_loader_args))
-    val_loader =  D2.create('valset', mp.testcfgs, unpack(data_loader_args))  -- using testcfgs
-    test_loader = D2.create('testset', mp.testcfgs, unpack(data_loader_args))
-
-    train_loader:save_sequential_batches()
-    val_loader:save_sequential_batches()
-    test_loader:save_sequential_batches()
+    local jsonfile = mp.data_root..'/'..mp.dataset_folder..'/'..mp.dataset_folder..'.json'
+    local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'
+    local dp = data_process.create(jsonfile, outfolder, config_args)
+    dp:create_datasets()
 end
 
 -- closure: returns loss, grad_params
