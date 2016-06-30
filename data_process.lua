@@ -32,7 +32,7 @@ function data_process.create(jsonfile, outfolder, args) -- I'm not sure if this 
     setmetatable(self, data_process)
 
     self.pnc = args.position_normalize_constant
-    self.vnc = args.velocity_normalize_cnstant
+    self.vnc = args.velocity_normalize_constant
     self.relative = args.relative -- bool
     self.masses = args.masses -- {0.33, 1.0, 3.0, 1e30}
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}

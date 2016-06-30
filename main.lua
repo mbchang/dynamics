@@ -24,7 +24,9 @@ local data_process = require 'data_process'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
-cmd:option('-root', "logslink", 'subdirectory to save logs')
+-- cmd:option('-root', "logslink", 'subdirectory to save logs')
+cmd:option('log_root', '', 'subdirectory to save logs and checkpoints')
+cmd:option('data_root', '', 'subdirectory to save data')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
@@ -115,7 +117,7 @@ if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
 if mp.accel then mp.object_dim = mp.object_dim+2 end
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
-mp.savedir = mp.root .. '/' .. mp.name
+mp.savedir = mp.logs_root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then require 'cutorch' end
@@ -158,6 +160,7 @@ function inittrain(preload, model_path)
     val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', tablex.deepcopy(test_args))
     train_test_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
+    assert(false)
     model = M.create(mp, preload, model_path)
     print(model.network)
 
@@ -449,7 +452,7 @@ function run_experiment_load()
 end
 
 function getLastSnapshot(network_name)
-    local res_file = io.popen("ls -t "..mp.root..'/'..network_name..
+    local res_file = io.popen("ls -t "..mp.logs_root..'/'..network_name..
                         " | grep -i epoch | head -n 1")
     local status, result = pcall(function()
         return res_file:read():match( "^%s*(.-)%s*$" ) end)

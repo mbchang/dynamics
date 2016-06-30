@@ -51,7 +51,10 @@ function datasampler.create(dataset_name, args)
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
-    print(self.num_batches)
+    -- print(self.dataset_folder)
+    -- print(self.savefolder)
+    -- assert(false)
+    -- print(self.num_batches)
 
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0

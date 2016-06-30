@@ -10,6 +10,7 @@ require 'Base'
 require 'sys'
 require 'pl'
 require 'data_utils'
+local tablex = require 'pl.tablex'
 
 -- require 'nn'
 require 'rnn'  -- also installs moses (https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md), like underscore.js
@@ -20,24 +21,23 @@ require 'IdentityCriterion'
 
 -- Local Imports
 local model_utils = require 'model_utils'
--- local D = require 'DataLoader'
 local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 require 'json_interface'
--- local dp = require 'data_process'
 
 -- hacky for now, just to see if it works
-local args = require 'config'
+local config_args = require 'config'
 local data_process = require 'data_process'
-local dp = data_process.create(args)
-
+local dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
 
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
-cmd:option('-root', "logslink", 'subdirectory to save logs')
+-- cmd:option('-root', "logslink", 'subdirectory to save logs')
+cmd:option('log_root', '', 'subdirectory to save logs and checkpoints')
+cmd:option('data_root', '', 'subdirectory to save data')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 -- dataset
@@ -51,14 +51,15 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
-    mp.root = 'logs'
+    mp.data_root = 'mj_data'
+    mp.logs_root = 'logs'
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
     -- mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
     --                     'SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
-    mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
-                        'SuperUROP/Code/dynamics/debug'--dataset_files_subsampled_dense_np2' --'hoho'
+    -- mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
+    --                     'SuperUROP/Code/dynamics/debug'--dataset_files_subsampled_dense_np2' --'hoho'
     mp.traincfgs = '[:-2:2-:]'
     mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 4 --1
@@ -81,17 +82,14 @@ end
 local M
 
 -- world constants
-local G_w_width, G_w_height = 480.0, 360.0 --384.0, 288.0
-local G_max_velocity, G_min_velocity = 2*3000,-2*3000
-local subsamp = 5
+local subsamp = 1
 
 -- if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
 -- if mp.accel then mp.object_dim = mp.object_dim+2 end
 -- mp.input_dim = mp.object_dim*mp.num_past
 -- mp.out_dim = mp.object_dim*mp.num_future
-mp.savedir = mp.root .. '/' .. mp.name
--- print(mp.savedir)
--- assert(false)
+mp.savedir = mp.logs_root .. '/' .. mp.name
+
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then require 'cutorch' end
@@ -104,12 +102,18 @@ local model, test_loader, modelfile
 function inittest(preload, model_path)
     print("Network parameters:")
     print(mp)
-    local data_loader_args = {mp.dataset_folder,
-                              mp.shuffle,
-                              mp.cuda}
-    test_loader = D.create('testset', unpack(data_loader_args))  -- TODO: Testing on trainset
+    print(mp.dataset_folder)
+    -- assert(false)
+    local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
+                            maxwinsize=config_args.maxwinsize,
+                            winsize=mp.winsize, -- not sure if this should be in mp
+                            num_past=mp.num_past,
+                            num_future=mp.num_future,
+                            sim=true,
+                            cuda=mp.cuda
+                            }
+    test_loader = D.create('testset', tablex.deepcopy(data_loader_args))  -- TODO: Testing on trainset
     model = M.create(mp, preload, model_path)
-    -- if preload then mp = torch.load(model_path).mp end
     modelfile = model_path
     print("Initialized Network")
 end
@@ -293,10 +297,10 @@ function update_position(this, pred)
     ----------------------------------------------------------------------------
 
     local this, pred = this:clone(), pred:clone()
-    local lastpos = (this[{{},{-1},{1,2}}]:clone()*G_w_width)
-    local lastvel = (this[{{},{-1},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
-    local currpos = (pred[{{},{},{1,2}}]:clone()*G_w_width)
-    local currvel = (pred[{{},{},{3,4}}]:clone()*G_max_velocity/1000*subsamp)
+    local lastpos = (this[{{},{-1},{1,2}}]:clone()*config_args.position_normalize_constant)
+    local lastvel = (this[{{},{-1},{3,4}}]:clone()*config_args.velocity_normalize_constant/1000)  -- TODO: this is without subsampling make sure that this is correct!
+    local currpos = (pred[{{},{},{1,2}}]:clone()*config_args.position_normalize_constant)
+    local currvel = (pred[{{},{},{3,4}}]:clone()*config_args.velocity_normalize_constant/1000)
 
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
@@ -309,7 +313,7 @@ function update_position(this, pred)
     end
 
     -- normalize again
-    pos = pos/G_w_width
+    pos = pos/config_args.position_normalize_constant
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
 
     pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
@@ -321,7 +325,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- actually you should make this more general.
     -- there is no concept of ground truth here?
     -- or you can make the ground truth go as far as there are timesteps available
-    ----------------------------------------------------------------------------
+    --------------------------------------------------- -------------------------
 
 
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
@@ -446,7 +450,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                'debug_eval_balls.json')
+                                'batch'..i..'json')  -- TODO: rename this to something more interesting
         end
     end
     collectgarbage()
@@ -459,16 +463,19 @@ function save_ex_pred_json(example, jsonfile)
             this_future, context_future,
             this_pred, context_pred = unpack(example)
 
+    local subfolder = mp.savedir .. '/' .. 'predictions/'
+    if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
+
     -- construct gnd truth (could move to this to a util function)
     local this_pred_traj = torch.cat({this_past, this_pred}, 2)
     local context_pred_traj = torch.cat({context_past,context_pred}, 3)
-    dp:record_trajectories({this_pred_traj, context_pred_traj}, 'pred_' .. jsonfile)
+    dp:record_trajectories({this_pred_traj, context_pred_traj}, subfolder..'pred_' .. jsonfile)
 
     -- print('hey')
     -- construct prediction
     local this_gt_traj = torch.cat({this_past, this_future}, 2)
     local context_gt_traj = torch.cat({context_past, context_future}, 3)
-    dp:record_trajectories({this_gt_traj, context_gt_traj}, 'gt_' .. jsonfile)
+    dp:record_trajectories({this_gt_traj, context_gt_traj}, subfolder..'gt_' .. jsonfile)
 
     -- TODO: I have to have some mechanism to indicate when is past and when is future
 end
@@ -509,7 +516,9 @@ function save_ex_pred(example, description, modelfile_, dataloader, numsteps)
 end
 
 function getLastSnapshot(network_name)
-    local res_file = io.popen("ls -t "..mp.root..'/'..network_name..
+
+    -- TODO: this should be replaced by savedir!
+    local res_file = io.popen("ls -t "..mp.logs_root..'/'..network_name..
                                 " | grep -i epoch | head -n 1")
     local status, result = pcall(function()
                 return res_file:read():match( "^%s*(.-)%s*$" ) end)
@@ -543,7 +552,6 @@ function predict_simulate()
 
     -- mp.winsize = 80  -- total number of frames
 	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     print(mp.winsize)
     print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
@@ -553,7 +561,6 @@ function predict_simulate_all()
 
     local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    print(snapshot)
     mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
@@ -567,7 +574,6 @@ function predict_b2i()
     local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
     checkpoint = checkpointtocuda(checkpoint)
-    print(checkpoint)
     mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
