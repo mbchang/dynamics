@@ -84,8 +84,6 @@ local M
 -- world constants
 local subsamp = 1
 
--- if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
--- if mp.accel then mp.object_dim = mp.object_dim+2 end
 -- mp.input_dim = mp.object_dim*mp.num_past
 -- mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.logs_root .. '/' .. mp.name
@@ -224,73 +222,6 @@ function backprop2input()
 end
 
 
-function test(dataloader, params_, saveoutput)
-    local sum_loss = 0
-    for i = 1,dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-
-        local batch = dataloader:sample_sequential_batch()
-        local test_loss, prediction = model:fp(params_, batch)
-
-        -- hacky for backwards compatability
-        local this, context, y, context_future, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
-
-
-        if mp.model == 'lstmtime' then
-            -- print(this:size())  -- (bsize, mp.winsize-1, mp.object_dim)
-            -- print(context:size())  -- (bsize, mp.seq_length, mp.winsize-1, mp.object_dim)
-            -- print(y:size())  -- (bsize, mp.winsize-1, mp.object_dim)
-            -- print(context_future:size())  -- (bsize, mp.seq_length mp.winsize-1, mp.object_dim)
-
-            -- take care of relative position
-            if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
-                                                this[{{},{},{1,4}}]  -- TODO RESIZE THIS?
-                y[{{},{},{1,4}}] = y[{{},{},{1,4}}] + this[{{},{},{1,4}}] -- add back because relative  -- TODO RESIZE THIS?
-            end
-        else
-            context_future = crop_future(context_future,
-                                        {context_future:size(1), mp.seq_length,
-                                        mp.winsize-mp.num_past, mp.object_dim},
-                                        {3,mp.num_future})
-            context_future:reshape(context_future:size(1),
-                        context_future:size(2), mp.num_future, mp.object_dim)
-            context = context:reshape(context:size(1), context:size(2),
-                                        mp.num_past, mp.object_dim)
-
-            -- reshape to -- (num_samples x num_future x 8)
-            prediction = prediction:reshape(
-                                    mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
-            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-            y = crop_future(y, {y:size(1),
-                                mp.winsize-mp.num_past, mp.object_dim},
-                                {2,mp.num_future})  -- TODO RESIZE THIS
-            y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
-
-            -- take care of relative position
-            if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
-                    this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
-                y[{{},{},{1,4}}] = y[{{},{},{1,4}}] +
-                    this[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}]) -- add back because relative  -- TODO RESIZE THIS?
-            end
-        end
-
-        -- save
-        if saveoutput then
-            save_ex_pred({this, context, y, prediction, context_future},
-                                    {config, start, finish},
-                                    modelfile,
-                                    dataloader,
-                                    mp.num_future)
-        end
-        sum_loss = sum_loss + test_loss
-    end
-    local avg_loss = sum_loss/dataloader.num_batches
-    collectgarbage()
-    return avg_loss
-end
-
 function update_position(this, pred)
     -- this: (mp.batch_size, mp.num_past, mp.object_dim)
     -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
@@ -326,7 +257,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- there is no concept of ground truth here?
     -- or you can make the ground truth go as far as there are timesteps available
     --------------------------------------------------- -------------------------
-
+    local avg_loss = 0
+    local total_particles = 0
 
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1, mp.ns do
@@ -359,11 +291,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         --- good up to here
 
+
         -- loop through time
         for t = 1, numsteps do
 
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
+            total_particles = total_particles+num_particles
 
             for j = 1, num_particles do
                 -- construct batch
@@ -385,17 +319,18 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local batch = {this, context, y, _, mask}
 
                 -- predict
-                local _, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
+                local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
+                avg_loss = avg_loss + loss
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
-
-                -- relative coords
-                if mp.relative then
-                    pred[{{},{},{1,4}}] = pred[{{},{},{1,4}}] +
-                                            this[{{},{-1},{1,4}}]:expandAs(
-                                            pred[{{},{},{1,4}}])
-                end
+                --
+                -- -- relative coords
+                -- if mp.relative then
+                --     pred[{{},{},{1,4}}] = pred[{{},{},{1,4}}] +
+                --                             this[{{},{-1},{1,4}}]:expandAs(
+                --                             pred[{{},{},{1,4}}])
+                -- end
 
 
                 -- restore object properties
@@ -440,19 +375,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         end
 
         if saveoutput then
-            -- save_ex_pred({this_orig, context_orig, y_orig,
-            --                         this_pred, context_pred},
-            --                         {config, start, finish},
-            --                         modelfile,
-            --                         dataloader,
-            --                         numsteps)
-
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
                                 'batch'..i..'json')  -- TODO: rename this to something more interesting
         end
     end
+    avg_loss = avg_loss/mp.ns/numsteps/total_particles/mp.batch_size
+    print('Mean Squared Error', avg_loss)
     collectgarbage()
 end
 
@@ -480,41 +410,6 @@ function save_ex_pred_json(example, jsonfile)
     -- TODO: I have to have some mechanism to indicate when is past and when is future
 end
 
-
-function save_ex_pred(example, description, modelfile_, dataloader, numsteps)
-    --[[
-        example: {this, context, y, prediction, context_future}
-        description: {config, start, finish}
-        modelfile_: like '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/network.t7'
-
-        will save to something like:
-            logs/<experiment-name>/predictions/<config.h5>
-
-
-        -- the reshaping should not happen here!
-    --]]
-
-    --unpack
-    local this, context, y, prediction, context_future = unpack(example)
-    local config, start, finish = unpack(description)
-
-    local subfolder = mp.savedir .. '/' .. 'predictions/'
-    if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
-    local save_path = subfolder .. config..'_['..start..','..finish..'].h5'
-
-    if mp.cuda then
-        prediction = prediction:float()
-        this = this:float()
-        context = context:float()
-        y = y:float()
-        context_future = context_future:float()
-    end
-
-    -- For now, just save it as hdf5. You can feed it back in later if you'd like
-    save_to_hdf5(save_path, {pred=prediction, this=this, context=context,
-                                y=y, context_future=context_future})
-end
-
 function getLastSnapshot(network_name)
 
     -- TODO: this should be replaced by savedir!
@@ -539,22 +434,6 @@ function predict()
     mp = checkpoint.mp
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     print(test(test_loader,checkpoint.model.theta.params, true))
-end
-
-
--- Note that this one does not do the ground truth. In fact, you might be able
--- to run this for arbitrary number of time-steps
-function predict_simulate()
-    local snapshot = getLastSnapshot(mp.name)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    print(snapshot)
-    mp = checkpoint.mp
-
-    -- mp.winsize = 80  -- total number of frames
-	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(mp.winsize)
-    print(simulate(test_loader, checkpoint.model.theta.params, true, 7))
 end
 
 function predict_simulate_all()

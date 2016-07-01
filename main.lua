@@ -113,8 +113,6 @@ else
     error('Unrecognized model')
 end
 
-if mp.num_past < 2 or mp.num_future < 2 then assert(not(mp.accel)) end
-if mp.accel then mp.object_dim = mp.object_dim+2 end
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.logs_root .. '/' .. mp.name
@@ -160,7 +158,6 @@ function inittrain(preload, model_path)
     val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
     test_loader = D.create('testset', tablex.deepcopy(test_args))
     train_test_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
-    assert(false)
     model = M.create(mp, preload, model_path)
     print(model.network)
 

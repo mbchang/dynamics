@@ -35,25 +35,14 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     -- -- ok, here we will have to split up the output
     local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
-    if mp.accel then
-        local pos_vel_pre, accel_prop_pre = split_tensor(3,
-                    {num_future, object_dim},{{1,4},{5,object_dim+2}})
-                    (decoder_preout):split(2)
-        local accel_prop = nn.Sigmoid()(accel_prop_pre)
-        local pos_vel = pos_vel_pre
-        local dec_out_reshaped = nn.JoinTable(3)({pos_vel, accel_prop})
-        local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
-        return nn.gModule({rnn_out}, {decoder_out})
-    else
-        local world_state_pre, obj_prop_pre = split_tensor(3,
-                    {num_future, object_dim},{{1,4},{5,object_dim}})
-                    (decoder_preout):split(2)  -- contains info about objectdim!
-        local obj_prop = nn.Sigmoid()(obj_prop_pre)
-        local world_state = world_state_pre -- linear
-        local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
-        local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
-        return nn.gModule({rnn_out}, {decoder_out})
-    end
+    local world_state_pre, obj_prop_pre = split_tensor(3,
+                {num_future, object_dim},{{1,4},{5,object_dim}})
+                (decoder_preout):split(2)  -- contains info about objectdim!
+    local obj_prop = nn.Sigmoid()(obj_prop_pre)
+    local world_state = world_state_pre -- linear
+    local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
+    local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
+    return nn.gModule({rnn_out}, {decoder_out})
 end
 
 -- with a bidirectional lstm, no need to put a mask

@@ -81,6 +81,11 @@ function datasampler:split_time(batch)
     return {focus_past, context_past, focus_future, context_future}
 end
 
+function datasampler:relative(batch)
+
+
+end
+
 function datasampler:sample_priority_batch(pow)
     -- return self:sample_random_batch()  -- or sample_random_batch
     --
