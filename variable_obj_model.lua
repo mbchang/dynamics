@@ -102,17 +102,11 @@ function split_output(params)
         {params.num_future,params.object_dim},{{1,config_args.si.m[1]-1},{config_args.si.m[1],params.object_dim}})
         ({future}):split(2)
 
-    -- split state: only pass gradients on velocity
-    -- local pos, vel = split_tensor(3,
-    --     {params.num_future, POSVELDIM},{{1,2},{3,4}})
-    --     ({world_state}):split(2) -- split world_state in half on last dim
-
-    -- split state: only pass gradients on velocity
+    -- split state: only pass gradients on velocity and angularVelocity
     local pos, vel, ang, ang_vel = split_tensor(3,
         {params.num_future, POSVELDIM},{{1,2},{3,4},{5,5},{6,6}})
         ({world_state}):split(4) -- split world_state in half on last dim
 
-    -- local net = nn.gModule({future},{pos, vel, obj_prop})
     local net = nn.gModule({future},{pos, vel, ang, ang_vel, obj_prop})
 
     if mp.cuda then
@@ -197,17 +191,6 @@ function model:fp(params_, batch, sim)
 
     local prediction = self.network:forward(input)
 
-    -- local p_pos, p_vel, p_obj_prop =
-    --                     unpack(split_output(self.mp):forward(prediction))
-    -- local gt_pos, gt_vel, gt_obj_prop =
-    --                     unpack(split_output(self.mp):forward(this_future))
-    --
-    -- local loss = self.criterion:forward(p_vel, gt_vel)
-
-    -- local loss = self.criterion:forward(p_vel, gt_vel)
-
-
-
     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
                         unpack(split_output(self.mp):forward(prediction))
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
@@ -231,17 +214,6 @@ function model:bp(batch, prediction, sim)
     local input, this_future = unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
-
-    -- local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
-    -- local gt_pos, gt_vel, gt_obj_prop =
-    --                     unpack(split_output(self.mp):forward(this_future))
-    --
-    -- local d_pos = self.identitycriterion:backward(p_pos, gt_pos)
-    -- local d_vel = self.criterion:backward(p_vel, gt_vel)
-    -- local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
-    -- local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
-    -- self.network:backward(input,d_pred)  -- updates grad_params
-
 
     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction))
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
