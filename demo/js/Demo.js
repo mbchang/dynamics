@@ -28,11 +28,92 @@
     }
 
     if (!_isBrowser) {
-        var jsonfile = require('jsonfile')
-        var assert = require('assert')
-        var utils = require('../../utils')
-        var fs = require('fs')
+        const jsonfile = require('jsonfile')
+        const assert = require('assert')
+        const utils = require('../../utils')
+        const fs = require('fs')
         require('./Examples')
+
+        const optionator = require('optionator')({
+            prepend: 'Usage: cmd [options]',
+            options: [{
+                option: 'help',
+                alias: 'h',
+                type: 'Boolean',
+                description: 'displays help',
+            }, {
+                option: 'env',
+                alias: 'e',
+                type: 'String',
+                description: 'base environment',
+                required: true
+            }, {
+                option: 'num_obj',
+                alias: 'n',
+                type: 'Int',
+                description: 'number of objects',
+                required: true
+            }, {
+                option: 'steps',
+                alias: 't',
+                type: 'Int',
+                description: 'number of timesteps',
+                required: true
+            }, {
+                option: 'samples',
+                alias: 's',
+                type: 'Int',
+                description: 'number of samples',
+                required: true
+            }, {
+                option: 'gravity',
+                alias: 'g',
+                type: 'Boolean',
+                description: 'number of objects',
+                default: false // TODO should this be int or boolean?
+            }, {
+                option: 'friction',  // TODO: shoud this be int or boolean?
+                alias: 'f',
+                type: 'Boolean',
+                description: 'number of objects',
+                default: false
+            }, {
+                option: 'pairwise', // TODO
+                alias: 'p',
+                type: 'Boolean',
+                description: 'include pairwise forces',
+                default: false  // TODO: should this be int or boolean?
+            }]
+        });
+
+        try {
+            const options = optionator.parseArgv(process.argv);
+            if (options.help) {
+                console.log(optionator.generateHelp());
+            }
+        } catch(e) {
+            console.log(optionator.generateHelp());
+            console.log(e.message)
+            process.exit(1)
+        }
+
+// /        console.log('hihi')
+        console.log(options)
+        // console.log('hihi')
+
+        assert(false)
+
+
+        // var experiment_string = scenarioName +
+        //                         '_n' + scenario.params.num_obj +
+        //                         '_gf' + 'None' + // TODO
+        //                         '_pf' + 'None' + // TODO
+        //                         '_fr' + '0' + //TODO
+        //                         '_t' + numsteps +
+        //                         '_ex' + numsamples
+
+
+
         var env = process.argv.slice(2)[0]
         if (env == null)
             throw('Please provide an enviornment, e.g. node Demo.js hockey')
