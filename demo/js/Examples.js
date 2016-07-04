@@ -1979,8 +1979,6 @@ if (!_isBrowser) {
             // these should not be mutated
             params = {
                       num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
-                      cx: 400,
-                      cy: 300,
                       max_v0: 20,
                       obj_radius: 60 };
 
@@ -1990,14 +1988,12 @@ if (!_isBrowser) {
             self.engine = demo.engine;
             self.engine.world.gravity.y = 0;
             self.engine.world.gravity.x = 0;
-            self.engine.world.bounds = { min: { x: 0, y: 0 },
-                                        max: { x: 2*params.cx, y: 2*params.cy }}
 
             // function
             self.rand_pos = function() {
                 return rand_pos(
-                    {hi: 2*params.cx - params.obj_radius - 1, lo: params.obj_radius + 1},
-                    {hi: 2*params.cy - params.obj_radius - 1, lo: params.obj_radius + 1});
+                    {hi: 2*demo.w_cx - params.obj_radius - 1, lo: params.obj_radius + 1},
+                    {hi: 2*demo.w_cy - params.obj_radius - 1, lo: params.obj_radius + 1});
                 };
 
             return self
@@ -2116,8 +2112,6 @@ if (!_isBrowser) {
             var self = {}
             // these should not be mutated
             self.params = {num_obj: options.numObj,
-                          cx: 400,
-                          cy: 300,
                           size: 40 };
             self.engine = demo.engine,
             self.world = self.engine.world;
@@ -2128,8 +2122,8 @@ if (!_isBrowser) {
             // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
             // var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
-            x = self.params.cx
-            var y = 2*self.params.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
+            x = demo.w_cx
+            var y = 2*demo.w_cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
             var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1, mass: 1})
             World.add(self.world, lastBlock)
 

@@ -359,11 +359,15 @@
         demo.engine.world.gravity.x = 0;
         demo.engine.timing.timeScale = 1;
 
+
         // These are the world boundaries!
         // TODO: make these world boundaries variable
         demo.w_offset = 5;  // world offset
         demo.w_cx = 400;
         demo.w_cy = 300;
+
+        demo.engine.world.bounds = { min: { x: 0, y: 0 },
+                                    max: { x: 2*demo.w_cx, y: 2*demo.w_cy }}
 
         var world_border = Composite.create({label:'Border'});
 
