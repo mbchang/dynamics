@@ -43,6 +43,7 @@ function datasampler.create(dataset_name, args)
     self.winsize=args.winsize
     self.num_past=args.num_past
     self.num_future=args.num_future
+    self.relative=args.relative
     self.sim=args.sim
     self.cuda=args.cuda
     assert(self.num_past + self.num_future <= self.winsize)
@@ -81,9 +82,30 @@ function datasampler:split_time(batch)
     return {focus_past, context_past, focus_future, context_future}
 end
 
-function datasampler:relative(batch)
+function datasampler:relative_pair(past, future, rta)
+    -- rta: relative to absolute, otherwise we are doing absolute to relative
+    -- print(future[{{},{},{1,4}}]:size())
+    -- print(past[{{},{},{1,4}}]:size())
+
+    -- print(past[{{},{},{1,4}}]:expandAs(future[{{},{},{1,4}}]):size())
+
+    -- TODO: use config args for this!
+    if rta then
+        future[{{},{},{1,4}}] = future[{{},{},{1,4}}] + past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
+    else
+        future[{{},{},{1,4}}] = future[{{},{},{1,4}}] - past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
+    end
+    return future
+end
 
 
+function datasampler:relative_batch(batch, rta)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+
+    -- TODO: use config args for this!
+    this_future = self:relative_pair(this_past, this_future, rta)
+
+    return {this_past, context_past, this_future, context_future, mask}
 end
 
 function datasampler:sample_priority_batch(pow)
@@ -120,6 +142,7 @@ function datasampler:load_batch_id(id)
     local nextbatch = torch.load(batchname)
 
     nextbatch = self:split_time(nextbatch)
+    if self.relative then nextbatch = self:relative_batch(nextbatch, false) end
 
     local this, context, y, context_future, mask = unpack(nextbatch)
 

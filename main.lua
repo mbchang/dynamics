@@ -24,7 +24,6 @@ local data_process = require 'data_process'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
--- cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('log_root', '', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '', 'subdirectory to save data')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
@@ -39,12 +38,12 @@ cmd:option('-test_dataset_folder', 'm2_5balls', 'dataset folder')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
-cmd:option('-relative', false, 'relative state vs absolute state')
+cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-accel', false, 'use acceleration data')
 
 -- training options
-cmd:option('-opt', "adam", 'rmsprop | adam')
+cmd:option('-opt', "rmsprop", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-shuffle', false, 'shuffle batches')
 cmd:option('-max_iter', 1000*1800, 'max number of iterations')
@@ -79,7 +78,7 @@ if mp.server == 'pc' then
     mp.num_future = 1 --10
 	mp.batch_size = 4 --1
     mp.max_iter = 5*252
-    mp.lrdecay = 0.99
+    -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.print_every = 1
@@ -147,6 +146,7 @@ function inittrain(preload, model_path)
                               winsize=mp.winsize, -- not sure if this should be in mp
                               num_past=mp.num_past,
                               num_future=mp.num_future,
+                              relative=mp.relative,
                               sim=false,
                               cuda=mp.cuda
                             }
@@ -167,6 +167,9 @@ function inittrain(preload, model_path)
         trainLogger.showPlot = false
         experimentLogger.showPlot = false
     end
+
+    -- save args
+    torch.save(mp.savedir..'/args.t7', {mp=mp,config_args=config_args})
     print("Initialized Network")
 end
 
@@ -174,10 +177,9 @@ function initsavebatches()
     mp.cuda = false
     mp.cunn = false
     mp.shuffle = false
-    print("Network parameters:")
-    print(mp)
     local jsonfile = mp.data_root..'/'..mp.dataset_folder..'/'..mp.dataset_folder..'.json'
-    local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'
+    local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'  -- TODO: make this some global thing!
+    print('Saving batches of size '..mp.batch_size..' from '..jsonfile..' into '..outfolder)
     local dp = data_process.create(jsonfile, outfolder, config_args)
     dp:create_datasets()
 end
@@ -291,50 +293,18 @@ function test(dataloader, params_, saveoutput)
         -- hacky for backwards compatability
         local this, context, y, context_future, mask = unpack(batch)
 
+        context = context:reshape(context:size(1), context:size(2),
+                                    mp.num_past, mp.object_dim)
 
-        if mp.model == 'lstmtime' then
-            -- print(this:size())  -- (bsize, mp.winsize-1, mp.object_dim)
-            -- print(context:size())  -- (bsize, mp.seq_length, mp.winsize-1, mp.object_dim)
-            -- print(y:size())  -- (bsize, mp.winsize-1, mp.object_dim)
-            -- print(context_future:size())  -- (bsize, mp.seq_length mp.winsize-1, mp.object_dim)
+        -- reshape to -- (num_samples x num_future x 8)
+        prediction = prediction:reshape(
+                                mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
+        this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
 
-            -- take care of relative position
-            if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
-                                                this[{{},{},{1,4}}]  -- TODO RESIZE THIS?
-                y[{{},{},{1,4}}] = y[{{},{},{1,4}}] + this[{{},{},{1,4}}] -- add back because relative  -- TODO RESIZE THIS?
-            end
-        else
-            -- do I need to crop future?
-            -- print('test')
-            -- print(context_future:size())
-            -- print(y:size())
-
-            -- context_future = crop_future(context_future,
-            --                             {context_future:size(1), mp.seq_length,
-            --                             mp.winsize-mp.num_past, mp.object_dim},
-            --                             {3,mp.num_future})
-            -- context_future:reshape(context_future:size(1),
-            --             context_future:size(2), mp.num_future, mp.object_dim)
-            context = context:reshape(context:size(1), context:size(2),
-                                        mp.num_past, mp.object_dim)
-
-            -- reshape to -- (num_samples x num_future x 8)
-            prediction = prediction:reshape(
-                                    mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
-            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-            -- y = crop_future(y, {y:size(1),
-            --                     mp.winsize-mp.num_past, mp.object_dim},
-            --                     {2,mp.num_future})  -- TODO RESIZE THIS
-            -- y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
-
-            -- take care of relative position
-            if mp.relative then
-                prediction[{{},{},{1,4}}] = prediction[{{},{},{1,4}}] +
-                    this[{{},{-1},{1,4}}]:expandAs(prediction[{{},{},{1,4}}])  -- TODO RESIZE THIS?
-                y[{{},{},{1,4}}] = y[{{},{},{1,4}}] +
-                    this[{{},{-1},{1,4}}]:expandAs(y[{{},{},{1,4}}]) -- add back because relative  -- TODO RESIZE THIS?
-            end
+        -- take care of relative position
+        if mp.relative then
+            prediction = test_loader:relative_pair(prediction, this, true)
+            y = test_loader:relative_pair(y, this, true)
         end
 
         -- save
@@ -464,11 +434,16 @@ end
 
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
+    local data_folder = mp.data_root..'/'..mp.dataset_folder..'/batches'
+    if not paths.dirp(data_folder) then
+        initsavebatches()
+    end
+    print('Running experiment.')
     run_experiment()
 elseif mp.mode == 'expload' then
     run_experiment_load()
 elseif mp.mode == 'save' then
-    initsavebatches(false)
+    initsavebatches()
 else
     error('unknown mode')
 end

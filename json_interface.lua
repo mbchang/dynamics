@@ -5,7 +5,7 @@ local tablex = require 'pl.tablex'
 
 -- from matter-js dump
 function load_data_json(jsonfile)
-    print(jsonfile)
+    print('Loading json file: '..jsonfile)
     local data = json.load(jsonfile)  -- 1 indexed (num_balls, timesteps, data)
     -- data: {velocity{x,y}, mass, position{x,y}}
     local num_examples = #data

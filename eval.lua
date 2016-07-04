@@ -27,9 +27,8 @@ require 'logging_utils'
 require 'json_interface'
 
 -- hacky for now, just to see if it works
-local config_args = require 'config'
+-- local config_args = require 'config'
 local data_process = require 'data_process'
-local dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
 
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
@@ -88,25 +87,32 @@ local subsamp = 1
 -- mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.logs_root .. '/' .. mp.name
 
+mp.relative=true -- TODO: address this!
+
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then require 'cutorch' end
 if mp.cunn then require 'cunn' end
 
-local model, test_loader, modelfile
+local model, test_loader, modelfile, dp
 
 ------------------------------- Helper Functions -------------------------------
 
 function inittest(preload, model_path)
     print("Network parameters:")
-    print(mp)
+    -- print(mp)
     print(mp.dataset_folder)
+    -- print(config_args)
+    -- assert(false)
+    dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
+
     -- assert(false)
     local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
                             maxwinsize=config_args.maxwinsize,
                             winsize=mp.winsize, -- not sure if this should be in mp
                             num_past=mp.num_past,
                             num_future=mp.num_future,
+                            relative=mp.relative, -- TODO: this should be in the saved args!
                             sim=true,
                             cuda=mp.cuda
                             }
@@ -258,7 +264,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- or you can make the ground truth go as far as there are timesteps available
     --------------------------------------------------- -------------------------
     local avg_loss = 0
-    local total_particles = 0
+    local count = 0
 
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1, mp.ns do
@@ -297,7 +303,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
-            total_particles = total_particles+num_particles
+            -- total_particles = total_particles+num_particles
 
             for j = 1, num_particles do
                 -- construct batch
@@ -321,17 +327,15 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 -- predict
                 local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
                 avg_loss = avg_loss + loss
+                count = count + 1
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
                 --
-                -- -- relative coords
-                -- if mp.relative then
-                --     pred[{{},{},{1,4}}] = pred[{{},{},{1,4}}] +
-                --                             this[{{},{-1},{1,4}}]:expandAs(
-                --                             pred[{{},{},{1,4}}])
-                -- end
-
+                -- -- relative coords for next timestep
+                if mp.relative then
+                    pred = test_loader:relative_pair(this, pred, true)
+                end
 
                 -- restore object properties
                 pred[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
@@ -362,12 +366,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
         local context_pred = pred_sim[{{},{2,-1}}]
 
-        -- if mp.relative then
-        --     print(this_orig[{{},{-1}}]:size())
-        --     print(y_orig:size())
-        --     assert(false)
-        --     y_orig[{{},{},{}}] = y_orig + this_orig[{{},{-1}}]  -- TODO RESIZE THIS  -- NOTE YOU SHOULD USE THE DATA PROCESS ARGS HERE!
-        -- end
+        if mp.relative then
+            y_orig = test_loader:relative_pair(this_orig, y_orig, true)
+        end
 
         -- when you save, you will replace context_future_orig
         if mp.gt then
@@ -378,10 +379,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                'batch'..i..'json')  -- TODO: rename this to something more interesting
+                                'batch'..i..'json')
         end
     end
-    avg_loss = avg_loss/mp.ns/numsteps/total_particles/mp.batch_size
+    avg_loss = avg_loss/count
     print('Mean Squared Error', avg_loss)
     collectgarbage()
 end
@@ -426,21 +427,17 @@ function getLastSnapshot(network_name)
     end
 end
 
-function predict()
-    local snapshot = getLastSnapshot(mp.name)
-    print(snapshot)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    -- checkpoint = tofloat(checkpoint)
-    mp = checkpoint.mp
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
-    print(test(test_loader,checkpoint.model.theta.params, true))
-end
 
 function predict_simulate_all()
 
     local snapshot = getLastSnapshot(mp.name)
     local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    mp = merge_tables(checkpoint.mp, mp)
+
+    local saved_args = torch.load(mp.savedir..'/args.t7')
+    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
+    config_args = saved_args.config_args
+
+    -- mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
     inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
     -- mp.winsize = 80  -- total number of frames

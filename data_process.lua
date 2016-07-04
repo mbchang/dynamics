@@ -239,8 +239,8 @@ function data_process:split2datasets(examples)
 
     -- shuffle examples
     local ridxs = torch.randperm(#examples)
-    -- print(ridxs)
-    -- assert(false)
+    print('Splitting datsets: '..string.format('%2d train %2d val %2d test',
+                                                num_train, num_val, num_test))
     for i = 1, ridxs:size(1) do
         xlua.progress(i, ridxs:size(1))
         local batch = examples[ridxs[i]]
@@ -260,7 +260,9 @@ function data_process:save_batches(datasets, savefolder)
     for k,v in pairs(datasets) do
         local dataset_folder = savefolder..'/'..k
         if not paths.dirp(dataset_folder) then paths.mkdir(dataset_folder) end
+        print('Saving',k)
         for i=1,#v do
+            xlua.progress(i,#v)
             local batch_file = dataset_folder..'/batch'..i
             torch.save(batch_file,v[i])
         end
