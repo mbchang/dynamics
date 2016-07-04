@@ -23,6 +23,8 @@ function load_data_json(jsonfile)
                 data[e][i][t][args.rsi.py] = state.position.y
                 data[e][i][t][args.rsi.vx] = state.velocity.x
                 data[e][i][t][args.rsi.vy] = state.velocity.y
+                data[e][i][t][args.rsi.a] = state.angle
+                data[e][i][t][args.rsi.av] = state.angularVelocity
                 data[e][i][t][args.rsi.m] = state.mass
                 data[e][i][t][args.rsi.oid] = 1
             end
@@ -52,6 +54,8 @@ function dump_data_json(data, jsonfile)
                                                   y=state[args.rsi.py]}
                 trajectories[e][i][t].velocity = {x=state[args.rsi.vx],
                                                   y=state[args.rsi.vy]}
+                trajectories[e][i][t].angle = state[args.rsi.a]
+                trajectories[e][i][t].anglularVelocity = state[args.rsi.av]
                 trajectories[e][i][t].mass = state[args.rsi.m]
             end
         end

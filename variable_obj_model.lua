@@ -94,19 +94,27 @@ end
 
 
 function split_output(params)
-    local POSVELDIM = 4
+    -- local POSVELDIM = 4
+    local POSVELDIM = 6
     local future = nn.Identity()()
 
     local world_state, obj_prop = split_tensor(3,
-        {params.num_future,params.object_dim},{{1,4},{5,params.object_dim}})
+        {params.num_future,params.object_dim},{{1,config_args.si.m[1]-1},{config_args.si.m[1],params.object_dim}})
         ({future}):split(2)
 
     -- split state: only pass gradients on velocity
-    local pos, vel = split_tensor(3,
-        {params.num_future, POSVELDIM},{{1,2},{3,4}})
-        ({world_state}):split(2) -- split world_state in half on last dim
+    -- local pos, vel = split_tensor(3,
+    --     {params.num_future, POSVELDIM},{{1,2},{3,4}})
+    --     ({world_state}):split(2) -- split world_state in half on last dim
 
-    local net = nn.gModule({future},{pos, vel, obj_prop})
+    -- split state: only pass gradients on velocity
+    local pos, vel, ang, ang_vel = split_tensor(3,
+        {params.num_future, POSVELDIM},{{1,2},{3,4},{5,5},{6,6}})
+        ({world_state}):split(4) -- split world_state in half on last dim
+
+    -- local net = nn.gModule({future},{pos, vel, obj_prop})
+    local net = nn.gModule({future},{pos, vel, ang, ang_vel, obj_prop})
+
     if mp.cuda then
         return net:cuda()
     else
@@ -122,8 +130,9 @@ function split_tensor(dim, reshape, boundaries)
     local chunks = {}
     for cb = 1,#boundaries do
         local left,right = unpack(boundaries[cb])
+        local length = right-left+1
         chunks[#chunks+1] = nn.JoinTable(dim)
-                                (nn.NarrowTable(left,right)(splitted))
+                                (nn.NarrowTable(left,length)(splitted))
     end
     local net = nn.gModule({tensor},chunks)
     if mp.cuda then
@@ -155,7 +164,7 @@ function model.create(mp_, preload, model_path)
         self.criterion = checkpoint.model.criterion:clone()
         self.identitycriterion = checkpoint.model.identitycriterion:clone()
     else
-        self.criterion = nn.MSECriterion()
+        self.criterion = nn.MSECriterion(false)  -- not size averaging!
         self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
         if self.mp.cuda then
@@ -188,12 +197,26 @@ function model:fp(params_, batch, sim)
 
     local prediction = self.network:forward(input)
 
-    local p_pos, p_vel, p_obj_prop =
+    -- local p_pos, p_vel, p_obj_prop =
+    --                     unpack(split_output(self.mp):forward(prediction))
+    -- local gt_pos, gt_vel, gt_obj_prop =
+    --                     unpack(split_output(self.mp):forward(this_future))
+    --
+    -- local loss = self.criterion:forward(p_vel, gt_vel)
+
+    -- local loss = self.criterion:forward(p_vel, gt_vel)
+
+
+
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
                         unpack(split_output(self.mp):forward(prediction))
-    local gt_pos, gt_vel, gt_obj_prop =
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    local loss = self.criterion:forward(p_vel, gt_vel)
+    local loss_vel = self.criterion:forward(p_vel, gt_vel)
+    local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
+    local loss = loss_vel + loss_ang_vel
+    loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
 
     collectgarbage()
     return loss, prediction
@@ -209,14 +232,40 @@ function model:bp(batch, prediction, sim)
 
     local splitter = split_output(self.mp)
 
-    local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
-    local gt_pos, gt_vel, gt_obj_prop =
+    -- local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
+    -- local gt_pos, gt_vel, gt_obj_prop =
+    --                     unpack(split_output(self.mp):forward(this_future))
+    --
+    -- local d_pos = self.identitycriterion:backward(p_pos, gt_pos)
+    -- local d_vel = self.criterion:backward(p_vel, gt_vel)
+    -- local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
+    -- local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
+    -- self.network:backward(input,d_pred)  -- updates grad_params
+
+
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction))
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    local d_pos = self.identitycriterion:backward(p_pos, gt_pos)
-    local d_vel = self.criterion:backward(p_vel, gt_vel)
-    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop)
-    local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_obj_prop})
+    -- NOTE! is there a better loss function for angle?
+    self.identitycriterion:forward(p_pos, gt_pos)
+    local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
+
+    self.criterion:forward(p_vel, gt_vel)
+    local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+    d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
+
+    self.identitycriterion:forward(p_ang, gt_ang)
+    local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
+
+    self.criterion:forward(p_ang_vel, gt_ang_vel)
+    local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+    d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
+
+    self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
+    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+
+    local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
     self.network:backward(input,d_pred)  -- updates grad_params
 
     collectgarbage()

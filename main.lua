@@ -18,8 +18,9 @@ local D = require 'data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
-local config_args = require 'config'
+config_args = require 'config'
 local data_process = require 'data_process'
+
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
@@ -36,7 +37,7 @@ cmd:option('-test_dataset_folder', 'm2_5balls', 'dataset folder')
 
 -- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
-cmd:option('-object_dim', 9, 'number of input features')
+-- cmd:option('-object_dim', 9, 'number of input features')
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
@@ -112,6 +113,7 @@ else
     error('Unrecognized model')
 end
 
+mp.object_dim = config_args.si.oid-- TODO! make this more versatile! (don't hardcode it to oid)
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.logs_root .. '/' .. mp.name
@@ -207,7 +209,7 @@ function feval_train(params_)  -- params_ should be first argument
 end
 
 function train(start_iter, epoch_num)
-    local epoch_num = epoch_num or 1  -- TODO!
+    local epoch_num = epoch_num or 1
     local start_iter = start_iter or 1
     print('Start iter:', start_iter)
     print('Start epoch num:', epoch_num)
@@ -425,11 +427,7 @@ function getLastSnapshot(network_name)
         return res_file:read():match( "^%s*(.-)%s*$" ) end)
     print(result)
     res_file:close()
-    if not status then
-        return false
-    else
-        return result
-    end
+    if not status then return false else return result end
 end
 
 ------------------------------------- Main -------------------------------------

@@ -87,13 +87,12 @@ function data_process:mass2onehot(mass)
 end
 
 function data_process:onehot2mass(onehot)
-    -- print(onehot)
     assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
     return self.masses[torch.find(onehot, 1)[1]]
 end
 
 function data_process:mass2onehotall(trajectories)
-    local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.vy}}]:clone()
+    local before = trajectories[{{},{},{},{self.rsi.px, self.si.m[1]-1}}]:clone()
     local after = trajectories[{{},{},{},{self.rsi.m+1,-1}}]:clone()
     local masses = trajectories[{{},{},{},{self.rsi.m}}]:clone()
 
@@ -118,7 +117,7 @@ end
 
 -- Do I need a onehot2massall method?
 function data_process:onehot2massall(trajectoriesonehot)
-    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.vy}}]:clone()
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.m[1]-1}}]:clone()
     local after = trajectoriesonehot[{{},{},{},{self.si.m[2]+1,-1}}]:clone()
     local onehot_masses = trajectoriesonehot[{{},{},{},{unpack(self.si.m)}}]:clone()
 
@@ -129,10 +128,7 @@ function data_process:onehot2massall(trajectoriesonehot)
     local masses = torch.zeros(num_ex*num_obj*num_steps, 1)
     onehot_masses:resize(num_ex*num_obj*num_steps, #self.masses)
 
-    -- print(trajectoriesonehot[{{3}}])
-
     for row=1,onehot_masses:size(1) do
-        -- print(row)
         masses[{{row}}] = self:onehot2mass(torch.squeeze(onehot_masses[{{row}}]))
     end
     masses:resize(num_ex, num_obj, num_steps, 1)
@@ -273,8 +269,6 @@ end
 function data_process:create_datasets()
     -- each example is a (focus, context) pair
     local json_file = self.jsonfile --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
-    -- print(self.jsonfile)
-    -- assert(false)
     local data = load_data_json(json_file)
     data = self:normalize(data)
     data = self:mass2onehotall(data)
