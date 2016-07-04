@@ -451,7 +451,6 @@
         }
 
         // experiment string
-
         var experiment_string = sim_options.env +
                                 '_n' + scenario.params.num_obj +
                                 '_t' + sim_options.steps +
@@ -550,7 +549,7 @@
         // main ////////////////////////////////////////////////////////////
         var demo = Demo.init()  // don't set the scene name yet
 
-        // can put a for loop here if you want to save logs
+        // NOTE: can put a for loop here if you want to multiple files, and then join them (may be faster)
         Demo.simulate(demo, cmd_options);
 
         // main ////////////////////////////////////////////////////////////
