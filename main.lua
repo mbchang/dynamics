@@ -78,7 +78,7 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 4 --1
-    mp.max_iter = 5*252
+    mp.max_iter = 1000
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
@@ -435,7 +435,7 @@ if mp.mode == 'exp' then
     local data_folder = mp.data_root..'/'..mp.dataset_folder..'/batches'
     if not paths.dirp(data_folder) then
         initsavebatches()
-    end
+    else print('Batches already made') end
     print('Running experiment.')
     run_experiment()
 elseif mp.mode == 'expload' then

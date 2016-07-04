@@ -27,7 +27,6 @@ require 'logging_utils'
 require 'json_interface'
 
 -- hacky for now, just to see if it works
--- local config_args = require 'config'
 local data_process = require 'data_process'
 
 ------------------------------------- Init -------------------------------------
@@ -235,9 +234,9 @@ function update_position(this, pred)
 
     local this, pred = this:clone(), pred:clone()
     local lastpos = (this[{{},{-1},{1,2}}]:clone()*config_args.position_normalize_constant)
-    local lastvel = (this[{{},{-1},{3,4}}]:clone()*config_args.velocity_normalize_constant/1000)  -- TODO: this is without subsampling make sure that this is correct!
+    local lastvel = (this[{{},{-1},{3,4}}]:clone()*config_args.velocity_normalize_constant)  -- TODO: this is without subsampling make sure that this is correct!
     local currpos = (pred[{{},{},{1,2}}]:clone()*config_args.position_normalize_constant)
-    local currvel = (pred[{{},{},{3,4}}]:clone()*config_args.velocity_normalize_constant/1000)
+    local currvel = (pred[{{},{},{3,4}}]:clone()*config_args.velocity_normalize_constant)
 
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
@@ -254,6 +253,30 @@ function update_position(this, pred)
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
 
     pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
+    return pred
+end
+
+function update_angle(this, pred)
+    local this, pred = this:clone(), pred:clone()
+
+    local last_angle = this[{{},{-1},{5}}]:clone()*config_args.angle_normalize_constant
+    local last_angular_velocity = this[{{},{-1},{6}}]:clone()*config_args.angle_normalize_constant  -- need to know the dt!
+    local curr_angle = pred[{{},{},{5}}]:clone()*config_args.angle_normalize_constant
+    local curr_angular_velocity = pred[{{},{},{6}}]:clone()*config_args.angle_normalize_constant  -- need to know the dt!
+
+    -- this is length n+1
+    local ang = torch.cat({last_angle, curr_angle},2)
+    local ang_vel = torch.cat({last_angular_velocity, curr_angular_velocity},2)
+
+    for i = 1,ang:size(2)-1 do
+        ang[{{},{i+1},{}}] = ang[{{},{i},{}}] + ang_vel[{{},{i},{}}]  -- last dim=2
+    end
+
+    -- normalize again
+    ang = ang/config_args.angle_normalize_constant
+    assert(ang[{{},{1},{}}]:size(1) == pred:size(1))
+
+    pred[{{},{},{5}}] = ang[{{},{2,-1},{}}]  -- reassign back to pred
     return pred
 end
 
@@ -342,6 +365,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- update position
                 pred = update_position(this, pred)
+                -- pred = nn.Unsqueeze(2,3):forward(pred)
+
+                -- update angle
+                pred = update_angle(this, pred)
                 pred = nn.Unsqueeze(2,3):forward(pred)
 
                 -- write into pred_sim
@@ -431,7 +458,8 @@ end
 function predict_simulate_all()
 
     local snapshot = getLastSnapshot(mp.name)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    local snapshotfile = mp.savedir ..'/'..snapshot
+    local checkpoint = torch.load(snapshotfile)
 
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
@@ -439,7 +467,7 @@ function predict_simulate_all()
 
     -- mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
+    inittest(true, snapshotfile)  -- assuming the mp.savedir doesn't change
     -- mp.winsize = 80  -- total number of frames
     -- mp.winsize = 20
 	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
@@ -448,11 +476,12 @@ end
 
 function predict_b2i()
     local snapshot = getLastSnapshot(mp.name)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+    local snapshotfile = mp.savedir ..'/'..snapshot
+    local checkpoint = torch.load(snapshotfile)
     checkpoint = checkpointtocuda(checkpoint)
     mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
-    inittest(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
+    inittest(true, snapshotfile)  -- assuming the mp.savedir doesn't change
     backprop2input()
 end
 

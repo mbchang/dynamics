@@ -33,6 +33,7 @@ function data_process.create(jsonfile, outfolder, args) -- I'm not sure if this 
 
     self.pnc = args.position_normalize_constant
     self.vnc = args.velocity_normalize_constant
+    self.anc = args.angle_normalize_constant
     self.relative = args.relative -- bool
     self.masses = args.masses -- {0.33, 1.0, 3.0, 1e30}
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
@@ -54,12 +55,16 @@ function data_process:normalize(unnormalized_trajectories)
     normalized = unnormalized_trajectories:clone()
 
     local px, py, vx, vy = self.rsi.px, self.rsi.py, self.rsi.vx, self.rsi.vy
+    local a, av = self.rsi.a, self.rsi.v
 
     -- normalize position
     normalized[{{},{},{},{px,py}}] = normalized[{{},{},{},{px,py}}]/self.pnc
 
     -- normalize velocity
     normalized[{{},{},{},{vx,vy}}] = normalized[{{},{},{},{vx,vy}}]/self.vnc
+
+    -- normalize angle and angular velocity (assumes they are together)
+    normalized[{{},{},{},{a, av}}] = normalized[{{},{},{},{a, av}}]/self.anc
 
     return normalized
 end
@@ -68,12 +73,16 @@ function data_process:unnormalize(normalized_trajectories)
     unnormalized = normalized_trajectories:clone()
 
     local px, py, vx, vy = self.rsi.px, self.rsi.py, self.rsi.vx, self.rsi.vy
+    local a, av = self.rsi.a, self.rsi.v
 
     -- normalize position
     unnormalized[{{},{},{},{px,py}}] = unnormalized[{{},{},{},{px,py}}]*self.pnc
 
     -- normalize velocity
     unnormalized[{{},{},{},{vx,vy}}] = unnormalized[{{},{},{},{vx,vy}}]*self.vnc
+
+    -- normalize angle and angular velocity (assumes they are together)
+    unnormalized[{{},{},{},{a, av}}] = unnormalized[{{},{},{},{a, av}}]*self.anc
 
     return unnormalized
 end
