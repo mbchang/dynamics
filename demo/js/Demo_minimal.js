@@ -96,6 +96,7 @@
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
                 Body.setPosition(body, trajectories[id][i].position)
+                // console.log(trajectories[id][i].position)
             }
 
             Runner.tick(demo.runner, demo.engine);

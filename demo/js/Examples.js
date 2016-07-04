@@ -1978,7 +1978,7 @@ if (!_isBrowser) {
             var self = {}; // instance of the Hockey class
 
             // these should not be mutated
-            params = {num_obj: 3,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+            params = {num_obj: 5,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                       cx: 400,
                       cy: 300,
                       max_v0: 20,
@@ -2011,6 +2011,10 @@ if (!_isBrowser) {
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_obj,self.params.max_v0)
 
+            // debug
+            // self.a0 = initialize_angles(self.params.num_obj, Math.PI)
+            // self.av0 = initialize_angles(self.params.num_obj, Math.PI/10)
+
             // set positions
             for (i = 0; i < self.params.num_obj; i++) {
                 // add body to world
@@ -2021,8 +2025,8 @@ if (!_isBrowser) {
                                                              frictionAir: 0,
                                                              frictionStatic: 0,
                                                              mass: 1.0,
-                                                             inertia: Infinity,
-                                                             inverseInertia: 0,
+                                                             inertia: Infinity,  //rotation
+                                                             inverseInertia: 0,  // rotation
                                                              label: "Entity"}));
              }
 
@@ -2035,6 +2039,25 @@ if (!_isBrowser) {
                         function(pair){
                             Body.setVelocity(pair[0],pair[1]); // pair[0] is object, pair[1] is velocity
                         });
+
+            // debug angle
+            // _.each(_.zip(self.engine.world.bodies
+            //                 .filter(function(elem) {
+            //                             return elem.label === 'Entity';
+            //                         }),
+            //             self.a0),
+            //             function(pair){
+            //                 Body.setAngle(pair[0],pair[1]); // pair[0] is object, pair[1] is velocity
+            //             });
+            //
+            // _.each(_.zip(self.engine.world.bodies
+            //                 .filter(function(elem) {
+            //                             return elem.label === 'Entity';
+            //                         }),
+            //             self.av0),
+            //             function(pair){
+            //                 Body.setAngularVelocity(pair[0],pair[1]); // pair[0] is object, pair[1] is velocity
+            //             });
         };
 
         var hockey = Hockey.create();
@@ -2108,7 +2131,7 @@ if (!_isBrowser) {
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
             x = self.params.cx
             var y = 2*self.params.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1, mass: 1})
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
@@ -2116,7 +2139,7 @@ if (!_isBrowser) {
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1})  // stack upwards
+                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1, mass: 1})  // stack upwards
                 lastBlock = block;
                 World.add(self.world, lastBlock)
             }

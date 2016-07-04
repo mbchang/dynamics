@@ -31,6 +31,7 @@
         var jsonfile = require('jsonfile')
         var assert = require('assert')
         var utils = require('../../utils')
+        var fs = require('fs')
         require('./Examples')
         var env = process.argv.slice(2)[0]
         if (env == null)
@@ -412,8 +413,7 @@
         var show = false  // this is a flag we will toggle
 
         var scenario = Example[scenarios[scenarioName]](demo)
-        var sim_file = scenarioName + 'engine.json',
-            trajectories = [],
+        var trajectories = [],
             i, id, k;
 
         for (s = 0; s < numsamples; s ++) {
@@ -439,7 +439,7 @@
             for (i = 0; i < numsteps; i++) {
                 for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                     trajectory[id][i] = {};
-                    for (k of ['position', 'velocity', 'mass']){
+                    for (k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity']){
                         var body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                         trajectory[id][i][k] = utils.copy(body[k])
                     }
@@ -451,14 +451,28 @@
             trajectories[s] = trajectory;
         }
 
-        console.log(scenario.engine.world)
-        console.log(scenario.engine.world.bodies[0].position)
+        // console.log(scenario.engine.world)
+        // assert(false)
+        // console.log(scenario.engine.world.bodies[0].position)
+        var experiment_string = scenarioName +
+                                '_n' + scenario.params.num_obj +
+                                '_gf' + 'None' + // TODO
+                                '_pf' + 'None' + // TODO
+                                '_fr' + '0' + //TODO
+                                '_t' + numsteps +
+                                '_ex' + numsamples
+        var savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
+                        experiment_string + '/'
 
+        if (!fs.existsSync(savefolder)){
+            fs.mkdirSync(savefolder);
+        }
+
+        var sim_file = savefolder + experiment_string + '.json'
 
         // save to file: (balls, timesteps, state)
-        // jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
-        console.log('Wrote to file')
-        jsonfile.writeFileSync(sim_file, scenario.engine.world, {spaces: 2});
+        console.log('Wrote to ' + sim_file)
+        jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
     };
 
     // main
@@ -466,6 +480,6 @@
         var demo = Demo.init()  // don't set the scene name yet
 
         // can put a for loop here if you want to save logs
-        Demo.simulate(demo, env, 50, 20);
+        Demo.simulate(demo, env, 60, 20);
     }
 })();

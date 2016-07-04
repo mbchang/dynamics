@@ -59,6 +59,28 @@ initialize_velocities = function(num_obj, max_v0) {
     return v0;
 }
 
+initialize_angles = function(num_obj, max_a0) {
+    var a0 = [];
+    for (var i = 0; i < num_obj; i++) {
+
+        // generate random initial angles b/w -max_a0 and max_a0 inclusive
+        var a = Math.random()*2*max_a0+1-max_a0
+        a0.push(a)
+    }
+    return a0;
+}
+
+initialize_angle_velocities = function(num_obj, max_av0) {
+    var av0 = [];
+    for (var i = 0; i < num_obj; i++) {
+
+        // generate random initial angles b/w -max_a0 and max_a0 inclusive
+        var av = Math.random()*2*max_av0+1-max_av0
+        av0.push(av)
+    }
+    return av0;
+}
+
 // load_trajectory = function(file_path) {
 //     var trajectory = jsonfile.readFileSync(file_path)
 //     console.log(trajectory)
