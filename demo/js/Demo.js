@@ -408,7 +408,7 @@
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
     Demo.simulate = function(demo, sim_options) {
-        var scenario = Example[scenarios[sim_options.env]](demo)
+        var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
         var trajectories = []
 
         for (s = 0; s < sim_options.samples; s ++) {
@@ -481,7 +481,6 @@
     // main
     if (!_isBrowser) {
         const optionator = require('optionator')({
-            prepend: 'Usage: cmd [options]',
             options: [{
                 option: 'help',
                 alias: 'h',
@@ -494,7 +493,7 @@
                 description: 'base environment',
                 required: true
             }, {
-                option: 'num_obj',
+                option: 'numObj',
                 alias: 'n',
                 type: 'Int',
                 description: 'number of objects',
@@ -542,15 +541,12 @@
         }
 
         const cmd_options = optionator.parseArgv(process.argv);
-        if (cmd_options.help) {
-            console.log(optionator.generateHelp());
-        }
+        if (cmd_options.help) console.log(optionator.generateHelp());
 
         // main ////////////////////////////////////////////////////////////
         var demo = Demo.init()  // don't set the scene name yet
 
         // can put a for loop here if you want to save logs
-        // Demo.simulate(demo, env, 60, 20);
         Demo.simulate(demo, cmd_options);
 
         // main ////////////////////////////////////////////////////////////

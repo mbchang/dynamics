@@ -1970,25 +1970,24 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Body = Matter.Body;
 
-    Example.m_balls = function(demo) {
-
+    Example.m_balls = function(demo, cmd_options) {
         var Hockey = {}
 
         Hockey.create = function(options) {
             var self = {}; // instance of the Hockey class
 
             // these should not be mutated
-            params = {num_obj: 5,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+            params = {
+                      num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                       cx: 400,
                       cy: 300,
                       max_v0: 20,
                       obj_radius: 60 };
+
             self.params = params;
 
             // var engine = Engine.create();
             self.engine = demo.engine;
-            // console.log('in example')
-            // console.log(self.engine)  // this is not the loaded engine!
             self.engine.world.gravity.y = 0;
             self.engine.world.gravity.x = 0;
             self.engine.world.bounds = { min: { x: 0, y: 0 },
@@ -2060,7 +2059,7 @@ if (!_isBrowser) {
             //             });
         };
 
-        var hockey = Hockey.create();
+        var hockey = Hockey.create(cmd_options);
         Hockey.init(hockey);
         return hockey;
     };
@@ -2109,14 +2108,14 @@ if (!_isBrowser) {
         Body = Matter.Body,
         Composites = Matter.Composites;
 
-    Example.m_tower = function(demo) {
+    Example.m_tower = function(demo, cmd_options) {
         // TODO: make the bodies inelastic
 
         var Tower = {}
-        Tower.create = function(){
+        Tower.create = function(options){
             var self = {}
             // these should not be mutated
-            self.params = {num_obj: 3,
+            self.params = {num_obj: options.numObj,
                           cx: 400,
                           cy: 300,
                           size: 40 };
@@ -2145,7 +2144,7 @@ if (!_isBrowser) {
             }
         }
 
-        var tower = Tower.create();
+        var tower = Tower.create(cmd_options);
         Tower.init(tower);
         return tower;
     };
