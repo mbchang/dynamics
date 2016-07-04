@@ -28,95 +28,11 @@
     }
 
     if (!_isBrowser) {
-        const jsonfile = require('jsonfile')
-        const assert = require('assert')
-        const utils = require('../../utils')
-        const fs = require('fs')
+        var jsonfile = require('jsonfile')
+        var assert = require('assert')
+        var utils = require('../../utils')
+        var fs = require('fs')
         require('./Examples')
-
-        const optionator = require('optionator')({
-            prepend: 'Usage: cmd [options]',
-            options: [{
-                option: 'help',
-                alias: 'h',
-                type: 'Boolean',
-                description: 'displays help',
-            }, {
-                option: 'env',
-                alias: 'e',
-                type: 'String',
-                description: 'base environment',
-                required: true
-            }, {
-                option: 'num_obj',
-                alias: 'n',
-                type: 'Int',
-                description: 'number of objects',
-                required: true
-            }, {
-                option: 'steps',
-                alias: 't',
-                type: 'Int',
-                description: 'number of timesteps',
-                required: true
-            }, {
-                option: 'samples',
-                alias: 's',
-                type: 'Int',
-                description: 'number of samples',
-                required: true
-            }, {
-                option: 'gravity',
-                alias: 'g',
-                type: 'Boolean',
-                description: 'number of objects',
-                default: false // TODO should this be int or boolean?
-            }, {
-                option: 'friction',  // TODO: shoud this be int or boolean?
-                alias: 'f',
-                type: 'Boolean',
-                description: 'number of objects',
-                default: false
-            }, {
-                option: 'pairwise', // TODO
-                alias: 'p',
-                type: 'Boolean',
-                description: 'include pairwise forces',
-                default: false  // TODO: should this be int or boolean?
-            }]
-        });
-
-        try {
-            const options = optionator.parseArgv(process.argv);
-            if (options.help) {
-                console.log(optionator.generateHelp());
-            }
-        } catch(e) {
-            console.log(optionator.generateHelp());
-            console.log(e.message)
-            process.exit(1)
-        }
-
-// /        console.log('hihi')
-        console.log(options)
-        // console.log('hihi')
-
-        assert(false)
-
-
-        // var experiment_string = scenarioName +
-        //                         '_n' + scenario.params.num_obj +
-        //                         '_gf' + 'None' + // TODO
-        //                         '_pf' + 'None' + // TODO
-        //                         '_fr' + '0' + //TODO
-        //                         '_t' + numsteps +
-        //                         '_ex' + numsamples
-
-
-
-        var env = process.argv.slice(2)[0]
-        if (env == null)
-            throw('Please provide an enviornment, e.g. node Demo.js hockey')
         module.exports = Demo;
         window = {};
     }
@@ -490,14 +406,12 @@
         }
     };
 
-    Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
-        var show = false  // this is a flag we will toggle
+    // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
+    Demo.simulate = function(demo, sim_options) {
+        var scenario = Example[scenarios[sim_options.env]](demo)
+        var trajectories = []
 
-        var scenario = Example[scenarios[scenarioName]](demo)
-        var trajectories = [],
-            i, id, k;
-
-        for (s = 0; s < numsamples; s ++) {
+        for (s = 0; s < sim_options.samples; s ++) {
             var trajectory = []
 
             // initialize trajectory conatiner
@@ -517,11 +431,11 @@
             assert(entity_ids.length == scenario.params.num_obj)
 
             // run the engine
-            for (i = 0; i < numsteps; i++) {
-                for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+            for (let i = 0; i < sim_options.steps; i++) {
+                for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                     trajectory[id][i] = {};
-                    for (k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity']){
-                        var body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
+                    for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity']){
+                        let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                         trajectory[id][i][k] = utils.copy(body[k])
                     }
                 }
@@ -532,16 +446,24 @@
             trajectories[s] = trajectory;
         }
 
-        // console.log(scenario.engine.world)
-        // assert(false)
-        // console.log(scenario.engine.world.bodies[0].position)
-        var experiment_string = scenarioName +
+        // experiment string
+
+        var experiment_string = sim_options.env +
                                 '_n' + scenario.params.num_obj +
-                                '_gf' + 'None' + // TODO
-                                '_pf' + 'None' + // TODO
-                                '_fr' + '0' + //TODO
-                                '_t' + numsteps +
-                                '_ex' + numsamples
+                                '_t' + sim_options.steps +
+                                '_ex' + sim_options.samples
+
+        // should do this using some map function TODO
+        if (sim_options.gravity) {
+            experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
+        }
+        if (sim_options.pairwise) {
+            experiment_string += '_pf' //+ sim_options.pairwise
+        }
+        if (sim_options.friction) {
+            experiment_string += '_fr' //+ sim_options.friction
+        }
+
         var savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
                         experiment_string + '/'
 
@@ -551,16 +473,86 @@
 
         var sim_file = savefolder + experiment_string + '.json'
 
-        // save to file: (balls, timesteps, state)
+        // save to file: (obj, timesteps, state)
         console.log('Wrote to ' + sim_file)
         jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
     };
 
     // main
     if (!_isBrowser) {
+        const optionator = require('optionator')({
+            prepend: 'Usage: cmd [options]',
+            options: [{
+                option: 'help',
+                alias: 'h',
+                type: 'Boolean',
+                description: 'displays help',
+            }, {
+                option: 'env',
+                alias: 'e',
+                type: 'String',
+                description: 'base environment',
+                required: true
+            }, {
+                option: 'num_obj',
+                alias: 'n',
+                type: 'Int',
+                description: 'number of objects',
+                required: true
+            }, {
+                option: 'steps',
+                alias: 't',
+                type: 'Int',
+                description: 'number of timesteps',
+                required: true
+            }, {
+                option: 'samples',
+                alias: 's',
+                type: 'Int',
+                description: 'number of samples',
+                required: true
+            }, {
+                option: 'gravity',
+                alias: 'g',
+                type: 'Boolean',
+                description: 'number of objects',
+                default: false // TODO should this be int or boolean?
+            }, {
+                option: 'friction',  // TODO: shoud this be int or boolean?
+                alias: 'f',
+                type: 'Boolean',
+                description: 'number of objects',
+                default: false
+            }, {
+                option: 'pairwise', // TODO
+                alias: 'p',
+                type: 'Boolean',
+                description: 'include pairwise forces',
+                default: false  // TODO: should this be int or boolean?
+            }]
+        });
+
+        // process invalid optiosn
+        try {
+            optionator.parseArgv(process.argv);
+        } catch(e) {
+            console.log(optionator.generateHelp());
+            console.log(e.message)
+            process.exit(1)
+        }
+
+        const cmd_options = optionator.parseArgv(process.argv);
+        if (cmd_options.help) {
+            console.log(optionator.generateHelp());
+        }
+
+        // main ////////////////////////////////////////////////////////////
         var demo = Demo.init()  // don't set the scene name yet
 
         // can put a for loop here if you want to save logs
-        Demo.simulate(demo, env, 60, 20);
+        // Demo.simulate(demo, env, 60, 20);
+        Demo.simulate(demo, cmd_options);
+
+        // main ////////////////////////////////////////////////////////////
     }
 })();
