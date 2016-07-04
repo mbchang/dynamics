@@ -449,6 +449,9 @@
 
             trajectories[s] = trajectory;
         }
+        console.log(scenario.engine.world.bodies[0])
+        console.log(scenario.engine.world)
+        assert(false)
 
         // experiment string
         var experiment_string = sim_options.env +
@@ -485,53 +488,53 @@
     if (!_isBrowser) {
         const optionator = require('optionator')({
             options: [{
-                option: 'help',
-                alias: 'h',
-                type: 'Boolean',
-                description: 'displays help',
-            }, {
-                option: 'env',
-                alias: 'e',
-                type: 'String',
-                description: 'base environment',
-                required: true
-            }, {
-                option: 'numObj',
-                alias: 'n',
-                type: 'Int',
-                description: 'number of objects',
-                required: true
-            }, {
-                option: 'steps',
-                alias: 't',
-                type: 'Int',
-                description: 'number of timesteps',
-                required: true
-            }, {
-                option: 'samples',
-                alias: 's',
-                type: 'Int',
-                description: 'number of samples',
-                required: true
-            }, {
-                option: 'gravity',
-                alias: 'g',
-                type: 'Boolean',
-                description: 'number of objects',
-                default: false // TODO should this be int or boolean?
-            }, {
-                option: 'friction',  // TODO: shoud this be int or boolean?
-                alias: 'f',
-                type: 'Boolean',
-                description: 'number of objects',
-                default: false
-            }, {
-                option: 'pairwise', // TODO
-                alias: 'p',
-                type: 'Boolean',
-                description: 'include pairwise forces',
-                default: false  // TODO: should this be int or boolean?
-            }]
+                    option: 'help',
+                    alias: 'h',
+                    type: 'Boolean',
+                    description: 'displays help',
+                }, {
+                    option: 'env',
+                    alias: 'e',
+                    type: 'String',
+                    description: 'base environment',
+                    required: true
+                }, {
+                    option: 'numObj',
+                    alias: 'n',
+                    type: 'Int',
+                    description: 'number of objects',
+                    required: true
+                }, {
+                    option: 'steps',
+                    alias: 't',
+                    type: 'Int',
+                    description: 'number of timesteps',
+                    required: true
+                }, {
+                    option: 'samples',
+                    alias: 's',
+                    type: 'Int',
+                    description: 'number of samples',
+                    required: true
+                }, {
+                    option: 'gravity',
+                    alias: 'g',
+                    type: 'Boolean',
+                    description: 'number of objects',
+                    default: false // TODO should this be int or boolean?
+                }, {
+                    option: 'friction',  // TODO: shoud this be int or boolean?
+                    alias: 'f',
+                    type: 'Boolean',
+                    description: 'number of objects',
+                    default: false
+                }, {
+                    option: 'pairwise', // TODO
+                    alias: 'p',
+                    type: 'Boolean',
+                    description: 'include pairwise forces',
+                    default: false  // TODO: should this be int or boolean?
+                }]
         });
 
         // process invalid optiosn

@@ -1978,12 +1978,15 @@ if (!_isBrowser) {
 
             // these should not be mutated
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
-                          max_v0: 20,
-                          obj_radius: 60 };
+                           friction: options.friction,
+                           max_v0: 20,
+                           obj_radius: 60 };
 
             self.engine = demo.engine;
-            self.engine.world.gravity.y = 0;
             self.engine.world.gravity.x = 0;
+            if (!(typeof options.gravity !== 'undefined' && options.gravity)) {
+                self.engine.world.gravity.y = 0;
+            }
 
             // function
             self.rand_pos = function() {
@@ -2004,17 +2007,22 @@ if (!_isBrowser) {
 
             // set positions
             for (i = 0; i < self.params.num_obj; i++) {
+                let body_opts = {restitution: 1,
+                                 mass: 1.0,
+                                 inertia: Infinity,  //rotation
+                                 inverseInertia: 0,  // rotation
+                                 label: "Entity"}
+                if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
+                    body_opts.friction = 0;
+                    body_opts.frictionAir = 0;
+                    body_opts.frictionStatic = 0;
+                }
+
+                let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
+                                        self.params.obj_radius, body_opts)
+
                 // add body to world
-                World.add(self.engine.world,
-                    Bodies.circle(self.p0[i].x, self.p0[i].y, self.params.obj_radius,
-                                                            {restitution: 1,
-                                                             friction: 0,
-                                                             frictionAir: 0,
-                                                             frictionStatic: 0,
-                                                             mass: 1.0,
-                                                             inertia: Infinity,  //rotation
-                                                             inverseInertia: 0,  // rotation
-                                                             label: "Entity"}));
+                World.add(self.engine.world, body);
              }
 
             // set velocities
@@ -2026,6 +2034,8 @@ if (!_isBrowser) {
                         function(pair){
                             Body.setVelocity(pair[0],pair[1]); // pair[0] is object, pair[1] is velocity
                         });
+
+            // TODO: here you should also set the friction and stuff!
         };
 
         var hockey = Hockey.create(cmd_options);
