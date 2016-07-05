@@ -452,9 +452,7 @@
         return trajectories;
     };
 
-    Demo.generate_data = function(demo, sim_options) {
-
-
+    Demo.create_json_fname = function(sim_options) {  // later add in the indices are something
         // experiment string
         let experiment_string = sim_options.env +
                                 '_n' + sim_options.numObj +
@@ -480,7 +478,40 @@
             fs.mkdirSync(savefolder);
         }
 
-        let sim_file = savefolder + experiment_string + '.json'
+        let sim_file = savefolder + experiment_string + '.json';
+        return sim_file;
+    }
+
+    Demo.generate_data = function(demo, sim_options) {
+
+
+        // // experiment string
+        // let experiment_string = sim_options.env +
+        //                         '_n' + sim_options.numObj +
+        //                         '_t' + sim_options.steps +
+        //                         '_ex' + sim_options.samples
+        //
+        // // should do this using some map function TODO
+        // if (sim_options.gravity) {
+        //     experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
+        // }
+        // if (sim_options.pairwise) {
+        //     experiment_string += '_pf' //+ sim_options.pairwise
+        // }
+        // if (sim_options.friction) {
+        //     experiment_string += '_fr' //+ sim_options.friction
+        // }
+        //
+        // let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
+        //                 experiment_string + '/'
+        // // var savefolder = '../data/' + experiment_string + '/'
+        //
+        // if (!fs.existsSync(savefolder)){
+        //     fs.mkdirSync(savefolder);
+        // }
+        //
+        // let sim_file = savefolder + experiment_string + '.json'
+        let sim_file = Demo.create_json_fname(sim_options)
 
         // receive trajectories here
         let trajectories = Demo.simulate(demo, sim_options.samples, sim_options);
