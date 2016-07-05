@@ -2021,21 +2021,11 @@ if (!_isBrowser) {
                 let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
                                         self.params.obj_radius, body_opts)
 
+                Body.setVelocity(body, self.v0[i])
+
                 // add body to world
                 World.add(self.engine.world, body);
              }
-
-            // set velocities
-            _.each(_.zip(self.engine.world.bodies
-                            .filter(function(elem) {
-                                        return elem.label === 'Entity';
-                                    }),
-                        self.v0),
-                        function(pair){
-                            Body.setVelocity(pair[0],pair[1]); // pair[0] is object, pair[1] is velocity
-                        });
-
-            // TODO: here you should also set the friction and stuff!
         };
 
         var hockey = Hockey.create(cmd_options);

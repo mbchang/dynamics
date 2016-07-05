@@ -81,6 +81,18 @@ initialize_angle_velocities = function(num_obj, max_av0) {
     return av0;
 }
 
+initialize_masses = function(num_obj, possible_masses) {
+    // TODO: this should be categorical!
+    var av0 = [];
+    for (var i = 0; i < num_obj; i++) {
+
+        // generate random initial angles b/w -max_a0 and max_a0 inclusive
+        var av = Math.random()*2*max_av0+1-max_av0
+        av0.push(av)
+    }
+    return av0;
+}
+
 // load_trajectory = function(file_path) {
 //     var trajectory = jsonfile.readFileSync(file_path)
 //     console.log(trajectory)

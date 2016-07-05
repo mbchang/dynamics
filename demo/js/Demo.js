@@ -449,9 +449,9 @@
 
             trajectories[s] = trajectory;
         }
-        console.log(scenario.engine.world.bodies[0])
-        console.log(scenario.engine.world)
-        assert(false)
+        // console.log(scenario.engine.world.bodies[0])
+        // console.log(scenario.engine.world)
+        // assert(false)
 
         // experiment string
         var experiment_string = sim_options.env +
@@ -472,6 +472,7 @@
 
         var savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
                         experiment_string + '/'
+        // var savefolder = '../data/' + experiment_string + '/'
 
         if (!fs.existsSync(savefolder)){
             fs.mkdirSync(savefolder);
