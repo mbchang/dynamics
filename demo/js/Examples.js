@@ -2046,7 +2046,7 @@ if (!_isBrowser) {
         Cradle.create = function(){
             var self = {}
             // these should not be mutated
-            self.params = {num_obj: 5};
+            self.params = {num_obj: options.numObj};
             self.engine = demo.engine,
             self.world = self.engine.world;
 
@@ -2128,7 +2128,7 @@ if (!_isBrowser) {
 
     // TODO!
     Example.m_chain = function(demo) {
-        self.params = {num_obj: 3};
+        self.params = {num_obj: options.numObj};
         var engine = demo.engine,
             world = engine.world,
             group = Body.nextGroup(true);

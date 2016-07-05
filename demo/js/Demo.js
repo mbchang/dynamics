@@ -411,11 +411,11 @@
     };
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
-    Demo.simulate = function(demo, sim_options) {
+    Demo.simulate = function(demo, num_samples, sim_options) {
         var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
         var trajectories = []
 
-        for (s = 0; s < sim_options.samples; s ++) {
+        for (s = 0; s < num_samples; s ++) {
             var trajectory = []
 
             // initialize trajectory conatiner
@@ -449,13 +449,15 @@
 
             trajectories[s] = trajectory;
         }
-        // console.log(scenario.engine.world.bodies[0])
-        // console.log(scenario.engine.world)
-        // assert(false)
+        return trajectories;
+    };
+
+    Demo.generate_data = function(demo, sim_options) {
+
 
         // experiment string
-        var experiment_string = sim_options.env +
-                                '_n' + scenario.params.num_obj +
+        let experiment_string = sim_options.env +
+                                '_n' + sim_options.numObj +
                                 '_t' + sim_options.steps +
                                 '_ex' + sim_options.samples
 
@@ -470,7 +472,7 @@
             experiment_string += '_fr' //+ sim_options.friction
         }
 
-        var savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
+        let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
                         experiment_string + '/'
         // var savefolder = '../data/' + experiment_string + '/'
 
@@ -478,11 +480,15 @@
             fs.mkdirSync(savefolder);
         }
 
-        var sim_file = savefolder + experiment_string + '.json'
+        let sim_file = savefolder + experiment_string + '.json'
+
+        // receive trajectories here
+        let trajectories = Demo.simulate(demo, sim_options.samples, sim_options);
 
         // save to file: (obj, timesteps, state)
         console.log('Wrote to ' + sim_file)
         jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
+
     };
 
     // main
@@ -554,7 +560,8 @@
         var demo = Demo.init()  // don't set the scene name yet
 
         // NOTE: can put a for loop here if you want to multiple files, and then join them (may be faster)
-        Demo.simulate(demo, cmd_options);
+        // Demo.simulate(demo, cmd_options);
+        Demo.generate_data(demo, cmd_options);
 
         // main ////////////////////////////////////////////////////////////
     }
