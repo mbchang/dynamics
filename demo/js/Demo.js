@@ -28,10 +28,11 @@
     }
 
     if (!_isBrowser) {
-        var jsonfile = require('jsonfile')
-        var assert = require('assert')
-        var utils = require('../../utils')
-        var fs = require('fs')
+        var jsonfile = require('jsonfile');
+        var assert = require('assert');
+        var utils = require('../../utils');
+        var mkdirp = require('mkdirp');
+        var fs = require('fs');
         require('./Examples')
         module.exports = Demo;
         window = {};
@@ -412,6 +413,7 @@
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
     Demo.simulate = function(demo, num_samples, sim_options) {
+        Demo.reset(demo);
         var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
         var trajectories = []
 
@@ -419,7 +421,7 @@
             var trajectory = []
 
             // initialize trajectory conatiner
-            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!  // we need a num_obj parameter!
+            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                 trajectory[id] = [];
             }
 
@@ -452,7 +454,7 @@
         return trajectories;
     };
 
-    Demo.create_json_fname = function(sim_options) {  // later add in the indices are something
+    Demo.create_json_fname = function(samples, id, sim_options) {  // later add in the indices are something
         // experiment string
         let experiment_string = sim_options.env +
                                 '_n' + sim_options.numObj +
@@ -471,59 +473,32 @@
         }
 
         let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
-                        experiment_string + '/'
+                        experiment_string + '/jsons/'
         // var savefolder = '../data/' + experiment_string + '/'
 
         if (!fs.existsSync(savefolder)){
-            fs.mkdirSync(savefolder);
+            // fs.mkdirSync(savefolder);
+            mkdirp.sync(savefolder);
         }
+
+        experiment_string += '_chksize' + samples + '_' + id
 
         let sim_file = savefolder + experiment_string + '.json';
         return sim_file;
-    }
-
-    Demo.generate_data = function(demo, sim_options) {
-
-
-        // // experiment string
-        // let experiment_string = sim_options.env +
-        //                         '_n' + sim_options.numObj +
-        //                         '_t' + sim_options.steps +
-        //                         '_ex' + sim_options.samples
-        //
-        // // should do this using some map function TODO
-        // if (sim_options.gravity) {
-        //     experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
-        // }
-        // if (sim_options.pairwise) {
-        //     experiment_string += '_pf' //+ sim_options.pairwise
-        // }
-        // if (sim_options.friction) {
-        //     experiment_string += '_fr' //+ sim_options.friction
-        // }
-        //
-        // let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
-        //                 experiment_string + '/'
-        // // var savefolder = '../data/' + experiment_string + '/'
-        //
-        // if (!fs.existsSync(savefolder)){
-        //     fs.mkdirSync(savefolder);
-        // }
-        //
-        // let sim_file = savefolder + experiment_string + '.json'
-        let sim_file = Demo.create_json_fname(sim_options)
-
-        // receive trajectories here
-        let trajectories = Demo.simulate(demo, sim_options.samples, sim_options);
-
-        // save to file: (obj, timesteps, state)
-        console.log('Wrote to ' + sim_file)
-        jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
-
     };
 
-    // main
-    if (!_isBrowser) {
+    Demo.generate_data = function(demo, sim_options) {
+        const max_iters_per_json = 37;
+        const chunks = chunk(sim_options.samples, max_iters_per_json)
+        for (let j=0; j < chunks.length; j++){
+            let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
+            let trajectories = Demo.simulate(demo, chunks[j], sim_options);
+            jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
+            console.log('Wrote to ' + sim_file)
+        }
+    };
+
+    Demo.process_cmd_options = function() {
         const optionator = require('optionator')({
             options: [{
                     option: 'help',
@@ -586,14 +561,15 @@
 
         const cmd_options = optionator.parseArgv(process.argv);
         if (cmd_options.help) console.log(optionator.generateHelp());
+        return cmd_options;
+    };
 
-        // main ////////////////////////////////////////////////////////////
+    // main
+    if (!_isBrowser) {
+        const cmd_options = Demo.process_cmd_options();
         var demo = Demo.init()  // don't set the scene name yet
 
-        // NOTE: can put a for loop here if you want to multiple files, and then join them (may be faster)
         // Demo.simulate(demo, cmd_options);
         Demo.generate_data(demo, cmd_options);
-
-        // main ////////////////////////////////////////////////////////////
     }
 })();
