@@ -474,7 +474,7 @@
 
         let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
                         experiment_string + '/jsons/'
-        // var savefolder = '../data/' + experiment_string + '/'
+        // var savefolder = '../data/' + experiment_string + '/jsons/'
 
         if (!fs.existsSync(savefolder)){
             // fs.mkdirSync(savefolder);
@@ -488,7 +488,7 @@
     };
 
     Demo.generate_data = function(demo, sim_options) {
-        const max_iters_per_json = 37;
+        const max_iters_per_json = 100;
         const chunks = chunk(sim_options.samples, max_iters_per_json)
         for (let j=0; j < chunks.length; j++){
             let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
