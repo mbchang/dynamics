@@ -322,11 +322,6 @@ end
 
 function data_process:sample_save_single_batch(batch, dataset_ids, counters, limits)
     local dataset_id = self:sample_dataset_id(dataset_ids, counters, limits)
-    -- print(dataset_id)
-    -- print(counters)
-    -- print(dataset_ids)
-    -- print(dataset_ids[dataset_id])
-    -- print(counters[dataset_ids[dataset_id]])
     counters[dataset_ids[dataset_id]] = counters[dataset_ids[dataset_id]] + 1
 
     -- save
@@ -352,7 +347,7 @@ function data_process:create_datasets_batches()
     print(num_obj..' objects '..num_steps..' steps '..total_samples..
         ' samples yields '..num_batches..' batches')
     local num_train, num_val, num_test = self:split_datasets_sizes(num_batches)
-    print('with train: '..num_train..' val: '..num_val..' test: '..num_test)
+    print('train: '..num_train..' val: '..num_val..' test: '..num_test)
 
     local counters = {trainset=0, valset=0, testset=0}
     local dataset_ids = {'trainset', 'valset', 'testset'}
@@ -381,15 +376,20 @@ function data_process:create_datasets_batches()
     leftover_examples = join_table_of_tables(leftover_examples)
     print('Merged leftover examples:')
     print(leftover_examples)
-    assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))
-    assert(leftover_examples[1]:size(1) % self.bsize == 0)
-    assert(data_process:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
-    local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2])
-    print('Saving leftover_batches')
-    print(leftover_batches)
-    for _, batch in pairs(leftover_batches) do
-        assert(data_process:check_overflow(counters, limits) >= 0)
-        counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
+    if #leftover_examples > 0 then
+        assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))
+        assert(leftover_examples[1]:size(1) % self.bsize == 0)
+        assert(data_process:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
+        local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2])
+        print('Saving leftover_batches')
+        print(leftover_batches)
+        for _, batch in pairs(leftover_batches) do
+            assert(data_process:check_overflow(counters, limits) >= 0)
+            counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
+        end
+    else
+        -- verify that all batches have been saved TODO
+        -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
     end
 end
 
@@ -409,13 +409,6 @@ function data_process:json2batches(jsonfile)
     data = self:normalize(data)
     data = self:mass2onehotall(data)
     local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
-    -- local focus_batches = self:split2batches(focus)
-    -- local context_batches = self:split2batches(context)
-    -- local all_batches = {}
-    -- for b=1,#focus_batches do
-    --     table.insert(all_batches, {focus_batches[b], context_batches[b]})
-    -- end
-    -- return all_batches
     return self:split2batchesall(focus, context)
 end
 
@@ -423,23 +416,11 @@ end
 function data_process:create_datasets()
     -- each example is a (focus, context) pair
     local json_file = self.jsonfolder --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
-    -- local data = load_data_json(json_file)
-    -- data = self:normalize(data)
-    -- data = self:mass2onehotall(data)
-    -- local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
-    -- local focus_batches = self:split2batches(focus)
-    -- local context_batches = self:split2batches(context)
-    -- local all_batches = {}
-    -- for b=1,#focus_batches do
-    --     table.insert(all_batches, {focus_batches[b], context_batches[b]})
-    -- end
     local all_batches = self:json2batches(jsonfile)
     local datasets = self:split2datasets(all_batches)
     self:save_batches(datasets, self.outfolder)
 
-
     -- TODO: you should also save a sort of config file in the folder such that you can match the winsize and stuff in your dataloader, for example
-
 end
 
 -- this method converts torch back to json file

@@ -34,12 +34,12 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 -- cmd:option('-root', "logslink", 'subdirectory to save logs')
-cmd:option('log_root', '', 'subdirectory to save logs and checkpoints')
-cmd:option('data_root', '', 'subdirectory to save data')
+cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
+cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 -- dataset
-cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
+cmd:option('-dataset_folder', '', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-ns', 3, 'number of test batches')
@@ -67,10 +67,9 @@ if mp.server == 'pc' then
 	mp.cuda = false
 	mp.cunn = false
 else
-	mp.winsize = 20  -- total number of frames
+	mp.winsize = 10  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder='/om/data/public/mbchang/physics-data/'..mp.dataset_folder
 	mp.seq_length = 10
 	mp.num_threads = 4
 	mp.cuda = true
@@ -289,6 +288,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local avg_loss = 0
     local count = 0
 
+    local unsqueezer = nn.Unsqueeze(2,3)
+    if mp.cuda then unsqueezer:cuda() end
+
     -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
     for i = 1, mp.ns do
         -- if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
@@ -308,8 +310,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
 
-        local past = torch.cat({nn.Unsqueeze(2,3):forward(this_orig:clone()), context_orig},2)
-        local future = torch.cat({nn.Unsqueeze(2,3):forward(y_orig:clone()), context_future_orig},2)
+        local past = torch.cat({unsqueezer:forward(this_orig:clone()), context_orig},2)
+        local future = torch.cat({unsqueezer:forward(y_orig:clone()), context_future_orig},2)
+
+        -- local past = torch.cat({nn.Unsqueeze(2,3):forward(this_orig:clone()), context_orig},2)
+        -- local future = torch.cat({nn.Unsqueeze(2,3):forward(y_orig:clone()), context_future_orig},2)
 
         assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
@@ -345,7 +350,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local y = future[{{},{j},{t}}]
                 y:resize(mp.batch_size, mp.num_future, mp.object_dim)
 
-                local batch = {this, context, y, _, mask}
+                local batch = {this, context, y, _, mask} -- TODO: this may be the problem!
 
                 -- predict
                 local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
@@ -369,7 +374,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- update angle
                 pred = update_angle(this, pred)
-                pred = nn.Unsqueeze(2,3):forward(pred)
+                pred = unsqueezer:forward(pred)
+                -- pred = nn.Unsqueeze(2,3):forward(pred)
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred

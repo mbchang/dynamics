@@ -25,7 +25,7 @@ local data_process = require 'data_process'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
-cmd:option('log_root', 'logs', 'subdirectory to save logs and checkpoints')
+cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "mj", 'experiment name')
@@ -77,7 +77,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.batch_size = 200 --1
+	mp.batch_size = 5 --1
     mp.max_iter = 1000
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
@@ -178,7 +178,7 @@ function initsavebatches()
     mp.shuffle = false
     local jsonfolder = mp.data_root..'/'..mp.dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
     local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'  -- TODO: make this some global thing!
-    print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'/json/ into '..outfolder)
+    print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..outfolder)
     config_args.batch_size = mp.batch_size
     local dp = data_process.create(jsonfolder, outfolder, config_args)
     -- dp:create_datasets()

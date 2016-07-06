@@ -11,7 +11,7 @@ local args = {
         permute_context=False,
         shuffle=False,
         maxwinsize=60,
-        max_iters_per_json=37  -- TODO
+        max_iters_per_json=100  -- TODO
 
         -- world params
 

@@ -151,7 +151,7 @@ function datasampler:load_batch_id(id)
     mask[{{context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
 
     -- convert to cuda or double
-    this,context,y,context_future = unpack(map(convert_type,{this,context,y,context_future},self.cuda))
+    this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
 
     nextbatch = {this, context, y, context_future, mask}
     collectgarbage()
