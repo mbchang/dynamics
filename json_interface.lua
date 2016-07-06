@@ -11,6 +11,7 @@ function load_data_json(jsonfile)
     local num_examples = #data
     local num_obj = #data[1]
     local T = #data[1][1]
+    assert(num_examples <= args.max_iters_per_json)
 
     -- TODO: adapt to include other information
     for e=1,num_examples do

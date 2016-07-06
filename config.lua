@@ -8,11 +8,10 @@ local args = {
         masses={0.33, 1.0, 3.0, 1e30},
         rsi={px=1, py=2, vx=3, vy=4, a=5, av=6, m=7, oid=8},  -- raw state indicies
         si={px=1, py=2, vx=3, vy=4, a=5, av=6, m={7,10}, oid=11},  -- state indices
-        object_dim = 9,
         permute_context=False,
-        batch_size=4,
         shuffle=False,
-        maxwinsize=60
+        maxwinsize=60,
+        max_iters_per_json=37  -- TODO
 
         -- world params
 

@@ -2,6 +2,7 @@ require 'hdf5'
 require 'nn'
 require 'nngraph'
 require 'torchx'
+local pltx = require 'pl.tablex'
 
 function get_keys(table)
     local keyset={}
@@ -191,6 +192,23 @@ function unpack_batch(batch, sim)
     end
 
     return input, this_future
+end
+
+-- each inner table contains the same number of tensors, for which all
+-- the dimensions (except the first) are the same
+function join_table_of_tables(table_of_tables)
+    if #table_of_tables == 0 then return table_of_tables end
+    local all
+    for _, inner in pairs(table_of_tables) do
+        if all == nil then
+            all = pltx.deepcopy(inner)
+        else
+            for k, tensor in pairs(inner) do
+                all[k] = torch.cat({all[k], tensor:clone()}, 1)
+            end
+        end
+    end
+    return all
 end
 
 

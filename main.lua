@@ -25,8 +25,8 @@ local data_process = require 'data_process'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
-cmd:option('log_root', '', 'subdirectory to save logs and checkpoints')
-cmd:option('data_root', '', 'subdirectory to save data')
+cmd:option('log_root', 'logs', 'subdirectory to save logs and checkpoints')
+cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
@@ -57,7 +57,7 @@ cmd:option('-ps', true, 'turn on priority sampling')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 
 -- experiment options
-cmd:option('-plot', true, 'turn on/off plot')
+cmd:option('-plot', false, 'turn on/off plot')
 
 -- every options
 cmd:option('-print_every', 100, 'print every number of batches')
@@ -77,7 +77,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-	mp.batch_size = 4 --1
+	mp.batch_size = 200 --1
     mp.max_iter = 1000
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
@@ -89,14 +89,11 @@ if mp.server == 'pc' then
 	mp.cuda = false
 	mp.cunn = false
 else
-	mp.winsize = 20  -- total number of frames
+	mp.winsize = 10  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.dataset_folder
-    mp.test_dataset_folder = '/om/data/public/mbchang/physics-data/'..mp.test_dataset_folder
 	mp.seq_length = 10
 	mp.num_threads = 4
-    mp.plot = false
 	mp.cuda = true
 	mp.cunn = true
 end
@@ -179,11 +176,13 @@ function initsavebatches()
     mp.cuda = false
     mp.cunn = false
     mp.shuffle = false
-    local jsonfile = mp.data_root..'/'..mp.dataset_folder..'/'..mp.dataset_folder..'.json'
+    local jsonfolder = mp.data_root..'/'..mp.dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
     local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'  -- TODO: make this some global thing!
-    print('Saving batches of size '..mp.batch_size..' from '..jsonfile..' into '..outfolder)
-    local dp = data_process.create(jsonfile, outfolder, config_args)
-    dp:create_datasets()
+    print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'/json/ into '..outfolder)
+    config_args.batch_size = mp.batch_size
+    local dp = data_process.create(jsonfolder, outfolder, config_args)
+    -- dp:create_datasets()
+    dp:create_datasets_batches()
 end
 
 -- closure: returns loss, grad_params

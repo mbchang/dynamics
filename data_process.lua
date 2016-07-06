@@ -22,12 +22,14 @@ require 'json_interface'
 require 'data_utils'
 require 'paths'
 require 'nn'
+local pls = require 'pl.stringx'
+local plt = require 'pl.tablex'
 
 local data_process = {}
 data_process.__index = data_process
 
 
-function data_process.create(jsonfile, outfolder, args) -- I'm not sure if this make sense in eval though
+function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if this make sense in eval though
     local self = {}
     setmetatable(self, data_process)
 
@@ -41,7 +43,7 @@ function data_process.create(jsonfile, outfolder, args) -- I'm not sure if this 
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
     self.bsize = args.batch_size
     self.shuffle = args.shuffle
-    self.jsonfile = jsonfile
+    self.jsonfolder = jsonfolder--..'/jsons'
     self.outfolder = outfolder -- save stuff to here.
 
     -- here you can also include have world parameters
@@ -227,16 +229,28 @@ end
 
 function data_process:split2batches(data)
     local num_examples = data:size(1)
-    assert(num_examples % self.bsize == 0)
-    return data:clone():chunk(num_examples/self.bsize,1)
+    -- assert(num_examples % self.bsize == 0)  -- TODO take care of this!
+    local num_chunks = math.ceil(num_examples/self.bsize)
+    print('Splitting '..num_examples..' examples into '..num_chunks..
+            ' batches of size at most '..self.bsize)
+    local result = data:clone():split(self.bsize,1)
+    return result
 end
 
 
 -- train-val-test: 70-15-15 split
-function data_process:split2datasets(examples)
-    local num_test = math.floor(#examples * 0.15)
+function data_process:split_datasets_sizes(num_examples)
+    assert(num_examples%1==0)
+    local num_test = math.floor(num_examples * 0.15)
     local num_val = num_test
-    local num_train = #examples - 2*num_test
+    local num_train = num_examples - 2*num_test
+    -- if num_val == 0 then assert(false, 'valset and testset sizes are 0!') end
+    return num_train, num_val, num_test
+end
+
+
+function data_process:split2datasets(examples)
+    local num_train, num_val, num_test = self:split_datasets_sizes(#examples)
 
     local test = {}
     local val = {}
@@ -274,20 +288,152 @@ function data_process:save_batches(datasets, savefolder)
     end
 end
 
--- save datasets
-function data_process:create_datasets()
-    -- each example is a (focus, context) pair
-    local json_file = self.jsonfile --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
-    local data = load_data_json(json_file)
-    data = self:normalize(data)
-    data = self:mass2onehotall(data)
-    local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
+function data_process:extract_flag(flags_list, delim)
+    local extract = plt.filter(flags_list, function(x) return pls.startswith(x, delim) end)
+    assert(#extract == 1)
+    return string.sub(extract[1], #delim+1)
+end
+
+-- rejection sampling
+function data_process:sample_dataset_id(dataset_ids, counters, limits)
+    local dataset_id = math.ceil(torch.rand(1)[1]*#dataset_ids)
+    while ((function ()
+                local dataset_name = dataset_ids[dataset_id]
+                if counters[dataset_name] >= limits[dataset_name] then
+                    return true
+                else return false end
+            end)()) do
+        dataset_id = math.ceil(torch.rand(1)[1]*#dataset_ids)
+    end
+    return dataset_id
+end
+
+function data_process:check_overflow(counters, limits)
+    local buffer = 0
+    for k,v in pairs(counters) do
+        if counters[k] > limits[k] then
+            return -1
+        else
+            buffer = buffer + limits[k] - counters[k]
+        end
+    end
+    return buffer
+end
+
+function data_process:sample_save_single_batch(batch, dataset_ids, counters, limits)
+    local dataset_id = self:sample_dataset_id(dataset_ids, counters, limits)
+    -- print(dataset_id)
+    -- print(counters)
+    -- print(dataset_ids)
+    -- print(dataset_ids[dataset_id])
+    -- print(counters[dataset_ids[dataset_id]])
+    counters[dataset_ids[dataset_id]] = counters[dataset_ids[dataset_id]] + 1
+
+    -- save
+    local dataset_folder = self.outfolder..'/'..dataset_ids[dataset_id]
+    if not paths.dirp(dataset_folder) then paths.mkdir(dataset_folder) end  -- really redundant, should move this out
+    local batch_file = dataset_folder..'/batch'..counters[dataset_ids[dataset_id]]
+    print('Saving to '..batch_file)
+    assert(not(paths.filep(batch_file)))
+    torch.save(batch_file,batch)
+    return counters
+end
+
+-- this sampling scheme is pretty complex, but it is random
+-- if max_iters_per_json is a multiple of batch_size, then it should be fine
+function data_process:create_datasets_batches()
+    --max_iters_per_json
+
+    local flags = pls.split(string.gsub(self.jsonfolder,'/jsons',''), '_')
+    local total_samples = tonumber(self:extract_flag(flags, 'ex'))
+    local num_obj = tonumber(self:extract_flag(flags, 'n'))
+    local num_steps = tonumber(self:extract_flag(flags, 't'))
+    local num_batches = total_samples*num_obj/self.bsize -- TODO: this can change based on on how you want to process num_steps!
+    print(num_obj..' objects '..num_steps..' steps '..total_samples..
+        ' samples yields '..num_batches..' batches')
+    local num_train, num_val, num_test = self:split_datasets_sizes(num_batches)
+    print('with train: '..num_train..' val: '..num_val..' test: '..num_test)
+
+    local counters = {trainset=0, valset=0, testset=0}
+    local dataset_ids = {'trainset', 'valset', 'testset'}
+    local limits = {trainset=num_train, valset=num_val, testset=num_test}
+
+    -- now, let's implement the queue
+    local leftover_examples = {}
+    for jsonfile in paths.iterfiles(self.jsonfolder) do  -- order doesn't matter
+       local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))  -- note that this may not all be the same batch size! They will even out at the end though
+       print(new_batches)
+       for _, batch in pairs(new_batches) do
+           assert(data_process:check_overflow(counters, limits) >= 0)
+           -- check to see if this batch is of batch_size
+           if batch[1]:size(1) < self.bsize then
+               table.insert(leftover_examples, batch)
+               print('leftover examples')
+               print(leftover_examples)
+           else
+               -- sample which dataset you should save it in
+                counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
+            end
+           collectgarbage()
+       end
+    end
+    -- now concatenate all the leftover_batches. They had better be a multiple of self.bsize
+    leftover_examples = join_table_of_tables(leftover_examples)
+    print('Merged leftover examples:')
+    print(leftover_examples)
+    assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))
+    assert(leftover_examples[1]:size(1) % self.bsize == 0)
+    assert(data_process:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
+    local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2])
+    print('Saving leftover_batches')
+    print(leftover_batches)
+    for _, batch in pairs(leftover_batches) do
+        assert(data_process:check_overflow(counters, limits) >= 0)
+        counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
+    end
+end
+
+-- perfomrs split2batches on both focus and context and then merges result
+function data_process:split2batchesall(focus, context)
     local focus_batches = self:split2batches(focus)
     local context_batches = self:split2batches(context)
     local all_batches = {}
     for b=1,#focus_batches do
         table.insert(all_batches, {focus_batches[b], context_batches[b]})
     end
+    return all_batches
+end
+
+function data_process:json2batches(jsonfile)
+    local data = load_data_json(jsonfile)
+    data = self:normalize(data)
+    data = self:mass2onehotall(data)
+    local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
+    -- local focus_batches = self:split2batches(focus)
+    -- local context_batches = self:split2batches(context)
+    -- local all_batches = {}
+    -- for b=1,#focus_batches do
+    --     table.insert(all_batches, {focus_batches[b], context_batches[b]})
+    -- end
+    -- return all_batches
+    return self:split2batchesall(focus, context)
+end
+
+-- save datasets
+function data_process:create_datasets()
+    -- each example is a (focus, context) pair
+    local json_file = self.jsonfolder --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
+    -- local data = load_data_json(json_file)
+    -- data = self:normalize(data)
+    -- data = self:mass2onehotall(data)
+    -- local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
+    -- local focus_batches = self:split2batches(focus)
+    -- local context_batches = self:split2batches(context)
+    -- local all_batches = {}
+    -- for b=1,#focus_batches do
+    --     table.insert(all_batches, {focus_batches[b], context_batches[b]})
+    -- end
+    local all_batches = self:json2batches(jsonfile)
     local datasets = self:split2datasets(all_batches)
     self:save_batches(datasets, self.outfolder)
 
@@ -304,7 +450,6 @@ function data_process:record_trajectories(batch, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
     -- print(trajectories[{{1},{1},{1}}])
-    -- assert(false)
 
     -- onehotall2mass
     local trajectories = self:onehot2massall(trajectories)
@@ -313,34 +458,6 @@ function data_process:record_trajectories(batch, jsonfile)
     -- print(unnormalized[{{1},{1},{1}}])
     dump_data_json(unnormalized, jsonfile)
 end
-
-
-
-
-
--- Now I need functions to sample batches
--- that would require me to keep some internal state for the priority table though.
--- when do I want to create that field? Or should I create a completely new file?
--- I think I should create a new file, iniialize with
-
--- to be compatible with previous code, for now
-function regression_interface(datasets)
-    -- just need the mask as well as split into past and future
-
-    -- th> a
-    -- {
-    --   1 : FloatTensor - size: 50x2x9
-    --   2 : FloatTensor - size: 50x10x2x9
-    --   3 : FloatTensor - size: 50x2x9
-    --   4 : FloatTensor - size: 10
-    --   5 : "worldm5_np=2_ng=0_slow"
-    --   6 : 1
-    --   7 : 50
-    --   8 : FloatTensor - size: 50x10x2x9
-    -- }
-end
-
-
 
 return data_process
 
