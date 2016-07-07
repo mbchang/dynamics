@@ -437,16 +437,16 @@ function save_ex_pred_json(example, jsonfile)
     local context_pred_traj = torch.cat({context_past,context_pred}, 3)
     dp:record_trajectories({this_pred_traj, context_pred_traj}, subfolder..'pred_' .. jsonfile)
 
-    -- print('hey')
     -- construct prediction
     local this_gt_traj = torch.cat({this_past, this_future}, 2)
     local context_gt_traj = torch.cat({context_past, context_future}, 3)
     dp:record_trajectories({this_gt_traj, context_gt_traj}, subfolder..'gt_' .. jsonfile)
 
-    -- TODO: I have to have some mechanism to indicate when is past and when is future
     local world_config = {
-        env=test_loader.scenario
-        numObj=tonumber(extract_flag(flags, 'n'))
+        num_past = mp.num_past,
+        num_future = mp.num_future,
+        env=test_loader.scenario,
+        numObj=tonumber(extract_flag(flags, 'n')),
         gravity=false, -- TODO
         friction=false, -- TODO
         pairwise=false -- TODO
