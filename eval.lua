@@ -43,6 +43,7 @@ cmd:option('-dataset_folder', '', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-ns', 3, 'number of test batches')
+cmd:option('-steps', 7, 'steps to simulate')
 cmd:text()
 
 -- parse input params
@@ -482,7 +483,7 @@ function predict_simulate_all()
 
     model_deps(mp.model)
     inittest(true, snapshotfile)  -- assuming the mp.savedir doesn't change
-    print(simulate_all(test_loader, checkpoint.model.theta.params, true, 7))
+    print(simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps))
 end
 
 function predict_b2i()
