@@ -11,7 +11,7 @@ require 'hdf5'
 require 'data_utils'
 require 'torchx'
 require 'utils'
-require 'pl.stringx'
+local pls = require 'pl.stringx'
 require 'pl.Set'
 local T = require 'pl.tablex'
 local PS = require 'priority_sampler'
@@ -50,12 +50,9 @@ function datasampler.create(dataset_name, args)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
 
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
+    self.scenario = string.sub(self.dataset_folder,1,pls.split(self.dataset_folder,'_')[1])
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
-    -- print(self.dataset_folder)
-    -- print(self.savefolder)
-    -- assert(false)
-    -- print(self.num_batches)
 
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0

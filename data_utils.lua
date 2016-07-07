@@ -161,6 +161,13 @@ function broadcast(tensor, dim)
     end
 end
 
+
+function extract_flag(flags_list, delim)
+    local extract = plt.filter(flags_list, function(x) return pls.startswith(x, delim) end)
+    assert(#extract == 1)
+    return string.sub(extract[1], #delim+1)
+end
+
 function unpack_batch(batch, sim)
     local this, context, y, context_future, mask = unpack(batch)
     local x = {this=this,context=context}
@@ -176,7 +183,8 @@ function unpack_batch(batch, sim)
     this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
 
     assert(this_past:size(1) == mp.batch_size and
-            this_past:size(2) == mp.input_dim)  -- TODO RESIZE THIS
+            this_past:size(2) == mp.input_dim,
+            'Your batch size or input dim is wrong')  -- TODO RESIZE THIS
     assert(context:size(1) == mp.batch_size and
             context:size(2)==torch.find(mask,1)[1]
             and context:size(3) == mp.input_dim)
@@ -251,6 +259,25 @@ function checkpointtocuda(checkpoint)
     checkpoint.model.theta.params = checkpoint.model.theta.params:cuda()
     checkpoint.model.theta.grad_params=checkpoint.model.theta.grad_params:cuda()
     return checkpoint
+end
+
+function unsqueeze(tensor, dim)
+    local ndims = tensor:dim()
+    assert(dim >= 1 and dim <= ndims+1 and dim % 1 ==0,
+            'can only unsqueeze up to one extra dimension')
+    local old_size = torch.totable(tensor:size())
+    local j = 1
+    local new_size = {}
+    for i=1,ndims+1 do
+        if i == dim then
+            table.insert(new_size, 1)
+        else
+            table.insert(new_size, old_size[j])
+            j = j + 1
+        end
+    end
+    tensor = tensor:clone():reshape(unpack(new_size))
+    return tensor
 end
 
 function mj_interface(batch)

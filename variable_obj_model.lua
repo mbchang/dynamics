@@ -157,6 +157,11 @@ function model.create(mp_, preload, model_path)
         self.network = checkpoint.model.network:clone()
         self.criterion = checkpoint.model.criterion:clone()
         self.identitycriterion = checkpoint.model.identitycriterion:clone()
+        if self.mp.cuda then
+            self.network:float()
+            self.criterion:float()
+            self.identitycriterion:float()
+        end
     else
         self.criterion = nn.MSECriterion(false)  -- not size averaging!
         self.identitycriterion = nn.IdentityCriterion()

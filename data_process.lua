@@ -136,7 +136,7 @@ function data_process:onehot2massall(trajectoriesonehot)
     local num_obj = onehot_masses:size(2)
     local num_steps = onehot_masses:size(3)
 
-    local masses = torch.zeros(num_ex*num_obj*num_steps, 1)
+    local masses = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
     onehot_masses:resize(num_ex*num_obj*num_steps, #self.masses)
 
     for row=1,onehot_masses:size(1) do
@@ -217,12 +217,13 @@ function data_process:expand_for_each_object(unfactorized)
     return focus, context
 end
 
+
 -- we also should have a method that divides the focus and context into past and future
 -- this assumes we are predicting for everybody
 function data_process:condense(focus, context)
 
     -- duplicates may exist, they may not
-    focus = nn.Unsqueeze(2, 3):forward(focus:clone())
+    focus = unsqueeze(focus, 2)
     -- TODO: get rid of duplicates!
     return torch.cat({focus, context},2)
 end
@@ -288,11 +289,11 @@ function data_process:save_batches(datasets, savefolder)
     end
 end
 
-function data_process:extract_flag(flags_list, delim)
-    local extract = plt.filter(flags_list, function(x) return pls.startswith(x, delim) end)
-    assert(#extract == 1)
-    return string.sub(extract[1], #delim+1)
-end
+-- function data_process:extract_flag(flags_list, delim)
+--     local extract = plt.filter(flags_list, function(x) return pls.startswith(x, delim) end)
+--     assert(#extract == 1)
+--     return string.sub(extract[1], #delim+1)
+-- end
 
 -- rejection sampling
 function data_process:sample_dataset_id(dataset_ids, counters, limits)
@@ -340,9 +341,12 @@ function data_process:create_datasets_batches()
     --max_iters_per_json
 
     local flags = pls.split(string.gsub(self.jsonfolder,'/jsons',''), '_')
-    local total_samples = tonumber(self:extract_flag(flags, 'ex'))
-    local num_obj = tonumber(self:extract_flag(flags, 'n'))
-    local num_steps = tonumber(self:extract_flag(flags, 't'))
+    local total_samples = tonumber(extract_flag(flags, 'ex'))
+    local num_obj = tonumber(extract_flag(flags, 'n'))
+    local num_steps = tonumber(extract_flag(flags, 't'))
+    -- local total_samples = tonumber(self:extract_flag(flags, 'ex'))
+    -- local num_obj = tonumber(self:extract_flag(flags, 'n'))
+    -- local num_steps = tonumber(self:extract_flag(flags, 't'))
     local num_batches = total_samples*num_obj/self.bsize -- TODO: this can change based on on how you want to process num_steps!
     print(num_obj..' objects '..num_steps..' steps '..total_samples..
         ' samples yields '..num_batches..' batches')
@@ -359,7 +363,7 @@ function data_process:create_datasets_batches()
        local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))  -- note that this may not all be the same batch size! They will even out at the end though
        print(new_batches)
        for _, batch in pairs(new_batches) do
-           assert(data_process:check_overflow(counters, limits) >= 0)
+           assert(self:check_overflow(counters, limits) >= 0)
            -- check to see if this batch is of batch_size
            if batch[1]:size(1) < self.bsize then
                table.insert(leftover_examples, batch)
@@ -379,12 +383,12 @@ function data_process:create_datasets_batches()
     if #leftover_examples > 0 then
         assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))
         assert(leftover_examples[1]:size(1) % self.bsize == 0)
-        assert(data_process:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
+        assert(self:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
         local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2])
         print('Saving leftover_batches')
         print(leftover_batches)
         for _, batch in pairs(leftover_batches) do
-            assert(data_process:check_overflow(counters, limits) >= 0)
+            assert(self:check_overflow(counters, limits) >= 0)
             counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
         end
     else

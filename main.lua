@@ -87,7 +87,6 @@ if mp.server == 'pc' then
     mp.val_every = 100
     mp.plot = false--true
 	mp.cuda = false
-	mp.cunn = false
 else
 	mp.winsize = 10  -- total number of frames
     mp.num_past = 2 -- total number of past frames
@@ -95,7 +94,6 @@ else
 	mp.seq_length = 10
 	mp.num_threads = 4
 	mp.cuda = true
-	mp.cunn = true
 end
 
 local M
@@ -116,8 +114,10 @@ mp.out_dim = mp.object_dim*mp.num_future
 mp.savedir = mp.logs_root .. '/' .. mp.name
 
 if mp.seed then torch.manualSeed(123) end
-if mp.cuda then require 'cutorch' end
-if mp.cunn then require 'cunn' end
+if mp.cuda then
+    require 'cutorch'
+    require 'cunn'
+end
 
 local optimizer, optim_state
 if mp.opt == 'rmsprop' then
@@ -254,7 +254,7 @@ function train(start_iter, epoch_num)
                 model.network:clearState()
 
                 local checkpoint = {}
-                checkpoint.model = model
+                checkpoint.model = model  -- TODO: should I save the model.theta?
                 checkpoint.mp = mp
                 checkpoint.train_losses = train_losses
                 checkpoint.val_losses = val_losses

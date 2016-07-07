@@ -65,15 +65,13 @@ if mp.server == 'pc' then
 	mp.seq_length = 10
 	mp.num_threads = 1
 	mp.cuda = false
-	mp.cunn = false
 else
 	mp.winsize = 10  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
 	mp.seq_length = 10
 	mp.num_threads = 4
-	mp.cuda = true
-	mp.cunn = true
+	-- mp.cuda = true
 end
 
 local M
@@ -89,8 +87,10 @@ mp.relative=true -- TODO: address this!
 
 
 if mp.seed then torch.manualSeed(123) end
-if mp.cuda then require 'cutorch' end
-if mp.cunn then require 'cunn' end
+if mp.cuda then
+    require 'cutorch'
+    require 'cunn'
+end
 
 local model, test_loader, modelfile, dp
 
@@ -103,6 +103,8 @@ function inittest(preload, model_path)
     -- print(config_args)
     -- assert(false)
     dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
+    model = M.create(mp, preload, model_path)
+    mp.cuda = false -- NOTE HACKY
 
     -- assert(false)
     local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
@@ -115,7 +117,6 @@ function inittest(preload, model_path)
                             cuda=mp.cuda
                             }
     test_loader = D.create('testset', tablex.deepcopy(data_loader_args))  -- TODO: Testing on trainset
-    model = M.create(mp, preload, model_path)
     modelfile = model_path
     print("Initialized Network")
 end
@@ -442,6 +443,14 @@ function save_ex_pred_json(example, jsonfile)
     dp:record_trajectories({this_gt_traj, context_gt_traj}, subfolder..'gt_' .. jsonfile)
 
     -- TODO: I have to have some mechanism to indicate when is past and when is future
+    local world_config = {
+        env=test_loader.scenario
+        numObj=tonumber(extract_flag(flags, 'n'))
+        gravity=false, -- TODO
+        friction=false, -- TODO
+        pairwise=false -- TODO
+    }
+    dump_data_json(world_config, subfolder..'config_')
 end
 
 function getLastSnapshot(network_name)
@@ -471,12 +480,8 @@ function predict_simulate_all()
     mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
     config_args = saved_args.config_args
 
-    -- mp = merge_tables(checkpoint.mp, mp)
     model_deps(mp.model)
     inittest(true, snapshotfile)  -- assuming the mp.savedir doesn't change
-    -- mp.winsize = 80  -- total number of frames
-    -- mp.winsize = 20
-	-- mp.dataset_folder = '/om/data/public/mbchang/physics-data/13'
     print(simulate_all(test_loader, checkpoint.model.theta.params, true, 7))
 end
 
