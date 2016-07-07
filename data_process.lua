@@ -434,13 +434,8 @@ end
 function data_process:record_trajectories(batch, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
-    -- print(trajectories[{{1},{1},{1}}])
-
-    -- onehotall2mass
     local trajectories = self:onehot2massall(trajectories)
-    -- print(trajectories[{{1},{1},{1}}])
     local unnormalized = self:unnormalize(trajectories)
-    -- print(unnormalized[{{1},{1},{1}}])
     dump_data_json(unnormalized, jsonfile)
 end
 

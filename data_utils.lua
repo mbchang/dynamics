@@ -105,7 +105,7 @@ function convert_type(x, should_cuda)
     if should_cuda then
         return x:cuda()
     else
-        return x:double()
+        return x:float()
     end
 end
 

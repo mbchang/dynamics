@@ -81,10 +81,6 @@ end
 
 function datasampler:relative_pair(past, future, rta)
     -- rta: relative to absolute, otherwise we are doing absolute to relative
-    -- print(future[{{},{},{1,4}}]:size())
-    -- print(past[{{},{},{1,4}}]:size())
-
-    -- print(past[{{},{},{1,4}}]:expandAs(future[{{},{},{1,4}}]):size())
 
     -- TODO: use config args for this!
     if rta then
@@ -129,13 +125,8 @@ end
 
 function datasampler:load_batch_id(id)
     self.current_sampled_id = id
-    -- local config_name, start, finish = unpack(self.batchlist[id])
-    -- -- print('current batch: '..self.current_batch .. ' id: '.. self.batch_idxs[self.current_batch]..
-    -- --         ' ' .. config_name .. ': [' .. start .. ':' .. finish ..']')
-    -- local savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
 
     local batchname = self.savefolder..'/'..'batch'..id
-    -- if not paths.filep(batchname) then batchname = batchname..'_hard' end -- this is a hard example. TODO: maybe put in a binary value as input
     local nextbatch = torch.load(batchname)
 
     nextbatch = self:split_time(nextbatch)
@@ -154,7 +145,5 @@ function datasampler:load_batch_id(id)
     collectgarbage()
     return nextbatch
 end
-
-
 
 return datasampler
