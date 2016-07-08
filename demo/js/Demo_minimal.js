@@ -19,6 +19,13 @@
     var Demo = {};
     Matter.Demo = Demo;
 
+    var scenarios = {
+        balls: "m_balls",
+        cradle: "m_newtonsCradle",
+        tower: "m_tower",
+        chain: "m_chain"
+    }
+
     if (!_isBrowser) {
         var jsonfile = require('jsonfile')
         var CircularJSON = require('circular-json')
@@ -50,6 +57,10 @@
 
         //TODO: note that here you should load the demo engine with the json file
 
+        // load the config file here.
+        let data = json_data.trajectories
+        let config = json_data.config
+
         var demo = {}
         demo.engine = Engine.create()
         demo.runner = Engine.run(demo.engine)
@@ -72,13 +83,13 @@
 
         World.add(demo.engine.world, world_border)  // its parent is a circular reference!
 
-        var sceneName = 'm_balls'
-        Example[sceneName](demo);
+        Example[scenarios[config.env]](demo, config)
 
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = json_data[0]  // extra 0 for batch mode
+        var trajectories = data[0]  // extra 0 for batch mode
+        // console.log(trajectories)
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 
@@ -96,13 +107,12 @@
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
                 Body.setPosition(body, trajectories[id][i].position)
-                // console.log(trajectories[id][i].position)
             }
 
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 1000 );
+                setTimeout( f, 100 );
             }
         }
         f();
