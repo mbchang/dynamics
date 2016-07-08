@@ -9,8 +9,10 @@ require 'xlua'
 require 'Base'
 require 'sys'
 require 'pl'
+--torch.setdefaulttensortype('torch.FloatTensor')
 require 'data_utils'
 local tablex = require 'pl.tablex'
+local pls = require 'pl.stringx'
 
 -- require 'nn'
 require 'rnn'  -- also installs moses (https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md), like underscore.js
@@ -59,10 +61,10 @@ if mp.server == 'pc' then
     --                     'SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
     -- mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
     --                     'SuperUROP/Code/dynamics/debug'--dataset_files_subsampled_dense_np2' --'hoho'
-    mp.traincfgs = '[:-2:2-:]'
-    mp.testcfgs = '[:-2:2-:]'
-	mp.batch_size = 4 --1
-    mp.max_iter = 5*252
+    -- mp.traincfgs = '[:-2:2-:]'
+    -- mp.testcfgs = '[:-2:2-:]'
+	mp.batch_size = 5 --1
+    -- mp.max_iter = 5*252
 	mp.seq_length = 10
 	mp.num_threads = 1
 	mp.cuda = false
@@ -293,16 +295,17 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local unsqueezer = nn.Unsqueeze(2,3)
     if mp.cuda then unsqueezer:cuda() end
 
-    -- assert(mp.num_future == 1 and numsteps <= mp.winsize-mp.num_past)
+    assert(numsteps <= test_loader.maxwinsize-mp.num_past,
+            'Number of predictive steps should be less than '..
+            test_loader.maxwinsize-mp.num_past+1)
     for i = 1, mp.ns do
-        -- if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-        -- xlua.progress(i, dataloader.num_batches)
         xlua.progress(i, mp.ns)
 
         local batch = dataloader:sample_sequential_batch()  -- TODO: perhaps here I should tell it what my desired windowsize should be
 
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
+
         -- crop to number of timestesp
         y_orig = y_orig[{{},{1, numsteps}}]
         context_future_orig = context_future_orig[{{},{},{1, numsteps}}]
@@ -324,9 +327,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                             torch.zeros(mp.batch_size, num_particles,
                                         numsteps, mp.object_dim),
                             mp.cuda)
-
-        --- good up to here
-
 
         -- loop through time
         for t = 1, numsteps do
@@ -399,6 +399,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- break pred_sim into this and context_future
         -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
+        if numsteps == 1 then this_pred = unsqueeze(this_pred,2) end
+
         local context_pred = pred_sim[{{},{2,-1}}]
 
         if mp.relative then
@@ -414,7 +416,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                'batch'..i..'json')
+                                'batch'..i..'.json')
         end
     end
     avg_loss = avg_loss/count
@@ -423,6 +425,19 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 end
 
 function save_ex_pred_json(example, jsonfile)
+    local flags = pls.split(mp.dataset_folder, '_')
+    local world_config = {
+        num_past = mp.num_past,
+        num_future = mp.num_future,
+        env=pls.split(mp.dataset_folder,'_')[1],--test_loader.scenario,
+        numObj=tonumber(extract_flag(flags, 'n')),
+        gravity=false, -- TODO
+        friction=false, -- TODO
+        pairwise=false -- TODO
+    }
+    -- print(world_config.env)
+    -- assert(false)
+
     -- first join on the time axis
     -- you should save context pred as well as context future
     local this_past, context_past,
@@ -435,23 +450,12 @@ function save_ex_pred_json(example, jsonfile)
     -- construct gnd truth (could move to this to a util function)
     local this_pred_traj = torch.cat({this_past, this_pred}, 2)
     local context_pred_traj = torch.cat({context_past,context_pred}, 3)
-    dp:record_trajectories({this_pred_traj, context_pred_traj}, subfolder..'pred_' .. jsonfile)
+    dp:record_trajectories({this_pred_traj, context_pred_traj}, world_config, subfolder..'pred_' .. jsonfile)
 
     -- construct prediction
     local this_gt_traj = torch.cat({this_past, this_future}, 2)
     local context_gt_traj = torch.cat({context_past, context_future}, 3)
-    dp:record_trajectories({this_gt_traj, context_gt_traj}, subfolder..'gt_' .. jsonfile)
-
-    local world_config = {
-        num_past = mp.num_past,
-        num_future = mp.num_future,
-        env=test_loader.scenario,
-        numObj=tonumber(extract_flag(flags, 'n')),
-        gravity=false, -- TODO
-        friction=false, -- TODO
-        pairwise=false -- TODO
-    }
-    dump_data_json(world_config, subfolder..'config_')
+    dp:record_trajectories({this_gt_traj, context_gt_traj}, world_config, subfolder..'gt_' .. jsonfile)
 end
 
 function getLastSnapshot(network_name)

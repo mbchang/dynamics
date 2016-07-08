@@ -21,6 +21,7 @@ require 'torchx'
 require 'json_interface'
 require 'data_utils'
 require 'paths'
+require 'json'
 require 'nn'
 local pls = require 'pl.stringx'
 local plt = require 'pl.tablex'
@@ -431,12 +432,14 @@ end
 -- input: (bsize, num_obj, steps, dim) for focus and context, with onehotmass, and normalized
 -- batch size can be one
 -- assume that the trajectories are not sliced into past and future for now
-function data_process:record_trajectories(batch, jsonfile)
+function data_process:record_trajectories(batch, config, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
     local trajectories = self:onehot2massall(trajectories)
     local unnormalized = self:unnormalize(trajectories)
-    dump_data_json(unnormalized, jsonfile)
+    -- dump_data_json(unnormalized, jsonfile)
+    local batch_table = data2table(unnormalized)
+    json.save(jsonfile, {trajectories=batch_table,config=config})
 end
 
 return data_process

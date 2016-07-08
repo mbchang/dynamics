@@ -3,6 +3,7 @@ require 'nn'
 require 'nngraph'
 require 'torchx'
 local pltx = require 'pl.tablex'
+local pls = require 'pl.stringx'
 
 function get_keys(table)
     local keyset={}
@@ -105,7 +106,7 @@ function convert_type(x, should_cuda)
     if should_cuda then
         return x:cuda()
     else
-        return x:float()
+        return x:double()
     end
 end
 
@@ -163,7 +164,7 @@ end
 
 
 function extract_flag(flags_list, delim)
-    local extract = plt.filter(flags_list, function(x) return pls.startswith(x, delim) end)
+    local extract = pltx.filter(flags_list, function(x) return pls.startswith(x, delim) end)
     assert(#extract == 1)
     return string.sub(extract[1], #delim+1)
 end
@@ -182,6 +183,9 @@ function unpack_batch(batch, sim)
     context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
     this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
 
+    -- print(this_past:size())
+    -- print(mp.batch_size)
+    -- print(mp.input_dim)
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim,
             'Your batch size or input dim is wrong')  -- TODO RESIZE THIS

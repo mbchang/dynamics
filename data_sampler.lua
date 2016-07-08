@@ -50,7 +50,9 @@ function datasampler.create(dataset_name, args)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
 
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
-    self.scenario = string.sub(self.dataset_folder,1,pls.split(self.dataset_folder,'_')[1])
+    -- print(self.dataset_folder)
+    -- assert(false)
+    -- self.scenario = pls.split(self.dataset_folder,'_')[1]
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
 
@@ -64,7 +66,7 @@ end
 
 function datasampler:split_time(batch)
     local focus, context = unpack(batch)
-    assert(focus:size(2) >= self.winsize and context:size(3) >= self.winsize)
+    assert(focus:size(2) >= self.winsize and context:size(3) >= self.winsize)  -- IS THIS WHAT WE WANT?
     local focus_past = focus[{{},{1, self.num_past}}]
     local context_past = context[{{},{}, {1, self.num_past}}]
     local focus_future, context_future

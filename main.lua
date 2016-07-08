@@ -78,7 +78,7 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 1000
+    mp.max_iter = 10000
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1

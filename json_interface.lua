@@ -36,8 +36,7 @@ function load_data_json(jsonfile)
     return data
 end
 
--- to matter-js dump
-function dump_data_json(data, jsonfile)
+function data2table(data)
     -- data: (bsize, num_obj, num_steps, dim)
     local num_examples = data:size(1)
     local num_obj = data:size(2)
@@ -61,6 +60,13 @@ function dump_data_json(data, jsonfile)
             end
         end
     end
+    return trajectories
+end
+
+-- to matter-js dump
+function dump_data_json(data, jsonfile)
+    -- data: (bsize, num_obj, num_steps, dim)
+    local trajectories = data2table(data)
     json.save(jsonfile, trajectories)
     return trajectories
 end
