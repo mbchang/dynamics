@@ -345,9 +345,6 @@ function data_process:create_datasets_batches()
     local total_samples = tonumber(extract_flag(flags, 'ex'))
     local num_obj = tonumber(extract_flag(flags, 'n'))
     local num_steps = tonumber(extract_flag(flags, 't'))
-    -- local total_samples = tonumber(self:extract_flag(flags, 'ex'))
-    -- local num_obj = tonumber(self:extract_flag(flags, 'n'))
-    -- local num_steps = tonumber(self:extract_flag(flags, 't'))
     local num_batches = total_samples*num_obj/self.bsize -- TODO: this can change based on on how you want to process num_steps!
     print(num_obj..' objects '..num_steps..' steps '..total_samples..
         ' samples yields '..num_batches..' batches')

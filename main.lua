@@ -9,6 +9,7 @@ require 'xlua'
 require 'Base'
 require 'sys'
 require 'pl'
+torch.setdefaulttensortype('torch.FloatTensor')
 require 'data_utils'
 local tablex = require 'pl.tablex'
 
@@ -47,7 +48,7 @@ cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-max_iter', 1000*1800, 'max number of iterations')
+cmd:option('-max_iter', 100000, 'max number of iterations')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
@@ -61,10 +62,10 @@ cmd:option('-plot', false, 'turn on/off plot')
 
 -- every options
 cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 1800*20, 'save every number of batches')
-cmd:option('-val_every',10*1800,'val every number of batches')
-cmd:option('-lrdecay_every',1800,'decay lr every number of batches')
-cmd:option('-lrdecayafter', 50*1800, 'number of epochs before turning down lr')
+cmd:option('-save_every', 10000, 'save every number of batches')
+cmd:option('-val_every',10000,'val every number of batches')
+cmd:option('-lrdecay_every',2000,'decay lr every number of batches')
+cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 
 cmd:text()
 

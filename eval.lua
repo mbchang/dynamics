@@ -9,7 +9,7 @@ require 'xlua'
 require 'Base'
 require 'sys'
 require 'pl'
---torch.setdefaulttensortype('torch.FloatTensor')
+torch.setdefaulttensortype('torch.FloatTensor')
 require 'data_utils'
 local tablex = require 'pl.tablex'
 local pls = require 'pl.stringx'
