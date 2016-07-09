@@ -81,6 +81,8 @@ function init_network(params)
 
     local sequencer = sequencer_type(step)
     sequencer:remember('neither')
+
+    -- I think if I add: sequencer_type(sequencer), then it'd be able to go through time as well.
     --
     local net = nn.Sequential()
     net:add(sequencer)
