@@ -33,6 +33,7 @@
         var utils = require('../../utils');
         var mkdirp = require('mkdirp');
         var fs = require('fs');
+        var ProgressBar = require('node-progress-bars');
         require('./Examples')
         module.exports = Demo;
         window = {};
@@ -417,11 +418,16 @@
         // var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
         var trajectories = []
 
+        var bar = new ProgressBar({
+            schema: ' [:bar] :current/:total :percent :elapseds :etas',
+            total : num_samples
+        });
+
         for (s = 0; s < num_samples; s ++) {
             Demo.reset(demo);
             var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
             var trajectory = []
-            console.log(s)
+            bar.tick()
 
             // initialize trajectory conatiner
             for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -495,7 +501,9 @@
         for (let j=0; j < chunks.length; j++){
             let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
             let trajectories = Demo.simulate(demo, chunks[j], sim_options);
-            jsonfile.writeFileSync(sim_file, trajectories, {spaces: 2});
+            jsonfile.writeFileSync(sim_file,
+                                {trajectories:trajectories, config:sim_options},
+                                {spaces: 2});
             console.log('Wrote to ' + sim_file)
         }
     };

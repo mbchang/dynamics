@@ -60,6 +60,9 @@
         // load the config file here.
         let data = json_data.trajectories
         let config = json_data.config
+        console.log(config)
+
+        // let data = json_data
 
         var demo = {}
         demo.engine = Engine.create()
@@ -112,7 +115,7 @@
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 100 );
+                setTimeout( f, 1000 );
             }
         }
         f();

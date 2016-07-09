@@ -2101,7 +2101,7 @@ if (!_isBrowser) {
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
-            var variance = 40
+            var variance = 80
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 y = y - self.params.size
