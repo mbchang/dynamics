@@ -19,13 +19,6 @@
     var Demo = {};
     Matter.Demo = Demo;
 
-    var scenarios = {
-        balls: "m_balls",
-        cradle: "m_newtonsCradle",
-        tower: "m_tower",
-        chain: "m_chain"
-    }
-
     if (!_isBrowser) {
         var jsonfile = require('jsonfile')
         var CircularJSON = require('circular-json')
@@ -86,13 +79,12 @@
 
         World.add(demo.engine.world, world_border)  // its parent is a circular reference!
 
-        Example[scenarios[config.env]](demo, config)
+        Example[config.env](demo, config)
 
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
         var trajectories = data[0]  // extra 0 for batch mode
-        // console.log(trajectories)
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 
@@ -115,7 +107,7 @@
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 1000 );
+                setTimeout( f, 100 );
             }
         }
         f();

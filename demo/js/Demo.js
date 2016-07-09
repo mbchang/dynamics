@@ -19,14 +19,6 @@
     var Demo = {};
     Matter.Demo = Demo;
 
-    // possible scenarios
-    var scenarios = {
-        balls: "m_balls",
-        cradle: "m_newtonsCradle",
-        tower: "m_tower",
-        chain: "m_chain"
-    }
-
     if (!_isBrowser) {
         var jsonfile = require('jsonfile');
         var assert = require('assert');
@@ -414,8 +406,6 @@
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
     Demo.simulate = function(demo, num_samples, sim_options) {
-        // Demo.reset(demo);
-        // var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
         var trajectories = []
 
         var bar = new ProgressBar({
@@ -425,7 +415,7 @@
 
         for (s = 0; s < num_samples; s ++) {
             Demo.reset(demo);
-            var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
+            var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
             bar.tick()
 

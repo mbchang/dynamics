@@ -1970,7 +1970,7 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Body = Matter.Body;
 
-    Example.m_balls = function(demo, cmd_options) {
+    Example.balls = function(demo, cmd_options) {
         var Hockey = {}
 
         Hockey.create = function(options) {
@@ -2040,7 +2040,7 @@ if (!_isBrowser) {
         Body = Matter.Body,
         Composites = Matter.Composites;
 
-    Example.m_newtonsCradle = function(demo) {
+    Example.newtonsCradle = function(demo) {
 
         var Cradle = {}
         Cradle.create = function(){
@@ -2077,7 +2077,7 @@ if (!_isBrowser) {
         Body = Matter.Body,
         Composites = Matter.Composites;
 
-    Example.m_tower = function(demo, cmd_options) {
+    Example.tower = function(demo, cmd_options) {
         // TODO: make the bodies inelastic
 
         var Tower = {}
@@ -2127,7 +2127,7 @@ if (!_isBrowser) {
         Constraint = Matter.Constraint;
 
     // TODO!
-    Example.m_chain = function(demo) {
+    Example.chain = function(demo) {
         self.params = {num_obj: options.numObj};
         var engine = demo.engine,
             world = engine.world,
