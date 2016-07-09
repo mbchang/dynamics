@@ -7,33 +7,34 @@ local tablex = require 'pl.tablex'
 function load_data_json(jsonfile)
     print('Loading json file: '..jsonfile)
     local data = json.load(jsonfile)  -- 1 indexed (num_balls, timesteps, data)
-    -- data: {velocity{x,y}, mass, position{x,y}}
-    local num_examples = #data
-    local num_obj = #data[1]
-    local T = #data[1][1]
+    local trajectories = data.trajectories
+    -- trajectories: {velocity{x,y}, mass, position{x,y}}
+    local num_examples = #trajectories
+    local num_obj = #trajectories[1]
+    local T = #trajectories[1][1]
     assert(num_examples <= args.max_iters_per_json)
 
     -- TODO: adapt to include other information
     for e=1,num_examples do
         for i=1,num_obj do
             for t=1,T do
-                -- mutate the data itself
-                local state = tablex.deepcopy(data[e][i][t])
-                data[e][i][t] = {}
-                data[e][i][t][args.rsi.px] = state.position.x
-                data[e][i][t][args.rsi.py] = state.position.y
-                data[e][i][t][args.rsi.vx] = state.velocity.x
-                data[e][i][t][args.rsi.vy] = state.velocity.y
-                data[e][i][t][args.rsi.a] = state.angle
-                data[e][i][t][args.rsi.av] = state.angularVelocity
-                data[e][i][t][args.rsi.m] = state.mass
-                data[e][i][t][args.rsi.oid] = 1
+                -- mutate the trajectories itself
+                local state = tablex.deepcopy(trajectories[e][i][t])
+                trajectories[e][i][t] = {}
+                trajectories[e][i][t][args.rsi.px] = state.position.x
+                trajectories[e][i][t][args.rsi.py] = state.position.y
+                trajectories[e][i][t][args.rsi.vx] = state.velocity.x
+                trajectories[e][i][t][args.rsi.vy] = state.velocity.y
+                trajectories[e][i][t][args.rsi.a] = state.angle
+                trajectories[e][i][t][args.rsi.av] = state.angularVelocity
+                trajectories[e][i][t][args.rsi.m] = state.mass
+                trajectories[e][i][t][args.rsi.oid] = 1
             end
         end
     end
 
-    data = torch.Tensor(data)
-    return data
+    trajectories = torch.Tensor(trajectories)
+    return trajectories
 end
 
 function data2table(data)
