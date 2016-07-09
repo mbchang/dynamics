@@ -228,9 +228,38 @@ net:add(pairwise_regroup)
 
 --------------------------------------------------------------------------------
 
+
 -- This is my network! But where do I store the internal memory?
 
 -- input: table of length timesteps of {table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}}
 -- output: table of length timesteps of {table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}}
 local clique_rnn = nn.Sequencer(net)
-print(clique_rnn:forward(input))
+-- print(clique_rnn:forward(input))
+
+
+--------------------------------------------------------------------------------
+-- LSTM internal state for each object
+local memory_net = nn.Sequential()
+memory_net:add(tstep)
+
+-- here create a table of LSTMS  --> how does this work with Sequential()
+local memory_in = nn.Identity()()  -- Parallel table?
+local memory_lstm = nn.Sequential()
+memory_lstm:add(nn.Linear(params.input_dim, params.rnn_dim))
+memory_lstm:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
+memory_lstm:add(nn.Linear(params.rnn_dim, params.input_dim))
+local memory_cell = nn.ParallelTable()
+for i=1,num_obj do
+    memory_cell:add(memory_lstm)
+end
+local memory_out = memory_cell(memory_in)
+local memory_module = nn.gModule({memory_in}, {memory_out})
+
+memory_net:add(memory_module)
+memory_net:add(pairwise_regroup)
+
+-- print('assdfdfdfdfdfd')
+-- print(memory_module:forward(tstep_output))
+
+local clique_rnn_memory = nn.Sequencer(net)
+print(clique_rnn_memory:forward(input))
