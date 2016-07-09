@@ -413,12 +413,15 @@
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
     Demo.simulate = function(demo, num_samples, sim_options) {
-        Demo.reset(demo);
-        var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
+        // Demo.reset(demo);
+        // var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
         var trajectories = []
 
         for (s = 0; s < num_samples; s ++) {
+            Demo.reset(demo);
+            var scenario = Example[scenarios[sim_options.env]](demo, sim_options)
             var trajectory = []
+            console.log(s)
 
             // initialize trajectory conatiner
             for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -442,7 +445,7 @@
                     trajectory[id][i] = {};
                     for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity']){
                         let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
-                        trajectory[id][i][k] = utils.copy(body[k])
+                        trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
                 }
                 Engine.update(scenario.engine);
@@ -477,7 +480,6 @@
         // var savefolder = '../data/' + experiment_string + '/jsons/'
 
         if (!fs.existsSync(savefolder)){
-            // fs.mkdirSync(savefolder);
             mkdirp.sync(savefolder);
         }
 
