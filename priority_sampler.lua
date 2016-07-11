@@ -8,6 +8,7 @@ function priority_sampler.create(num_batches)
     self.batch_weights = torch.zeros(num_batches)
     self.alpha = 0.1 -- corresponds to when we do random sampling
     self.epc_num = 1
+    self.table_is_full = false
     self.num_batches = num_batches
 
     collectgarbage()
@@ -16,6 +17,7 @@ end
 
 function priority_sampler:update_batch_weight(batch_id, weight)
     self.batch_weights[batch_id] = weight
+    self.table_is_full = self.batch_weights:min() > 0
 end
 
 function normalize(tensor)

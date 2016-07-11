@@ -107,7 +107,8 @@ function general_datasampler:sample_priority_batch(pow)
     -- here just call sample_priority_batch randomly on the constituent datasamplers
     -- TODO: do they keep track of their own curr_batch? take a look at how main.lua changes the state of priority_sampler.
     -- So you may have to clean up the architecture of priority_sampelr.
-    local dataset_folder_idx = math.ceil(torch.rand(1)*#self.dataset_folders)
+    -- local dataset_folder_idx = math.ceil(torch.rand(1)*#self.dataset_folders)
+    local dataset_folder_idx = math.random(3)
     return self.datasamplers[dataset_folder_idx]:sample_priority_batch(pow)
 
 

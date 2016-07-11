@@ -106,7 +106,8 @@ end
 function datasampler:sample_priority_batch(pow)
     -- return self:sample_random_batch()  -- or sample_random_batch
     --
-    if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1
+    -- if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1  -- make this a boolean.
+    if self.table_is_full then
         -- return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
         return self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
@@ -146,6 +147,14 @@ function datasampler:load_batch_id(id)
     nextbatch = {this, context, y, context_future, mask}
     collectgarbage()
     return nextbatch
+end
+
+function datasampler:get_hardest_batch()
+    return self.priority_sampler:get_hardest_batch()
+end
+
+function datasampler:update_batch_weight(batch_id, weight)
+    self.priority_sampler:update_batch_weight(batch_id, weight)
 end
 
 return datasampler

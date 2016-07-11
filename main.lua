@@ -202,8 +202,10 @@ function feval_train(params_)  -- params_ should be first argument
         model.theta.grad_params:add(model.theta.params:clone():mul(mp.L2) )
     end
 
-    train_loader.priority_sampler:update_batch_weight(
-                                        train_loader.current_sampled_id, loss)
+    -- train_loader.priority_sampler:update_batch_weight(
+    --                                     train_loader.current_sampled_id, loss)  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
+    train_loader.update_batch_weight(train_loader.current_sampled_id,loss)
+
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
@@ -215,7 +217,7 @@ function train(start_iter, epoch_num)
     print('Start epoch num:', epoch_num)
     for t = start_iter,mp.max_iter do
 
-        train_loader.priority_sampler:set_epcnum(epoch_num)
+        -- train_loader.priority_sampler:set_epcnum(epoch_num)  -- TAKE CARE OF THIS! The priority sampler should take of this already! Add this feature and test it first before you go into the general_datasampler
         local new_params, train_loss = optimizer(feval_train,
                                 model.theta.params, optim_state)  -- next batch
 
@@ -233,8 +235,10 @@ function train(start_iter, epoch_num)
                     epoch_num, t, train_loss[1],
                     model.theta.grad_params:norm(),
                     train_loader.current_sampled_id,
-                    train_loader.priority_sampler:get_hardest_batch()[2],
-                    train_loader.priority_sampler:get_hardest_batch()[1],
+                    train_loader.get_hardest_batch()[2],
+                    train_loader.get_hardest_batch()[1],
+                    -- train_loader.priority_sampler:get_hardest_batch()[2],  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
+                    -- train_loader.priority_sampler:get_hardest_batch()[1],  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
                     optim_state.learningRate))
         end
 
