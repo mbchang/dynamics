@@ -90,6 +90,10 @@ function general_datasampler.create(dataset_name, args)
     self.current_sampled_id = 0
     -- self.batch_idxs = torch.range(1,self.num_batches)
 
+    -- TODO: ou can have an isfull field that is set if all of the consituent datasamplers are full
+    self.has_seen_all_batches = false
+    self.has_reported = false
+
     collectgarbage()
     return self
 end
@@ -108,10 +112,20 @@ function general_datasampler:sample_priority_batch(pow)
     -- TODO: do they keep track of their own curr_batch? take a look at how main.lua changes the state of priority_sampler.
     -- So you may have to clean up the architecture of priority_sampelr.
     -- local dataset_folder_idx = math.ceil(torch.rand(1)*#self.dataset_folders)
+
     local dataset_folder_idx = math.random(3)
-    return self.datasamplers[dataset_folder_idx]:sample_priority_batch(pow)
+    print(self.datasamplers[dataset_folder_idx].dataset_folder)
+    local batch = self.datasamplers[dataset_folder_idx]:sample_priority_batch(pow)
+
+    if plseq.reduce('and', plseq.map(function(x) return x.has_reported end,
+            self.datasamplers)) and not(self.has_reported) then
+        self.has_seen_all_batches = true
+        self.has_reported = true
+        print('Seen all batches')
+    end
 
 
+    return batch
 end
 
 -- return general_datasampler
@@ -134,3 +148,6 @@ local data_loader_args = {
                         }
 
 gd = general_datasampler.create('trainset', data_loader_args)
+for i = 1, 100 do
+    gd:sample_priority_batch(1)
+end

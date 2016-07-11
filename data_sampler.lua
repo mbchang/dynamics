@@ -60,6 +60,9 @@ function datasampler.create(dataset_name, args)
     self.current_sampled_id = 0
     self.batch_idxs = torch.range(1,self.num_batches)
 
+    -- debug
+    self.has_reported = false
+
     collectgarbage()
     return self
 end
@@ -105,14 +108,23 @@ end
 
 function datasampler:sample_priority_batch(pow)
     -- return self:sample_random_batch()  -- or sample_random_batch
+
+    local batch
     --
     -- if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1  -- make this a boolean.
     if self.priority_sampler.table_is_full then
         -- return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
-        return self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
+        batch = self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
-        return self:sample_sequential_batch()  -- or sample_random_batch
+        batch = self:sample_sequential_batch()  -- or sample_random_batch
     end
+
+    if self.priority_sampler.table_is_full and not(self.has_reported) then
+        print(self.dataset_folder..' has seen all batches')  -- DEBUG
+        self.has_reported = true
+    end
+
+    return batch
 end
 
 function datasampler:sample_random_batch()
@@ -145,6 +157,7 @@ function datasampler:load_batch_id(id)
     this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
 
     nextbatch = {this, context, y, context_future, mask}
+    -- self:update_batch_weight(self.current_sampled_id, 1) -- DEBUG
     collectgarbage()
     return nextbatch
 end
