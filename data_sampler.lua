@@ -157,7 +157,8 @@ function datasampler:load_batch_id(id)
     this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
 
     nextbatch = {this, context, y, context_future, mask}
-    -- self:update_batch_weight(self.current_sampled_id, 1) -- DEBUG
+    print(self.dataset_folder..' '.. self.current_sampled_id)
+    self:update_batch_weight(self.current_sampled_id, 1) -- DEBUG
     collectgarbage()
     return nextbatch
 end
