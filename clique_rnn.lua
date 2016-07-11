@@ -87,7 +87,7 @@ function split_tensor(dim, reshape, boundaries)
     end
 end
 
-function init_network(params)
+function init_tstep_one_obj(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
 
@@ -124,16 +124,16 @@ function init_network(params)
 
     -- I think if I add: sequencer_type(sequencer), then it'd be able to go through time as well.
     --
-    local tstep = nn.Sequential()
-    tstep:add(sequencer)
+    local tstep_one_obj = nn.Sequential()
+    tstep_one_obj:add(sequencer)
 
 
     -- input table of (bsize, 2*d_hid) of length seq_length
     -- output: tensor (bsize, 2*d_hid)
-    tstep:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
-    tstep:add(decoder)
+    tstep_one_obj:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
+    tstep_one_obj:add(decoder)
 
-    return tstep
+    return tstep_one_obj
 end
 
 -- for sequencer: input table of (bsize, 2*d_hid) of length seq_length
@@ -144,6 +144,93 @@ local timesteps = 5
 local num_obj = 4
 local bsize = 2
 
+-- input: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
+-- output: table of length num_obj of {(bsize, input_dim)}
+function init_tstep(params)
+    local tstep = nn.Sequencer(init_tstep_one_obj(params))
+    return tstep
+end
+
+-- 2) pairwise_regroup
+-- input: obj_states: table of length num_obj of {(bsize, input_dim)}
+-- output: obj_state_pairs: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
+function init_pairwise_regroup(params)
+    local obj_states = nn.Identity()()
+    local obj_state_pairs = {}
+    for i=1,num_obj do
+        local focus = nn.SelectTable(i)(obj_states)
+        local pairs_for_focus = {}
+        for j=1,num_obj do
+            local context = nn.SelectTable(j)(obj_states)
+            if i ~= j then table.insert(pairs_for_focus, nn.Identity(){focus, context}) end
+        end
+        table.insert(obj_state_pairs, nn.Identity()(pairs_for_focus))
+    end
+
+    local pairwise_regroup = nn.gModule({obj_states},obj_state_pairs)
+    return pairwise_regroup
+end
+
+--------------------------------------------------------------------------------
+-- input: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
+-- output: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
+function init_clique_rnn(params)
+    local net = nn.Sequential()
+    net:add(init_tstep(params))
+    net:add(init_pairwise_regroup(params))
+    -- here do I add memory, or do I add memory in tstep? Check how LSTM is being implemented
+    -- perhaps I should look inthe documentation of AbstractRecurrent for SharedClones
+    -- the tstep_one_obj should be cloned for all objects, but given an object, it should also persist through time.
+
+    --------------------------------------------------------------------------------
+
+
+    -- This is my network! But where do I store the internal memory?
+
+    -- input: table of length timesteps of {table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}}
+    -- output: table of length timesteps of {table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}}
+    local clique_rnn = nn.Sequencer(net)
+    -- print(clique_rnn:forward(input))
+    return clique_rnn
+end
+
+-- LSTM internal state for each object
+function init_clique_rnn_memory(params)
+    local memory_net = nn.Sequential()
+    memory_net:add(init_tstep(params))
+
+    -- here create a table of LSTMS  --> how does this work with Sequential()
+    local memory_in = nn.Identity()()  -- Parallel table?
+    local memory_lstm = nn.Sequential()
+    memory_lstm:add(nn.Linear(params.input_dim, params.rnn_dim))
+    memory_lstm:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
+    memory_lstm:add(nn.Linear(params.rnn_dim, params.input_dim))
+    local memory_cell = nn.ParallelTable()
+    for i=1,num_obj do
+        memory_cell:add(memory_lstm)
+    end
+    local memory_out = memory_cell(memory_in)
+    local memory_module = nn.gModule({memory_in}, {memory_out})
+
+    memory_net:add(memory_module)
+    memory_net:add(init_pairwise_regroup(params))
+
+    local clique_rnn_memory = nn.Sequencer(memory_net)
+    return clique_rnn_memory
+end
+
+--------------------------------------------------------------------------------
+-- networks
+--------------------------------------------------------------------------------
+local tstep_one_obj = init_tstep_one_obj(params)
+local tstep = init_tstep(params)
+local clique_rnn = init_clique_rnn(params)
+local clique_rnn_memory = init_clique_rnn_memory(params)
+
+--------------------------------------------------------------------------------
+-- Data
+--------------------------------------------------------------------------------
+
 -- for one object
 local tstep_one_obj_input = {}
 for o=1,num_obj-1 do
@@ -152,7 +239,6 @@ end
 
 -- input: table of length num_obj of pairs of (bsize, input_dim)
 -- output: (bsize, input_dim)
-local tstep_one_obj = init_network(params)
 print(tstep_one_obj)
 print(tstep_one_obj:forward(tstep_one_obj_input))
 --------------------------------------------------------------------------------
@@ -168,9 +254,7 @@ for n=1,num_obj do
     table.insert(tstep_input, obj_input)
 end
 
--- input: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
--- output: table of length num_obj of {(bsize, input_dim)}
-local tstep = nn.Sequencer(tstep_one_obj)
+
 print(tstep)
 local tstep_output = tstep:forward(tstep_input)
 print(tstep_output)
@@ -192,74 +276,6 @@ for t=1,timesteps do
 end
 
 -- so basically the recurrence is: tstep --> pairwise_regroup --> tstep --> pairwise_regroup etc
-
--- need a sequential here
--- 1) tstep
--- 2) pairwise_regroup
-
-
--- 2) pairwise_regroup
--- input: obj_states: table of length num_obj of {(bsize, input_dim)}
--- output: obj_state_pairs: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
-
-local obj_states = nn.Identity()()
-local obj_state_pairs = {}
-for i=1,num_obj do
-    local focus = nn.SelectTable(i)(obj_states)
-    local pairs_for_focus = {}
-    for j=1,num_obj do
-        local context = nn.SelectTable(j)(obj_states)
-        if i ~= j then table.insert(pairs_for_focus, nn.Identity(){focus, context}) end
-    end
-    table.insert(obj_state_pairs, nn.Identity()(pairs_for_focus))
-end
-
-local pairwise_regroup = nn.gModule({obj_states},obj_state_pairs)
-
---------------------------------------------------------------------------------
--- input: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
--- output: table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}
-local net = nn.Sequential()
-net:add(tstep)
-net:add(pairwise_regroup)
--- here do I add memory, or do I add memory in tstep? Check how LSTM is being implemented
--- perhaps I should look inthe documentation of AbstractRecurrent for SharedClones
--- the tstep_one_obj should be cloned for all objects, but given an object, it should also persist through time.
-
 --------------------------------------------------------------------------------
 
-
--- This is my network! But where do I store the internal memory?
-
--- input: table of length timesteps of {table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}}
--- output: table of length timesteps of {table of length num_obj of {table of length num_obj-1 of pairs of (bsize, input_dim)}}
-local clique_rnn = nn.Sequencer(net)
--- print(clique_rnn:forward(input))
-
-
---------------------------------------------------------------------------------
--- LSTM internal state for each object
-local memory_net = nn.Sequential()
-memory_net:add(tstep)
-
--- here create a table of LSTMS  --> how does this work with Sequential()
-local memory_in = nn.Identity()()  -- Parallel table?
-local memory_lstm = nn.Sequential()
-memory_lstm:add(nn.Linear(params.input_dim, params.rnn_dim))
-memory_lstm:add(nn.LSTM(params.rnn_dim,params.rnn_dim))
-memory_lstm:add(nn.Linear(params.rnn_dim, params.input_dim))
-local memory_cell = nn.ParallelTable()
-for i=1,num_obj do
-    memory_cell:add(memory_lstm)
-end
-local memory_out = memory_cell(memory_in)
-local memory_module = nn.gModule({memory_in}, {memory_out})
-
-memory_net:add(memory_module)
-memory_net:add(pairwise_regroup)
-
--- print('assdfdfdfdfdfd')
--- print(memory_module:forward(tstep_output))
-
-local clique_rnn_memory = nn.Sequencer(net)
 print(clique_rnn_memory:forward(input))
