@@ -84,7 +84,7 @@ function general_datasampler.create(dataset_name, args)
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.num_batches end,
                                 self.datasamplers))
-    print('num_batches', self.num_batches)
+    print(self.dataset_name,'num_batches', self.num_batches)
     -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
 
     -- self.priority_sampler = PS.create(self.num_batches)

@@ -56,7 +56,7 @@ function datasampler.create(dataset_name, args)
     -- self.scenario = pls.split(self.dataset_folder,'_')[1]
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
-    print(self.dataset_folder..' num batches', self.num_batches)
+    print(self.dataset_name,self.dataset_folder,'num batches', self.num_batches)
 
     self.priority_sampler = PS.create(self.num_batches)
     self.current_sampled_id = 0
