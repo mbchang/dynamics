@@ -61,7 +61,8 @@ function general_datasampler.create(dataset_name, args)
     local self = {}
     setmetatable(self, general_datasampler)
     self.current_batch = 0
-    self.dataset_folders = assert(loadstring("return "..string.gsub(args.dataset_names,'\"',''))())
+    self.data_root = args.data_root
+    self.dataset_folders = args.dataset_folders--assert(loadstring("return "..string.gsub(args.dataset_folders,'\"',''))())
     self.dataset_name = dataset_name
     self.maxwinsize=args.maxwinsize
     self.winsize=args.winsize
@@ -78,13 +79,12 @@ function general_datasampler.create(dataset_name, args)
         args.dataset_folder='mj_data/'..dataset_folder -- NOTE HARDCODED!
         self.datasamplers[i] = D.create(dataset_name, args)
     end
-
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     -- self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.num_batches end,
                                 self.datasamplers))
-    print(self.dataset_name,'num_batches', self.num_batches)
+    print(self.dataset_name..': num_batches: '..self.num_batches)
     -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
 
     -- self.priority_sampler = PS.create(self.num_batches)

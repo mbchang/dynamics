@@ -34,8 +34,8 @@ cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 
 -- dataset
-cmd:option('-dataset_folder', 'm2_5balls', 'dataset folder')
-cmd:option('-test_dataset_folder', 'm2_5balls', 'dataset folder')
+cmd:option('-dataset_folders', '', 'dataset folder')
+cmd:option('-test_dataset_folders', '', 'dataset folder')
 
 -- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
@@ -84,9 +84,9 @@ if mp.server == 'pc' then
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.print_every = 100
-    mp.save_every = 1000
-    mp.val_every = 1000
+    mp.print_every = 10
+    mp.save_every = 50
+    mp.val_every = 50
     mp.plot = false--true
 	mp.cuda = false
 else
@@ -132,6 +132,9 @@ else
     error('unknown optimizer')
 end
 
+mp.dataset_folders = assert(loadstring("return "..string.gsub(mp.dataset_folders,'\"',''))())
+mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_dataset_folders,'\"',''))())
+
 local model, train_loader, test_loader, modelfile
 local train_losses, val_losses, test_losses = {},{},{}
 
@@ -152,9 +155,9 @@ function inittrain(preload, model_path)
     --                           cuda=mp.cuda
     --                         }
 
-
-    local data_loader_args = {dataset_folder=mp.data_root..'/',--..mp.dataset_folder,
-                              dataset_names="{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}",
+    local data_loader_args = {data_root=mp.data_root..'/',--..mp.dataset_folder,
+                            --   dataset_folders="{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}",
+                              dataset_folders=mp.dataset_folders,--"{'balls_n3_t60_ex20'}",
                               maxwinsize=config_args.maxwinsize,
                               winsize=mp.winsize, -- not sure if this should be in mp
                               num_past=mp.num_past,
@@ -165,8 +168,9 @@ function inittrain(preload, model_path)
                             }
     -- test_args is the same but with a different dataset_folder
     local test_args = tablex.deepcopy(data_loader_args)
-    test_args.dataset_folder = mp.data_root..'/'--..mp.test_dataset_folder  -- TODO trying to get general datasampler to work
-    test_args.dataset_names = "{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
+    -- test_args.data_root = mp.data_root..'/'..mp.test_dataset_folder  -- TODO trying to get general datasampler to work
+    -- test_args.data_root = mp.data_root..'/'--..mp.test_dataset_folder  -- TODO trying to get general datasampler to work
+    test_args.dataset_folders = mp.test_dataset_folders--"{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
 
     train_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
@@ -191,14 +195,42 @@ function initsavebatches()
     mp.cuda = false
     mp.cunn = false
     mp.shuffle = false
-    local jsonfolder = mp.data_root..'/'..mp.dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
-    local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'  -- TODO: make this some global thing!
-    print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..outfolder)
     config_args.batch_size = mp.batch_size
-    local dp = data_process.create(jsonfolder, outfolder, config_args)
-    -- dp:create_datasets()
-    dp:create_datasets_batches()
+    for _, dataset_folder in pairs(mp.dataset_folders) do
+        local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
+        if not paths.dirp(data_folder) then
+            local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
+            local outfolder = mp.data_root..'/'..dataset_folder..'/batches'  -- TODO: make this some global thing!
+            print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..outfolder)
+            local dp = data_process.create(jsonfolder, outfolder, config_args)
+            dp:create_datasets_batches()
+        else
+            print('Batches for '..dataset_folder..' already made')
+        end
+    end
 end
+
+-- local data_folder = mp.data_root..'/'..mp.dataset_folder..'/batches'
+-- if not paths.dirp(data_folder) then
+    -- initsavebatches()
+    -- generalinitsavebatches()
+
+-- else print('Batches already made') end
+
+-- function initsavebatches(dataset_folder)
+--     mp.cuda = false
+--     mp.cunn = false
+--     mp.shuffle = false
+--     print(mp.dataset_folders)
+--     assert(false)
+--     local jsonfolder = mp.data_root..'/'..mp.dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
+--     local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'  -- TODO: make this some global thing!
+--     print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..outfolder)
+--     config_args.batch_size = mp.batch_size
+--     local dp = data_process.create(jsonfolder, outfolder, config_args)
+--     -- dp:create_datasets()
+--     dp:create_datasets_batches()
+-- end
 
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
@@ -454,10 +486,7 @@ end
 
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'exp' then
-    local data_folder = mp.data_root..'/'..mp.dataset_folder..'/batches'
-    if not paths.dirp(data_folder) then
-        initsavebatches()
-    else print('Batches already made') end
+    initsavebatches()
     print('Running experiment.')
     run_experiment()
 elseif mp.mode == 'expload' then
