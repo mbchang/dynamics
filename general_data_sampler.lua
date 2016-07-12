@@ -20,7 +20,7 @@ local plseq = require 'pl.seq'
 
 --
 -- b = "{3,4}"
-b = "{'balls_n20_t60_ex100','tower_n6_t60_ex20','balls_n1_t60_ex10'}"
+-- b = "{'balls_n20_t60_ex100','tower_n6_t60_ex20','balls_n1_t60_ex10'}"
 -- loadstring("b="..string.gsub(b,'\"',''))()
 -- print(b)
 
@@ -30,7 +30,7 @@ general_datasampler.__index = general_datasampler
 -- here we want a method for splitting into past and future
 
 -- when you create the data sampler, you should already initialize the table ()
-b = "{'balls_n20_t60_ex100','tower_n6_t60_ex20','balls_n1_t60_ex10'}"
+-- b = "{'balls_n20_t60_ex100','tower_n6_t60_ex20','balls_n1_t60_ex10'}"
 -- local c = loadstring("return "..string.gsub(b,'\"',''))()
 -- print('c',c)
 -- a = assert(loadstring("return "..string.gsub(b,'\"',''))())
@@ -84,11 +84,15 @@ function general_datasampler.create(dataset_name, args)
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.num_batches end,
                                 self.datasamplers))
+    print('num_batches', self.num_batches)
     -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
 
     -- self.priority_sampler = PS.create(self.num_batches)
-    self.current_sampled_id = 0
-    -- self.batch_idxs = torch.range(1,self.num_batches)
+    self.current_sampled_id = nil
+    self.current_dataset = 1
+    -- -- self.batch_idxs = torch.range(1,self.num_batches)
+    -- self.datasampler_current_sampled_ids = plseq.map(function(x) return 1 end,
+    --                                         self.datasamplers)
 
     -- TODO: ou can have an isfull field that is set if all of the consituent datasamplers are full
     self.has_seen_all_batches = false
@@ -99,55 +103,65 @@ function general_datasampler.create(dataset_name, args)
 end
 
 function general_datasampler:sample_priority_batch(pow)
-    -- return self:sample_random_batch()  -- or sample_random_batch
+    self.current_dataset = math.random(#self.datasamplers)
+    local batch = self.datasamplers[self.current_dataset]:sample_priority_batch(pow)
+    self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
+    -- print(self.current_dataset..'.'..self.datasamplers[self.current_dataset].current_sampled_id)
     --
-    -- if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1
-    --     -- return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
-    --     return self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
-    -- else
-    --     return self:sample_sequential_batch()  -- or sample_random_batch
-    -- end
-
-    -- here just call sample_priority_batch randomly on the constituent datasamplers
-    -- TODO: do they keep track of their own curr_batch? take a look at how main.lua changes the state of priority_sampler.
-    -- So you may have to clean up the architecture of priority_sampelr.
-    -- local dataset_folder_idx = math.ceil(torch.rand(1)*#self.dataset_folders)
-
-    local dataset_folder_idx = math.random(3)
-    print(self.datasamplers[dataset_folder_idx].dataset_folder)
-    local batch = self.datasamplers[dataset_folder_idx]:sample_priority_batch(pow)
-
+    --
     if plseq.reduce('and', plseq.map(function(x) return x.has_reported end,
             self.datasamplers)) and not(self.has_reported) then
         self.has_seen_all_batches = true
         self.has_reported = true
         print('Seen all batches')
     end
-
-
+    -- local batch = self:sample_sequential_batch()
     return batch
 end
 
--- return general_datasampler
-
-
-dataset_names = "{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
--- dataset_names = "{'balls_n20_t60_ex100','balls_n1_t60_ex10'}"
--- dataset_names = "{'balls_n20_t60_ex100'}"
-
-local data_loader_args = {
-                        dataset_names = dataset_names,
-                        dataset_folder='mj_data'..'/',--..dataset_names,  -- NOTE THESE ARE THE DATASET NAMES!
-                        maxwinsize=60,
-                        winsize=10, -- not sure if this should be in mp
-                        num_past=2,
-                        num_future=1,
-                        relative=true, -- TODO: this should be in the saved args!
-                        sim=false,
-                        cuda=false
-                        }
-
-gd = general_datasampler.create('trainset', data_loader_args)
-for i = 1, 100 do
-    gd:sample_priority_batch(1)
+-- returns {loss, idx}
+function general_datasampler:get_hardest_batch()
+    -- TODO!  need the current dataset and current sampled id
+    local hardest_batch = self.datasamplers[self.current_dataset]:get_hardest_batch()
+    return {hardest_batch[1], hardest_batch[2], self.current_dataset}
 end
+
+function general_datasampler:update_batch_weight(weight)
+    -- TODO!
+    self.datasamplers[self.current_dataset]:update_batch_weight(weight)
+end
+
+function general_datasampler:sample_sequential_batch()
+    local datasampler = self.datasamplers[self.current_dataset]
+    self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
+    local batch = datasampler:sample_sequential_batch()
+    if datasampler.current_batch == datasampler.num_batches then
+        self.current_dataset = self.current_dataset % #self.datasamplers + 1
+    end
+    return batch
+end
+
+
+return general_datasampler
+
+
+-- dataset_names = "{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
+-- -- dataset_names = "{'balls_n20_t60_ex100','balls_n1_t60_ex10'}"
+-- -- dataset_names = "{'balls_n20_t60_ex100'}"
+--
+-- local data_loader_args = {
+--                         dataset_names = dataset_names,
+--                         dataset_folder='mj_data'..'/',--..dataset_names,  -- NOTE THESE ARE THE DATASET NAMES!
+--                         maxwinsize=60,
+--                         winsize=10, -- not sure if this should be in mp
+--                         num_past=2,
+--                         num_future=1,
+--                         relative=true, -- TODO: this should be in the saved args!
+--                         sim=false,
+--                         cuda=false
+--                         }
+--
+-- gd = general_datasampler.create('trainset', data_loader_args)
+-- for i = 1, 100 do
+--     gd:sample_priority_batch(1)
+-- end

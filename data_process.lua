@@ -53,6 +53,18 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     return self
 end
 
+function data_process.relative_pair(past, future, rta)
+    -- rta: relative to absolute, otherwise we are doing absolute to relative
+
+    -- TODO: use config args for this!
+    if rta then
+        future[{{},{},{1,4}}] = future[{{},{},{1,4}}] + past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
+    else
+        future[{{},{},{1,4}}] = future[{{},{},{1,4}}] - past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
+    end
+    return future
+end
+
 -- trajectories: (num_examples, num_objects, timesteps, [px, py, vx, vy, mass])
 function data_process:normalize(unnormalized_trajectories)
     normalized = unnormalized_trajectories:clone()
@@ -150,6 +162,8 @@ function data_process:onehot2massall(trajectoriesonehot)
 
     return trajectories
 end
+
+
 
 --[[ Expands the number of examples per batch to have an example per particle
     Input: unfactorized: (num_samples x num_obj x windowsize x 8)

@@ -15,7 +15,8 @@ local tablex = require 'pl.tablex'
 
 -- Local Imports
 local model_utils = require 'model_utils'
-local D = require 'data_sampler'
+-- local D = require 'data_sampler'
+local D = require 'general_data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 
@@ -83,9 +84,9 @@ if mp.server == 'pc' then
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.print_every = 1
-    mp.save_every = 100
-    mp.val_every = 100
+    mp.print_every = 100
+    mp.save_every = 1000
+    mp.val_every = 1000
     mp.plot = false--true
 	mp.cuda = false
 else
@@ -141,7 +142,19 @@ local train_losses, val_losses, test_losses = {},{},{}
 function inittrain(preload, model_path)
     print("Network parameters:")
     print(mp)
-    local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
+    -- local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
+    --                           maxwinsize=config_args.maxwinsize,
+    --                           winsize=mp.winsize, -- not sure if this should be in mp
+    --                           num_past=mp.num_past,
+    --                           num_future=mp.num_future,
+    --                           relative=mp.relative,
+    --                           sim=false,
+    --                           cuda=mp.cuda
+    --                         }
+
+
+    local data_loader_args = {dataset_folder=mp.data_root..'/',--..mp.dataset_folder,
+                              dataset_names="{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}",
                               maxwinsize=config_args.maxwinsize,
                               winsize=mp.winsize, -- not sure if this should be in mp
                               num_past=mp.num_past,
@@ -152,7 +165,8 @@ function inittrain(preload, model_path)
                             }
     -- test_args is the same but with a different dataset_folder
     local test_args = tablex.deepcopy(data_loader_args)
-    test_args.dataset_folder = mp.data_root..'/'..mp.test_dataset_folder
+    test_args.dataset_folder = mp.data_root..'/'--..mp.test_dataset_folder  -- TODO trying to get general datasampler to work
+    test_args.dataset_names = "{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
 
     train_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
@@ -204,7 +218,9 @@ function feval_train(params_)  -- params_ should be first argument
 
     -- train_loader.priority_sampler:update_batch_weight(
     --                                     train_loader.current_sampled_id, loss)  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
-    train_loader:update_batch_weight(train_loader.current_sampled_id,loss)
+    -- train_loader:update_batch_weight(train_loader.current_sampled_id,loss)
+    train_loader:update_batch_weight(loss)
+
 
     collectgarbage()
     return loss, grad -- f(x), df/dx
@@ -229,12 +245,14 @@ function train(start_iter, epoch_num)
 
         -- print
         if (t-start_iter+1) % mp.print_every == 0 then
-            print(string.format("epoch %2d\titeration %2d\tloss = %6.8f"..
-                            "\tgradnorm = %6.4e\tbatch = %4d\t"..
-                            "hardest batch: %4d \twith loss %6.8f lr = %6.4e",
+            print(string.format("epoch %2d  iteration %2d  loss = %6.8f"..
+                            "  gradnorm = %6.4e  batch = %d-%d    "..
+                            "hardest batch: %d-%d    with loss %6.8f lr = %6.4e",
                     epoch_num, t, train_loss[1],
                     model.theta.grad_params:norm(),
+                    train_loader.current_dataset,
                     train_loader.current_sampled_id,
+                    train_loader:get_hardest_batch()[3],  -- TODO add this in!
                     train_loader:get_hardest_batch()[2],
                     train_loader:get_hardest_batch()[1],
                     -- train_loader.priority_sampler:get_hardest_batch()[2],  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
@@ -309,8 +327,8 @@ function test(dataloader, params_, saveoutput)
 
         -- take care of relative position
         if mp.relative then
-            prediction = test_loader:relative_pair(prediction, this, true)
-            y = test_loader:relative_pair(y, this, true)
+            prediction = data_process.relative_pair(prediction, this, true)
+            y = data_process.relative_pair(y, this, true)
         end
 
         -- save

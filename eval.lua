@@ -364,7 +364,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 --
                 -- -- relative coords for next timestep
                 if mp.relative then
-                    pred = test_loader:relative_pair(this, pred, true)
+                    pred = data_process.relative_pair(this, pred, true)
                 end
 
                 -- restore object properties
@@ -404,7 +404,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local context_pred = pred_sim[{{},{2,-1}}]
 
         if mp.relative then
-            y_orig = test_loader:relative_pair(this_orig, y_orig, true)
+            y_orig = data_process.relative_pair(this_orig, y_orig, true)
         end
 
         -- when you save, you will replace context_future_orig
