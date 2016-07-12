@@ -98,17 +98,6 @@ function inittest(preload, model_path)
     dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
-
-    -- -- assert(false)
-    -- local data_loader_args = {dataset_folders=mp.data_root..'/',--..mp.dataset_folder,
-    --                         maxwinsize=config_args.maxwinsize,
-    --                         winsize=mp.winsize, -- not sure if this should be in mp
-    --                         num_past=mp.num_past,
-    --                         num_future=mp.num_future,
-    --                         relative=mp.relative, -- TODO: this should be in the saved args!
-    --                         sim=true,
-    --                         cuda=mp.cuda
-    --                         }
     local data_loader_args = {data_root=mp.data_root..'/',
                               dataset_folders=mp.dataset_folders,
                               maxwinsize=config_args.maxwinsize,
@@ -377,7 +366,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 -- update angle
                 pred = update_angle(this, pred)
                 pred = unsqueezer:forward(pred)
-                -- pred = nn.Unsqueeze(2,3):forward(pred)
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
