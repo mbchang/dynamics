@@ -145,19 +145,8 @@ local train_losses, val_losses, test_losses = {},{},{}
 function inittrain(preload, model_path)
     print("Network parameters:")
     print(mp)
-    -- local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
-    --                           maxwinsize=config_args.maxwinsize,
-    --                           winsize=mp.winsize, -- not sure if this should be in mp
-    --                           num_past=mp.num_past,
-    --                           num_future=mp.num_future,
-    --                           relative=mp.relative,
-    --                           sim=false,
-    --                           cuda=mp.cuda
-    --                         }
-
-    local data_loader_args = {data_root=mp.data_root..'/',--..mp.dataset_folder,
-                            --   dataset_folders="{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}",
-                              dataset_folders=mp.dataset_folders,--"{'balls_n3_t60_ex20'}",
+    local data_loader_args = {data_root=mp.data_root..'/',
+                              dataset_folders=mp.dataset_folders,
                               maxwinsize=config_args.maxwinsize,
                               winsize=mp.winsize, -- not sure if this should be in mp
                               num_past=mp.num_past,
@@ -168,9 +157,7 @@ function inittrain(preload, model_path)
                             }
     -- test_args is the same but with a different dataset_folder
     local test_args = tablex.deepcopy(data_loader_args)
-    -- test_args.data_root = mp.data_root..'/'..mp.test_dataset_folder  -- TODO trying to get general datasampler to work
-    -- test_args.data_root = mp.data_root..'/'--..mp.test_dataset_folder  -- TODO trying to get general datasampler to work
-    test_args.dataset_folders = mp.test_dataset_folders--"{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
+    test_args.dataset_folders = mp.test_dataset_folders
 
     train_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
@@ -210,28 +197,6 @@ function initsavebatches()
     end
 end
 
--- local data_folder = mp.data_root..'/'..mp.dataset_folder..'/batches'
--- if not paths.dirp(data_folder) then
-    -- initsavebatches()
-    -- generalinitsavebatches()
-
--- else print('Batches already made') end
-
--- function initsavebatches(dataset_folder)
---     mp.cuda = false
---     mp.cunn = false
---     mp.shuffle = false
---     print(mp.dataset_folders)
---     assert(false)
---     local jsonfolder = mp.data_root..'/'..mp.dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
---     local outfolder = mp.data_root..'/'..mp.dataset_folder..'/batches'  -- TODO: make this some global thing!
---     print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..outfolder)
---     config_args.batch_size = mp.batch_size
---     local dp = data_process.create(jsonfolder, outfolder, config_args)
---     -- dp:create_datasets()
---     dp:create_datasets_batches()
--- end
-
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
@@ -248,12 +213,7 @@ function feval_train(params_)  -- params_ should be first argument
         model.theta.grad_params:add(model.theta.params:clone():mul(mp.L2) )
     end
 
-    -- train_loader.priority_sampler:update_batch_weight(
-    --                                     train_loader.current_sampled_id, loss)  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
-    -- train_loader:update_batch_weight(train_loader.current_sampled_id,loss)
     train_loader:update_batch_weight(loss)
-
-
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
@@ -265,11 +225,9 @@ function train(start_iter, epoch_num)
     print('Start epoch num:', epoch_num)
     for t = start_iter,mp.max_iter do
 
-        -- train_loader.priority_sampler:set_epcnum(epoch_num)  -- TAKE CARE OF THIS! The priority sampler should take of this already! Add this feature and test it first before you go into the general_datasampler
         local new_params, train_loss = optimizer(feval_train,
                                 model.theta.params, optim_state)  -- next batch
 
-        -- print('norm',train_loader.priority_sampler.batch_weights:norm())
         assert(new_params == model.theta.params)
 
         trainLogger:add{['log MSE loss (train set)'] = torch.log(train_loss[1])}
@@ -284,11 +242,9 @@ function train(start_iter, epoch_num)
                     model.theta.grad_params:norm(),
                     train_loader.current_dataset,
                     train_loader.current_sampled_id,
-                    train_loader:get_hardest_batch()[3],  -- TODO add this in!
+                    train_loader:get_hardest_batch()[3],
                     train_loader:get_hardest_batch()[2],
                     train_loader:get_hardest_batch()[1],
-                    -- train_loader.priority_sampler:get_hardest_batch()[2],  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
-                    -- train_loader.priority_sampler:get_hardest_batch()[1],  -- TOOD: you should have a method in data_sampler to update the batch weight. main should not have access to priority_sampler.
                     optim_state.learningRate))
         end
 

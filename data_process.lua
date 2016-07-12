@@ -304,12 +304,6 @@ function data_process:save_batches(datasets, savefolder)
     end
 end
 
--- function data_process:extract_flag(flags_list, delim)
---     local extract = plt.filter(flags_list, function(x) return pls.startswith(x, delim) end)
---     assert(#extract == 1)
---     return string.sub(extract[1], #delim+1)
--- end
-
 -- rejection sampling
 function data_process:sample_dataset_id(dataset_ids, counters, limits)
     local dataset_id = math.ceil(torch.rand(1)[1]*#dataset_ids)

@@ -51,9 +51,6 @@ function datasampler.create(dataset_name, args)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
 
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
-    -- print(self.dataset_folder)
-    -- assert(false)
-    -- self.scenario = pls.split(self.dataset_folder,'_')[1]
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     print('savefolder', self.savefolder)
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
@@ -88,19 +85,6 @@ function datasampler:split_time(batch)
     return {focus_past, context_past, focus_future, context_future}
 end
 
--- function datasampler:relative_pair(past, future, rta)
---     -- rta: relative to absolute, otherwise we are doing absolute to relative
---
---     -- TODO: use config args for this!
---     if rta then
---         future[{{},{},{1,4}}] = future[{{},{},{1,4}}] + past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
---     else
---         future[{{},{},{1,4}}] = future[{{},{},{1,4}}] - past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
---     end
---     return future
--- end
-
-
 function datasampler:relative_batch(batch, rta)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
@@ -115,7 +99,6 @@ function datasampler:sample_priority_batch(pow)
 
     local batch
     --
-    -- if self.priority_sampler.epc_num > 1 then  -- TODO turn this back to 1  -- make this a boolean.
     if self.priority_sampler.table_is_full then
         -- return self:load_batch_id(self.priority_sampler:sample(self.priority_sampler.epc_num/100))  -- sharpens in discrete steps  TODO this was hacky
         batch = self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
@@ -144,7 +127,6 @@ end
 
 function datasampler:load_batch_id(id)
     self.current_sampled_id = id
-    -- print(self.dataset_folder..' batch '..id)
 
     local batchname = self.savefolder..'/'..'batch'..id
     local nextbatch = torch.load(batchname)
@@ -161,8 +143,6 @@ function datasampler:load_batch_id(id)
     this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
 
     nextbatch = {this, context, y, context_future, mask}
-    -- print(self.dataset_folder..' '.. self.current_sampled_id)
-    -- self:update_batch_weight(self.current_sampled_id, 1) -- DEBUG
     collectgarbage()
     return nextbatch
 end
