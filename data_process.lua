@@ -33,7 +33,6 @@ data_process.__index = data_process
 function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if this make sense in eval though
     local self = {}
     setmetatable(self, data_process)
-
     self.pnc = args.position_normalize_constant
     self.vnc = args.velocity_normalize_constant
     self.anc = args.angle_normalize_constant

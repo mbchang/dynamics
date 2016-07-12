@@ -113,7 +113,9 @@ end
 mp.object_dim = config_args.si.oid-- TODO! make this more versatile! (don't hardcode it to oid)
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
+mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.savedir = mp.logs_root .. '/' .. mp.name
+print(mp.savedir)
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then

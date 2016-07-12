@@ -23,7 +23,8 @@ require 'IdentityCriterion'
 
 -- Local Imports
 local model_utils = require 'model_utils'
-local D = require 'data_sampler'
+-- local D = require 'data_sampler'
+local D = require 'general_data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 require 'json_interface'
@@ -35,16 +36,15 @@ local data_process = require 'data_process'
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
--- cmd:option('-root', "logslink", 'subdirectory to save logs')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 -- dataset
-cmd:option('-dataset_folder', '', 'dataset folder')
+cmd:option('-dataset_folders', '', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-ns', 3, 'number of test batches')
+cmd:option('-ns', 18, 'number of test batches')
 cmd:option('-steps', 7, 'steps to simulate')
 cmd:text()
 
@@ -57,14 +57,7 @@ if mp.server == 'pc' then
     mp.winsize = 10 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
-    -- mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
-    --                     'SuperUROP/Code/data/worldm1_np=3_ng=0nonstationarylite'--dataset_files_subsampled_dense_np2' --'hoho'
-    -- mp.dataset_folder = '/Users/MichaelChang/Documents/Researchlink/'..
-    --                     'SuperUROP/Code/dynamics/debug'--dataset_files_subsampled_dense_np2' --'hoho'
-    -- mp.traincfgs = '[:-2:2-:]'
-    -- mp.testcfgs = '[:-2:2-:]'
 	mp.batch_size = 5 --1
-    -- mp.max_iter = 5*252
 	mp.seq_length = 10
 	mp.num_threads = 1
 	mp.cuda = false
@@ -74,7 +67,7 @@ else
     mp.num_future = 1
 	mp.seq_length = 10
 	mp.num_threads = 4
-	-- mp.cuda = true
+	mp.cuda = true
 end
 
 local M
@@ -84,10 +77,10 @@ local subsamp = 1
 
 -- mp.input_dim = mp.object_dim*mp.num_past
 -- mp.out_dim = mp.object_dim*mp.num_future
+mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
+mp.dataset_folders = assert(loadstring("return "..string.gsub(mp.dataset_folders,'\"',''))())
 mp.savedir = mp.logs_root .. '/' .. mp.name
-
 mp.relative=true -- TODO: address this!
-
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then
@@ -101,23 +94,30 @@ local model, test_loader, modelfile, dp
 
 function inittest(preload, model_path)
     print("Network parameters:")
-    -- print(mp)
-    print(mp.dataset_folder)
-    -- print(config_args)
-    -- assert(false)
+    print(mp.dataset_folders)
     dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
 
-    -- assert(false)
-    local data_loader_args = {dataset_folder=mp.data_root..'/'..mp.dataset_folder,
-                            maxwinsize=config_args.maxwinsize,
-                            winsize=mp.winsize, -- not sure if this should be in mp
-                            num_past=mp.num_past,
-                            num_future=mp.num_future,
-                            relative=mp.relative, -- TODO: this should be in the saved args!
-                            sim=true,
-                            cuda=mp.cuda
+    -- -- assert(false)
+    -- local data_loader_args = {dataset_folders=mp.data_root..'/',--..mp.dataset_folder,
+    --                         maxwinsize=config_args.maxwinsize,
+    --                         winsize=mp.winsize, -- not sure if this should be in mp
+    --                         num_past=mp.num_past,
+    --                         num_future=mp.num_future,
+    --                         relative=mp.relative, -- TODO: this should be in the saved args!
+    --                         sim=true,
+    --                         cuda=mp.cuda
+    --                         }
+    local data_loader_args = {data_root=mp.data_root..'/',
+                              dataset_folders=mp.dataset_folders,
+                              maxwinsize=config_args.maxwinsize,
+                              winsize=mp.winsize, -- not sure if this should be in mp
+                              num_past=mp.num_past,
+                              num_future=mp.num_future,
+                              relative=mp.relative,
+                              sim=true,
+                              cuda=mp.cuda
                             }
     test_loader = D.create('testset', tablex.deepcopy(data_loader_args))  -- TODO: Testing on trainset
     modelfile = model_path
@@ -301,7 +301,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     for i = 1, mp.ns do
         xlua.progress(i, mp.ns)
 
-        local batch = dataloader:sample_sequential_batch()  -- TODO: perhaps here I should tell it what my desired windowsize should be
+        local batch, current_dataset = dataloader:sample_sequential_batch(true)  -- TODO: perhaps here I should tell it what my desired windowsize should be
 
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
@@ -416,7 +416,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                'batch'..i..'.json')
+                                'batch'..test_loader.datasamplers[current_dataset].current_sampled_id..'.json',
+                                current_dataset)
         end
     end
     avg_loss = avg_loss/count
@@ -424,12 +425,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     collectgarbage()
 end
 
-function save_ex_pred_json(example, jsonfile)
-    local flags = pls.split(mp.dataset_folder, '_')
+function save_ex_pred_json(example, jsonfile, current_dataset)
+    -- local flags = pls.split(mp.dataset_folder, '_')
+    local flags = pls.split(mp.dataset_folders[current_dataset], '_')
+
     local world_config = {
         num_past = mp.num_past,
         num_future = mp.num_future,
-        env=pls.split(mp.dataset_folder,'_')[1],--test_loader.scenario,
+        env=flags[1],--test_loader.scenario,
         numObj=tonumber(extract_flag(flags, 'n')),
         gravity=false, -- TODO
         friction=false, -- TODO
@@ -444,7 +447,8 @@ function save_ex_pred_json(example, jsonfile)
             this_future, context_future,
             this_pred, context_pred = unpack(example)
 
-    local subfolder = mp.savedir .. '/' .. 'predictions/'
+    -- local subfolder = mp.savedir .. '/' .. 'predictions/'
+    local subfolder = mp.savedir .. '/' .. mp.dataset_folders[current_dataset] .. 'predictions/'
     if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
 
     -- construct gnd truth (could move to this to a util function)
@@ -476,9 +480,12 @@ end
 
 
 function predict_simulate_all()
+    print(mp.name)
+    print(string.gsub(mp.name,"'","\'"))
 
     local snapshot = getLastSnapshot(mp.name)
     local snapshotfile = mp.savedir ..'/'..snapshot
+    print(snapshotfile)
     local checkpoint = torch.load(snapshotfile)
 
     local saved_args = torch.load(mp.savedir..'/args.t7')

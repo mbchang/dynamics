@@ -78,7 +78,7 @@ function general_datasampler:sample_priority_batch(pow)
         self.has_reported = true
         print('Seen all batches')
     end
-    return batch
+    return batch, self.current_dataset
 end
 
 -- returns {loss, idx, current_dataset}
@@ -88,18 +88,21 @@ function general_datasampler:get_hardest_batch()
 end
 
 function general_datasampler:update_batch_weight(weight)
-    -- TODO!
     self.datasamplers[self.current_dataset]:update_batch_weight(weight)
 end
 
-function general_datasampler:sample_sequential_batch()
+function general_datasampler:sample_sequential_batch(modulo)
     local datasampler = self.datasamplers[self.current_dataset]
     self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
     local batch = datasampler:sample_sequential_batch()
-    if datasampler.current_batch == datasampler.num_batches then
+    if modulo then
         self.current_dataset = self.current_dataset % #self.datasamplers + 1
+    else
+        if datasampler.current_batch == datasampler.num_batches then
+            self.current_dataset = self.current_dataset % #self.datasamplers + 1
+        end
     end
-    return batch
+    return batch, self.current_dataset
 end
 
 
