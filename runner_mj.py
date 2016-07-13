@@ -33,7 +33,7 @@ def create_jobs(dry_run, mode, ext):
             ]
 
     for job in jobs:
-        job['name'] = job['dataset_folders'] + '--' + job['test_dataset_folders']
+        job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
 
 
     if dry_run:
@@ -61,8 +61,12 @@ def create_jobs(dry_run, mode, ext):
                     jobname = jobname + "_" + flag + "_" + str(job[flag])
                     flagstring = flagstring + " -" + flag + " " + str(job[flag])
             else:
-                jobname = jobname + "_" + flag + "_" + str(job[flag])
-                flagstring = flagstring + " -" + flag + " " + str(job[flag])
+                if flag in ['name', 'dataset_folders', 'test_dataset_folders']:
+                    jobname = jobname + "_\"" + flag + "\"_" + str(job[flag])
+                    flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')
+                else:
+                    jobname = jobname + "_" + flag + "_" + str(job[flag])
+                    flagstring = flagstring + " -" + flag + " " + str(job[flag])
         # flagstring = flagstring + " -name " + jobname + " -mode " + mode
         flagstring = flagstring + " -mode " + mode
 
@@ -84,10 +88,14 @@ def predict(dry_run):
 
 
 def to_slurm(jobname, jobcommand, dry_run):
-    with open('slurm_scripts/' + jobname + '.slurm', 'w') as slurmfile:
+    jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
+    jobname_formatted2 = jobname_formatted.replace('\\"','')
+    print('repr', repr(jobname))
+
+    with open('slurm_scripts/' + jobname.replace('\\"','') + '.slurm', 'w') as slurmfile:
         slurmfile.write("#!/bin/bash\n")
         slurmfile.write("#SBATCH --job-name"+"=" + jobname + "\n")
-        slurmfile.write("#SBATCH --output=slurm_logs/" + jobname + ".out\n")
+        slurmfile.write("#SBATCH --output=slurm_logs/" + jobname_formatted + ".out\n")
         # slurmfile.write("#SBATCH --error=slurm_logs/" + jobname + ".err\n")
         slurmfile.write("#SBATCH -N 1\n")
         slurmfile.write("#SBATCH -c 1\n")
@@ -97,15 +105,10 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH --time=2-23:00:00\n")
         slurmfile.write(jobcommand)
 
-
-    jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
-    print "sbatch slurm_scripts/" + jobname_formatted + ".slurm &"
-
     if not dry_run:
-        jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\'")
-        print "sbatch slurm_scripts/" + jobname_formatted + ".slurm &"
-        os.system("sbatch slurm_scripts/" + jobname_formatted + ".slurm &")
+        print "sbatch slurm_scripts/" + jobname_formatted2 + ".slurm &"
+        os.system("sbatch slurm_scripts/" + jobname_formatted2 + ".slurm &")
 
-dryrun = True
+dryrun = False
 run_experiment(dryrun)
 # predict(dryrun)

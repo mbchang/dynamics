@@ -49,7 +49,7 @@ function general_datasampler.create(dataset_name, args)
 
     self.datasamplers = {}
     for i, dataset_folder in pairs(self.dataset_folders) do
-        args.dataset_folder='mj_data/'..dataset_folder -- NOTE HARDCODED!
+        args.dataset_folder=self.data_root..dataset_folder -- NOTE HARDCODED!
         self.datasamplers[i] = D.create(dataset_name, args)
     end
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
