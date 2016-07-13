@@ -426,8 +426,6 @@ function save_ex_pred_json(example, jsonfile, current_dataset)
         friction=false, -- TODO
         pairwise=false -- TODO
     }
-    -- print(world_config.env)
-    -- assert(false)
 
     -- first join on the time axis
     -- you should save context pred as well as context future

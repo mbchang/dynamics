@@ -49,7 +49,7 @@ cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-max_iter', 100000, 'max number of iterations')
+cmd:option('-max_iter', 700000, 'max number of iterations')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
