@@ -41,11 +41,11 @@ cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 -- dataset
-cmd:option('-dataset_folders', '', 'dataset folder')
+cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-ns', 18, 'number of test batches')
-cmd:option('-steps', 7, 'steps to simulate')
+cmd:option('-ns', 3, 'number of test batches')
+cmd:option('-steps', 58, 'steps to simulate')
 cmd:text()
 
 -- parse input params
@@ -78,7 +78,7 @@ local subsamp = 1
 -- mp.input_dim = mp.object_dim*mp.num_past
 -- mp.out_dim = mp.object_dim*mp.num_future
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
-mp.dataset_folders = assert(loadstring("return "..string.gsub(mp.dataset_folders,'\"',''))())
+mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_dataset_folders,'\"',''))())
 mp.savedir = mp.logs_root .. '/' .. mp.name
 mp.relative=true -- TODO: address this!
 
@@ -94,12 +94,12 @@ local model, test_loader, modelfile, dp
 
 function inittest(preload, model_path)
     print("Network parameters:")
-    print(mp.dataset_folders)
+    print(mp.test_dataset_folders)
     dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
     local data_loader_args = {data_root=mp.data_root..'/',
-                              dataset_folders=mp.dataset_folders,
+                              dataset_folders=mp.test_dataset_folders,
                               maxwinsize=config_args.maxwinsize,
                               winsize=mp.winsize, -- not sure if this should be in mp
                               num_past=mp.num_past,
@@ -112,8 +112,6 @@ function inittest(preload, model_path)
     modelfile = model_path
     print("Initialized Network")
 end
-
-
 
 function backprop2input()
     -- for one input
@@ -288,7 +286,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             'Number of predictive steps should be less than '..
             test_loader.maxwinsize-mp.num_past+1)
     for i = 1, mp.ns do
-        xlua.progress(i, mp.ns)
+        if mp.server == 'pc' then xlua.progress(i, mp.ns) end
 
         local batch, current_dataset = dataloader:sample_sequential_batch(true)  -- TODO: perhaps here I should tell it what my desired windowsize should be
 
@@ -415,7 +413,7 @@ end
 
 function save_ex_pred_json(example, jsonfile, current_dataset)
     -- local flags = pls.split(mp.dataset_folder, '_')
-    local flags = pls.split(mp.dataset_folders[current_dataset], '_')
+    local flags = pls.split(mp.test_dataset_folders[current_dataset], '_')
 
     local world_config = {
         num_past = mp.num_past,
@@ -434,7 +432,7 @@ function save_ex_pred_json(example, jsonfile, current_dataset)
             this_pred, context_pred = unpack(example)
 
     -- local subfolder = mp.savedir .. '/' .. 'predictions/'
-    local subfolder = mp.savedir .. '/' .. mp.dataset_folders[current_dataset] .. 'predictions/'
+    local subfolder = mp.savedir .. '/' .. mp.test_dataset_folders[current_dataset] .. 'predictions/'
     if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
 
     -- construct gnd truth (could move to this to a util function)

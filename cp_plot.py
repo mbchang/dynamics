@@ -1,15 +1,18 @@
 import os
 
 experiments = [
-                'balls_n10_t60_ex50000__balls_n10_t60_ex50000',
                 'balls_n3_t60_ex50000',
                 'balls_n3_t60_ex50000,balls_n5_t60_ex50000,balls_n7_t60_ex50000__balls_n10_t60_ex50000',
                 'balls_n3_t60_ex50000,balls_n5_t60_ex50000__balls_n10_t60_ex50000',
                 'balls_n3_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000',
                 'balls_n3_t60_ex50000__balls_n10_t60_ex50000',
                 'balls_n3_t60_ex50000__balls_n5_t60_ex50000',
+                'balls_n5_t60_ex10000',
+                'balls_n5_t60_ex10000_fr',
+                'balls_n5_t60_ex10000_gf',
                 'balls_n5_t60_ex50000',
                 'balls_n7_t60_ex50000',
+                'tower_n10_t120_ex50000__tower_n10_t120_ex50000',
                 ]
 
 # specify paths
