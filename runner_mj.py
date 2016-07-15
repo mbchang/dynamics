@@ -25,11 +25,13 @@ def create_jobs(dry_run, mode, ext):
 
 
     jobs = [
-            {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000','balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"}
+            #{'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
+            #{'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
+            #{'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
+            #{'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000','balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
+            {'dataset_folders':"{'tower_n10_t60_ex50000'}", 'test_dataset_folders': "{'tower_n10_t60_ex50000'}"}
             ]
 
     for job in jobs:
@@ -88,9 +90,11 @@ def predict(dry_run):
 
 
 def to_slurm(jobname, jobcommand, dry_run):
-    jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
+    # jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
+    # jobname_formatted2 = jobname_formatted.replace('\\"','')
+
+    jobname_formatted = jobname.replace('{','').replace('}','').replace("'","")
     jobname_formatted2 = jobname_formatted.replace('\\"','')
-    print('repr', repr(jobname))
 
     with open('slurm_scripts/' + jobname.replace('\\"','') + '.slurm', 'w') as slurmfile:
         slurmfile.write("#!/bin/bash\n")
@@ -102,7 +106,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         # slurmfile.write("#SBATCH -p gpu\n")
         slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=3000\n")
-        slurmfile.write("#SBATCH --time=2-23:00:00\n")
+        slurmfile.write("#SBATCH --time=6-23:00:00\n")
         slurmfile.write(jobcommand)
 
     if not dry_run:

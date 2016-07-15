@@ -89,33 +89,5 @@ function plot_experiment(logfile, savefile)
                  subsamplerate)
  end
 
--- losses,lr=0.0005_results.t7  losses,lr=5e-06_results.t7   saved_model,lr=5e-05.t7
--- experiment_results.t7        losses,lr=5e-05_results.t7
-
--- assert(false)
--- common_mp.results_folder = 'rand_order_results_batch_size=100_seq_length=10_layers=4_rnn_dim=100'
--- print(common_mp.results_folder)
-
--- plot_experiment_results(common_mp.results_folder .. '/experiment_results.t7', 'plots')
--- plot_train_losses(common_mp.results_folder .. '/losses,lr=5e-05_results', '.')
-
-
--- plot_all_training('openmind')
--- plot_all_experiments('pc', plot_experiment_results, 'experiment_results.t7')
-
-
-
--- -- read_log_file('openmind/baselinesubsampled_opt_adam_lr_0.0005')
--- plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.001/train.log',
--- --                      'hihhihhihih')
--- plot_experiment('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/'..
---                 'dynamics/oplogs/baselinesubsampledcontig_opt_optimrmsprop_'..
---                 'testcfgs_[:-2:2-:]_traincfgs_[:-2:2-:]_lr_0.001/experiment.log',
---                 'hihhihhihih')
-
--- plot_training_losses('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs/baselinesubsampled_opt_adam_lr_0.001/train.log',
--- --                      'hihhihhihih')
-
--- print(pp.infolder)
 plot_experiment(pp.infolder..'/experiment.log', pp.infolder..'/experiment.png')
 plot_training_losses(pp.infolder..'/train.log',pp.infolder..'/train.png')
