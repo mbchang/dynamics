@@ -46,7 +46,8 @@ function general_datasampler.create(dataset_name, args)
     self.cuda=args.cuda
     assert(self.num_past + self.num_future <= self.winsize)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
-
+    print(args.shuffle)
+    assert(false)
     self.datasamplers = {}
     for i, dataset_folder in pairs(self.dataset_folders) do
         args.dataset_folder=self.data_root..dataset_folder -- NOTE HARDCODED!

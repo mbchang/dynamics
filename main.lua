@@ -84,6 +84,7 @@ if mp.server == 'pc' then
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
+    mp.shuffle = true
     mp.print_every = 10
     mp.save_every = 50
     mp.val_every = 50
@@ -155,6 +156,7 @@ function inittrain(preload, model_path)
                               num_future=mp.num_future,
                               relative=mp.relative,
                               sim=false,
+                              shuffle=mp.shuffle,
                               cuda=mp.cuda
                             }
     -- test_args is the same but with a different dataset_folder
@@ -183,7 +185,6 @@ end
 function initsavebatches()
     mp.cuda = false
     mp.cunn = false
-    mp.shuffle = false
     config_args.batch_size = mp.batch_size
     for _, dataset_folder in pairs(mp.dataset_folders) do
         local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
@@ -393,6 +394,8 @@ end
 function experiment(start_iter, epoch_num)
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
+    print(mp.shuffle)
+    assert(false)
     train(start_iter, epoch_num)
 end
 

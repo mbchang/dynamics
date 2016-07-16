@@ -38,6 +38,7 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.anc = args.angle_normalize_constant
     self.relative = args.relative -- bool
     self.masses = args.masses -- {0.33, 1.0, 3.0, 1e30}
+    self.maxwinsize = args.maxwinsize
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
@@ -169,8 +170,8 @@ end
     Input: unfactorized: (num_samples x num_obj x windowsize x 8)
     Output:
         {
-            focus: (num_samples, windowsize, 8)
-            context: (num_samples x (num_obj-1) x windowsize x 8) or {}
+            focus: (num_samples*num_obj, num_steps, obj_dim)
+            context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
         }
 --]]
 function data_process:expand_for_each_object(unfactorized)
@@ -246,7 +247,10 @@ end
 -- TODO: when spliting in time, should I split in the split2batches, or in the xpand_for_each_object?
 -- data:
 function data_process:split2batches(data)
+    print(data:size())
     local num_examples = data:size(1)
+    -- here you should split through time
+
     -- assert(num_examples % self.bsize == 0)  -- TODO take care of this!
     local num_chunks = math.ceil(num_examples/self.bsize)
     print('Splitting '..num_examples..' examples into '..num_chunks..
@@ -405,6 +409,8 @@ function data_process:create_datasets_batches()
 end
 
 -- perfomrs split2batches on both focus and context and then merges result
+-- focus (num_samples*num_obj, num_steps, obj_dim)
+-- context (num_samples*num_obj, num_obj-1, num_steps, obj_dim)
 function data_process:split2batchesall(focus, context)
     local focus_batches = self:split2batches(focus)
     local context_batches = self:split2batches(context)
@@ -418,10 +424,9 @@ end
 -- TODO: when spliting in time, should I split in the split2batchesall, or in the xpand_for_each_object?
 function data_process:json2batches(jsonfile)
     local data = load_data_json(jsonfile)
+    assert(data:size(3) == self.maxwinsize)
     data = self:normalize(data)
-    data = self:mass2onehotall(data)
-    -- print(data:size())
-    -- assert(false)
+    data = self:mass2onehotall(data)  -- (num_ex, num_obj, num_steps, obj_dim)
     local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
     return self:split2batchesall(focus, context)
 end

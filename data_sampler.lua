@@ -37,7 +37,6 @@ function datasampler.create(dataset_name, args)
 
     local self = {}
     setmetatable(self, datasampler)
-    self.current_batch = 0
     self.dataset_folder=args.dataset_folder
     self.dataset_name=dataset_name
     self.maxwinsize=args.maxwinsize
@@ -45,6 +44,7 @@ function datasampler.create(dataset_name, args)
     self.num_past=args.num_past
     self.num_future=args.num_future
     self.relative=args.relative
+    self.shuffle=args.shuffle -- TODO!
     self.sim=args.sim
     self.cuda=args.cuda
     assert(self.num_past + self.num_future <= self.winsize)
@@ -54,11 +54,24 @@ function datasampler.create(dataset_name, args)
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     print('savefolder', self.savefolder)
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
+    self.num_subbatches = math.floor(self.num_batches*self.maxwinsize/self.winsize)  -- NOTE: assume that all batches contain self.maxwinsize timesteps!
+
+    if self.shuffle then
+        self.subbatch_indices = torch.randperm(self.num_subbatches)
+    else
+        self.subbatch_indices = torch.range(1,self.num_subbatches)
+    end
+    print(self.subbatch_indices)
+    print(self.shuffle)
+    assert(false)
+
     print(self.dataset_name..': '..self.dataset_folder..' number of batches: '..self.num_batches)
 
-    self.priority_sampler = PS.create(self.num_batches)
+    self.priority_sampler = PS.create(self.num_subbatches)
     self.current_sampled_id = 0
-    self.batch_idxs = torch.range(1,self.num_batches)
+    self.current_batch = 0  -- may be deprecated
+    self.current_subbatch = 0
+    -- self.batch_idxs = torch.range(1,self.num_batches)
     self.current_dataset = 1
 
     -- debug
@@ -68,18 +81,21 @@ function datasampler.create(dataset_name, args)
     return self
 end
 
-function datasampler:split_time(batch)
+function datasampler:split_time(batch, offset)
+    local offset = offset or 1
     local focus, context = unpack(batch)
     assert(focus:size(2) >= self.winsize and context:size(3) >= self.winsize)  -- IS THIS WHAT WE WANT?
-    local focus_past = focus[{{},{1, self.num_past}}]
-    local context_past = context[{{},{}, {1, self.num_past}}]
+    assert((offset-1)+self.num_past+self.num_future <= self.maxwinsize)
+
+    local focus_past = focus[{{},{offset, (offset-1)+self.num_past}}]
+    local context_past = context[{{},{}, {offset, (offset-1)+self.num_past}}]
     local focus_future, context_future
     if self.sim then
-        focus_future = focus[{{},{self.num_past+1, -1}}]
-        context_future = context[{{},{},{self.num_past+1, -1}}]
+        focus_future = focus[{{},{(offset-1)+self.num_past+1, -1}}]
+        context_future = context[{{},{},{(offset-1)+self.num_past+1, -1}}]
     else
-        focus_future = focus[{{},{self.num_past+1, self.num_past+self.num_future}}]
-        context_future = context[{{},{},{self.num_past+1, self.num_past+self.num_future}}]
+        focus_future = focus[{{},{(offset-1)+self.num_past+1, (offset-1)+self.num_past+self.num_future}}]
+        context_future = context[{{},{},{(offset-1)+self.num_past+1, (offset-1)+self.num_past+self.num_future}}]
     end
 
     return {focus_past, context_past, focus_future, context_future}
@@ -104,6 +120,7 @@ function datasampler:sample_priority_batch(pow)
         batch = self:load_batch_id(self.priority_sampler:sample(pow))  -- sum turns it into a number
     else
         batch = self:sample_sequential_batch()  -- or sample_random_batch
+        -- batch = self:sample_random_batch()
     end
 
     if self.priority_sampler.table_is_full and not(self.has_reported) then
@@ -115,21 +132,36 @@ function datasampler:sample_priority_batch(pow)
 end
 
 function datasampler:sample_random_batch()
-    local id = math.random(self.num_batches)
-    return self:load_batch_id(id)
+    self.current_subbatch = (self.current_subbatch % self.num_subbatches) + 1
+    -- local batch_id = math.floor(self.current_subbatch / self.winsize) + 1
+    -- local offset = self.current_subbatch - (self.winsize*(batch_id-1)) + 1  -- index (inclusive of the start of the window)
+    -- local batch = self:load_batch_id(batch_id)  -- focus: (bsize, maxwinsize, obj_dim)
+    -- local batch = self:select_time_interval(batch, offset)  -- focus: (bsize, winsize, obj_dim)
+    print(self.current_subbatch, self.subbatch_indices[self.current_subbatch])
+    local batch = self:load_subbatch_id(self.subbatch_indices[self.current_subbatch])
+    return batch
 end
 
 function datasampler:sample_sequential_batch()
-    self.current_batch = self.current_batch + 1
-    if self.current_batch > self.num_batches then self.current_batch = 1 end
-    return self:load_batch_id(self.batch_idxs[self.current_batch])
+    -- self.current_batch = self.current_batch + 1
+    -- if self.current_batch > self.num_batches then self.current_batch = 1 end
+    -- local batch = self:load_batch_id(self.batch_idxs[self.current_batch])
+    local batch = self:sample_random_batch()
+    return batch
 end
+
+-- function datasampler:sample_sequential_subbatch()
+--     self.current_batch = self.current_batch + 1
+--     if self.current_batch > self.num_batches then self.current_batch = 1 end
+--     local batch = self:load_batch_id(self.batch_idxs[self.current_batch])
+--     return batch
+-- end
 
 function datasampler:load_batch_id(id)
     self.current_sampled_id = id
 
     local batchname = self.savefolder..'/'..'batch'..id
-    local nextbatch = torch.load(batchname)
+    local nextbatch = torch.load(batchname)   -- focus: (bsize, maxwinsize, obj_dim)
 
     nextbatch = self:split_time(nextbatch)
     if self.relative then nextbatch = self:relative_batch(nextbatch, false) end
@@ -146,6 +178,47 @@ function datasampler:load_batch_id(id)
     collectgarbage()
     return nextbatch
 end
+
+function datasampler:load_subbatch_id(id)
+    self.current_sampled_id = id  -- note! I don't even need to change this! This now indexes the subbatches!
+    local batch_id = math.floor(self.current_subbatch / self.winsize) + 1
+    local offset = self.current_subbatch - (self.winsize*(batch_id-1)) + 1
+
+    local batchname = self.savefolder..'/'..'batch'..batch_id
+    local nextbatch = torch.load(batchname)   -- focus: (bsize, maxwinsize, obj_dim)
+
+    nextbatch = self:split_time(nextbatch, offset)
+    if self.relative then nextbatch = self:relative_batch(nextbatch, false) end
+
+    local this, context, y, context_future, mask = unpack(nextbatch)
+
+    mask = torch.zeros(10)
+    mask[{{context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
+
+    -- convert to cuda or double
+    this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
+
+    nextbatch = {this, context, y, context_future, mask}
+    collectgarbage()
+    return nextbatch
+end
+
+-- either: focus (num_samples*num_obj, num_steps, obj_dim)
+        --> (num_samples*num_obj*(num_steps/window_size), window_size, obj_dim)
+-- or: context (num_samples*num_obj, num_obj-1, num_steps, obj_dim)
+        --> (num_samples*num_obj*(num_steps/window_size), num_obj-1, window_size, obj_dim)
+-- windowsize: num_past + num_future
+function datasampler:subdivide_time(data)
+    local num_ex = data:size(1)
+
+    -- define window_size here
+    local dim_to_split = data:dim()-1
+    local splitted = data:clone():split(window_size, dim_to_split)
+    local joined = torch.cat(splitted,1)
+    assert(joined:size(1)==num_ex*window_size and joined:size(3)==window_size)
+    return joined
+end
+
 
 function datasampler:get_hardest_batch()
     return self.priority_sampler:get_hardest_batch()
