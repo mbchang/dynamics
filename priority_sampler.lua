@@ -16,6 +16,7 @@ function priority_sampler.create(num_batches)
 end
 
 function priority_sampler:update_batch_weight(batch_id, weight)
+    -- print('batch_id', batch_id)
     self.batch_weights[batch_id] = weight
     self.table_is_full = self.batch_weights:min() > 0
 end

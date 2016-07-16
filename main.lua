@@ -76,7 +76,7 @@ mp = cmd:parse(arg)
 if mp.server == 'pc' then
     mp.data_root = 'mj_data'
     mp.logs_root = 'logs'
-    mp.winsize = 10 -- total number of frames
+    mp.winsize = 10 -- total number of frames  -- TODO! winsize should be num_past + num_future!
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
@@ -84,7 +84,7 @@ if mp.server == 'pc' then
     -- mp.lrdecay = 0.99
 	mp.seq_length = 10
 	mp.num_threads = 1
-    mp.shuffle = true
+    mp.shuffle = false
     mp.print_every = 10
     mp.save_every = 50
     mp.val_every = 50
@@ -141,7 +141,6 @@ mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_datas
 local model, train_loader, test_loader, modelfile
 local train_losses, val_losses, test_losses = {},{},{}
 
-
 ------------------------------- Helper Functions -------------------------------
 
 -- initialize
@@ -156,7 +155,8 @@ function inittrain(preload, model_path)
                               num_future=mp.num_future,
                               relative=mp.relative,
                               sim=false,
-                              shuffle=mp.shuffle,
+                              subdivide=config_args.subdivide,
+                              shuffle=config_args.shuffle,
                               cuda=mp.cuda
                             }
     -- test_args is the same but with a different dataset_folder
@@ -204,6 +204,8 @@ end
 function feval_train(params_)  -- params_ should be first argument
 
     local batch = train_loader:sample_priority_batch(mp.sharpen)
+    -- local batch = train_loader:sample_sequential_batch(true)
+
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
 
@@ -236,7 +238,6 @@ function train(start_iter, epoch_num)
         trainLogger:add{['log MSE loss (train set)'] = torch.log(train_loss[1])}
         trainLogger:style{['log MSE loss (train set)'] = '~'}
 
-        -- print
         if (t-start_iter+1) % mp.print_every == 0 then
             print(string.format("epoch %2d  iteration %2d  loss = %6.8f"..
                             "  gradnorm = %6.4e  batch = %d-%d    "..
@@ -301,7 +302,7 @@ function test(dataloader, params_, saveoutput)
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
 
-        local batch = dataloader:sample_sequential_batch()
+        local batch = dataloader:sample_sequential_batch(false)
 
         local test_loss, prediction = model:fp(params_, batch)
 
@@ -394,8 +395,6 @@ end
 function experiment(start_iter, epoch_num)
     torch.setnumthreads(mp.num_threads)
     print('<torch> set nb of threads to ' .. torch.getnumthreads())
-    print(mp.shuffle)
-    assert(false)
     train(start_iter, epoch_num)
 end
 

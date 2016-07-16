@@ -46,8 +46,6 @@ function general_datasampler.create(dataset_name, args)
     self.cuda=args.cuda
     assert(self.num_past + self.num_future <= self.winsize)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
-    print(args.shuffle)
-    assert(false)
     self.datasamplers = {}
     for i, dataset_folder in pairs(self.dataset_folders) do
         args.dataset_folder=self.data_root..dataset_folder -- NOTE HARDCODED!
@@ -55,7 +53,7 @@ function general_datasampler.create(dataset_name, args)
     end
     -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
-                            plseq.map(function(x) return x.num_batches end,
+                            plseq.map(function(x) return x.total_batches end,  -- TODO!
                                 self.datasamplers))
     print(self.dataset_name..': num_batches: '..self.num_batches)
     self.current_sampled_id = nil
@@ -69,6 +67,7 @@ function general_datasampler.create(dataset_name, args)
     return self
 end
 
+-- this samples the current dataset randomly but sample_sequential_batch does not!
 function general_datasampler:sample_priority_batch(pow)
     self.current_dataset = math.random(#self.datasamplers)
     local batch = self.datasamplers[self.current_dataset]:sample_priority_batch(pow)
@@ -88,21 +87,25 @@ function general_datasampler:get_hardest_batch()
     return {hardest_batch[1], hardest_batch[2], self.current_dataset}
 end
 
+-- this has to be called after you sample that particular dataset!
 function general_datasampler:update_batch_weight(weight)
+    assert(self.current_sampled_id == self.datasamplers[self.current_dataset].current_sampled_id)
     self.datasamplers[self.current_dataset]:update_batch_weight(weight)
 end
 
 function general_datasampler:sample_sequential_batch(modulo)
-    local datasampler = self.datasamplers[self.current_dataset]
-    self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
-    local batch = datasampler:sample_sequential_batch()
-    if modulo then
+    -- update current dataset
+    if modulo then  -- cycle through the datasamplers
         self.current_dataset = self.current_dataset % #self.datasamplers + 1
-    else
-        if datasampler.current_batch == datasampler.num_batches then
+    else  -- do one datasampler at a time
+        if self.datasamplers[self.current_dataset].current_batch == self.datasamplers[self.current_dataset].total_batches then
             self.current_dataset = self.current_dataset % #self.datasamplers + 1
         end
     end
+    -- update id in the current dataset
+    local datasampler = self.datasamplers[self.current_dataset]
+    local batch = datasampler:sample_sequential_batch()
+    self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
     return batch, self.current_dataset
 end
 
