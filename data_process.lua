@@ -163,6 +163,7 @@ function data_process:onehot2massall(trajectoriesonehot)
 end
 
 
+-- TODO: when spliting in time, should I split in the split2batches, or in the xpand_for_each_object?
 
 --[[ Expands the number of examples per batch to have an example per particle
     Input: unfactorized: (num_samples x num_obj x windowsize x 8)
@@ -242,6 +243,8 @@ function data_process:condense(focus, context)
     return torch.cat({focus, context},2)
 end
 
+-- TODO: when spliting in time, should I split in the split2batches, or in the xpand_for_each_object?
+-- data:
 function data_process:split2batches(data)
     local num_examples = data:size(1)
     -- assert(num_examples % self.bsize == 0)  -- TODO take care of this!
@@ -346,8 +349,7 @@ end
 -- this sampling scheme is pretty complex, but it is random
 -- if max_iters_per_json is a multiple of batch_size, then it should be fine
 function data_process:create_datasets_batches()
-    --max_iters_per_json
-
+    -- set up
     local flags = pls.split(string.gsub(self.jsonfolder,'/jsons',''), '_')
     local total_samples = tonumber(extract_flag(flags, 'ex'))
     local num_obj = tonumber(extract_flag(flags, 'n'))
@@ -413,10 +415,13 @@ function data_process:split2batchesall(focus, context)
     return all_batches
 end
 
+-- TODO: when spliting in time, should I split in the split2batchesall, or in the xpand_for_each_object?
 function data_process:json2batches(jsonfile)
     local data = load_data_json(jsonfile)
     data = self:normalize(data)
     data = self:mass2onehotall(data)
+    -- print(data:size())
+    -- assert(false)
     local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
     return self:split2batchesall(focus, context)
 end
