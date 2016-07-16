@@ -35,7 +35,7 @@ function general_datasampler.create(dataset_name, args)
     setmetatable(self, general_datasampler)
     self.current_batch = 0
     self.data_root = args.data_root
-    self.dataset_folders = args.dataset_folders--assert(loadstring("return "..string.gsub(args.dataset_folders,'\"',''))())
+    self.dataset_folders = args.dataset_folders
     self.dataset_name = dataset_name
     self.maxwinsize=args.maxwinsize
     self.winsize=args.winsize
@@ -51,7 +51,6 @@ function general_datasampler.create(dataset_name, args)
         args.dataset_folder=self.data_root..dataset_folder -- NOTE HARDCODED!
         self.datasamplers[i] = D.create(dataset_name, args)
     end
-    -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.total_batches end,  -- TODO!
                                 self.datasamplers))
@@ -59,7 +58,6 @@ function general_datasampler.create(dataset_name, args)
     self.current_sampled_id = nil
     self.current_dataset = 1
 
-    -- TODO: ou can have an isfull field that is set if all of the consituent datasamplers are full
     self.has_seen_all_batches = false
     self.has_reported = false
 

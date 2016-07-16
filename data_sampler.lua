@@ -52,12 +52,11 @@ function datasampler.create(dataset_name, args)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
     if self.subdivide then assert(self.shuffle) end  -- you have to shuffle if you subdivide
 
-    -- here find out how many batches (for now, we won't do any dynamic re-distributing)
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     print('savefolder', self.savefolder)
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
-    self.num_subbatches_per_batch = math.floor(self.maxwinsize/self.winsize)
-    self.num_subbatches = self.num_batches*self.num_subbatches_per_batch  -- NOTE: assume that all batches contain self.maxwinsize timesteps!
+    self.num_subbatches_per_batch = math.floor(self.maxwinsize/self.winsize)  -- NOTE: assume that all batches contain self.maxwinsize timesteps!
+    self.num_subbatches = self.num_batches*self.num_subbatches_per_batch
     print(self.dataset_name..': '..self.dataset_folder..
             ' number of batches: '..self.num_batches..
             ' number of subbatches: '..self.num_subbatches)
