@@ -15,7 +15,6 @@ local tablex = require 'pl.tablex'
 
 -- Local Imports
 local model_utils = require 'model_utils'
--- local D = require 'data_sampler'
 local D = require 'general_data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
@@ -49,12 +48,12 @@ cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-max_iter', 700000, 'max number of iterations')
+cmd:option('-max_iter', 1500000, 'max number of iterations')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-val_window', 10, 'for testing convergence')
-cmd:option('-val_eps', 1e-6, 'for testing convergence')  -- 1e-5
+cmd:option('-val_eps', 1.5e-5, 'for testing convergence')  -- 1e-5
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
@@ -305,6 +304,7 @@ function train(start_iter, epoch_num)
                 print('Val loss difference in a window of '..
                         mp.val_window..': '..(max_val_loss-min_val_loss)[1])
                 -- test if the max and min differ by less than epsilon
+                print((max_val_loss-min_val_loss)[1])
                 if (max_val_loss-min_val_loss)[1] < mp.val_eps then
                     print('That is less than '..mp.val_eps..'. Converged.')
                     -- TODO! Can stop the training
