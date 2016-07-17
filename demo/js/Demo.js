@@ -356,24 +356,26 @@
 
         // These are the world boundaries!
         // TODO: make these world boundaries variable
-        demo.w_offset = 5;  // world offset
+        demo.offset = 5;  // world offset
         config = {}
-        config.cx = 400;
-        config.cy = 300;
+        config.cx = 300;
+        config.cy = 200;
 
-        demo.w_cx = config.cx;
-        demo.w_cy = config.cy;
+        demo.cx = config.cx;
+        demo.cy = config.cy;
+        demo.width = 2*demo.cx
+        demo.height = 2*demo.cy
 
         demo.engine.world.bounds = { min: { x: 0, y: 0 },
-                                    max: { x: 2*demo.w_cx, y: 2*demo.w_cy }}
+                                    max: { x: demo.width, y: demo.height }}
 
         var world_border = Composite.create({label:'Border'});
 
         Composite.add(world_border, [
-            Bodies.rectangle(demo.w_cx, -demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.w_cx, 2*demo.w_cy+demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(2*demo.w_cx + demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(-demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 })
+            Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),
+            Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),
+            Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }),
+            Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })
         ]);
 
         World.add(world, world_border)  // its parent is a circular reference!

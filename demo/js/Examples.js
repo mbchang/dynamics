@@ -1935,11 +1935,11 @@ if (!_isBrowser) {
 
         // now, can I make it generate random initial locations and velocities?
         var num_obj = 5
-        // use demo.w_offset, demo.w_cx, demo.w_cy
+        // use demo.offset, demo.cx, demo.cy
 
         world.bounds = {
                 min: { x: 0, y: 0 },
-                max: { x: 2*demo.w_cx, y: 2*demo.w_cy }
+                max: { x: 2*demo.cx, y: 2*demo.cy }
             }
         console.log(world.bounds)
 
@@ -1991,8 +1991,8 @@ if (!_isBrowser) {
             // function
             self.rand_pos = function() {
                 return rand_pos(
-                    {hi: 2*demo.w_cx - self.params.obj_radius - 1, lo: self.params.obj_radius + 1},
-                    {hi: 2*demo.w_cy - self.params.obj_radius - 1, lo: self.params.obj_radius + 1});
+                    {hi: 2*demo.cx - self.params.obj_radius - 1, lo: self.params.obj_radius + 1},
+                    {hi: 2*demo.cy - self.params.obj_radius - 1, lo: self.params.obj_radius + 1});
                 };
 
             return self
@@ -2095,8 +2095,8 @@ if (!_isBrowser) {
             // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
             // var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
-            var x = demo.w_cx
-            var y = 2*demo.w_cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
+            var x = demo.cx
+            var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
             var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1, mass: 1})
             World.add(self.world, lastBlock)
 
