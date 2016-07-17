@@ -25,7 +25,7 @@
         var utils = require('../../utils');
         var mkdirp = require('mkdirp');
         var fs = require('fs');
-        var ProgressBar = require('node-progress-bars');
+        // var ProgressBar = require('node-progress-bars');
         require('./Examples')
         module.exports = Demo;
         window = {};
@@ -414,16 +414,17 @@
     Demo.simulate = function(demo, num_samples, sim_options) {
         var trajectories = []
 
-        var bar = new ProgressBar({
-            schema: ' [:bar] :current/:total :percent :elapseds :etas',
-            total : num_samples
-        });
+        // var bar = new ProgressBar({
+        //     schema: ' [:bar] :current/:total :percent :elapseds :etas',
+        //     total : num_samples
+        // });
 
         for (s = 0; s < num_samples; s ++) {
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
-            bar.tick()
+            // bar.tick()
+            console.log(s)
 
             // initialize trajectory conatiner
             for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
