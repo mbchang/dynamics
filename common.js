@@ -83,14 +83,14 @@ initialize_angle_velocities = function(num_obj, max_av0) {
 
 initialize_masses = function(num_obj, possible_masses) {
     // TODO: this should be categorical!
-    var av0 = [];
+    var masses = [];
     for (var i = 0; i < num_obj; i++) {
 
-        // generate random initial angles b/w -max_a0 and max_a0 inclusive
-        var av = Math.random()*2*max_av0+1-max_av0
-        av0.push(av)
+        // choose a random mass in the list of possible_masses
+        var m = Math.floor(Math.random()*possible_masses.length + 1)
+        masses.push(possible_masses[m])
     }
-    return av0;
+    return masses;
 }
 
 // load_trajectory = function(file_path) {
