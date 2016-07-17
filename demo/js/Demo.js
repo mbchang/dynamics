@@ -357,8 +357,12 @@
         // These are the world boundaries!
         // TODO: make these world boundaries variable
         demo.w_offset = 5;  // world offset
-        demo.w_cx = 400;
-        demo.w_cy = 300;
+        config = {}
+        config.cx = 400;
+        config.cy = 300;
+
+        demo.w_cx = config.cx;
+        demo.w_cy = config.cy;
 
         demo.engine.world.bounds = { min: { x: 0, y: 0 },
                                     max: { x: 2*demo.w_cx, y: 2*demo.w_cy }}
@@ -367,7 +371,7 @@
 
         Composite.add(world_border, [
             Bodies.rectangle(demo.w_cx, -demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.w_cx, 600+demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
+            Bodies.rectangle(demo.w_cx, 2*demo.w_cy+demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(2*demo.w_cx + demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(-demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 })
         ]);
@@ -471,9 +475,9 @@
             experiment_string += '_fr' //+ sim_options.friction
         }
 
-        let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
-                        experiment_string + '/jsons/'
-        // var savefolder = '../data/' + experiment_string + '/jsons/'
+        // let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
+        //                 experiment_string + '/jsons/'
+        var savefolder = '../data/' + experiment_string + '/jsons/'
 
         if (!fs.existsSync(savefolder)){
             mkdirp.sync(savefolder);
@@ -492,8 +496,9 @@
             let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
             let trajectories = Demo.simulate(demo, chunks[j], sim_options);
             jsonfile.writeFileSync(sim_file,
-                                {trajectories:trajectories, config:sim_options},
-                                {spaces: 2});
+                                {trajectories:trajectories, config:sim_options}
+                                // {spaces: 2}
+                                );
             console.log('Wrote to ' + sim_file)
         }
     };

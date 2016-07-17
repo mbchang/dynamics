@@ -61,23 +61,66 @@
         demo.engine = Engine.create()
         demo.runner = Engine.run(demo.engine)
         demo.container = document.getElementById('canvas-container');
-        demo.render = Render.create({element: demo.container, engine: demo.engine})
-        Render.run(demo.render)
+        // demo.render = Render.create({element: demo.container, engine: demo.engine})
+        // Render.run(demo.render)
 
         demo.w_offset = 5;  // world offset
-        demo.w_cx = 400;
-        demo.w_cy = 300;
+        // demo.w_cx = 400;
+        // demo.w_cy = 300;
+
+        config.cx = 400;
+        config.cy = 300;
+        // config.scale = 1;
+
+        demo.w_cx = config.cx;
+        demo.w_cy = config.cy;
+        // 2 = config.scale;
+
+        demo.engine.world.bounds = { min: { x: 0, y: 0 },
+                            max: { x: 2*demo.w_cx, y: 2*demo.w_cy }}
 
         var world_border = Composite.create({label:'Border'});
 
         Composite.add(world_border, [
             Bodies.rectangle(demo.w_cx, -demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.w_cx, 600+demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
+            Bodies.rectangle(demo.w_cx, 2*demo.w_cy+demo.w_offset, 2*demo.w_cx + 2*demo.w_offset, 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(2*demo.w_cx + demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 }),
             Bodies.rectangle(-demo.w_offset, demo.w_cy, 2*demo.w_offset, 2*demo.w_cy + 2*demo.w_offset, { isStatic: true, restitution: 1 })
         ]);
 
         World.add(demo.engine.world, world_border)  // its parent is a circular reference!
+
+
+        demo.render = Render.create({element: demo.container, engine: demo.engine, 
+                                    hasBounds: true, options:{height:600, width:800}})
+        Render.run(demo.render)
+
+        if (demo.render) {
+            var renderOptions = demo.render.options;
+            renderOptions.wireframes = false;
+            renderOptions.hasBounds = false;
+            renderOptions.showDebug = false;
+            renderOptions.showBroadphase = false;
+            renderOptions.showBounds = true;
+            renderOptions.showVelocity = false;
+            renderOptions.showCollisions = false;
+            renderOptions.showAxes = false;
+            renderOptions.showPositions = false;
+            renderOptions.showAngleIndicator = true;
+            renderOptions.showIds = false;
+            renderOptions.showShadows = false;
+            renderOptions.showVertexNumbers = false;
+            renderOptions.showConvexHulls = false;
+            renderOptions.showInternalEdges = false;
+            renderOptions.showSeparations = false;
+            renderOptions.background = '#fff';
+
+            if (_isMobile) {
+                renderOptions.showDebug = true;
+            }
+        }
+
+
 
         Example[config.env](demo, config)
 
@@ -111,6 +154,7 @@
             }
         }
         f();
+
 
     }
 
