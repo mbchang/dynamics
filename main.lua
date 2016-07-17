@@ -53,6 +53,8 @@ cmd:option('-max_iter', 700000, 'max number of iterations')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
+cmd:option('-val_window', 10, 'for testing convergence')
+cmd:option('-val_eps', 1e-6, 'for testing convergence')  -- 1e-5
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
@@ -82,6 +84,8 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
+    mp.val_window = 3
+    mp.val_eps = 1e-3
 	mp.seq_length = 10
 	mp.num_threads = 1
     mp.shuffle = false
@@ -278,6 +282,36 @@ function train(start_iter, epoch_num)
                 torch.save(model_file, checkpoint)
                 print('Saved model')
             end
+
+            -- here test for val_loss convergence
+            if #val_losses >= mp.val_window then
+                local val_loss_window = torch.Tensor(val_losses)[{{-mp.val_window,-1}}]
+                -- these are torch Tensors
+                local max_val_loss, max_val_loss_idx = torch.max(val_loss_window,1)
+                local min_val_loss, min_val_loss_idx = torch.min(val_loss_window,1)
+
+                local val_avg_delta = (val_loss_window[{{2,-1}}] - val_loss_window[{{1,-2}}]):mean()
+                print('Average change in val loss over '..mp.val_window..
+                        ' validations: '..val_avg_delta)
+                -- test if the loss is going down. the average pairwise delta should be negative, and the last should be less than the first
+                -- TODO should we also test if the last one is less than the first?
+                if val_avg_delta < 0 and torch.lt(max_val_loss_idx,min_val_loss_idx) then
+                    print('Loss is decreasing')
+                    -- if not we can lower the learning rate
+                else
+                    print('Loss is increasing')
+                end
+
+                print('Val loss difference in a window of '..
+                        mp.val_window..': '..(max_val_loss-min_val_loss)[1])
+                -- test if the max and min differ by less than epsilon
+                if (max_val_loss-min_val_loss)[1] < mp.val_eps then
+                    print('That is less than '..mp.val_eps..'. Converged.')
+                    -- TODO! Can stop the training
+                    break
+                end
+                -- TODO: figure out waht a good val_eps should be
+            end
         end
 
         -- lr decay
@@ -305,32 +339,6 @@ function test(dataloader, params_, saveoutput)
         local batch = dataloader:sample_sequential_batch(false)
 
         local test_loss, prediction = model:fp(params_, batch)
-
-        -- hacky for backwards compatability
-        local this, context, y, context_future, mask = unpack(batch)
-
-        context = context:reshape(context:size(1), context:size(2),
-                                    mp.num_past, mp.object_dim)
-
-        -- reshape to -- (num_samples x num_future x 8)
-        prediction = prediction:reshape(
-                                mp.batch_size, mp.num_future, mp.object_dim)   -- TODO RESIZE THIS
-        this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)   -- TODO RESIZE THIS
-
-        -- take care of relative position
-        if mp.relative then
-            prediction = data_process.relative_pair(prediction, this, true)
-            y = data_process.relative_pair(y, this, true)
-        end
-
-        -- save
-        if saveoutput then
-            save_ex_pred({this, context, y, prediction, context_future},
-                                    {config, start, finish},
-                                    modelfile,
-                                    dataloader,
-                                    mp.num_future)
-        end
         sum_loss = sum_loss + test_loss
     end
     local avg_loss = sum_loss/dataloader.num_batches
@@ -338,40 +346,6 @@ function test(dataloader, params_, saveoutput)
     return avg_loss
 end
 
-
-function save_ex_pred(example, description, modelfile_, dataloader, numsteps)
-    --[[
-        example: {this, context, y, prediction, context_future}
-        description: {config, start, finish}
-        modelfile_: like '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/logs/lalala/network.t7'
-
-        will save to something like:
-            logs/<experiment-name>/predictions/<config.h5>
-
-
-        -- the reshaping should not happen here!
-    --]]
-
-    --unpack
-    local this, context, y, prediction, context_future = unpack(example)
-    local config, start, finish = unpack(description)
-
-    local subfolder = mp.savedir .. '/' .. 'predictions/'
-    if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
-    local save_path = subfolder .. config..'_['..start..','..finish..'].h5'
-
-    if mp.cuda then
-        prediction = prediction:float()
-        this = this:float()
-        context = context:float()
-        y = y:float()
-        context_future = context_future:float()
-    end
-
-    -- For now, just save it as hdf5. You can feed it back in later if you'd like
-    save_to_hdf5(save_path, {pred=prediction, this=this, context=context,
-                                y=y, context_future=context_future})
-end
 
 function validate()
     local train_loss = test(train_test_loader, model.theta.params, false)
