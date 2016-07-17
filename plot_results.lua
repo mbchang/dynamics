@@ -31,11 +31,11 @@ function read_log_file_3vals(logfile)
         data3[#data3+1] = tonumber(x[3]) --ignores the string at the top
     end
     local data = torch.cat({torch.Tensor(data1), torch.Tensor(data2), torch.Tensor(data3)}, 2)
-    print(data)
+    -- print(data)
 
     -- test convergence
     local val = data[{{},{2}}]
-    for w =3, 100 do
+    for w =3, data:size(1) do
         local valwin = torch.exp(val[{{-w,-1}}])
         local max_val_loss, max_val_loss_idx = torch.max(valwin,1)
         local min_val_loss, min_val_loss_idx = torch.min(valwin,1)
@@ -46,10 +46,7 @@ function read_log_file_3vals(logfile)
               'avg_delta', val_avg_delta, 'abs_delta', abs_delta)
     end
 
-
-
-
-    assert(false)
+    -- assert(false)
     return data
 end
 

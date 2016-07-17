@@ -1,7 +1,7 @@
 local args = {
 
         -- datasaver
-        position_normalize_constant=800,
+        position_normalize_constant=600,  -- TODO change
         velocity_normalize_constant=50,
         angle_normalize_constant=2*math.pi,
         relative=true,
@@ -15,6 +15,8 @@ local args = {
         subdivide=true,
 
         -- world params
+        cx=300, -- 2*cx is width of world
+        cy=200 -- 2*cy is height of world
 
 
 

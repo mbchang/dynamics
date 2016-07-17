@@ -77,7 +77,7 @@ mp = cmd:parse(arg)
 if mp.server == 'pc' then
     mp.data_root = 'mj_data'
     mp.logs_root = 'logs'
-    mp.winsize = 10 -- total number of frames  -- TODO! winsize should be num_past + num_future!
+    mp.winsize = 3 -- total number of frames  -- TODO! winsize should be num_past + num_future!
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
@@ -94,7 +94,7 @@ if mp.server == 'pc' then
     mp.plot = false--true
 	mp.cuda = false
 else
-	mp.winsize = 10  -- total number of frames
+	mp.winsize = 3  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
 	mp.seq_length = 10
