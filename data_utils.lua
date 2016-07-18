@@ -183,9 +183,6 @@ function unpack_batch(batch, sim)
     context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
     this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
 
-    -- print(this_past:size())
-    -- print(mp.batch_size)
-    -- print(mp.input_dim)
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim,
             'Your batch size or input dim is wrong')  -- TODO RESIZE THIS

@@ -53,11 +53,11 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     return self
 end
 
-function data_process.relative_pair(past, future, rta)
+function data_process.relative_pair(past, future, relative_to_absolute)
     -- rta: relative to absolute, otherwise we are doing absolute to relative
 
     -- TODO: use config args for this!
-    if rta then
+    if relative_to_absolute then
         future[{{},{},{1,4}}] = future[{{},{},{1,4}}] + past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
     else
         future[{{},{},{1,4}}] = future[{{},{},{1,4}}] - past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])

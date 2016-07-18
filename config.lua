@@ -1,7 +1,7 @@
 local args = {
 
         -- datasaver
-        position_normalize_constant=600,  -- TODO change
+        -- position_normalize_constant=800,  -- TODO change
         velocity_normalize_constant=50,
         angle_normalize_constant=2*math.pi,
         relative=true,
@@ -18,13 +18,11 @@ local args = {
         cx=400, -- 2*cx is width of world
         cy=300 -- 2*cy is height of world
 
-
-
         -- all the paths
 
     }
 
-
-
+args.position_normalize_constant = math.max(args.cx,args.cy)*2
+args.ossi = args.si.m[1]  -- object_state_start_index: CHANGE THIS WHEN YOU ADD STUFF TO RAW STATE INDICES!
 
 return args

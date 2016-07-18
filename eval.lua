@@ -43,9 +43,9 @@ cmd:option('-seed', true, 'manual seed or not')
 -- dataset
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
-cmd:option('-gt', false, 'saving ground truth')  -- 0.001
+-- cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-ns', 3, 'number of test batches')
-cmd:option('-steps', 58, 'steps to simulate')
+cmd:option('-steps', 1, 'steps to simulate')
 cmd:text()
 
 -- parse input params
@@ -220,44 +220,56 @@ end
 function update_position(this, pred)
     -- this: (mp.batch_size, mp.num_past, mp.object_dim)
     -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
+    -- pred is with respect to this[{{},{-1}}]
     ----------------------------------------------------------------------------
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local pnc = config_args.position_normalize_constant
+    local vnc = config_args.velocity_normalize_constant
 
     local this, pred = this:clone(), pred:clone()
-    local lastpos = (this[{{},{-1},{1,2}}]:clone()*config_args.position_normalize_constant)
-    local lastvel = (this[{{},{-1},{3,4}}]:clone()*config_args.velocity_normalize_constant)  -- TODO: this is without subsampling make sure that this is correct!
-    local currpos = (pred[{{},{},{1,2}}]:clone()*config_args.position_normalize_constant)
-    local currvel = (pred[{{},{},{3,4}}]:clone()*config_args.velocity_normalize_constant)
+    local lastpos = (this[{{},{-1},{px,py}}]:clone()*pnc)
+    local lastvel = (this[{{},{-1},{vx,vy}}]:clone()*vnc)  -- TODO: this is without subsampling make sure that this is correct!
+    local currpos = (pred[{{},{},{px,py}}]:clone()*pnc)
+    local currvel = (pred[{{},{},{vx,vy}}]:clone()*vnc)
 
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
     local vel = torch.cat({lastvel, currvel},2)
 
-    -- there may be a bug here
-    -- take the last part (future)
+    -- iteratively update pos through time. 
     for i = 1,pos:size(2)-1 do
         pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
     end
 
     -- normalize again
-    pos = pos/config_args.position_normalize_constant
+    pos = pos/pnc
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
 
-    pred[{{},{},{1,2}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
+    pred[{{},{},{px,py}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
     return pred
 end
 
 function update_angle(this, pred)
+    local a = config_args.si.a
+    local av = config_args.si.av
+    local anc = config_args.angle_normalize_constant
+
     local this, pred = this:clone(), pred:clone()
 
-    local last_angle = this[{{},{-1},{5}}]:clone()*config_args.angle_normalize_constant
-    local last_angular_velocity = this[{{},{-1},{6}}]:clone()*config_args.angle_normalize_constant
-    local curr_angle = pred[{{},{},{5}}]:clone()*config_args.angle_normalize_constant
-    local curr_angular_velocity = pred[{{},{},{6}}]:clone()*config_args.angle_normalize_constant
+    -- TODO: use config!
+    local last_angle = this[{{},{-1},{a}}]:clone()*anc
+    local last_angular_velocity = this[{{},{-1},{av}}]:clone()*anc
+    local curr_angle = pred[{{},{},{a}}]:clone()*anc
+    local curr_angular_velocity = pred[{{},{},{av}}]:clone()*anc
 
     -- this is length n+1
     local ang = torch.cat({last_angle, curr_angle},2)
     local ang_vel = torch.cat({last_angular_velocity, curr_angular_velocity},2)
 
+    -- iteratively update ang through time. 
     for i = 1,ang:size(2)-1 do
         ang[{{},{i+1},{}}] = ang[{{},{i},{}}] + ang_vel[{{},{i},{}}]  -- last dim=2
     end
@@ -266,7 +278,7 @@ function update_angle(this, pred)
     ang = ang/config_args.angle_normalize_constant
     assert(ang[{{},{1},{}}]:size(1) == pred:size(1))
 
-    pred[{{},{},{5}}] = ang[{{},{2,-1},{}}]  -- reassign back to pred
+    pred[{{},{},{a}}] = ang[{{},{2,-1},{}}]  -- reassign back to pred
     return pred
 end
 
@@ -300,14 +312,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         local num_particles = torch.find(mask,1)[1] + 1
 
+        -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-
         local past = torch.cat({unsqueezer:forward(this_orig:clone()), context_orig},2)
         local future = torch.cat({unsqueezer:forward(y_orig:clone()), context_future_orig},2)
-
-        -- local past = torch.cat({nn.Unsqueeze(2,3):forward(this_orig:clone()), context_orig},2)
-        -- local future = torch.cat({nn.Unsqueeze(2,3):forward(y_orig:clone()), context_future_orig},2)
 
         assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
@@ -348,19 +357,18 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 count = count + 1
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-                this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)
-                --
+                this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
+
                 -- -- relative coords for next timestep
                 if mp.relative then
                     pred = data_process.relative_pair(this, pred, true)
                 end
 
-                -- restore object properties
-                pred[{{},{},{5,-1}}] = this[{{},{-1},{5,-1}}]
-
+                -- restore object properties because we aren't learning them
+                pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]  -- NOTE! THIS DOESN'T TAKE ANGLE INTO ACCOUNT!
+                
                 -- update position
                 pred = update_position(this, pred)
-                -- pred = nn.Unsqueeze(2,3):forward(pred)
 
                 -- update angle
                 pred = update_angle(this, pred)
@@ -379,12 +387,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
         end
-        --- to be honest I don't think we need to break into past and context future, but actually that might be good for coloriing past and future, but
+        --- to be honest I don't think we need to break into past and context
+        -- future, but actually that might be good for coloriing past and future, but
         -- actually I don't think so. For now let's just adapt it
 
         -- at this point, pred_sim should be all filled out
         -- break pred_sim into this and context_future
         -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
+        -- recall that you had defined this_pred as the first obj in the future tensor
         local this_pred = torch.squeeze(pred_sim[{{},{1}}])
         if numsteps == 1 then this_pred = unsqueeze(this_pred,2) end
 
@@ -395,9 +405,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         end
 
         -- when you save, you will replace context_future_orig
-        if mp.gt then
-            context_pred = context_future_orig  -- only saving ground truth
-        end
+        -- if mp.gt then
+        --     context_pred = context_future_orig  -- only saving ground truth
+        -- end
 
         if saveoutput and i <= mp.ns then
             save_ex_pred_json({this_orig, context_orig,
