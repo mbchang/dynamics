@@ -11,9 +11,12 @@ experiments = [
                 # 'balls_n5_t60_ex10000_fr',
                 # 'balls_n5_t60_ex10000_gf',
                 # 'balls_n5_t60_ex50000',
-                'balls_n7_t60_ex50000',
+                # 'balls_n7_t60_ex50000',
                 # 'tower_n10_t120_ex50000__tower_n10_t120_ex50000',
-                'balls_n2_t60_ex50000__balls_n2_t60_ex50000'
+                'balls_n2_t60_ex50000__balls_n2_t60_ex50000',
+                'balls_n2_t60_ex50000__balls_n2_t60_ex50000_batchnorm',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_batchnorm',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000'
                 ]
 
 # specify paths

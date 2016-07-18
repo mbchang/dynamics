@@ -44,7 +44,7 @@ cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-ns', 10, 'number of test batches')
+cmd:option('-ns', 3, 'number of test batches')
 cmd:option('-steps', 58, 'steps to simulate')
 cmd:text()
 
@@ -285,7 +285,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
-    -- for i = 1, mp.ns 
+    -- for i = 1, mp.ns do
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
 
