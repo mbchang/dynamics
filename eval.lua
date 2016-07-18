@@ -44,7 +44,7 @@ cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
 cmd:option('-gt', false, 'saving ground truth')  -- 0.001
-cmd:option('-ns', 3, 'number of test batches')
+cmd:option('-ns', 10, 'number of test batches')
 cmd:option('-steps', 58, 'steps to simulate')
 cmd:text()
 
@@ -250,9 +250,9 @@ function update_angle(this, pred)
     local this, pred = this:clone(), pred:clone()
 
     local last_angle = this[{{},{-1},{5}}]:clone()*config_args.angle_normalize_constant
-    local last_angular_velocity = this[{{},{-1},{6}}]:clone()*config_args.angle_normalize_constant  -- need to know the dt!
+    local last_angular_velocity = this[{{},{-1},{6}}]:clone()*config_args.angle_normalize_constant
     local curr_angle = pred[{{},{},{5}}]:clone()*config_args.angle_normalize_constant
-    local curr_angular_velocity = pred[{{},{},{6}}]:clone()*config_args.angle_normalize_constant  -- need to know the dt!
+    local curr_angular_velocity = pred[{{},{},{6}}]:clone()*config_args.angle_normalize_constant
 
     -- this is length n+1
     local ang = torch.cat({last_angle, curr_angle},2)
@@ -282,13 +282,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local unsqueezer = nn.Unsqueeze(2,3)
     if mp.cuda then unsqueezer:cuda() end
 
-    assert(numsteps <= test_loader.maxwinsize-mp.num_past,
+    assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
-            test_loader.maxwinsize-mp.num_past+1)
-    for i = 1, mp.ns do
-        if mp.server == 'pc' then xlua.progress(i, mp.ns) end
+            dataloader.maxwinsize-mp.num_past+1)
+    -- for i = 1, mp.ns 
+    for i = 1, dataloader.num_batches do
+        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
 
-        local batch, current_dataset = dataloader:sample_sequential_batch(true)  -- TODO: perhaps here I should tell it what my desired windowsize should be
+        local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- TODO: perhaps here I should tell it what my desired windowsize should be
 
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
@@ -398,7 +399,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             context_pred = context_future_orig  -- only saving ground truth
         end
 
-        if saveoutput then
+        if saveoutput and i <= mp.ns then
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},

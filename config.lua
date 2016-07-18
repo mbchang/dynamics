@@ -15,8 +15,8 @@ local args = {
         subdivide=true,
 
         -- world params
-        cx=300, -- 2*cx is width of world
-        cy=200 -- 2*cy is height of world
+        cx=400, -- 2*cx is width of world
+        cy=300 -- 2*cy is height of world
 
 
 

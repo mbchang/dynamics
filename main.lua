@@ -43,6 +43,7 @@ cmd:option('-layers', 3, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-accel', false, 'use acceleration data')
+cmd:option('-batch_norm', false, 'batch norm')
 
 -- training options
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
@@ -208,6 +209,18 @@ function feval_train(params_)  -- params_ should be first argument
 
     local batch = train_loader:sample_priority_batch(mp.sharpen)
     -- local batch = train_loader:sample_sequential_batch(true)
+    -- print(batch)
+
+    -- {
+    --   1 : FloatTensor - size: 5x2x11
+    --   2 : FloatTensor - size: 5x4x2x11
+    --   3 : FloatTensor - size: 5x1x11
+    --   4 : FloatTensor - size: 5x4x1x11
+    --   5 : FloatTensor - size: 10
+    -- }
+
+
+    -- assert(false)
 
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)

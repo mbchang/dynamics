@@ -3,8 +3,8 @@ require 'nngraph'
 require 'rnn'
 
 config_args = require 'config'
-params = {model='ffobj', rnn_dim=100, input_dim=10, num_future=1, object_dim=10, layers=3}
-mp = {cuda=false}
+-- params = {model='ffobj', rnn_dim=100, input_dim=10, num_future=1, object_dim=10, layers=3}
+-- mp = {cuda=false}
 
 
 function init_object_encoder(input_dim, rnn_inp_dim)
@@ -227,55 +227,55 @@ local tstep = init_tstep(params)
 local clique_rnn = init_clique_rnn(params)
 local clique_rnn_memory = init_clique_rnn_memory(params)
 
---------------------------------------------------------------------------------
--- Data
---------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------
+-- -- Data
+-- --------------------------------------------------------------------------------
 
--- for one object
-local tstep_one_obj_input = {}
-for o=1,num_obj-1 do
-    table.insert(tstep_one_obj_input, {torch.rand(bsize, params.input_dim), torch.rand(bsize, params.input_dim)})
-end
+-- -- for one object
+-- local tstep_one_obj_input = {}
+-- for o=1,num_obj-1 do
+--     table.insert(tstep_one_obj_input, {torch.rand(bsize, params.input_dim), torch.rand(bsize, params.input_dim)})
+-- end
 
--- input: table of length num_obj of pairs of (bsize, input_dim)
--- output: (bsize, input_dim)
-print(tstep_one_obj)
-print(tstep_one_obj:forward(tstep_one_obj_input))
---------------------------------------------------------------------------------
-
-
--- for all objects
-local tstep_input = {}
-for n=1,num_obj do
-    local obj_input = {}  -- predict for this particular object
-    for o=1,num_obj-1 do
-        table.insert(obj_input, {torch.rand(bsize, params.input_dim), torch.rand(bsize, params.input_dim)})
-    end
-    table.insert(tstep_input, obj_input)
-end
+-- -- input: table of length num_obj of pairs of (bsize, input_dim)
+-- -- output: (bsize, input_dim)
+-- print(tstep_one_obj)
+-- print(tstep_one_obj:forward(tstep_one_obj_input))
+-- --------------------------------------------------------------------------------
 
 
-print(tstep)
-local tstep_output = tstep:forward(tstep_input)
-print(tstep_output)
+-- -- for all objects
+-- local tstep_input = {}
+-- for n=1,num_obj do
+--     local obj_input = {}  -- predict for this particular object
+--     for o=1,num_obj-1 do
+--         table.insert(obj_input, {torch.rand(bsize, params.input_dim), torch.rand(bsize, params.input_dim)})
+--     end
+--     table.insert(tstep_input, obj_input)
+-- end
 
---------------------------------------------------------------------------------
 
--- for all timesteps
-local input = {}  -- predict for all timesteps
-for t=1,timesteps do
-    local tstep_input = {}
-    for n=1,num_obj do
-        local obj_input = {}  -- predict for this particular object
-        for o=1,num_obj-1 do
-            table.insert(obj_input, {torch.rand(bsize, params.input_dim), torch.rand(bsize, params.input_dim)})
-        end
-        table.insert(tstep_input, obj_input)
-    end
-    table.insert(input, tstep_input)
-end
+-- print(tstep)
+-- local tstep_output = tstep:forward(tstep_input)
+-- print(tstep_output)
 
--- so basically the recurrence is: tstep --> pairwise_regroup --> tstep --> pairwise_regroup etc
---------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------
 
-print(clique_rnn_memory:forward(input))
+-- -- for all timesteps
+-- local input = {}  -- predict for all timesteps
+-- for t=1,timesteps do
+--     local tstep_input = {}
+--     for n=1,num_obj do
+--         local obj_input = {}  -- predict for this particular object
+--         for o=1,num_obj-1 do
+--             table.insert(obj_input, {torch.rand(bsize, params.input_dim), torch.rand(bsize, params.input_dim)})
+--         end
+--         table.insert(tstep_input, obj_input)
+--     end
+--     table.insert(input, tstep_input)
+-- end
+
+-- -- so basically the recurrence is: tstep --> pairwise_regroup --> tstep --> pairwise_regroup etc
+-- --------------------------------------------------------------------------------
+
+-- print(clique_rnn_memory:forward(input))
