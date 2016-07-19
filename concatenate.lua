@@ -12,52 +12,28 @@ nngraph.setDebug(true)
 -- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
 function init_network(params)
-    -- encoder produces: (bsize, rnn_inp_dim)
-    -- decoder expects (bsize, 2*rnn_hid_dim)
+    -- input: (bsize, num_obj*num_past*obj_dim)
+    -- output: (bsize, num_obj*num_past*obj_dim)
+    -- hiddim: (bsize, num_obj*num_past*rnn_dim)
+    local data_dim = num_obj*num_past*obj_dim
+    local hid_dim = num_obj*num_past*rnn_dim)  -- TODO rename rnn_dim to hid_dim
+    local net = nn.Sequential()
 
-    local layer, sequencer_type, dcoef
-    if params.model == 'lstmobj' then
-        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'gruobj' then
-        layer = nn.GRU(params.rnn_dim,params.rnn_dim)
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'cat' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
-        sequencer_type = nn.Sequencer
-        dcoef = 1
-    else
-        error('unknown model')
-    end
+    local num_layers = params.layers+2
 
-    local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
-    local decoder = init_object_decoder(dcoef*params.rnn_dim, params.num_future,
-                                                            params.object_dim)
-
-    local step = nn.Sequential()
-    step:add(encoder)
-    for i = 1,params.layers do
-        step:add(layer:clone())  -- same param initial, but weights not shared
-        step:add(nn.ReLU())
+    for i = 1, num_layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
+        if i == 1 then 
+            net:add(nn.Linear(data_dim, hid_dim))
+        elseif i == num_layers then 
+            net:add(nn.Linear(hid_dim, data_dim))
+        else
+            net:add(nn.Linear(hid_dim, hid_dim))
+        end
+        net:add(nn.ReLU)  
         if mp.batch_norm then 
-            step:add(nn.BatchNormalization(params.rnn_dim))
+            step:add(nn.BatchNormalization(hid_dim))
         end
     end
-
-    local sequencer = sequencer_type(step)
-    sequencer:remember('neither')
-
-    -- I think if I add: sequencer_type(sequencer), then it'd be able to go through time as well.
-    --
-    local net = nn.Sequential()
-    net:add(sequencer)
-
-    -- input table of (bsize, 2*d_hid) of length seq_length
-    -- output: tensor (bsize, 2*d_hid)
-    net:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
-    net:add(decoder)
     return net
 end
 

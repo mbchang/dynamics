@@ -16,11 +16,13 @@ experiments = [
                 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_lrdecay_every10000',
                 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_lrdecay_every5000',
                 # 'balls_n2_t60_ex50000__balls_n2_t60_ex50000',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_lrdecay_every2500',
                 'balls_n2_t60_ex50000__balls_n2_t60_ex50000_batchnorm',
                 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_batchnorm',
                 'balls_n3_t60_ex50000__balls_n3_t60_ex50000',
                 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every2500',
                 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every5000',
+                'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
                 ]
 
 # specify paths
