@@ -113,12 +113,8 @@ function split_output(params)
         ({world_state}):split(4) -- split world_state in half on last dim
 
     local net = nn.gModule({future},{pos, vel, ang, ang_vel, obj_prop})
-
-    if mp.cuda then
-        return net:cuda()
-    else
-        return net
-    end
+    if mp.cuda then net = net:cuda() end
+    return net
 end
 
 -- boundaries: {{l1,r1},{l2,r2},{l3,r3},etc}
@@ -134,11 +130,8 @@ function split_tensor(dim, reshape, boundaries)
                                 (nn.NarrowTable(left,length)(splitted))
     end
     local net = nn.gModule({tensor},chunks)
-    if mp.cuda then
-        return net:cuda()
-    else
-        return net
-    end
+    if mp.cuda then net = net:cuda() end
+    return net
 end
 
 

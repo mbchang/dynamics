@@ -28,7 +28,7 @@ cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
-cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
+cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj | cat | ind')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 
@@ -67,7 +67,7 @@ cmd:option('-plot', false, 'turn on/off plot')
 cmd:option('-print_every', 100, 'print every number of batches')
 cmd:option('-save_every', 10000, 'save every number of batches')
 cmd:option('-val_every',10000,'val every number of batches')
-cmd:option('-lrdecay_every',5000,'decay lr every number of batches')
+cmd:option('-lrdecay_every',2500,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 
 cmd:text()
@@ -84,7 +84,7 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
-    mp.model = 'ffobj'
+    mp.model = 'ind'
     mp.val_window = 3
     mp.val_eps = 1e-3
 	mp.seq_length = 10  -- for the concatenate model
@@ -110,6 +110,8 @@ if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
 elseif mp.model == 'cat' then 
     M = require 'concatenate'
+elseif mp.model == 'ind' then 
+    M = require 'independent'
 elseif mp.model == 'lstmtime' then
     M = require 'lstm_model'
 elseif mp.model == 'ff' then

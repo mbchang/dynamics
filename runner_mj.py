@@ -40,14 +40,23 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000,balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000,balls_n5_t60_ex50000,balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex5000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
 
             {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n8_t60_ex50000'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             ]
 
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
-        for bn in [True, False]:
+        for bn in [False]:
             job['batch_norm'] = bn
             actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
@@ -85,11 +94,11 @@ def create_jobs(dry_run, mode, ext):
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')
                 else:
                     if flag in ['name']:
-                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','')# + '_batchnorm'
+                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','') + '_modelind'# + '_batchnorm'
                     jobname = jobname + "_" + flag + "_" + str(job[flag])
                     flagstring = flagstring + " -" + flag + " " + str(job[flag])
 
-        flagstring = flagstring + " -mode " + mode
+        flagstring = flagstring + " -model ind" + " -mode " + mode
 
         if mode == 'exp':
             prefix = 'th main.lua'

@@ -5,7 +5,7 @@ require 'nngraph'
 require 'Base'
 require 'IdentityCriterion'
 require 'data_utils'
-require 'modules'
+-- require 'modules'
 
 nngraph.setDebug(true)
 
