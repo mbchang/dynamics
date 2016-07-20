@@ -28,7 +28,7 @@ cmd:option('-mode', "exp", 'exp | pred | simulate | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
-cmd:option('-model', "cat", 'ff | ffobj | lstmobj | gruobj')
+cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 
@@ -84,9 +84,10 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
+    mp.model = 'ffobj'
     mp.val_window = 3
     mp.val_eps = 1e-3
-	mp.seq_length = 10
+	mp.seq_length = 10  -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
     mp.print_every = 10
@@ -98,7 +99,7 @@ else
 	mp.winsize = 3  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.seq_length = 10
+	mp.seq_length = 10   -- for the concatenate model
 	mp.num_threads = 4
 	mp.cuda = true
 end
