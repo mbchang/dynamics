@@ -1925,7 +1925,7 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Body = Matter.Body;;
 
-    Example.m_simpleHockey = function(demo) {
+    Example.m_simpleBalls = function(demo) {
 
         var engine = demo.engine,
             world = engine.world;
@@ -1971,10 +1971,10 @@ if (!_isBrowser) {
         Body = Matter.Body;
 
     Example.balls = function(demo, cmd_options) {
-        var Hockey = {}
+        var Balls = {}
 
-        Hockey.create = function(options) {
-            var self = {}; // instance of the Hockey class
+        Balls.create = function(options) {
+            var self = {}; // instance of the Balls class
 
             // these should not be mutated
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
@@ -2009,7 +2009,7 @@ if (!_isBrowser) {
             return self
         };
 
-        Hockey.init = function(self) {  // hockey is like self here
+        Balls.init = function(self) {  // hockey is like self here
             // generate positions
             self.p0 = initialize_positions(self.params.num_obj, self.params.obj_radius, self.rand_pos)
 
@@ -2043,9 +2043,9 @@ if (!_isBrowser) {
              }
         };
 
-        var hockey = Hockey.create(cmd_options);
-        Hockey.init(hockey);
-        return hockey;
+        var balls = Balls.create(cmd_options);
+        Balls.init(balls);
+        return balls;
     };
 
 })();
