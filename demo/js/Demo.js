@@ -450,6 +450,8 @@
                         let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
+                    // console.log(trajectory[id][i])
+                    // assert(false)
                 }
                 Engine.update(scenario.engine);
                 // I should also put a render.update here too
@@ -468,6 +470,9 @@
                                 '_ex' + sim_options.samples
 
         // should do this using some map function TODO
+        if (sim_options.variableMass) {
+            experiment_string += '_m' 
+        }
         if (sim_options.gravity) {
             experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
         }
@@ -538,16 +543,22 @@
                     description: 'number of samples',
                     required: true
                 }, {
+                    option: 'variableMass',
+                    alias: 'm',
+                    type: 'Boolean',
+                    description: 'include variable mass',
+                    required: false
+                }, {
                     option: 'gravity',
                     alias: 'g',
                     type: 'Boolean',
-                    description: 'number of objects',
+                    description: 'include gravity',
                     default: false // TODO should this be int or boolean?
                 }, {
                     option: 'friction',  // TODO: shoud this be int or boolean?
                     alias: 'f',
                     type: 'Boolean',
-                    description: 'number of objects',
+                    description: 'include friction',
                     default: false
                 }, {
                     option: 'pairwise', // TODO

@@ -94,6 +94,14 @@
                                     hasBounds: true, options:{height:demo.height, width:demo.width}})
         Render.run(demo.render)
 
+        Events.on(demo.render, 'afterRender', function(e) {
+            var img = demo.render.canvas.toDataURL("image"+e.timestamp+".png")
+            var data = img.replace(/^data:image\/\w+;base64,/, "");
+            // var buf = new Buffer(data, 'base64');
+            // fs.writeFile('image.png', buf);
+            // document.write('<img src="'+img+'"/>');  // how do I save this?
+        });
+
         if (demo.render) {
             var renderOptions = demo.render.options;
             renderOptions.wireframes = false;
@@ -119,6 +127,7 @@
             }
         }
 
+        var mass_colors = {'1':'#C7F464', '20':'#FF6B6B'}// TODO eventually call Example[config.env].mass_colors
 
 
         Example[config.env](demo, config)
@@ -126,9 +135,11 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[0]  // extra 0 for batch mode
+        var trajectories = data[1]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
+
+        console.log(trajectories)
 
         var i = 0
         function f() {
@@ -143,6 +154,7 @@
             for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
+                body.render.fillStyle = mass_colors[trajectories[id][i].mass]//'#4ECDC4'
                 Body.setPosition(body, trajectories[id][i].position)
             }
 

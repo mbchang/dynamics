@@ -1999,12 +1999,12 @@ if (!_isBrowser) {
             // this is defined here
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = [1, 3, 5]
+                self.possible_masses = [1, 25] // let's just try mass of 20 for now
             } else {
-                self.possible_masses = [1, 1, 1]
+                self.possible_masses = [1]
             }
 
-            self.mass_colors = {'1':'#C7F464', '3':'#FF6B6B', '5':'#4ECDC4'}
+            self.mass_colors = {'1':'#C7F464', '25':'#FF6B6B'}//, '40':'#4ECDC4'}
 
             return self
         };
@@ -2025,7 +2025,6 @@ if (!_isBrowser) {
             for (i = 0; i < self.params.num_obj; i++) {
                 let body_opts = {restitution: 1,
                                  mass: self.m[i],
-                                 render: {fillStyle: self.mass_colors[self.m[i]]},
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
                                  label: "Entity"}
