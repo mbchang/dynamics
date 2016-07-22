@@ -1978,6 +1978,7 @@ if (!_isBrowser) {
 
             // these should not be mutated
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+                           variableMass: options.variableMass,
                            friction: options.friction,
                            max_v0: 20,
                            obj_radius: 60 };
@@ -1995,6 +1996,16 @@ if (!_isBrowser) {
                     {hi: 2*demo.cy - self.params.obj_radius - 1, lo: self.params.obj_radius + 1});
                 };
 
+            // this is defined here
+
+            if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
+                self.possible_masses = [1, 3, 5]
+            } else {
+                self.possible_masses = [1, 1, 1]
+            }
+
+            self.mass_colors = {'1':'#C7F464', '3':'#FF6B6B', '5':'#4ECDC4'}
+
             return self
         };
 
@@ -2005,10 +2016,16 @@ if (!_isBrowser) {
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_obj,self.params.max_v0)
 
+            // generate massses
+            self.m = initialize_masses(self.params.num_obj, self.possible_masses)
+
+            console.log(self.m)
+
             // set positions
             for (i = 0; i < self.params.num_obj; i++) {
                 let body_opts = {restitution: 1,
-                                 mass: 1.0,
+                                 mass: self.m[i],
+                                 render: {fillStyle: self.mass_colors[self.m[i]]},
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
                                  label: "Entity"}
@@ -2020,7 +2037,6 @@ if (!_isBrowser) {
 
                 let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
                                         self.params.obj_radius, body_opts)
-
                 Body.setVelocity(body, self.v0[i])
 
                 // add body to world

@@ -87,7 +87,7 @@ initialize_masses = function(num_obj, possible_masses) {
     for (var i = 0; i < num_obj; i++) {
 
         // choose a random mass in the list of possible_masses
-        var m = Math.floor(Math.random()*possible_masses.length + 1)
+        var m = Math.floor(Math.random()*possible_masses.length)
         masses.push(possible_masses[m])
     }
     return masses;
