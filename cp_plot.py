@@ -26,7 +26,9 @@ experiments = [
                 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every5000',
                 'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
                 'balls_n9_t60_ex50000__balls_n9_t60_ex50000_lrdecay_every2500',
-                'balls_n6_t60_ex50000__balls_n6_t60_ex50000_lrdecay_every2500'
+                'balls_n6_t60_ex50000__balls_n6_t60_ex50000_lrdecay_every2500',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3e-5'
                 ]
 
 # specify paths

@@ -22,6 +22,9 @@ function init_network(params)
     local num_future = params.num_future
     local in_dim = max_obj*num_past*obj_dim
     local hid_dim = max_obj*rnn_dim  -- TODO rename rnn_dim to hid_dim
+
+    -- local hid_dim = rnn_dim
+
     local out_dim = max_obj*num_future*obj_dim  -- note that we will be ignoring the padded areas during backpropagation
     local num_layers = params.layers+2
 
@@ -29,12 +32,15 @@ function init_network(params)
     for i = 1, num_layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
         if i == 1 then 
             net:add(nn.Linear(in_dim, hid_dim))
+            net:add(nn.ReLU())  
         elseif i == num_layers then 
             net:add(nn.Linear(hid_dim, out_dim))
+            -- net:add(nn.Add(out_dim,0))
+            -- net:add(nn.ReLU()) -- turns out I just need a nonlinear activation here? It is because the dim needs to be correct!
         else
             net:add(nn.Linear(hid_dim, hid_dim))
+            net:add(nn.ReLU())  
         end
-        net:add(nn.ReLU())  
         if mp.batch_norm then 
             net:add(nn.BatchNormalization(hid_dim))
         end
@@ -191,7 +197,8 @@ function model:bp(batch, prediction, sim)
 
     -- pad again
     d_pred = self:pad(d_pred, 2, mp.seq_length-num_obj)
-    d_pred = d_pred:reshape(bsize, mp.seq_length, num_future, obj_dim)
+    d_pred = d_pred:reshape(bsize, mp.seq_length*num_future*obj_dim)
+
     self.network:backward(past, d_pred)
 
     collectgarbage()

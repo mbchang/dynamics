@@ -386,6 +386,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 assert(mp.num_past == 1)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
+
+            -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
+
+            
         end
         --- to be honest I don't think we need to break into past and context
         -- future, but actually that might be good for coloriing past and future, but
@@ -404,10 +408,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             y_orig = data_process.relative_pair(this_orig, y_orig, true)
         end
 
-        -- when you save, you will replace context_future_orig
-        -- if mp.gt then
-        --     context_pred = context_future_orig  -- only saving ground truth
-        -- end
+        -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
 
         if saveoutput and i <= mp.ns then
             save_ex_pred_json({this_orig, context_orig,

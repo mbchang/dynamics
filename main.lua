@@ -84,9 +84,10 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
-    mp.model = 'ind'
-    mp.val_window = 3
-    mp.val_eps = 1e-3
+    mp.lr = 3e-5
+    mp.model = 'cat'
+    mp.val_window = 5
+    mp.val_eps = 1e-4
 	mp.seq_length = 10  -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
@@ -112,6 +113,8 @@ elseif mp.model == 'cat' then
     M = require 'concatenate'
 elseif mp.model == 'ind' then 
     M = require 'independent'
+elseif mp.model == 'crnn' then 
+    M = require 'clique_rnn'
 elseif mp.model == 'lstmtime' then
     M = require 'lstm_model'
 elseif mp.model == 'ff' then
@@ -123,6 +126,10 @@ end
 mp.object_dim = config_args.si.oid-- TODO! make this more versatile! (don't hardcode it to oid)
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
+if mp.model == 'crnn' then 
+    mp.input_dim = mp.object_dim 
+    mp.out_dim = mp.object_dim
+end
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.savedir = mp.logs_root .. '/' .. mp.name
 print(mp.savedir)
@@ -178,6 +185,7 @@ function inittrain(preload, model_path)
     train_test_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     model = M.create(mp, preload, model_path)
     print(model.network)
+    print(model.theta.params:nElement(), 'parameters')
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
@@ -223,9 +231,6 @@ function feval_train(params_)  -- params_ should be first argument
     --   4 : FloatTensor - size: 5x4x1x11
     --   5 : FloatTensor - size: 10
     -- }
-
-
-    -- assert(false)
 
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
