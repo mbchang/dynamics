@@ -43,7 +43,10 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
 
-            {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n5_t60_ex50000','balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
+
             # {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
@@ -51,6 +54,8 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n8_t60_ex50000'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000_m'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m'}"},
+
             ]
 
     actual_jobs = []
@@ -94,11 +99,11 @@ def create_jobs(dry_run, mode, ext):
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')
                 else:
                     if flag in ['name']:
-                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','') + '_modelind'# + '_batchnorm'
+                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','')
                     jobname = jobname + "_" + flag + "_" + str(job[flag])
                     flagstring = flagstring + " -" + flag + " " + str(job[flag])
 
-        flagstring = flagstring + " -model ind" + " -mode " + mode
+        flagstring = flagstring +  " -mode " + mode
 
         if mode == 'exp':
             prefix = 'th main.lua'

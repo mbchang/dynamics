@@ -135,7 +135,6 @@ function data_process:mass2onehotall(trajectories)
 
     -- join
     local trajectoriesonehot = torch.cat({before, masses, after}, 4)
-
     return trajectoriesonehot
 end
 

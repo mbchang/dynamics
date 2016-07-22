@@ -5,7 +5,7 @@ local args = {
         velocity_normalize_constant=50,
         angle_normalize_constant=2*math.pi,
         relative=true,
-        masses={0.33, 1.0, 3.0, 1e30},
+        masses={25.0, 1.0, 3.0, 1e30},  -- for now only the first two are used
         rsi={px=1, py=2, vx=3, vy=4, a=5, av=6, m=7, oid=8},  -- raw state indicies
         si={px=1, py=2, vx=3, vy=4, a=5, av=6, m={7,10}, oid=11},  -- state indices
         permute_context=false,
