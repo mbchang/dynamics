@@ -189,6 +189,10 @@ function unpack_batch(batch, sim)
     assert(context:size(1) == mp.batch_size and
             context:size(2)==torch.find(mask,1)[1]
             and context:size(3) == mp.input_dim)
+
+    -- print(this_future:size())
+    -- print(mp.batch_size)
+    -- print(mp.out_dim)
     assert(this_future:size(1) == mp.batch_size and
             this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
 

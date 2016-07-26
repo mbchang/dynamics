@@ -20,6 +20,7 @@ require 'torch'
 require 'nngraph'
 require 'Base'
 require 'IdentityCriterion'
+require 'gnuplot'
 
 -- Local Imports
 local model_utils = require 'model_utils'
@@ -92,7 +93,7 @@ local model, test_loader, modelfile, dp
 
 ------------------------------- Helper Functions -------------------------------
 
-function inittest(preload, model_path)
+function inittest(preload, model_path, opt)
     print("Network parameters:")
     print(mp.test_dataset_folders)
     dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
@@ -105,7 +106,7 @@ function inittest(preload, model_path)
                               num_past=mp.num_past,
                               num_future=mp.num_future,
                               relative=mp.relative,
-                              sim=true,
+                              sim=opt.sim,
                               cuda=mp.cuda
                             }
     test_loader = D.create('testset', tablex.deepcopy(data_loader_args))  -- TODO: Testing on trainset
@@ -297,7 +298,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
-    -- for i = 1, mp.ns do
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
 
@@ -423,6 +423,71 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     collectgarbage()
 end
 
+-- eventually move this to variable_object_model
+function inspect_hidden_state(dataloader, params_)
+    local all_euc_dist = {}
+    local all_effects_norm = {}
+    for i = 1, dataloader.num_batches do
+        local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- actually you'd do this for multiple batches
+        local euc_dist = get_euc_dist(batch[1], batch[2]) -- table of length num_context of {bsize}
+
+        local loss, pred = model:fp(params_,batch,true)
+        local effects = model.network:listModules()[2].output  -- effects[1] corresponds to context[{{},{1}}]  (bsize, rnn_dim)
+        local effects_norm = {}  -- table of length num_context of {bsize}
+        for j=1,#effects do
+            table.insert(effects_norm, torch.squeeze(effects[j]:norm(2,2)))  -- you want to normalize in batch mode!
+        end
+
+        -- joining the two tables (but if you want to do individaul analysis you wouldn't do this)
+        tablex.insertvalues(all_euc_dist,euc_dist)
+        tablex.insertvalues(all_effects_norm,effects_norm)
+    end
+    all_euc_dist = torch.cat(all_euc_dist)
+    all_effects_norm = torch.cat(all_effects_norm)
+
+    local fname = 'hidden_state_all_testfolders'
+    torch.save(mp.savedir..'/'..fname..'.t7', {euc_dist=all_euc_dist, effects_norm=all_effects_norm})
+    if mp.server == 'pc' then
+        -- plot scatter plot. TODO: later move this to an independent function
+        gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
+        gnuplot.xlabel('Euclidean Distance')
+        gnuplot.ylabel('Hidden State Norm')
+        gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
+        gnuplot.plot(all_euc_dist, all_effects_norm, '+')
+        gnuplot.plotflush()
+        print('Saved plot to '..mp.savedir..'/'..fname..'.png')
+    end
+end
+
+function plot_tensor(tensor, info, subsamplerate)
+    local toplot = subsample(tensor, subsamplerate)
+    gnuplot.pngfigure(info[1])
+    gnuplot.xlabel(info[2])
+    gnuplot.ylabel(info[3])
+    gnuplot.title(info[4])  -- change
+    gnuplot.plot(unpack(toplot))
+    gnuplot.plotflush()
+end
+
+-- return a table of euc dist between this and each of context
+-- size is the number of items in context
+-- is this for the last timestep of this?
+-- TODO: later we can plot for all timesteps
+function get_euc_dist(this, context, t)
+    local num_context = context:size(2)
+    local t = t or -1  -- efault use last timestep
+    local this_pos = this[{{},{t},{1,2}}]  -- TODO: use config args
+    local context_pos = context[{{},{},{t},{1,2}}]
+    local diff = torch.squeeze(context_pos - this_pos:repeatTensor(1,num_context,1)) -- (bsize, num_context, 2)
+    local diffsq = torch.pow(diff,2)
+    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
+    euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
+    for i=1,#euc_dists do
+        euc_dists[i] = torch.squeeze(euc_dists[i])
+    end
+    return euc_dists
+end
+
 function save_ex_pred_json(example, jsonfile, current_dataset)
     -- local flags = pls.split(mp.dataset_folder, '_')
     local flags = pls.split(mp.test_dataset_folders[current_dataset], '_')
@@ -474,6 +539,25 @@ function getLastSnapshot(network_name)
     end
 end
 
+function run_inspect_hidden_state()
+    print(mp.name)
+    print(string.gsub(mp.name,"'","\'"))
+
+    local snapshot = getLastSnapshot(mp.name)
+    local snapshotfile = mp.savedir ..'/'..snapshot
+    print(snapshotfile)
+    local checkpoint = torch.load(snapshotfile)
+
+    local saved_args = torch.load(mp.savedir..'/args.t7')
+    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
+    config_args = saved_args.config_args
+
+    model_deps(mp.model)
+    inittest(true, snapshotfile, {sim=false})  -- assuming the mp.savedir doesn't change
+
+    print(inspect_hidden_state(test_loader, checkpoint.model.theta.params, true, mp.steps))
+end
+
 
 function predict_simulate_all()
     print(mp.name)
@@ -489,7 +573,7 @@ function predict_simulate_all()
     config_args = saved_args.config_args
 
     model_deps(mp.model)
-    inittest(true, snapshotfile)  -- assuming the mp.savedir doesn't change
+    inittest(true, snapshotfile, {sim=true})  -- assuming the mp.savedir doesn't change
     print(simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps))
 end
 
@@ -522,6 +606,8 @@ end
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'sim' then
     predict_simulate_all()
+elseif mp.mode == 'hid' then
+    run_inspect_hidden_state()
 elseif mp.mode == 'b2i' then
     predict_b2i()
 elseif mp.mode == 'pred' then

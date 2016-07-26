@@ -85,7 +85,7 @@ if mp.server == 'pc' then
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
     mp.lr = 3e-5
-    mp.model = 'cat'
+    mp.model = 'ffobj'
     mp.val_window = 5
     mp.val_eps = 1e-4
 	mp.seq_length = 10  -- for the concatenate model

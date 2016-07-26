@@ -99,9 +99,9 @@ def create_jobs(dry_run, mode, ext):
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')
                 else:
                     if flag in ['name']:
-                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','')
+                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','') + '_lrdecayevery5000'
                     jobname = jobname + "_" + flag + "_" + str(job[flag])
-                    flagstring = flagstring + " -" + flag + " " + str(job[flag])
+                    flagstring = flagstring + ' -lrdecay_every 5000' + " -" + flag + " " + str(job[flag])
 
         flagstring = flagstring +  " -mode " + mode
 
