@@ -61,8 +61,9 @@ def create_jobs(dry_run, mode, ext):
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
-        for bn in [False]:
-            job['batch_norm'] = bn
+        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
+        for lr in [3e-4,1e-3,3e-3]:
+            job['lr'] = lr
             actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
@@ -73,7 +74,7 @@ def create_jobs(dry_run, mode, ext):
         print "Starting jobs:"
 
     for job in jobs:
-        jobname = ""
+        jobname = job['name']
         flagstring = ""
         for flag in job:
             if isinstance(job[flag], bool):
@@ -82,28 +83,17 @@ def create_jobs(dry_run, mode, ext):
                     flagstring = flagstring + " -" + flag
                 else:
                     print "WARNING: Excluding 'False' flag " + flag
-            elif flag == 'import':
-                imported_network_name = job[flag]
-                if imported_network_name in base_networks.keys():
-                    network_location = base_networks[imported_network_name]
-                    jobname = jobname + "_" + flag + "_" + str(imported_network_name)
-                    flagstring = flagstring + " -" + flag + " " + str(network_location)
-                else:
-                    jobname = jobname + "_" + flag + "_" + str(job[flag])
-                    flagstring = flagstring + " -" + flag + " " + str(job[flag])
             else:
                 if flag in ['dataset_folders', 'test_dataset_folders']:
                     # eval.lua does not have a 'dataset_folders' flag
                     if not(mode == 'sim' and flag == 'dataset_folders'):
-                        jobname = jobname + "_\"" + flag + "\"_" + str(job[flag])
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')
                 else:
-                    if flag in ['name']:
-                        job[flag] = job[flag].replace('{','').replace('}', '').replace("'","").replace('\\"','') + '_lrdecayevery5000'
-                    jobname = jobname + "_" + flag + "_" + str(job[flag])
-                    flagstring = flagstring + ' -lrdecay_every 5000' + " -" + flag + " " + str(job[flag])
+                    if flag not in ['name']:
+                        jobname = jobname + "_" + flag  + str(job[flag])
+                        flagstring = flagstring + " -" + flag + " " + str(job[flag])
 
-        flagstring = flagstring +  " -mode " + mode
+        flagstring = flagstring + " -name " + jobname + " -mode " + mode 
 
         if mode == 'exp':
             prefix = 'th main.lua'
@@ -122,7 +112,7 @@ def create_jobs(dry_run, mode, ext):
                 os.system(jobcommand)
 
         else:
-            to_slurm(job['name'] + ext, jobcommand, dry_run)
+            to_slurm(jobname + ext, jobcommand, dry_run)
 
 def run_experiment(dry_run):
     create_jobs(dry_run=dry_run, mode='exp', ext='')
