@@ -445,6 +445,9 @@ function inspect_hidden_state(dataloader, params_)
     all_euc_dist = torch.cat(all_euc_dist)
     all_effects_norm = torch.cat(all_effects_norm)
 
+    print(all_euc_dist:norm())
+    print(all_effects_norm:norm())
+
     local fname = 'hidden_state_all_testfolders'
     torch.save(mp.savedir..'/'..fname..'.t7', {euc_dist=all_euc_dist, effects_norm=all_effects_norm})
     if mp.server == 'pc' then
@@ -455,18 +458,8 @@ function inspect_hidden_state(dataloader, params_)
         gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
         gnuplot.plot(all_euc_dist, all_effects_norm, '+')
         gnuplot.plotflush()
-        print('Saved plot to '..mp.savedir..'/'..fname..'.png')
+        print('Saved plot of hidden state to '..mp.savedir..'/'..fname..'.png')
     end
-end
-
-function plot_tensor(tensor, info, subsamplerate)
-    local toplot = subsample(tensor, subsamplerate)
-    gnuplot.pngfigure(info[1])
-    gnuplot.xlabel(info[2])
-    gnuplot.ylabel(info[3])
-    gnuplot.title(info[4])  -- change
-    gnuplot.plot(unpack(toplot))
-    gnuplot.plotflush()
 end
 
 -- return a table of euc dist between this and each of context
@@ -606,6 +599,7 @@ end
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'sim' then
     predict_simulate_all()
+    run_inspect_hidden_state() -- I'm just getting the hidden state here
 elseif mp.mode == 'hid' then
     run_inspect_hidden_state()
 elseif mp.mode == 'b2i' then

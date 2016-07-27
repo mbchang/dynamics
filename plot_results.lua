@@ -4,9 +4,14 @@ require 'gnuplot'
 require 'paths'
 require 'utils'
 
-pp = lapp[[
-   -i,--infolder           (default "in")           folder to read
-]]
+
+local cmd = torch.CmdLine()
+cmd:option('-i', "in", 'exp | pred | simulate | save')
+cmd:option('-h', false, 'false for training curve, true for hid state scatter plot')
+cmd:text()
+
+-- parse input params
+pp = cmd:parse(arg)
 
 -- will have to change this soon
 function read_log_file(logfile)
@@ -103,7 +108,28 @@ function plot_experiment(logfile, savefile)
                  'Log Euclidean Distance',
                  'Losses'},
                  subsamplerate)
- end
+end
 
-plot_experiment(pp.infolder..'/experiment.log', pp.infolder..'/experiment.png')
-plot_training_losses(pp.infolder..'/train.log',pp.infolder..'/train.png')
+-- savefile: mp.savedir .. '/' .. fname .. '.png'
+function plot_hidden_state(all_euc_dist, all_effect_norm, savefile)
+    gnuplot.pngfigure(savefile)
+    gnuplot.xlabel('Euclidean Distance')
+    gnuplot.ylabel('Hidden State Norm')
+    gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
+    gnuplot.plot(all_euc_dist, all_effects_norm, '+')
+    gnuplot.plotflush()
+    print('Saved plot to '..savefile)
+end
+
+
+plot_experiment(pp.i..'/experiment.log', pp.i..'/experiment.png')
+plot_training_losses(pp.i..'/train.log',pp.i..'/train.png')
+
+-- plot hidden state
+if pp.h then 
+    local fname = 'hidden_state_all_testfolders'
+    local hid_info = torch.load(pp.i..'/'..fname..'.t7')
+    local all_euc_dist = hid_info.euc_dist
+    local all_effects_norm = hid_info.effects_norm
+    plot_hidden_state(all_euc_dist, all_effects_norm, pp.i..'/'..fname..'.png')
+end

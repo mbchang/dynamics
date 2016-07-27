@@ -104,7 +104,7 @@ def create_jobs(dry_run, mode, ext):
 
         jobcommand = prefix + flagstring
 
-        print(jobcommand + '\n')
+        # print(jobcommand + '\n')
         if local and not dry_run:
             if detach:
                 os.system(jobcommand + ' 2> slurm_logs/' + jobname + '.err 1> slurm_logs/' + jobname + '.out &')
@@ -126,9 +126,10 @@ def sim(dry_run):
 def to_slurm(jobname, jobcommand, dry_run):
     # jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
     # jobname_formatted2 = jobname_formatted.replace('\\"','')
-
-    print jobname
-    print jobcommand
+    print '################'
+    print 'name:', jobname
+    print 'command:', jobcommand
+    print '\n'
 
     with open('slurm_scripts/' + jobname + '.slurm', 'w') as slurmfile:
         slurmfile.write("#!/bin/bash\n")
