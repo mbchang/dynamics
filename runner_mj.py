@@ -27,10 +27,10 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n5_t60_ex50000','balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             # {'dataset_folders':"{'tower_n10_t60_ex50000'}", 'test_dataset_folders': "{'tower_n10_t60_ex50000'}"}
-
             # {'dataset_folders':"{'tower_n10_t120_ex50000'}", 'test_dataset_folders': "{'tower_n10_t120_ex50000'}"},
-            # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
+
+            {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex10000_gf'}", 'test_dataset_folders': "{'balls_n5_t60_ex10000_gf'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex10000_fr'}", 'test_dataset_folders': "{'balls_n5_t60_ex10000_fr'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex10000'}", 'test_dataset_folders': "{'balls_n5_t60_ex10000'}"},
@@ -40,31 +40,34 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000,balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000,balls_n5_t60_ex50000,balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex5000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000','balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
 
-            # {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n8_t60_ex50000'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n3_t60_ex50000_m'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_m'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m'}"},
 
             ]
 
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
-        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for lr in [3e-4,1e-3,3e-3]:
-            job['lr'] = lr
-            actual_jobs.append(copy.deepcopy(job))
+        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','') + '_lrdecay_every2500'
+        # for lr in [3e-4,1e-3,3e-3]:
+        #     job['lr'] = lr
+        # for model in ['cat']:
+        #     job['model'] = model
+        #     job['lr'] = 3e-5
+        actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 
@@ -147,6 +150,5 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-run_experiment(dry_run)
-# predict(dry_run)
-# sim(dry_run)
+# run_experiment(dry_run)
+sim(dry_run)

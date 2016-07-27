@@ -3,15 +3,19 @@ require 'torch'
 require 'gnuplot'
 require 'paths'
 require 'utils'
+torch.setdefaulttensortype('torch.FloatTensor')
 
 
 local cmd = torch.CmdLine()
-cmd:option('-i', "in", 'exp | pred | simulate | save')
-cmd:option('-h', false, 'false for training curve, true for hid state scatter plot')
+cmd:option('-infolder', "in", 'infolder')
+cmd:option('-hid', false, 'false for training curve, true for hid state scatter plot')
 cmd:text()
 
 -- parse input params
 pp = cmd:parse(arg)
+
+-- print(pp)
+-- assert(false)
 
 -- will have to change this soon
 function read_log_file(logfile)
@@ -46,9 +50,9 @@ function read_log_file_3vals(logfile)
         local min_val_loss, min_val_loss_idx = torch.min(valwin,1)
         local val_avg_delta = (valwin[{{2,-1}}] - valwin[{{1,-2}}]):mean()
         local abs_delta = (max_val_loss-min_val_loss):sum()
-        print(w, 'max', max_val_loss:sum(), 'maxid', max_val_loss_idx:sum(),
-              'min', min_val_loss:sum(), 'minid', min_val_loss_idx:sum(),
-              'avg_delta', val_avg_delta, 'abs_delta', abs_delta)
+        -- print(w, 'max', max_val_loss:sum(), 'maxid', max_val_loss_idx:sum(),
+        --       'min', min_val_loss:sum(), 'minid', min_val_loss_idx:sum(),
+        --       'avg_delta', val_avg_delta, 'abs_delta', abs_delta)
     end
 
     -- assert(false)
@@ -111,25 +115,25 @@ function plot_experiment(logfile, savefile)
 end
 
 -- savefile: mp.savedir .. '/' .. fname .. '.png'
-function plot_hidden_state(all_euc_dist, all_effect_norm, savefile)
+function plot_hidden_state(all_euc_dist, all_effects_norm, savefile)
     gnuplot.pngfigure(savefile)
     gnuplot.xlabel('Euclidean Distance')
     gnuplot.ylabel('Hidden State Norm')
     gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
-    gnuplot.plot(all_euc_dist, all_effects_norm, '+')
+    gnuplot.plot(all_euc_dist, all_effects_norm, '.')
     gnuplot.plotflush()
     print('Saved plot to '..savefile)
 end
 
 
-plot_experiment(pp.i..'/experiment.log', pp.i..'/experiment.png')
-plot_training_losses(pp.i..'/train.log',pp.i..'/train.png')
+plot_experiment(pp.infolder..'/experiment.log', pp.infolder..'/experiment.png')
+plot_training_losses(pp.infolder..'/train.log',pp.infolder..'/train.png')
 
 -- plot hidden state
-if pp.h then 
+if pp.hid then 
     local fname = 'hidden_state_all_testfolders'
-    local hid_info = torch.load(pp.i..'/'..fname..'.t7')
-    local all_euc_dist = hid_info.euc_dist
-    local all_effects_norm = hid_info.effects_norm
-    plot_hidden_state(all_euc_dist, all_effects_norm, pp.i..'/'..fname..'.png')
+    local hid_info = torch.load(pp.infolder..'/'..fname)
+    local all_euc_dist = torch.Tensor(hid_info.euc_dist)
+    local all_effects_norm = torch.Tensor(hid_info.effects_norm)
+    plot_hidden_state(all_euc_dist, all_effects_norm, pp.infolder..'/'..fname..'.png')
 end

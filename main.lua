@@ -84,6 +84,8 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
+    mp.lrdecayafter = 100
+    mp.lrdecay_every = 10
     mp.lr = 3e-5
     mp.model = 'ffobj'
     mp.val_window = 5
@@ -297,10 +299,13 @@ function train(start_iter, epoch_num)
                 local checkpoint = {}
                 checkpoint.model = model  -- TODO: should I save the model.theta?
                 checkpoint.mp = mp
+                print(mp.lr)
+                print(checkpoint.mp.lr)
                 checkpoint.train_losses = train_losses
                 checkpoint.val_losses = val_losses
                 checkpoint.test_losses = test_losses
                 checkpoint.iters = t
+                -- checkpoint.lr = mp.lr
                 torch.save(model_file, checkpoint)
                 print('Saved model')
             end
@@ -340,7 +345,8 @@ function train(start_iter, epoch_num)
         -- lr decay
         -- here you can adjust the learning rate based on val loss
         if t >= mp.lrdecayafter and (t-start_iter+1) % mp.lrdecay_every == 0 then
-            optim_state.learningRate =optim_state.learningRate*mp.lrdecay
+            mp.lr = mp.lr*mp.lrdecay  -- I should mutate this because it should keep track of the current lr anyway
+            optim_state.learningRate = mp.lr  
             print('Learning rate is now '..optim_state.learningRate)
         end
 
@@ -416,8 +422,15 @@ end
 function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     print(snapshot)
-    local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
-    mp = checkpoint.mp  -- completely overwrite
+    -- local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
+-- hardcoded
+    local checkpoint = torch.load('logs/balls_n3_t60_ex20,balls_n6_t60_ex20,balls_n5_t60_ex20/epoch1.00_0.0469.t7')
+
+    mp = checkpoint.mp  -- completely overwrite  NOTE!
+
+    print(mp.lr)
+
+    assert(false)
     inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
 
     -- These are things you have to set; although priority sampler might not be reset

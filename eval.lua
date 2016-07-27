@@ -449,7 +449,7 @@ function inspect_hidden_state(dataloader, params_)
     print(all_effects_norm:norm())
 
     local fname = 'hidden_state_all_testfolders'
-    torch.save(mp.savedir..'/'..fname..'.t7', {euc_dist=all_euc_dist, effects_norm=all_effects_norm})
+    torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, effects_norm=all_effects_norm})
     if mp.server == 'pc' then
         -- plot scatter plot. TODO: later move this to an independent function
         gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
