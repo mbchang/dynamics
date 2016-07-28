@@ -253,6 +253,7 @@ function update_position(this, pred)
     return pred
 end
 
+
 function update_angle(this, pred)
     local a = config_args.si.a
     local av = config_args.si.av
@@ -426,10 +427,12 @@ end
 -- eventually move this to variable_object_model
 function inspect_hidden_state(dataloader, params_)
     local all_euc_dist = {}
+    local all_euc_dist_diff = {}
     local all_effects_norm = {}
     for i = 1, dataloader.num_batches do
         local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- actually you'd do this for multiple batches
         local euc_dist = get_euc_dist(batch[1], batch[2]) -- table of length num_context of {bsize}
+        local euc_dist_diff = get_velocity_direction(batch[1], batch[2])
 
         local loss, pred = model:fp(params_,batch,true)
         local effects = model.network:listModules()[2].output  -- effects[1] corresponds to context[{{},{1}}]  (bsize, rnn_dim)
@@ -440,26 +443,56 @@ function inspect_hidden_state(dataloader, params_)
 
         -- joining the two tables (but if you want to do individaul analysis you wouldn't do this)
         tablex.insertvalues(all_euc_dist,euc_dist)
+        tablex.insertvalues(all_euc_dist_diff, euc_dist_diff)
         tablex.insertvalues(all_effects_norm,effects_norm)
     end
     all_euc_dist = torch.cat(all_euc_dist)
+    all_euc_dist_diff = torch.cat(all_euc_dist_diff)
     all_effects_norm = torch.cat(all_effects_norm)
 
+    -- here let's split into positive and negative velocity
+    -- positive velocity is going away and negative velocity is going towards
+    local neg_vel_idx = torch.squeeze(all_euc_dist_diff:lt(0):nonzero())  -- indices of all_euc_dist_diff that are negative
+    local pos_vel_idx = torch.squeeze(all_euc_dist_diff:ge(0):nonzero())  -- >=0; moving away
+
+    local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
+    local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
+
+    local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
+    local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
+
+    local norm_neg_vel = all_effects_norm:index(1,neg_vel_idx)
+    local norm_pos_vel = all_effects_norm:index(1,pos_vel_idx)
+
+    -- now, plot euc_dist_neg_vel vs norm_neg_vel and euc_dist_pos_vel vs norm_pos_vel
+
     print(all_euc_dist:norm())
+    print(all_euc_dist_diff:norm())
     print(all_effects_norm:norm())
 
     local fname = 'hidden_state_all_testfolders'
-    torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, effects_norm=all_effects_norm})
+    torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
+                                        euc_dist_diff=all_euc_dist_diff, 
+                                        effects_norm=all_effects_norm})
     if mp.server == 'pc' then
-        -- plot scatter plot. TODO: later move this to an independent function
-        gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
-        gnuplot.xlabel('Euclidean Distance')
-        gnuplot.ylabel('Hidden State Norm')
-        gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
-        gnuplot.plot(all_euc_dist, all_effects_norm, '+')
-        gnuplot.plotflush()
-        print('Saved plot of hidden state to '..mp.savedir..'/'..fname..'.png')
+        -- plot_hid_state(fname, all_euc_dist, all_effects_norm, '+')
+        plot_hid_state(fname..'_toward', euc_dist_neg_vel, norm_neg_vel)
+        plot_hid_state(fname..'_away', euc_dist_pos_vel, norm_pos_vel)
+
     end
+end
+
+
+-- todo: move this to plot_results
+function plot_hid_state(fname, x,y)
+    -- plot scatter plot. TODO: later move this to an independent function
+    gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
+    gnuplot.xlabel('Euclidean Distance')
+    gnuplot.ylabel('Hidden State Norm')
+    gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
+    gnuplot.plot(x, y, '+')
+    gnuplot.plotflush()
+    print('Saved plot of hidden state to '..mp.savedir..'/'..fname..'.png')
 end
 
 -- return a table of euc dist between this and each of context
@@ -468,17 +501,55 @@ end
 -- TODO: later we can plot for all timesteps
 function get_euc_dist(this, context, t)
     local num_context = context:size(2)
-    local t = t or -1  -- efault use last timestep
-    local this_pos = this[{{},{t},{1,2}}]  -- TODO: use config args
-    local context_pos = context[{{},{},{t},{1,2}}]
-    local diff = torch.squeeze(context_pos - this_pos:repeatTensor(1,num_context,1)) -- (bsize, num_context, 2)
-    local diffsq = torch.pow(diff,2)
-    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
+    local t = t or -1  -- default use last timestep
+    local px = config_args.si.px
+    local py = config_args.si.py
+
+    local this_pos = this[{{},{t},{px, py}}]  -- TODO: use config args
+    local context_pos = context[{{},{},{t},{px, py}}]
+    local euc_dists = euc_dist(this_pos:repeatTensor(1,num_context,1), context_pos)
     euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
     for i=1,#euc_dists do
         euc_dists[i] = torch.squeeze(euc_dists[i])
     end
     return euc_dists
+end
+
+-- b and a must be same size
+function euc_dist(a,b)
+    local diff = torch.squeeze(b - a) -- (bsize, num_context, 2)
+    local diffsq = torch.pow(diff,2)
+    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
+    return euc_dists
+end
+
+-- similar to update_position
+function get_velocity_direction(this, context, t)
+    local num_context = context:size(2)
+    local t = t or -1
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local pnc = config_args.position_normalize_constant
+    local vnc = config_args.velocity_normalize_constant
+
+    local this_pos_now = this[{{},{t},{px, py}}]
+    local context_pos_now = context[{{},{},{t},{px, py}}]
+
+    local context_vel = context[{{},{},{t},{vx, vy}}]
+    local context_pos_next = (context_pos_now:clone()*pnc + context_vel:clone()*vnc)/pnc
+
+    -- find difference in distances from this_pos_now to context_pos_now
+    -- and from his_pos_now to context_pos_next. This will be +/- number
+    local euc_dist_now = euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_now)
+    local euc_dist_next = euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_next)
+    local euc_dist_diff = euc_dist_next - euc_dist_now  -- (bsize, num_context, 1)  negative if context moving toward this
+    euc_dist_diffs = torch.split(euc_dist_diff, 1,2)  --convert to table of (bsize, 1, 1)
+    for i=1,#euc_dist_diffs do
+        euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
+    end
+    return euc_dist_diffs
 end
 
 function save_ex_pred_json(example, jsonfile, current_dataset)

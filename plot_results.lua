@@ -114,15 +114,16 @@ function plot_experiment(logfile, savefile)
                  subsamplerate)
 end
 
--- savefile: mp.savedir .. '/' .. fname .. '.png'
-function plot_hidden_state(all_euc_dist, all_effects_norm, savefile)
-    gnuplot.pngfigure(savefile)
+-- todo: move this to plot_results
+function plot_hid_state(fname, x,y)
+    -- plot scatter plot. TODO: later move this to an independent function
+    gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
     gnuplot.xlabel('Euclidean Distance')
     gnuplot.ylabel('Hidden State Norm')
     gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
-    gnuplot.plot(all_euc_dist, all_effects_norm, '.')
+    gnuplot.plot(x, y, '+')
     gnuplot.plotflush()
-    print('Saved plot to '..savefile)
+    print('Saved plot of hidden state to '..mp.savedir..'/'..fname..'.png')
 end
 
 
@@ -134,6 +135,22 @@ if pp.hid then
     local fname = 'hidden_state_all_testfolders'
     local hid_info = torch.load(pp.infolder..'/'..fname)
     local all_euc_dist = torch.Tensor(hid_info.euc_dist)
+    local all_euc_dist_diff = torch.Tensor(hid_info.euc_dist_diff)
     local all_effects_norm = torch.Tensor(hid_info.effects_norm)
-    plot_hidden_state(all_euc_dist, all_effects_norm, pp.infolder..'/'..fname..'.png')
+
+    local neg_vel_idx = torch.squeeze(all_euc_dist_diff:lt(0):nonzero())  -- indices of all_euc_dist_diff that are negative
+    local pos_vel_idx = torch.squeeze(all_euc_dist_diff:ge(0):nonzero())  -- >=0; moving away
+
+    local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
+    local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
+
+    local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
+    local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
+
+    local norm_neg_vel = all_effects_norm:index(1,neg_vel_idx)
+    local norm_pos_vel = all_effects_norm:index(1,pos_vel_idx)
+
+    -- plot_hidden_state(pp.infolder..'/'..fname..'.png', all_euc_dist, all_effects_norm, pp.infolder)
+    plot_hid_state(pp.infolder..'/'..fname..'_toward.png', euc_dist_neg_vel, norm_neg_vel)
+    plot_hid_state(pp.infolder..'/'..fname..'_away.png', euc_dist_pos_vel, norm_pos_vel)
 end
