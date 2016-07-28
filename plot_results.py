@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import utils as u
 
 root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs'
 
@@ -91,10 +92,53 @@ def plot_4balls():
     plot_experiments(exp_list, 'test', root, '18_layers_3_lrdecay_0.99_lr=0.0003_sharpen_1_4balls.png')
 
 
+def plot_hid_state(h5_file_folder):
+    fname = 'hidden_state_all_testfolders'
+    # TODO! The constants here are hard coded!!!
+    data = u.load_dict_from_hdf5(os.path.join(h5_file_folder, fname))
+    # keys: 'euc_dist', 'euc_dist_diff', 'effects_norm'
+    all_euc_dist = data['euc_dist']
+    all_euc_dist_diff = data['euc_dist_diff']
+    all_effects_norm = data['effects_norm']
+
+    neg_vel_idx = np.argwhere(all_euc_dist_diff < 0)
+    pos_vel_idx = np.argwhere(all_euc_dist_diff >= 0)
+
+    neg_vel = all_euc_dist_diff[neg_vel_idx]
+    pos_vel = all_euc_dist_diff[pos_vel_idx]
+
+    euc_dist_neg_vel = all_euc_dist[neg_vel_idx]
+    euc_dist_pos_vel = all_euc_dist[pos_vel_idx]
+
+    norm_neg_vel = all_effects_norm[neg_vel_idx]
+    norm_pos_vel = all_effects_norm[pos_vel_idx]
+
+    outfile = 's'
+
+    plot_hid_state_helper(os.path.join(h5_file_folder, fname)+'_toward.png', euc_dist_neg_vel, norm_neg_vel, neg_vel)
+    plot_hid_state_helper(os.path.join(h5_file_folder, fname)+'_away.png', euc_dist_pos_vel, norm_pos_vel, pos_vel)  # do the color gradient based on neg_vel
+
+
+    # -- plot_hidden_state(pp.infolder..'/'..fname..'.png', all_euc_dist, all_effects_norm, pp.infolder)
+    # plot_hid_state(pp.infolder..'/'..fname..'_toward.png', euc_dist_neg_vel, norm_neg_vel)
+    # plot_hid_state(pp.infolder..'/'..fname..'_away.png', euc_dist_pos_vel, norm_pos_vel)
+
+def plot_hid_state_helper(outfile, x, y, c):
+    plt.scatter(x,y, c=c, marker='.')
+    plt.legend()
+    plt.title('Pairwise Hidden State as a Function of Distance from Focus Object')
+    plt.xlabel('Euclidean Distance')
+    plt.ylabel('Hidden State Norm')
+    plt.savefig(outfile)
+    # plt.show()
+
+
+
 if __name__ == "__main__":
-    plot_lstm()
-    plot_ff()
-    plot_ff_lstm()
-    plot_2balls()
-    plot_3balls()
-    plot_4balls()
+    # plot_lstm()
+    # plot_ff()
+    # plot_ff_lstm()
+    # plot_2balls()
+    # plot_3balls()
+    # plot_4balls()
+    plot_hid_state('logs/balls_n3_t60_ex20,balls_n6_t60_ex20,balls_n5_t60_ex20/hidden_state_all_testfolders.h5')

@@ -1,5 +1,6 @@
 import os
 import sys
+import plot_results
 
 experiments = [
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_lrdecay_every10000',
@@ -77,3 +78,4 @@ for experiment_folder in experiments:
     command = 'th plot_results.lua -infolder ' + experiment_folder
     print command
     os.system(command)
+    plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct

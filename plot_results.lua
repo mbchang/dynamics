@@ -131,7 +131,7 @@ plot_experiment(pp.infolder..'/experiment.log', pp.infolder..'/experiment.png')
 plot_training_losses(pp.infolder..'/train.log',pp.infolder..'/train.png')
 
 -- plot hidden state
-if pp.hid then 
+if pp.hid then
     local fname = 'hidden_state_all_testfolders'
     local hid_info = torch.load(pp.infolder..'/'..fname)
     local all_euc_dist = torch.Tensor(hid_info.euc_dist)

@@ -9,6 +9,7 @@ require 'xlua'
 require 'Base'
 require 'sys'
 require 'pl'
+require 'hdf5'
 torch.setdefaulttensortype('torch.FloatTensor')
 require 'data_utils'
 local tablex = require 'pl.tablex'
@@ -457,6 +458,8 @@ function inspect_hidden_state(dataloader, params_)
 
     local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
     local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
+    print(neg_vel)
+    assert(false)
 
     local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
     local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
@@ -474,6 +477,12 @@ function inspect_hidden_state(dataloader, params_)
     torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
                                         euc_dist_diff=all_euc_dist_diff, 
                                         effects_norm=all_effects_norm})
+    local plot_tensor_file = hdf5.open(mp.savedir..'/'..fname..'.h5', 'w')
+    plot_tensor_file:write('euc_dist', all_euc_dist)
+    plot_tensor_file:write('euc_dist_diff', all_euc_dist_diff)
+    plot_tensor_file:write('effects_norm', all_effects_norm)
+    plot_tensor_file:close()
+    print('saved to '..mp.savedir..'/'..fname..'.h5')
     if mp.server == 'pc' then
         -- plot_hid_state(fname, all_euc_dist, all_effects_norm, '+')
         plot_hid_state(fname..'_toward', euc_dist_neg_vel, norm_neg_vel)
