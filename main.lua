@@ -44,6 +44,8 @@ cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-batch_norm', false, 'batch norm')
+cmd:option('-num_past', 2, 'number of past timesteps')
+
 
 -- training options
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
@@ -99,8 +101,8 @@ if mp.server == 'pc' then
     mp.plot = false--true
 	mp.cuda = false
 else
-	mp.winsize = 3  -- total number of frames
-    mp.num_past = 2 -- total number of past frames
+	-- mp.winsize = 3  -- total number of frames
+    -- mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
 	mp.seq_length = 10   -- for the concatenate model
 	mp.num_threads = 4
@@ -125,6 +127,7 @@ else
     error('Unrecognized model')
 end
 
+mp.winsize = mp.num_past + mp.num_future
 mp.object_dim = config_args.si.oid-- TODO! make this more versatile! (don't hardcode it to oid)
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
