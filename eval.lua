@@ -294,9 +294,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local avg_loss = 0
     local count = 0
 
-    local unsqueezer = nn.Unsqueeze(2,3)
-    if mp.cuda then unsqueezer:cuda() end
-
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
@@ -317,8 +314,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-        local past = torch.cat({unsqueezer:forward(this_orig:clone()), context_orig},2)
-        local future = torch.cat({unsqueezer:forward(y_orig:clone()), context_future_orig},2)
+        local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
+        local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)
 
         assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
@@ -374,7 +371,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- update angle
                 pred = update_angle(this, pred)
-                pred = unsqueezer:forward(pred)
+                -- pred = unsqueezer:forward(pred)
+                pred = unsqueeze(pred, 2)
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
@@ -451,6 +449,7 @@ function inspect_hidden_state(dataloader, params_)
     all_euc_dist_diff = torch.cat(all_euc_dist_diff)
     all_effects_norm = torch.cat(all_effects_norm)
 
+
     -- here let's split into positive and negative velocity
     -- positive velocity is going away and negative velocity is going towards
     local neg_vel_idx = torch.squeeze(all_euc_dist_diff:lt(0):nonzero())  -- indices of all_euc_dist_diff that are negative
@@ -458,8 +457,6 @@ function inspect_hidden_state(dataloader, params_)
 
     local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
     local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
-    print(neg_vel)
-    assert(false)
 
     local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
     local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
@@ -475,8 +472,9 @@ function inspect_hidden_state(dataloader, params_)
 
     local fname = 'hidden_state_all_testfolders'
     torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
-                                        euc_dist_diff=all_euc_dist_diff, 
-                                        effects_norm=all_effects_norm})
+                                euc_dist_diff=all_euc_dist_diff, 
+                                effects_norm=all_effects_norm})
+
     local plot_tensor_file = hdf5.open(mp.savedir..'/'..fname..'.h5', 'w')
     plot_tensor_file:write('euc_dist', all_euc_dist)
     plot_tensor_file:write('euc_dist_diff', all_euc_dist_diff)
