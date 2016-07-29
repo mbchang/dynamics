@@ -68,8 +68,6 @@
         // create an example engine (see /examples/engine.js)
         demo.engine = Example.engine(demo);
 
-        // console.log(demo.engine)
-        // assert(false)
 
         if (_isBrowser) {
             // run the engine
@@ -358,8 +356,8 @@
         // TODO: make these world boundaries variable
         demo.offset = 5;  // world offset
         config = {}
-        config.cx = 300;
-        config.cy = 200;
+        config.cx = 400;
+        config.cy = 300;
 
         demo.cx = config.cx;
         demo.cy = config.cy;

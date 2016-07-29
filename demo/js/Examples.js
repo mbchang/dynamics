@@ -1976,6 +1976,14 @@ if (!_isBrowser) {
         Balls.create = function(options) {
             var self = {}; // instance of the Balls class
 
+            // default
+            if (!(typeof options !== 'undefined' &&  options)) {
+                var options = {}
+                options.numObj = 3
+                options.variableMass = false
+                options.friction = false
+            }
+
             // these should not be mutated
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                            variableMass: options.variableMass,
@@ -2099,6 +2107,13 @@ if (!_isBrowser) {
         Tower.create = function(options){
             var self = {}
             // these should not be mutated
+
+            // default
+            if (!(typeof options !== 'undefined' &&  options)) {
+                var options = {}
+                options.numObj = 6
+            }
+
             self.params = {num_obj: options.numObj,
                           size: 40 };
             self.engine = demo.engine,
@@ -2112,7 +2127,8 @@ if (!_isBrowser) {
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
             var x = demo.cx
             var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1, mass: 1})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1})
+            Body.setVelocity(lastBlock, { x: 0, y: 0 })
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
@@ -2120,7 +2136,8 @@ if (!_isBrowser) {
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 1, mass: 1})  // stack upwards
+                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1})  // stack upwards
+                Body.setVelocity(lastBlock, { x: 0, y: 0 })
                 lastBlock = block;
                 World.add(self.world, lastBlock)
             }
