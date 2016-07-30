@@ -129,8 +129,8 @@ def plot_hid_state_helper(outfile, x, y, c):
     plt.title('Pairwise Hidden State as a Function of Distance from Focus Object')
     plt.xlabel('Euclidean Distance')
     plt.ylabel('Hidden State Norm')
-    plt.savefig(outfile)
-    # plt.show()
+    # plt.savefig(outfile)
+    plt.show()
 
 
 

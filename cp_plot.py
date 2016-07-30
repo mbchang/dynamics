@@ -48,6 +48,14 @@ experiments = [
                 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every5000', 
                 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every5000',
 
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past10',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past9',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past8',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past7',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past6',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past5',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past4',
+                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past3',
 
                 ]
 
@@ -69,13 +77,16 @@ elif response != 'n':
     response = raw_input('Running command:\n\n' + command + '\nProceed?[y/n]')
 else:
     print 'Not running command.'
-    sys.exit()
+    sys.exit(0)
 
 # plot
 for experiment_folder in experiments:
-    experiment_folder = os.path.join(out_root, experiment_folder)
-    # command = 'th plot_results.lua -hid -infolder ' + experiment_folder
-    command = 'th plot_results.lua -infolder ' + experiment_folder
-    print command
-    os.system(command)
-    plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
+    try:
+        experiment_folder = os.path.join(out_root, experiment_folder)
+        # command = 'th plot_results.lua -hid -infolder ' + experiment_folder
+        command = 'th plot_results.lua -infolder ' + experiment_folder
+        print command
+        os.system(command)
+        # plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
+    except KeyboardInterrupt:
+        sys.exit(0)

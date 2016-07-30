@@ -175,4 +175,124 @@ function model:bp(batch, prediction, sim)
     return self.theta.grad_params
 end
 
+-- simulate batch forward one timestep
+function model:sim(batch)
+    
+    -- get data
+    local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
+
+    -- crop to number of timestesp
+    y_orig = y_orig[{{},{1, numsteps}}]
+    context_future_orig = context_future_orig[{{},{},{1, numsteps}}]
+
+    local num_particles = torch.find(mask,1)[1] + 1
+
+    -- arbitrary notion of ordering here
+    -- past: (bsize, num_particles, mp.numpast*mp.objdim)
+    -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
+    local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
+    local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)
+
+    assert(past:size(2) == num_particles and future:size(2) == num_particles)
+
+    local pred_sim = model_utils.transfer_data(
+                        torch.zeros(mp.batch_size, num_particles,
+                                    numsteps, mp.object_dim),
+                        mp.cuda)
+
+    -- loop through time
+    for t = 1, numsteps do
+
+        -- for each particle, update to the next timestep, given
+        -- the past configuration of everybody
+        -- total_particles = total_particles+num_particles
+
+        for j = 1, num_particles do
+            -- construct batch
+            local this = torch.squeeze(past[{{},{j}}])
+
+            local context
+            if j == 1 then
+                context = past[{{},{j+1,-1}}]
+            elseif j == num_particles then
+                context = past[{{},{1,-2}}]
+            else
+                context = torch.cat({past[{{},{1,j-1}}],
+                                                    past[{{},{j+1,-1}}]},2)
+            end
+
+            local y = future[{{},{j},{t}}]
+            y:resize(mp.batch_size, mp.num_future, mp.object_dim)
+
+            local batch = {this, context, y, _, mask} -- TODO: this may be the problem!
+
+            -- predict
+            local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
+            avg_loss = avg_loss + loss
+            count = count + 1
+
+            pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
+            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
+
+            -- -- relative coords for next timestep
+            if mp.relative then
+                pred = data_process.relative_pair(this, pred, true)
+            end
+
+            -- restore object properties because we aren't learning them
+            pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]  -- NOTE! THIS DOESN'T TAKE ANGLE INTO ACCOUNT!
+            
+            -- update position
+            pred = update_position(this, pred)
+
+            -- update angle
+            pred = update_angle(this, pred)
+            -- pred = unsqueezer:forward(pred)
+            pred = unsqueeze(pred, 2)
+
+            -- write into pred_sim
+            pred_sim[{{},{j},{t},{}}] = pred
+        end
+
+        -- update past for next timestep
+        if mp.num_past > 1 then
+            past = torch.cat({past[{{},{},{2,-1},{}}],
+                                pred_sim[{{},{},{t},{}}]}, 3)
+        else
+            assert(mp.num_past == 1)
+            past = pred_sim[{{},{},{t},{}}]:clone()
+        end
+
+        -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
+
+        
+    end
+    --- to be honest I don't think we need to break into past and context
+    -- future, but actually that might be good for coloriing past and future, but
+    -- actually I don't think so. For now let's just adapt it
+
+    -- at this point, pred_sim should be all filled out
+    -- break pred_sim into this and context_future
+    -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
+    -- recall that you had defined this_pred as the first obj in the future tensor
+    local this_pred = torch.squeeze(pred_sim[{{},{1}}])
+    if numsteps == 1 then this_pred = unsqueeze(this_pred,2) end
+
+    local context_pred = pred_sim[{{},{2,-1}}]
+
+    if mp.relative then
+        y_orig = data_process.relative_pair(this_orig, y_orig, true)
+    end
+
+    -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
+
+    -- if saveoutput and i <= mp.ns then
+    --     save_ex_pred_json({this_orig, context_orig,
+    --                         y_orig, context_future_orig,
+    --                         this_pred, context_pred},
+    --                         'batch'..test_loader.datasamplers[current_dataset].current_sampled_id..'.json',
+    --                         current_dataset)
+    -- end
+end
+
 return model
