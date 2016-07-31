@@ -68,8 +68,8 @@
         // demo.cx = 400;
         // demo.cy = 300;
 
-        config.cx = 300;
-        config.cy = 200;
+        config.cx = 400;
+        config.cy = 300;
 
         demo.cx = config.cx;
         demo.cy = config.cy;
@@ -155,7 +155,11 @@
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
                 body.render.fillStyle = mass_colors[trajectories[id][i].mass]//'#4ECDC4'
-                body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
+                if (i < config.num_past) {
+                    body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
+                } else {
+                    body.render.strokeStyle = '#551A8B'// orange #551A8B is purple
+                }
                 body.render.lineWidth = 5
 
                 console.log(body)
