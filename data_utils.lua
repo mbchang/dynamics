@@ -169,43 +169,6 @@ function extract_flag(flags_list, delim)
     return string.sub(extract[1], #delim+1)
 end
 
-function unpack_batch(batch, sim)
-    local this, context, y, context_future, mask = unpack(batch)
-    local x = {this=this,context=context}
-
-    -- unpack inputs
-    local this_past     = convert_type(x.this:clone(), mp.cuda)
-    local context       = convert_type(x.context:clone(), mp.cuda)
-    local this_future   = convert_type(y:clone(), mp.cuda)
-
-    -- reshape
-    this_past:resize(this_past:size(1), this_past:size(2)*this_past:size(3))
-    context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
-    this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
-
-    assert(this_past:size(1) == mp.batch_size and
-            this_past:size(2) == mp.input_dim,
-            'Your batch size or input dim is wrong')  -- TODO RESIZE THIS
-    assert(context:size(1) == mp.batch_size and
-            context:size(2)==torch.find(mask,1)[1]
-            and context:size(3) == mp.input_dim)
-
-    -- print(this_future:size())
-    -- print(mp.batch_size)
-    -- print(mp.out_dim)
-    assert(this_future:size(1) == mp.batch_size and
-            this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
-
-    -- here you have to create a table of tables
-    -- this: (bsize, input_dim)
-    -- context: (bsize, mp.seq_length, dim)
-    local input = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
-    end
-
-    return input, this_future
-end
 
 -- each inner table contains the same number of tensors, for which all
 -- the dimensions (except the first) are the same

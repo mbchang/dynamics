@@ -9,6 +9,8 @@ require 'modules'
 
 nngraph.setDebug(true)
 
+nbrhd = true  -- later make this a flag!
+
 -- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
 function init_network(params)
@@ -106,6 +108,41 @@ function model.create(mp_, preload, model_path)
     return self
 end
 
+function model:unpack_batch(batch, sim)
+    local this, context, y, context_future, mask = unpack(batch)
+    local x = {this=this,context=context}
+
+    -- unpack inputs
+    local this_past     = convert_type(x.this:clone(), mp.cuda)
+    local context       = convert_type(x.context:clone(), mp.cuda)
+    local this_future   = convert_type(y:clone(), mp.cuda)
+
+    -- reshape
+    this_past:resize(this_past:size(1), this_past:size(2)*this_past:size(3))
+    context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
+    this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
+
+    assert(this_past:size(1) == mp.batch_size and
+            this_past:size(2) == mp.input_dim,
+            'Your batch size or input dim is wrong')  -- TODO RESIZE THIS
+    assert(context:size(1) == mp.batch_size and
+            context:size(2)==torch.find(mask,1)[1]
+            and context:size(3) == mp.input_dim)
+
+    assert(this_future:size(1) == mp.batch_size and
+            this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
+
+    -- here you have to create a table of tables
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local input = {}
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
+    end
+
+    return input, this_future
+end
+
 -- Input to fp
 -- {
 --   1 : DoubleTensor - size: 4x2x9
@@ -118,7 +155,7 @@ function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
 
-    local input, this_future = unpack_batch(batch, sim)
+    local input, this_future = self:unpack_batch(batch, sim)
 
     local prediction = self.network:forward(input)
 
@@ -142,7 +179,7 @@ end
 -- a lot of instantiations of split_output
 function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
-    local input, this_future = unpack_batch(batch, sim)
+    local input, this_future = self:unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
 
@@ -173,6 +210,129 @@ function model:bp(batch, prediction, sim)
 
     collectgarbage()
     return self.theta.grad_params
+end
+
+function model:update_position(this, pred)
+    -- this: (mp.batch_size, mp.num_past, mp.object_dim)
+    -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
+    -- pred is with respect to this[{{},{-1}}]
+    ----------------------------------------------------------------------------
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local pnc = config_args.position_normalize_constant
+    local vnc = config_args.velocity_normalize_constant
+
+    local this, pred = this:clone(), pred:clone()
+    local lastpos = (this[{{},{-1},{px,py}}]:clone()*pnc)
+    local lastvel = (this[{{},{-1},{vx,vy}}]:clone()*vnc)  -- TODO: this is without subsampling make sure that this is correct!
+    local currpos = (pred[{{},{},{px,py}}]:clone()*pnc)
+    local currvel = (pred[{{},{},{vx,vy}}]:clone()*vnc)
+
+    -- this is length n+1
+    local pos = torch.cat({lastpos, currpos},2)
+    local vel = torch.cat({lastvel, currvel},2)
+
+    -- iteratively update pos through time. 
+    for i = 1,pos:size(2)-1 do
+        pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
+    end
+
+    -- normalize again
+    pos = pos/pnc
+    assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
+
+    pred[{{},{},{px,py}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
+    return pred
+end
+
+
+function model:update_angle(this, pred)
+    local a = config_args.si.a
+    local av = config_args.si.av
+    local anc = config_args.angle_normalize_constant
+
+    local this, pred = this:clone(), pred:clone()
+
+    -- TODO: use config!
+    local last_angle = this[{{},{-1},{a}}]:clone()*anc
+    local last_angular_velocity = this[{{},{-1},{av}}]:clone()*anc
+    local curr_angle = pred[{{},{},{a}}]:clone()*anc
+    local curr_angular_velocity = pred[{{},{},{av}}]:clone()*anc
+
+    -- this is length n+1
+    local ang = torch.cat({last_angle, curr_angle},2)
+    local ang_vel = torch.cat({last_angular_velocity, curr_angular_velocity},2)
+
+    -- iteratively update ang through time. 
+    for i = 1,ang:size(2)-1 do
+        ang[{{},{i+1},{}}] = ang[{{},{i},{}}] + ang_vel[{{},{i},{}}]  -- last dim=2
+    end
+
+    -- normalize again
+    ang = ang/config_args.angle_normalize_constant
+    assert(ang[{{},{1},{}}]:size(1) == pred:size(1))
+
+    pred[{{},{},{a}}] = ang[{{},{2,-1},{}}]  -- reassign back to pred
+    return pred
+end
+
+-- return a table of euc dist between this and each of context
+-- size is the number of items in context
+-- is this for the last timestep of this?
+-- TODO: later we can plot for all timesteps
+function model:get_euc_dist(this, context, t)
+    local num_context = context:size(2)
+    local t = t or -1  -- default use last timestep
+    local px = config_args.si.px
+    local py = config_args.si.py
+
+    local this_pos = this[{{},{t},{px, py}}]  -- TODO: use config args
+    local context_pos = context[{{},{},{t},{px, py}}]
+    local euc_dists = self:euc_dist(this_pos:repeatTensor(1,num_context,1), context_pos)
+    euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
+    for i=1,#euc_dists do
+        euc_dists[i] = torch.squeeze(euc_dists[i])
+    end
+    return euc_dists
+end
+
+-- b and a must be same size
+function model:euc_dist(a,b)
+    local diff = torch.squeeze(b - a) -- (bsize, num_context, 2)
+    local diffsq = torch.pow(diff,2)
+    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
+    return euc_dists
+end
+
+-- similar to update_position
+function model:get_velocity_direction(this, context, t)
+    local num_context = context:size(2)
+    local t = t or -1
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local pnc = config_args.position_normalize_constant
+    local vnc = config_args.velocity_normalize_constant
+
+    local this_pos_now = this[{{},{t},{px, py}}]
+    local context_pos_now = context[{{},{},{t},{px, py}}]
+
+    local context_vel = context[{{},{},{t},{vx, vy}}]
+    local context_pos_next = (context_pos_now:clone()*pnc + context_vel:clone()*vnc)/pnc
+
+    -- find difference in distances from this_pos_now to context_pos_now
+    -- and from his_pos_now to context_pos_next. This will be +/- number
+    local euc_dist_now = self:euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_now)
+    local euc_dist_next = self:euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_next)
+    local euc_dist_diff = euc_dist_next - euc_dist_now  -- (bsize, num_context, 1)  negative if context moving toward this
+    euc_dist_diffs = torch.split(euc_dist_diff, 1,2)  --convert to table of (bsize, 1, 1)
+    for i=1,#euc_dist_diffs do
+        euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
+    end
+    return euc_dist_diffs
 end
 
 -- simulate batch forward one timestep
