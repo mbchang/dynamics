@@ -38,7 +38,7 @@ cmd:option('-test_dataset_folders', '', 'dataset folder')
 
 -- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
--- cmd:option('-object_dim', 9, 'number of input features')
+cmd:option('-nbrhd', false, 'restrict attention to neighborhood')
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
@@ -86,6 +86,7 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
+    mp.nbrhd = true
     mp.lrdecayafter = 100
     mp.lrdecay_every = 10
     mp.lr = 3e-5

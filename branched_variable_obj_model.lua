@@ -9,8 +9,6 @@ require 'modules'
 
 nngraph.setDebug(true)
 
-nbrhd = false  -- later make this a flag!
-
 -- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
 function init_network(params)
@@ -154,7 +152,8 @@ function model:unpack_batch(batch, sim)
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     -- TODO! change nbrhd to flag
-    if nbrhd then  
+    if self.mp.nbrhd then  
+        print('hi')
         self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
