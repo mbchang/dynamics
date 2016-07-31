@@ -137,17 +137,56 @@ function model:unpack_batch(batch, sim)
     -- context: (bsize, mp.seq_length, dim)
     local input = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-
-        ------------------------------------------------------------------
-        -- here do the local neighborhood thing
-
-        ------------------------------------------------------------------
-
-
         table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
     end
 
+    ------------------------------------------------------------------
+    -- here do the local neighborhood thing
+    -- local neighbor_masks = self:select_neighbors(input)
+    -- input = self:apply_neighbor_mask(input, neighbor_masks)
+    ------------------------------------------------------------------
+
     return input, this_future
+end
+
+-- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
+-- out: {{indices of neighbors}, {indices of non-neighbors}}
+-- maybe I can output a mask? then I can rename this function to neighborhood_mask
+function model:select_neighbors(input)
+    local threshold = config_args.neighborhood*config_args.circle_radius*4
+    local neighbor_masks = {}
+    for i, pair in pairs(input) do
+        -- reshape
+        local this = pair[1]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+        local context = pair[2]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+
+        -- compute where they will be in the next timestep
+        local this_pos_next = self:update_position_one(this)
+        local context_pos_next = self:update_position_one(context)
+
+        -- compute euclidean distance between this_pos_next and context_pos_next
+        local euc_dist_next = torch.squeeze(self:euc_dist(this_pos_next, context_pos_next)) -- (bsize)
+        euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
+
+        -- find the indices in the batch for neighbors and non-neighbors
+        local neighbor_mask = euc_dist_next:le(threshold)  -- 1 if neighbor 0 otherwise
+        table.insert(neighbor_masks, neighbor_mask)
+    end
+
+    return neighbor_masks
+end
+
+-- we mask out this as well, because it is as if that interaction didn't happen
+function model:apply_neighbor_mask(input, neighbor_mask)
+    assert(#neighbor_mask == #input)
+    for i, pair in pairs(input) do 
+        if i == 2 then print(neighbor_mask[2]) end
+        if i == 2 then print(pair[2][{{},{1,4}}]) end
+        pair[1] = torch.cmul(pair[1],neighbor_mask[i]:view(mp.batch_size,1):expandAs(pair[1]):float())
+        pair[2] = torch.cmul(pair[2], neighbor_mask[i]:view(mp.batch_size,1):expandAs(pair[2]):float())
+        if i == 2 then print(pair[2][{{},{1,4}}]) end
+    end
+    return input
 end
 
 -- Input to fp
@@ -233,11 +272,6 @@ function model:bp(batch, prediction, sim)
     ------------------------------------------------------------------
 
 
-
-
-
-
-
     collectgarbage()
     return self.theta.grad_params
 end
@@ -264,7 +298,7 @@ function model:update_position(this, pred)
     local pos = torch.cat({lastpos, currpos},2)
     local vel = torch.cat({lastvel, currvel},2)
 
-    -- iteratively update pos through time. 
+    -- iteratively update pos through num_future 
     for i = 1,pos:size(2)-1 do
         pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
     end
@@ -330,15 +364,15 @@ end
 
 -- b and a must be same size
 function model:euc_dist(a,b)
-    local diff = torch.squeeze(b - a) -- (bsize, num_context, 2)
+    local diff = torch.squeeze(b - a, 3) -- (bsize, num_context, 2)
     local diffsq = torch.pow(diff,2)
     local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
     return euc_dists
 end
 
--- similar to update_position
-function model:get_velocity_direction(this, context, t)
-    local num_context = context:size(2)
+-- update position at time t to get position at t+1
+-- default t is the last t
+function model:update_position_one(state, t)
     local t = t or -1
     local px = config_args.si.px
     local py = config_args.si.py
@@ -347,11 +381,25 @@ function model:get_velocity_direction(this, context, t)
     local pnc = config_args.position_normalize_constant
     local vnc = config_args.velocity_normalize_constant
 
-    local this_pos_now = this[{{},{t},{px, py}}]
-    local context_pos_now = context[{{},{},{t},{px, py}}]
+    local pos_now, vel_now
+    if state:dim() == 4 then
+        pos_now = state[{{},{},{t},{px, py}}]
+        vel_now = state[{{},{},{t},{vx, vy}}]
+    else
+        pos_now = state[{{},{t},{px, py}}]
+        vel_now = state[{{},{t},{vx, vy}}]
+    end
 
-    local context_vel = context[{{},{},{t},{vx, vy}}]
-    local context_pos_next = (context_pos_now:clone()*pnc + context_vel:clone()*vnc)/pnc
+    local pos_next = (pos_now:clone()*pnc + vel_now:clone()*vnc)/pnc
+    return pos_next, pos_now
+end
+
+-- similar to update_position
+function model:get_velocity_direction(this, context, t)
+    local num_context = context:size(2)
+
+    local this_pos_next, this_pos_now = self:update_position_one(this)
+    local context_pos_next, context_pos_now = self:update_position_one(context)
 
     -- find difference in distances from this_pos_now to context_pos_now
     -- and from his_pos_now to context_pos_next. This will be +/- number
@@ -362,6 +410,7 @@ function model:get_velocity_direction(this, context, t)
     for i=1,#euc_dist_diffs do
         euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
     end
+    -- assert(false)
     return euc_dist_diffs
 end
 

@@ -13,16 +13,18 @@ local args = {
         maxwinsize=60,
         max_iters_per_json=100,  -- TODO
         subdivide=true,
+        circle_radius=60, -- only applicable to balls!
 
         -- world params
         cx=400, -- 2*cx is width of world
         cy=300 -- 2*cy is height of world
 
         -- all the paths
-
+        
     }
 
 args.position_normalize_constant = math.max(args.cx,args.cy)*2
 args.ossi = args.si.m[1]  -- object_state_start_index: CHANGE THIS WHEN YOU ADD STUFF TO RAW STATE INDICES!
+args.neighborhood = 1.5 -- number of object radii that we consider the neighborhood
 
 return args
