@@ -72,6 +72,7 @@
         if (_isBrowser) {
             // run the engine
             demo.runner = Engine.run(demo.engine);
+            demo.runner.isFixed = true
 
             // get container element for the canvas
             demo.container = document.getElementById('canvas-container');  // this requires a browser

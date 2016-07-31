@@ -588,8 +588,10 @@ if (!_isBrowser) {
     Example.engine = function(demo) {   // add the option to add options here, perhaps Engine.extend?
         // some example engine options
         var options = {
-            positionIterations: 6,
-            velocityIterations: 4,
+            // positionIterations: 6,
+            // velocityIterations: 4,
+            positionIterations: 100,
+            velocityIterations: 100,
             enableSleeping: false,
             metrics: { extended: true }
         };
@@ -1512,7 +1514,9 @@ if (!_isBrowser) {
             world = engine.world;
 
         var stack = Composites.stack(90, 50, 18, 15, 0, 0, function(x, y) {
-            return Bodies.rectangle(x, y, 35, 35);
+            return Bodies.rectangle(x, y, 35, 35);   
+        // var stack = Composites.stack(90, 50, 18, 4, 0, 0, function(x, y) {
+            // return Bodies.rectangle(x, y, 35, 35, {slop: 0});
         });
 
         World.add(world, stack);
@@ -1534,6 +1538,7 @@ if (!_isBrowser) {
 
         var stack = Composites.stack(100, 120, 25, 18, 0, 0, function(x, y) {
             return Bodies.rectangle(x, y, 25, 25);
+            // return Bodies.rectangle(x, y, 25, 25, {slop: 1});
         });
 
         World.add(world, stack);
@@ -1997,6 +2002,8 @@ if (!_isBrowser) {
                 self.engine.world.gravity.y = 0;
             }
 
+            // demo.runner.isFixed = true
+
             // function
             self.rand_pos = function() {
                 return rand_pos(
@@ -2101,8 +2108,6 @@ if (!_isBrowser) {
         Composites = Matter.Composites;
 
     Example.tower = function(demo, cmd_options) {
-        // TODO: make the bodies inelastic
-
         var Tower = {}
         Tower.create = function(options){
             var self = {}
@@ -2118,6 +2123,11 @@ if (!_isBrowser) {
                           size: 40 };
             self.engine = demo.engine,
             self.world = self.engine.world;
+
+            // console.log(self.engine)
+            // console.log(demo.runner)
+
+
             return self;
         }
         Tower.init = function(self){
