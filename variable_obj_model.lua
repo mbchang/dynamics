@@ -137,6 +137,13 @@ function model:unpack_batch(batch, sim)
     -- context: (bsize, mp.seq_length, dim)
     local input = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+
+        ------------------------------------------------------------------
+        -- here do the local neighborhood thing
+
+        ------------------------------------------------------------------
+
+
         table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
     end
 
@@ -206,7 +213,30 @@ function model:bp(batch, prediction, sim)
     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
-    self.network:backward(input,d_pred)  -- updates grad_params
+    -- self.network:backward(input,d_pred)  -- updates grad_params
+
+    ------------------------------------------------------------------
+    -- here do the local neighborhood thing: 
+    -- replace self.network:backward with decoder:backward, then zero out the
+    -- gradients for the far away ones and then continue to backprop. 
+    -- note that first you should test that doing backward in two steps works
+    -- before you think about doing the zeroing out
+
+    local decoder_in = self.network.modules[2].output
+    local d_decoder = self.network.modules[3]:backward(decoder_in, d_pred)
+    local caddtable_in = self.network.modules[1].output
+    local d_caddtable = self.network.modules[2]:backward(caddtable_in, d_decoder)
+    -- print(d_caddtable)  -- zero these out
+    -- assert(false)
+    local d_input = self.network.modules[1]:backward(input, d_caddtable)
+
+    ------------------------------------------------------------------
+
+
+
+
+
+
 
     collectgarbage()
     return self.theta.grad_params
