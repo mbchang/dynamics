@@ -224,7 +224,8 @@ function model:fp(params_, batch, sim)
     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
     local loss = loss_vel + loss_ang_vel
     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
-
+    print(self.network.modules[2])
+    assert(false)
     collectgarbage()
     return loss, prediction
 end
