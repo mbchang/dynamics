@@ -9,7 +9,7 @@ require 'modules'
 
 nngraph.setDebug(true)
 
-nbrhd = true  -- later make this a flag!
+nbrhd = false  -- later make this a flag!
 
 -- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
@@ -142,8 +142,16 @@ function model:unpack_batch(batch, sim)
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
-    -- local neighbor_masks = self:select_neighbors(input)
-    -- input = self:apply_neighbor_mask(input, neighbor_masks)
+    -- TODO! change nbrhd to flag
+    if nbrhd then  
+        self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
+    else
+        self.neighbor_masks = {}  -- don't mask out neighbors
+        for i=1,#input do
+            table.insert(self.neighbor_masks, torch.ones(mp.batch_size))
+        end
+    end
+    input = self:apply_neighbor_mask(input, self.neighbor_masks)
     ------------------------------------------------------------------
 
     return input, this_future
@@ -153,7 +161,7 @@ end
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
 -- maybe I can output a mask? then I can rename this function to neighborhood_mask
 function model:select_neighbors(input)
-    local threshold = config_args.neighborhood*config_args.circle_radius*4
+    local threshold = config_args.neighborhood*config_args.circle_radius
     local neighbor_masks = {}
     for i, pair in pairs(input) do
         -- reshape
@@ -169,7 +177,7 @@ function model:select_neighbors(input)
         euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
 
         -- find the indices in the batch for neighbors and non-neighbors
-        local neighbor_mask = euc_dist_next:le(threshold)  -- 1 if neighbor 0 otherwise
+        local neighbor_mask = euc_dist_next:le(threshold):float()  -- 1 if neighbor 0 otherwise
         table.insert(neighbor_masks, neighbor_mask)
     end
 
@@ -179,12 +187,14 @@ end
 -- we mask out this as well, because it is as if that interaction didn't happen
 function model:apply_neighbor_mask(input, neighbor_mask)
     assert(#neighbor_mask == #input)
-    for i, pair in pairs(input) do 
-        if i == 2 then print(neighbor_mask[2]) end
-        if i == 2 then print(pair[2][{{},{1,4}}]) end
-        pair[1] = torch.cmul(pair[1],neighbor_mask[i]:view(mp.batch_size,1):expandAs(pair[1]):float())
-        pair[2] = torch.cmul(pair[2], neighbor_mask[i]:view(mp.batch_size,1):expandAs(pair[2]):float())
-        if i == 2 then print(pair[2][{{},{1,4}}]) end
+    for i, x in pairs(input) do 
+        if type(x) == 'table' then
+            x[1] = torch.cmul(x[1],neighbor_mask[i]:view(mp.batch_size,1):expandAs(x[1]))
+            x[2] = torch.cmul(x[2], neighbor_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
+        else
+            x = torch.cmul(x, neighbor_mask[i]:view(mp.batch_size,1):expandAs(x):float())
+            input[i] = x -- it doesn't actually automatically mutate
+        end
     end
     return input
 end
@@ -265,8 +275,7 @@ function model:bp(batch, prediction, sim)
     local d_decoder = self.network.modules[3]:backward(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].output
     local d_caddtable = self.network.modules[2]:backward(caddtable_in, d_decoder)
-    print(d_caddtable)  -- zero these out
-    assert(false)
+    d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)
     local d_input = self.network.modules[1]:backward(input, d_caddtable)
 
     ------------------------------------------------------------------
