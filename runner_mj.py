@@ -46,12 +46,12 @@ def create_jobs(dry_run, mode, ext):
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
             {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n8_t60_ex50000'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n8_t60_ex50000'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n9_t60_ex50000'}", 'test_dataset_folders': "{'balls_n9_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000_m'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m'}"},
 
             ]
@@ -59,15 +59,16 @@ def create_jobs(dry_run, mode, ext):
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
-        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','') + '_lrdecay_every2500'
-        # for lr in [3e-4,1e-3,3e-3]:
-        #     job['lr'] = lr
-        # for model in ['cat']:
-        #     job['model'] = model
-        #     job['lr'] = 3e-5
-        # for num_past in [3,4,5,6,7,8,9,10]:
-        #     job['num_past'] = num_past
-        actual_jobs.append(copy.deepcopy(job))
+        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')# + '_lrdecay_every2500'
+        for model in ['bffobj']:
+            for nbrhd in [True, False]:  
+                for layers in [1,2]:
+                    for lr in [3e-4,1e-3,3e-3]:
+                        job['model'] = model
+                        job['nbrhd'] = nbrhd
+                        job['layers'] = layers
+                        job['lr'] = lr
+                        actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 
@@ -150,5 +151,5 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-# run_experiment(dry_run)
-sim(dry_run)
+run_experiment(dry_run)
+# sim(dry_run)

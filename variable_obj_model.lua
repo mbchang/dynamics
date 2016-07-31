@@ -420,7 +420,7 @@ function model:get_velocity_direction(this, context, t)
     -- find difference in distances from this_pos_now to context_pos_now
     -- and from his_pos_now to context_pos_next. This will be +/- number
     local euc_dist_now = self:euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_now)
-    local euc_dist_next = self:euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_next)
+    local euc_dist_next = self:euc_dist(this_pos_next:repeatTensor(1,num_context,1), context_pos_next)
     local euc_dist_diff = euc_dist_next - euc_dist_now  -- (bsize, num_context, 1)  negative if context moving toward this
     euc_dist_diffs = torch.split(euc_dist_diff, 1,2)  --convert to table of (bsize, 1, 1)
     for i=1,#euc_dist_diffs do

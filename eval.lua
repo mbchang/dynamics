@@ -540,6 +540,8 @@ function model_deps(modeltype)
             modeltype == 'ffobj' or
                     modeltype == 'gruobj' then
         M = require 'variable_obj_model'
+    elseif modeltype == 'bffobj' then
+        M = require 'branched_variable_obj_model'
     elseif modeltype == 'lstmtime' then
         M = require 'lstm_model'
     elseif modeltype == 'ff' then
@@ -552,8 +554,8 @@ end
 
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'sim' then
-    -- predict_simulate_all()
-    run_inspect_hidden_state() -- I'm just getting the hidden state here
+    predict_simulate_all()
+    -- run_inspect_hidden_state() -- I'm just getting the hidden state here
 elseif mp.mode == 'hid' then
     run_inspect_hidden_state()
 elseif mp.mode == 'b2i' then
