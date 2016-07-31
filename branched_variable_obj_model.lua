@@ -30,13 +30,20 @@ function init_network(params)
         layer = nn.Linear(params.rnn_dim, params.rnn_dim)
         sequencer_type = nn.Sequencer
         dcoef = 1
+    elseif params.model == 'bffobj' then
+        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
+        sequencer_type = nn.Sequencer
+        dcoef = 1
     else
         error('unknown model')
     end
 
     local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
-    local decoder = init_object_decoder(dcoef*params.rnn_dim, params.num_future,
-                                                            params.object_dim)
+    local decoder = init_object_decoder_with_identity(dcoef*params.rnn_dim, 
+                                                        params.layers,
+                                                        params.num_past, 
+                                                        params.num_future,
+                                                        params.object_dim)
 
     local step = nn.Sequential()
     step:add(encoder)
@@ -51,14 +58,16 @@ function init_network(params)
     local sequencer = sequencer_type(step)
     sequencer:remember('neither')
 
-    -- I think if I add: sequencer_type(sequencer), then it'd be able to go through time as well.
-    --
     local net = nn.Sequential()
-    net:add(sequencer)
-
+    local branches = nn.ParallelTable()
+    local pairwise = nn.Sequential()
+    pairwise:add(sequencer)
     -- input table of (bsize, 2*d_hid) of length seq_length
     -- output: tensor (bsize, 2*d_hid)
-    net:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
+    pairwise:add(nn.CAddTable())
+    branches:add(pairwise)
+    branches:add(nn.Identity())  -- for focus object identity
+    net:add(branches)
     net:add(decoder)
     return net
 end
@@ -100,6 +109,8 @@ function model.create(mp_, preload, model_path)
             self.identitycriterion:cuda()
         end
     end
+    -- print(self.network)
+    -- assert(false)
 
     self.theta = {}
     self.theta.params, self.theta.grad_params = self.network:getParameters()
@@ -132,7 +143,6 @@ function model:unpack_batch(batch, sim)
     assert(this_future:size(1) == mp.batch_size and
             this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
 
-
     -- here you have to create a table of tables
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
@@ -155,7 +165,7 @@ function model:unpack_batch(batch, sim)
     input = self:apply_neighbor_mask(input, self.neighbor_masks)
     ------------------------------------------------------------------
 
-    return input, this_future
+    return {input, this_past}, this_future
 end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
@@ -225,6 +235,7 @@ function model:fp(params_, batch, sim)
     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
     local loss = loss_vel + loss_ang_vel
     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
+
     collectgarbage()
     return loss, prediction
 end
@@ -264,6 +275,10 @@ function model:bp(batch, prediction, sim)
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
     -- self.network:backward(input,d_pred)  -- updates grad_params
 
+    --self.network.modules[1]: ParallelTable
+    --self.network.modules[1].modules[1]: pairwise
+    --self.network.modules[1].modules[2]: identity
+
     ------------------------------------------------------------------
     -- here do the local neighborhood thing: 
     -- replace self.network:backward with decoder:backward, then zero out the
@@ -271,12 +286,14 @@ function model:bp(batch, prediction, sim)
     -- note that first you should test that doing backward in two steps works
     -- before you think about doing the zeroing out
 
-    local decoder_in = self.network.modules[2].output
-    local d_decoder = self.network.modules[3]:backward(decoder_in, d_pred)
-    local caddtable_in = self.network.modules[1].output
-    local d_caddtable = self.network.modules[2]:backward(caddtable_in, d_decoder)
+    local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
+    local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
+    local caddtable_in = self.network.modules[1].modules[1].modules[1].output
+    local d_caddtable = self.network.modules[1].modules[1].modules[2]:backward(caddtable_in, d_decoder[1])
     d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)
-    local d_input = self.network.modules[1]:backward(input, d_caddtable)
+    local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
+    local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
+    -- d_input = {d_pairwise, d_identity}
 
     ------------------------------------------------------------------
 

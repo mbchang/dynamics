@@ -8,6 +8,8 @@ require 'data_utils'
 
 nngraph.setDebug(true)
 
+local mp = {cuda=false}
+
 function init_object_encoder(input_dim, rnn_inp_dim)
     assert(rnn_inp_dim % 2 == 0)
     local thisp     = nn.Identity()() -- (batch_size, input_dim)
@@ -45,24 +47,27 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     return nn.gModule({rnn_out}, {decoder_out})
 end
 
-function init_object_decoder_with_identity(rnn_hid_dim, num_future, object_dim)
-    -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
+function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, num_future, object_dim)
+    -- rnn_out (batch_size, rnn_hid_dim)
     local rnn_out = nn.Identity()()
+    local out_dim = num_future * object_dim
 
     ------------------------------------------------
     -- input branch to decoder
+    -- orig_state (batch_size, mp.num_past*mp.object_dim)
     local orig_state = nn.Identity()()
+    local decoder_in_dim = num_past*object_dim + rnn_hid_dim
 
     -- should I combine them first, or should I do a encoding then combine?
     -- I think I should just combine
     local decoder_in = nn.JoinTable(2)({orig_state, rnn_out})  -- TODO: figure out what dimension this is
 
     local decoder_preout, decoder_net
-    if mp.decoder_layers == 0 then
+    if num_layers == 0 then
         decoder_net = nn.Linear(decoder_in_dim, out_dim)
     else
-        local decoder_net = nn.Sequential()
-        for i=1,mp.num_layers do
+        decoder_net = nn.Sequential()
+        for i=1,num_layers do
             if i == 1 then 
                 decoder_net:add(nn.Linear(decoder_in_dim, rnn_hid_dim))
                 decoder_net:add(nn.ReLU())
@@ -78,9 +83,9 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_future, object_dim)
         end
     end
 
-    local out_dim = num_future * object_dim
-    local decoder_preout = decoder_net(rnn_out)
-    ------------------------------------------------
+    local decoder_preout = decoder_net(decoder_in)
+
+    -- ------------------------------------------------
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
                 {num_future, object_dim},{{1,4},{5,object_dim}})
@@ -90,58 +95,6 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_future, object_dim)
     local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
     local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
     return nn.gModule({orig_state, rnn_out}, {decoder_out})
-end
-
--- with a bidirectional lstm, no need to put a mask
--- however, you can have variable sequence length now!
-function init_network(params)
-    -- encoder produces: (bsize, rnn_inp_dim)
-    -- decoder expects (bsize, 2*rnn_hid_dim)
-
-    local layer, sequencer_type, dcoef
-    if params.model == 'lstmobj' then
-        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'gruobj' then
-        layer = nn.GRU(params.rnn_dim,params.rnn_dim)
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'ffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
-        sequencer_type = nn.Sequencer
-        dcoef = 1
-    else
-        error('unknown model')
-    end
-
-    local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
-    local decoder = init_object_decoder(dcoef*params.rnn_dim, params.num_future,
-                                                            params.object_dim)
-
-    local step = nn.Sequential()
-    step:add(encoder)
-    for i = 1,params.layers do
-        step:add(layer:clone())  -- same param initial, but weights not shared
-        step:add(nn.ReLU())
-        if mp.batch_norm then 
-            step:add(nn.BatchNormalization(params.rnn_dim))
-        end
-    end
-
-    local sequencer = sequencer_type(step)
-    sequencer:remember('neither')
-
-    -- I think if I add: sequencer_type(sequencer), then it'd be able to go through time as well.
-    --
-    local net = nn.Sequential()
-    net:add(sequencer)
-
-    -- input table of (bsize, 2*d_hid) of length seq_length
-    -- output: tensor (bsize, 2*d_hid)
-    net:add(nn.CAddTable())  -- add across the "timesteps" to sum contributions
-    net:add(decoder)
-    return net
 end
 
 
@@ -181,4 +134,9 @@ function split_tensor(dim, reshape, boundaries)
     return net
 end
 
+
+-- local rnn_out = torch.rand(5,50)
+-- local orig_state = torch.rand(5,22)
+-- local d = init_object_decoder_with_identity(50, 3, 2, 1, 11)
+-- print(d:forward{orig_state, rnn_out})
 

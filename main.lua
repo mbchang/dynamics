@@ -89,7 +89,7 @@ if mp.server == 'pc' then
     mp.lrdecayafter = 100
     mp.lrdecay_every = 10
     mp.lr = 3e-5
-    mp.model = 'ffobj'
+    mp.model = 'bffobj'
     mp.val_window = 5
     mp.val_eps = 1e-4
 	mp.seq_length = 10  -- for the concatenate model
@@ -113,6 +113,8 @@ local M
 
 if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
+elseif mp.model == 'bffobj' then 
+    M = require 'branched_variable_obj_model'
 elseif mp.model == 'cat' then 
     M = require 'concatenate'
 elseif mp.model == 'ind' then 
