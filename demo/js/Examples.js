@@ -1973,7 +1973,8 @@ if (!_isBrowser) {
     var World = Matter.World,
         Bodies = Matter.Bodies,
         Composites = Matter.Composites,
-        Body = Matter.Body;
+        Body = Matter.Body,
+        Common = Matter.Common;
 
     Example.balls = function(demo, cmd_options) {
         var Balls = {}
@@ -1984,8 +1985,8 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 3
-                options.variableMass = false
+                options.numObj = 5
+                options.variableMass = true
                 options.friction = false
             }
 
@@ -1993,7 +1994,8 @@ if (!_isBrowser) {
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                            variableMass: options.variableMass,
                            friction: options.friction,
-                           max_v0: 20,
+                           // max_v0: 20,
+                           max_v0: 10,
                            obj_radius: 60 };
 
             self.engine = demo.engine;
@@ -2014,12 +2016,12 @@ if (!_isBrowser) {
             // this is defined here
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = [1, 25] // let's just try mass of 20 for now
+                self.possible_masses = [1, 15] // let's just try mass of 20 for now
             } else {
                 self.possible_masses = [1]
             }
 
-            self.mass_colors = {'1':'#C7F464', '25':'#FF6B6B'}//, '40':'#4ECDC4'}
+            self.mass_colors = {'1':'#C7F464', '15':'#FF6B6B'}//, '40':'#4ECDC4'}
 
             return self
         };
@@ -2051,7 +2053,14 @@ if (!_isBrowser) {
 
                 let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
                                         self.params.obj_radius, body_opts)
+
+                body.render.fillStyle = self.mass_colors[self.m[i]]//'#4ECDC4'
+                body.render.strokeStyle = '#FFA500'// orange
+                body.render.lineWidth = 5
+
+
                 Body.setVelocity(body, self.v0[i])
+
 
                 // add body to world
                 World.add(self.engine.world, body);
@@ -2123,11 +2132,6 @@ if (!_isBrowser) {
                           size: 40 };
             self.engine = demo.engine,
             self.world = self.engine.world;
-
-            // console.log(self.engine)
-            // console.log(demo.runner)
-
-
             return self;
         }
         Tower.init = function(self){

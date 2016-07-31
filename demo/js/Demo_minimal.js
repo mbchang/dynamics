@@ -108,12 +108,12 @@
             renderOptions.hasBounds = false;
             renderOptions.showDebug = false;
             renderOptions.showBroadphase = false;
-            renderOptions.showBounds = true;
+            renderOptions.showBounds = false;
             renderOptions.showVelocity = false;
             renderOptions.showCollisions = false;
             renderOptions.showAxes = false;
             renderOptions.showPositions = false;
-            renderOptions.showAngleIndicator = true;
+            renderOptions.showAngleIndicator = false;
             renderOptions.showIds = false;
             renderOptions.showShadows = false;
             renderOptions.showVertexNumbers = false;
@@ -155,6 +155,11 @@
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
                 body.render.fillStyle = mass_colors[trajectories[id][i].mass]//'#4ECDC4'
+                body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
+                body.render.lineWidth = 5
+
+                console.log(body)
+
                 Body.setPosition(body, trajectories[id][i].position)
             }
 

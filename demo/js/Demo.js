@@ -389,12 +389,12 @@
             renderOptions.hasBounds = false;
             renderOptions.showDebug = false;
             renderOptions.showBroadphase = false;
-            renderOptions.showBounds = true;
-            renderOptions.showVelocity = true;
+            renderOptions.showBounds = false;
+            renderOptions.showVelocity = false;
             renderOptions.showCollisions = false;
-            renderOptions.showAxes = true;
-            renderOptions.showPositions = true;
-            renderOptions.showAngleIndicator = true;
+            renderOptions.showAxes = false;
+            renderOptions.showPositions = false;
+            renderOptions.showAngleIndicator = false;
             renderOptions.showIds = false;
             renderOptions.showShadows = false;
             renderOptions.showVertexNumbers = false;
