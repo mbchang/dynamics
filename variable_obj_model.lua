@@ -17,6 +17,13 @@ function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
 
+    local bias
+    if params.nbrhd then
+        bias = false
+    else
+        bias = true
+    end
+
     local layer, sequencer_type, dcoef
     if params.model == 'lstmobj' then
         layer = nn.LSTM(params.rnn_dim,params.rnn_dim)
@@ -27,7 +34,7 @@ function init_network(params)
         sequencer_type = nn.BiSequencer
         dcoef = 2
     elseif params.model == 'ffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
+        layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
         sequencer_type = nn.Sequencer
         dcoef = 1
     else

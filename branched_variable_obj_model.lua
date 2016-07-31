@@ -15,9 +15,11 @@ function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
 
+    local bias = not params.nbrhd
+
     local layer, sequencer_type, dcoef
     if params.model == 'lstmobj' then
-        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)
+        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)  -- NOTE
         sequencer_type = nn.BiSequencer
         dcoef = 2
     elseif params.model == 'gruobj' then
@@ -25,18 +27,18 @@ function init_network(params)
         sequencer_type = nn.BiSequencer
         dcoef = 2
     elseif params.model == 'ffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
+        layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
         sequencer_type = nn.Sequencer
         dcoef = 1
     elseif params.model == 'bffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim)
+        layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
         sequencer_type = nn.Sequencer
         dcoef = 1
     else
         error('unknown model')
     end
 
-    local encoder = init_object_encoder(params.input_dim, params.rnn_dim)
+    local encoder = init_object_encoder(params.input_dim, params.rnn_dim, bias)
     local decoder = init_object_decoder_with_identity(dcoef*params.rnn_dim, 
                                                         params.layers,
                                                         params.num_past, 
@@ -153,7 +155,6 @@ function model:unpack_batch(batch, sim)
     -- here do the local neighborhood thing
     -- TODO! change nbrhd to flag
     if self.mp.nbrhd then  
-        print('hi')
         self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
@@ -284,14 +285,37 @@ function model:bp(batch, prediction, sim)
     -- gradients for the far away ones and then continue to backprop. 
     -- note that first you should test that doing backward in two steps works
     -- before you think about doing the zeroing out
+    -- print(input[1][1][1])
+    -- for i=1,#input[1] do
+    --     for j=1,2 do
+    --         print(i,j)
+    --         print(input[1][i][j]:norm())
+    --         print(self.network.modules[1].modules[1].modules[1].output[i][j]:norm())  -- the sequencer's output for zero input is not 0!
+    --     end
+    -- end
+    -- ok, so the input norm is all 0!
+    -- p = self.network.modules[1].modules[1].modules[1].modules[1].modules[1].modules[1]:parameters()
+    -- print(p)
+    -- print(p[1]) -- weights 1
+    -- print(p[2])  -- bias 1
+    -- print(p[3])  -- weights 2
+    -- print(p[4]) -- bias 2
+    -- -- turns out that this is nonzero because of bias
+    -- print(self.network.modules[1].modules[1].modules[1].modules[1].modules[1].modules[1].output)  -- this is nonzero because of ReLU?
+
 
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
+    -- print(decoder_in[1])
     local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].modules[1].modules[1].output
+    -- print(caddtable_in[1])  -- 0 because bias is 0
     local d_caddtable = self.network.modules[1].modules[1].modules[2]:backward(caddtable_in, d_decoder[1])
-    d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)
+    d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
+    -- print(d_caddtable[1])
     local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
     local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
+    -- print(d_identity)
+    -- assert(false)
     -- d_input = {d_pairwise, d_identity}
 
     ------------------------------------------------------------------

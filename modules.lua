@@ -10,16 +10,16 @@ nngraph.setDebug(true)
 
 local mp = {cuda=false}
 
-function init_object_encoder(input_dim, rnn_inp_dim)
+function init_object_encoder(input_dim, rnn_inp_dim, bias)
     assert(rnn_inp_dim % 2 == 0)
     local thisp     = nn.Identity()() -- (batch_size, input_dim)
     local contextp  = nn.Identity()() -- (batch_size, partilce_dim)
 
     -- (batch_size, rnn_inp_dim/2)
     local thisp_out     = nn.ReLU()
-                            (nn.Linear(input_dim, rnn_inp_dim/2)(thisp))
+                            (nn.Linear(input_dim, rnn_inp_dim/2, bias)(thisp))
     local contextp_out  = nn.ReLU()
-                            (nn.Linear(input_dim, rnn_inp_dim/2)(contextp))
+                            (nn.Linear(input_dim, rnn_inp_dim/2, bias)(contextp))
 
     -- Concatenate
     -- (batch_size, rnn_inp_dim)
