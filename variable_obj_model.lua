@@ -265,8 +265,8 @@ function model:bp(batch, prediction, sim)
     local d_decoder = self.network.modules[3]:backward(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].output
     local d_caddtable = self.network.modules[2]:backward(caddtable_in, d_decoder)
-    -- print(d_caddtable)  -- zero these out
-    -- assert(false)
+    print(d_caddtable)  -- zero these out
+    assert(false)
     local d_input = self.network.modules[1]:backward(input, d_caddtable)
 
     ------------------------------------------------------------------
