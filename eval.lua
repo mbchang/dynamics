@@ -47,7 +47,7 @@ cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
 -- cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-ns', 3, 'number of test batches')
-cmd:option('-steps', 1, 'steps to simulate')
+cmd:option('-steps', 58, 'steps to simulate')
 cmd:text()
 
 -- parse input params
@@ -466,9 +466,9 @@ function inspect_hidden_state(dataloader, params_)
 
     -- now, plot euc_dist_neg_vel vs norm_neg_vel and euc_dist_pos_vel vs norm_pos_vel
 
-    print(all_euc_dist:norm())
-    print(all_euc_dist_diff:norm())
-    print(all_effects_norm:norm())
+    print('all_euc_dist:norm()', all_euc_dist:norm())
+    print('all_euc_dist_diff:norm()', all_euc_dist_diff:norm())
+    print('all_effects_norm:norm()', all_effects_norm:norm())
 
     local fname = 'hidden_state_all_testfolders'
     torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
@@ -601,7 +601,7 @@ function getLastSnapshot(network_name)
                                 " | grep -i epoch | head -n 1")
     local status, result = pcall(function()
                 return res_file:read():match( "^%s*(.-)%s*$" ) end)
-    print(result)
+    print('Last Snapshot: '..result)
     res_file:close()
     if not status then
         return false
@@ -611,12 +611,11 @@ function getLastSnapshot(network_name)
 end
 
 function run_inspect_hidden_state()
-    print(mp.name)
-    print(string.gsub(mp.name,"'","\'"))
+    -- print(mp.name)
 
     local snapshot = getLastSnapshot(mp.name)
     local snapshotfile = mp.savedir ..'/'..snapshot
-    print(snapshotfile)
+    print('Snapshot file: '..snapshotfile)
     local checkpoint = torch.load(snapshotfile)
 
     local saved_args = torch.load(mp.savedir..'/args.t7')
@@ -626,13 +625,12 @@ function run_inspect_hidden_state()
     model_deps(mp.model)
     inittest(true, snapshotfile, {sim=false})  -- assuming the mp.savedir doesn't change
 
-    print(inspect_hidden_state(test_loader, checkpoint.model.theta.params, true, mp.steps))
+    inspect_hidden_state(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
 
 
 function predict_simulate_all()
-    print(mp.name)
-    print(string.gsub(mp.name,"'","\'"))
+    -- print(mp.name)
 
     local snapshot = getLastSnapshot(mp.name)
     local snapshotfile = mp.savedir ..'/'..snapshot
@@ -645,7 +643,7 @@ function predict_simulate_all()
 
     model_deps(mp.model)
     inittest(true, snapshotfile, {sim=true})  -- assuming the mp.savedir doesn't change
-    print(simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps))
+    simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
 
 function predict_b2i()

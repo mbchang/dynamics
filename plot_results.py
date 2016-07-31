@@ -93,8 +93,10 @@ def plot_4balls():
 
 
 def plot_hid_state(h5_file_folder):
-    fname = 'hidden_state_all_testfolders'
+
+    fname = 'hidden_state_all_testfolders.h5'
     # TODO! The constants here are hard coded!!!
+    print 'Reading', os.path.join(h5_file_folder, fname)
     data = u.load_dict_from_hdf5(os.path.join(h5_file_folder, fname))
     # keys: 'euc_dist', 'euc_dist_diff', 'effects_norm'
     all_euc_dist = data['euc_dist']
@@ -124,13 +126,25 @@ def plot_hid_state(h5_file_folder):
     # plot_hid_state(pp.infolder..'/'..fname..'_away.png', euc_dist_pos_vel, norm_pos_vel)
 
 def plot_hid_state_helper(outfile, x, y, c):
-    plt.scatter(x,y, c=c, marker='.')
+    # normalize c
+    c = np.abs(c)  # care about magnitude, since we already split into positive and negative
+    c_range = np.max(c) - np.min(c)  # get range
+    c /= c_range  # normalize range 1
+    c -= np.min(c)  # note that min is different, shift to [0,1]
+
+    colors = plt.cm.jet(np.squeeze(c))
+    m = plt.cm.ScalarMappable(cmap=plt.cm.jet)
+    m.set_array(colors)
+    sc = plt.scatter(x,y, s=0.05, c=colors, marker='o', edgecolor=colors)
+    plt.colorbar(m)
     plt.legend()
     plt.title('Pairwise Hidden State as a Function of Distance from Focus Object')
     plt.xlabel('Euclidean Distance')
     plt.ylabel('Hidden State Norm')
-    # plt.savefig(outfile)
-    plt.show()
+    plt.savefig(outfile)
+    plt.close()
+    # plt.show()
+    print'Saved plot to', outfile
 
 
 
@@ -141,4 +155,5 @@ if __name__ == "__main__":
     # plot_2balls()
     # plot_3balls()
     # plot_4balls()
-    plot_hid_state('logs/balls_n3_t60_ex20,balls_n6_t60_ex20,balls_n5_t60_ex20/hidden_state_all_testfolders.h5')
+    # plot_hid_state('logs/balls_n3_t60_ex20,balls_n6_t60_ex20,balls_n5_t60_ex20')
+    plot_hid_state('opmjlogs/balls_n3_t60_ex50000__balls_n3_t60_ex50000')
