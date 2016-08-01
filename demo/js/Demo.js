@@ -72,8 +72,7 @@
 
         if (_isBrowser) {
             // run the engine
-            // demo.runner = Engine.run(demo.engine);
-            // demo.runner = Runner.create()
+            demo.runner = Engine.run(demo.engine);
             demo.runner.isFixed = true
 
             // // get container element for the canvas
@@ -87,15 +86,6 @@
 
             // run the renderer
             Render.run(demo.render);
-
-
-            // var pcanvas = PImage.make(300, 300);
-            // demo.render = Render.create({
-            //     element: 17,
-            //     canvas: pcanvas,
-            //     engine: demo.engine,
-            // })
-
 
             // add a mouse controlled constraint
             demo.mouseConstraint = MouseConstraint.create(demo.engine, {
@@ -115,57 +105,16 @@
                 demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
         } else {
             // run the engine
-            // demo.runner = Engine.run(demo.engine);
             demo.runner = Runner.create()
             demo.runner.isFixed = true
-
-            // // // get container element for the canvas
-            // demo.container = document.getElementById('canvas-container');  // this requires a browser
-
-            // // // create a debug renderer
-            // demo.render = Render.create({
-            //     element: demo.container,
-            //     engine: demo.engine,
-            // });
-
-            // run the renderer
-            // Render.run(demo.render);
-
             var pcanvas = PImage.make(800, 600);  // 693
             pcanvas.style = {}  
             console.log(pcanvas)
             demo.render = Render.create({
-                element: 17,
+                element: 17, // dummy
                 canvas: pcanvas,
                 engine: demo.engine,
             })
-
-            // var i = 0
-            // function f() {
-            //     Runner.tick(demo.runner, demo.engine);
-            //     Render.world(demo.render)
-            //     setTimeout(f,10)
-            // }
-            // f();
-
-
-
-            // add a mouse controlled constraint
-            // demo.mouseConstraint = MouseConstraint.create(demo.engine, {
-            //     element: demo.render.canvas
-            // });
-
-            // World.add(demo.engine.world, demo.mouseConstraint);
-
-            // pass mouse to renderer to enable showMousePosition
-            // demo.render.mouse = demo.mouseConstraint.mouse;
-
-            // set up demo interface (see end of this file)
-            // Demo.initControls(demo);
-
-            // get the scene function name from hash
-            // if (window.location.hash.length !== 0)
-            //     demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
         }
 
         // set up a scene with bodies
@@ -507,6 +456,8 @@
 
             sim_options.steps = 2
 
+            var canvases = []
+
             // run the engine
             for (let i = 0; i < sim_options.steps; i++) {
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -520,14 +471,12 @@
                 demo.render.context.fillStyle = 'white'
                 demo.render.context.fillRect(0,0,800,600)
                 Render.world(demo.render)
-                // console.log(demo.render.canvas)
+
                 let filename = 'out'+i+'_'+s+'.png'
                 PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
                     console.log("wrote out the png file to out"+filename);
                 });
-                // var pcanvas = PImage.make(800, 800);
-                // pcanvas.style = {} 
-                // demo.render.canvas = pcanvas
+                canvases.push(demo.render.canvas)
             }
 
             trajectories[s] = trajectory;
@@ -581,13 +530,6 @@
                                 );
             console.log('Wrote to ' + sim_file)
         }
-
-        //pureimage stuff
-        // var img1 = PImage.make(100,50);
-        // var ctx = img1.getContext('2d');
-        // console.log(ctx)
-        // // ctx.setFillStyleRGBA(255,0,0, 0.5);
-        // ctx.fillRect(0,0,100,100);
     };
 
     Demo.process_cmd_options = function() {
