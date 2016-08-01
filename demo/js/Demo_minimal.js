@@ -25,6 +25,7 @@
         var assert = require('assert')
         var utils = require('../../utils')
         var sleep = require('sleep')
+        var PImage = require('pureimage');
         require('./Examples')
         var env = process.argv.slice(2)[0]
         if (env == null)
@@ -68,7 +69,7 @@
         // demo.cx = 400;
         // demo.cy = 300;
 
-        config.cx = 400;
+        config.cx = 300;
         config.cy = 300;
 
         demo.cx = config.cx;
@@ -100,6 +101,9 @@
             // var buf = new Buffer(data, 'base64');
             // fs.writeFile('image.png', buf);
             // document.write('<img src="'+img+'"/>');  // how do I save this?
+            PImage.encodePNG(img, fs.createWriteStream('out.png'), function(err) {
+            console.log("wrote out the png file to out.png");
+        });
         });
 
         if (demo.render) {

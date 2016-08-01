@@ -1985,7 +1985,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 5
+                options.numObj = 2
                 options.variableMass = true
                 options.friction = false
             }

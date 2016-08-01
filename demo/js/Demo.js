@@ -25,6 +25,7 @@
         var utils = require('../../utils');
         var mkdirp = require('mkdirp');
         var fs = require('fs');
+        var PImage = require('pureimage');
         // var ProgressBar = require('node-progress-bars');
         require('./Examples')
         module.exports = Demo;
@@ -71,13 +72,14 @@
 
         if (_isBrowser) {
             // run the engine
-            demo.runner = Engine.run(demo.engine);
+            // demo.runner = Engine.run(demo.engine);
+            // demo.runner = Runner.create()
             demo.runner.isFixed = true
 
-            // get container element for the canvas
+            // // get container element for the canvas
             demo.container = document.getElementById('canvas-container');  // this requires a browser
 
-            // create a debug renderer
+            // // create a debug renderer
             demo.render = Render.create({
                 element: demo.container,
                 engine: demo.engine,
@@ -85,6 +87,15 @@
 
             // run the renderer
             Render.run(demo.render);
+
+
+            // var pcanvas = PImage.make(300, 300);
+            // demo.render = Render.create({
+            //     element: 17,
+            //     canvas: pcanvas,
+            //     engine: demo.engine,
+            // })
+
 
             // add a mouse controlled constraint
             demo.mouseConstraint = MouseConstraint.create(demo.engine, {
@@ -102,6 +113,59 @@
             // get the scene function name from hash
             if (window.location.hash.length !== 0)
                 demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
+        } else {
+            // run the engine
+            // demo.runner = Engine.run(demo.engine);
+            demo.runner = Runner.create()
+            demo.runner.isFixed = true
+
+            // // // get container element for the canvas
+            // demo.container = document.getElementById('canvas-container');  // this requires a browser
+
+            // // // create a debug renderer
+            // demo.render = Render.create({
+            //     element: demo.container,
+            //     engine: demo.engine,
+            // });
+
+            // run the renderer
+            // Render.run(demo.render);
+
+            var pcanvas = PImage.make(800, 600);  // 693
+            pcanvas.style = {}  
+            console.log(pcanvas)
+            demo.render = Render.create({
+                element: 17,
+                canvas: pcanvas,
+                engine: demo.engine,
+            })
+
+            // var i = 0
+            // function f() {
+            //     Runner.tick(demo.runner, demo.engine);
+            //     Render.world(demo.render)
+            //     setTimeout(f,10)
+            // }
+            // f();
+
+
+
+            // add a mouse controlled constraint
+            // demo.mouseConstraint = MouseConstraint.create(demo.engine, {
+            //     element: demo.render.canvas
+            // });
+
+            // World.add(demo.engine.world, demo.mouseConstraint);
+
+            // pass mouse to renderer to enable showMousePosition
+            // demo.render.mouse = demo.mouseConstraint.mouse;
+
+            // set up demo interface (see end of this file)
+            // Demo.initControls(demo);
+
+            // get the scene function name from hash
+            // if (window.location.hash.length !== 0)
+            //     demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
         }
 
         // set up a scene with bodies
@@ -410,7 +474,7 @@
     };
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
-    Demo.simulate = function(demo, num_samples, sim_options) {
+    Demo.simulate = function(demo, num_samples, sim_options, batch) {
         var trajectories = []
 
         // var bar = new ProgressBar({
@@ -418,7 +482,7 @@
         //     total : num_samples
         // });
 
-        for (s = 0; s < num_samples; s ++) {
+        for (let s = 0; s < num_samples; s++) {
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
@@ -441,6 +505,8 @@
 
             assert(entity_ids.length == scenario.params.num_obj)
 
+            sim_options.steps = 2
+
             // run the engine
             for (let i = 0; i < sim_options.steps; i++) {
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -449,11 +515,19 @@
                         let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
-                    // console.log(trajectory[id][i])
-                    // assert(false)
                 }
                 Engine.update(scenario.engine);
-                // I should also put a render.update here too
+                demo.render.context.fillStyle = 'white'
+                demo.render.context.fillRect(0,0,800,600)
+                Render.world(demo.render)
+                // console.log(demo.render.canvas)
+                let filename = 'out'+i+'_'+s+'.png'
+                PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
+                    console.log("wrote out the png file to out"+filename);
+                });
+                // var pcanvas = PImage.make(800, 800);
+                // pcanvas.style = {} 
+                // demo.render.canvas = pcanvas
             }
 
             trajectories[s] = trajectory;
@@ -501,13 +575,19 @@
         const chunks = chunk(sim_options.samples, max_iters_per_json)
         for (let j=0; j < chunks.length; j++){
             let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
-            let trajectories = Demo.simulate(demo, chunks[j], sim_options);
+            let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
             jsonfile.writeFileSync(sim_file,
                                 {trajectories:trajectories, config:sim_options}
-                                // {spaces: 2}
                                 );
             console.log('Wrote to ' + sim_file)
         }
+
+        //pureimage stuff
+        // var img1 = PImage.make(100,50);
+        // var ctx = img1.getContext('2d');
+        // console.log(ctx)
+        // // ctx.setFillStyleRGBA(255,0,0, 0.5);
+        // ctx.fillRect(0,0,100,100);
     };
 
     Demo.process_cmd_options = function() {
