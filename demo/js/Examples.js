@@ -1276,6 +1276,7 @@ if (!_isBrowser) {
             Events.on(stack.bodies[i], 'sleepStart sleepEnd', function(event) {
                 var body = this;
                 console.log('body id', body.id, 'sleeping:', body.isSleeping);
+                // console.log(body.velocity)
             });
         }
 
@@ -2050,7 +2051,9 @@ if (!_isBrowser) {
                                  mass: self.m[i],
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
-                                 label: "Entity"}
+                                 label: "Entity",
+                                 // continuous: 1
+                             }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
                     body_opts.frictionAir = 0;
@@ -2066,6 +2069,10 @@ if (!_isBrowser) {
 
 
                 Body.setVelocity(body, self.v0[i])
+
+                // console.log(body.continuous+0.01)
+                // console.log(body)
+                // assert(false)
 
 
                 // add body to world
@@ -2152,7 +2159,7 @@ if (!_isBrowser) {
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
-            var variance = 80
+            var variance = 100  // 80
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 y = y - self.params.size

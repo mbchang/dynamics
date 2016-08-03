@@ -77,6 +77,7 @@
             // run the engine
             demo.runner = Engine.run(demo.engine);
             demo.runner.isFixed = true
+            demo.runner.delta = 1
 
             // // get container element for the canvas
             demo.container = document.getElementById('canvas-container');  // this requires a browser
@@ -478,8 +479,6 @@
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
                 }
-                // console.log(scenario.engine)
-                // assert(false)
 
                 Engine.update(scenario.engine);
 
