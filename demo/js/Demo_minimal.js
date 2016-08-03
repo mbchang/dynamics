@@ -108,7 +108,7 @@
 
         if (demo.render) {
             var renderOptions = demo.render.options;
-            renderOptions.wireframes = false;
+            renderOptions.wireframes = true;
             renderOptions.hasBounds = false;
             renderOptions.showDebug = false;
             renderOptions.showBroadphase = false;
@@ -139,7 +139,7 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[0]  // extra 0 for batch mode
+        var trajectories = data[3]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 
@@ -167,9 +167,9 @@
                 body.render.lineWidth = 5
 
                 // console.log(body)
-
                 Body.setPosition(body, trajectories[id][i].position)
                 Body.setVelocity(body, trajectories[id][i].velocity)
+                Body.setAngle(body, trajectories[id][i].angle)
                 if (trajectories[id][i].mass == 1) {
                     console.log(trajectories[id][i].velocity)
                     console.log(trajectories[id][i].position)
