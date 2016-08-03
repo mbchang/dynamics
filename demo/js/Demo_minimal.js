@@ -69,7 +69,7 @@
         // demo.cx = 400;
         // demo.cy = 300;
 
-        config.cx = 300;
+        config.cx = 400;
         config.cy = 300;
 
         demo.cx = config.cx;

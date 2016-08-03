@@ -66,6 +66,8 @@
         var demo = Demo.create(options);
         Matter.Demo._demo = demo;
 
+        demo.cmd_options = options
+
         // create an example engine (see /examples/engine.js)
         demo.engine = Example.engine(demo);
 
@@ -101,24 +103,27 @@
             Demo.initControls(demo);
 
             // get the scene function name from hash
-            if (window.location.hash.length !== 0)
+            if (window.location.hash.length !== 0) {
                 demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
+            }
         } else {
-            // run the engine
-            demo.runner = Runner.create()
-            demo.runner.isFixed = true
-            var pcanvas = PImage.make(800, 600);  // 693
-            pcanvas.style = {}  
-            console.log(pcanvas)
-            demo.render = Render.create({
-                element: 17, // dummy
-                canvas: pcanvas,
-                engine: demo.engine,
-            })
+            if (options.image) {
+                // run the engine
+                demo.runner = Runner.create()
+                demo.runner.isFixed = true
+                var pcanvas = PImage.make(800, 600);  // 693
+                pcanvas.style = {}  
+                console.log(pcanvas)
+                demo.render = Render.create({
+                    element: 17, // dummy
+                    canvas: pcanvas,
+                    engine: demo.engine,
+                })
+            }
         }
 
         // set up a scene with bodies
-        Demo.reset(demo);
+        Demo.reset(demo);  // somehow the canvas dims are (600, 800)
 
         if (_isBrowser)
             Demo.setScene(demo, demo.sceneName);
@@ -378,8 +383,17 @@
         demo.width = 2*demo.cx
         demo.height = 2*demo.cy
 
+        // this is correct
         demo.engine.world.bounds = { min: { x: 0, y: 0 },
-                                    max: { x: demo.width, y: demo.height }}
+                                    max: { x: demo.width, y: demo.height }} 
+
+        if (demo.cmd_options.image) {
+            demo.render.hasBounds = true
+            demo.render.options.height = demo.height
+            demo.render.options.width = demo.width
+            demo.render.canvas.height = demo.height
+            demo.render.canvas.width = demo.width
+        }
 
         var world_border = Composite.create({label:'Border'});
 
@@ -454,10 +468,6 @@
 
             assert(entity_ids.length == scenario.params.num_obj)
 
-            sim_options.steps = 2
-
-            var canvases = []
-
             // run the engine
             for (let i = 0; i < sim_options.steps; i++) {
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -467,18 +477,22 @@
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
                 }
+
                 Engine.update(scenario.engine);
-                demo.render.context.fillStyle = 'white'
-                demo.render.context.fillRect(0,0,800,600)
-                Render.world(demo.render)
 
-                let filename = 'out'+i+'_'+s+'.png'
-                PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
-                    console.log("wrote out the png file to out"+filename);
-                });
-                canvases.push(demo.render.canvas)
+                if (sim_options.image) {
+                    demo.render.context.fillStyle = 'white'
+                    demo.render.context.fillRect(0,0,demo.width,demo.height)
+                }
+
+                if (sim_options.image) {
+                    Render.world(demo.render)
+                    let filename = 'out'+i+'_'+s+'.png'  // TODO! rename
+                    PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
+                        console.log("wrote out the png file to out"+filename);
+                    });
+                }
             }
-
             trajectories[s] = trajectory;
         }
         return trajectories;
@@ -570,6 +584,12 @@
                     description: 'include variable mass',
                     required: false
                 }, {
+                    option: 'image',
+                    alias: 'i',
+                    type: 'Boolean',
+                    description: 'include image frames',
+                    default: false // TODO should this be int or boolean?
+                }, {
                     option: 'gravity',
                     alias: 'g',
                     type: 'Boolean',
@@ -607,9 +627,7 @@
     // main
     if (!_isBrowser) {
         const cmd_options = Demo.process_cmd_options();
-        var demo = Demo.init()  // don't set the scene name yet
-
-        // Demo.simulate(demo, cmd_options);
+        var demo = Demo.init(cmd_options)  // don't set the scene name yet
         Demo.generate_data(demo, cmd_options);
     }
 })();

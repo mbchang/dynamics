@@ -590,8 +590,8 @@ if (!_isBrowser) {
         var options = {
             // positionIterations: 6,
             // velocityIterations: 4,
-            positionIterations: 100,
-            velocityIterations: 100,
+            positionIterations: 50,
+            velocityIterations: 50,
             enableSleeping: false,
             metrics: { extended: true }
         };
@@ -1985,7 +1985,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 2
+                options.numObj = 5
                 options.variableMass = true
                 options.friction = false
             }
@@ -1994,9 +1994,16 @@ if (!_isBrowser) {
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                            variableMass: options.variableMass,
                            friction: options.friction,
-                           // max_v0: 20,
-                           max_v0: 10,
+                          //  // max_v0: 10,
+                          // max_v0: 5,
                            obj_radius: 60 };
+
+            if (options.variableMass) {
+                self.params.max_v0 = 5
+            } else {
+                self.params.max_v0 = 20
+            }
+            // console.log(self.params.max_v0)
 
             self.engine = demo.engine;
             self.engine.world.gravity.x = 0;
@@ -2016,12 +2023,12 @@ if (!_isBrowser) {
             // this is defined here
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = [1, 15] // let's just try mass of 20 for now
+                self.possible_masses = [1, 15, 30] // let's just try mass of 20 for now
             } else {
                 self.possible_masses = [1]
             }
 
-            self.mass_colors = {'1':'#C7F464', '15':'#FF6B6B'}//, '40':'#4ECDC4'}
+            self.mass_colors = {'1':'#C7F464', '15':'#FF6B6B', '30':'#4ECDC4'}
 
             return self
         };
@@ -2036,7 +2043,7 @@ if (!_isBrowser) {
             // generate massses
             self.m = initialize_masses(self.params.num_obj, self.possible_masses)
 
-            console.log(self.m)
+            // console.log(self.m)
 
             // set positions
             for (i = 0; i < self.params.num_obj; i++) {
