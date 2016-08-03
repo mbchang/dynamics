@@ -2,6 +2,7 @@
 var _isBrowser = typeof window !== 'undefined' && window.location,
     // Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
     Matter = _isBrowser ? window.Matter : require('matter-js');  // how do I modify window.Matter? Also it looks like I need to download matter-dev.js!
+    // Matter = _isBrowser ? window.Matter : require('./ccd-matter')
 
 var Example = {};
 Matter.Example = Example;
@@ -590,8 +591,8 @@ if (!_isBrowser) {
         var options = {
             // positionIterations: 6,
             // velocityIterations: 4,
-            positionIterations: 50,
-            velocityIterations: 50,
+            positionIterations: 100,
+            velocityIterations: 100,
             enableSleeping: false,
             metrics: { extended: true }
         };
@@ -1999,7 +2000,7 @@ if (!_isBrowser) {
                            obj_radius: 60 };
 
             if (options.variableMass) {
-                self.params.max_v0 = 5
+                self.params.max_v0 = 15
             } else {
                 self.params.max_v0 = 20
             }
@@ -2042,8 +2043,6 @@ if (!_isBrowser) {
 
             // generate massses
             self.m = initialize_masses(self.params.num_obj, self.possible_masses)
-
-            // console.log(self.m)
 
             // set positions
             for (i = 0; i < self.params.num_obj; i++) {

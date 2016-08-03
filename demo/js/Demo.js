@@ -15,6 +15,7 @@
 
     // var Matter = _isBrowser ? window.Matter : require('../../build/matter-dev.js');
     var Matter = _isBrowser ? window.Matter : require('matter-js');
+    // var Matter = _isBrowser ? window.Matter : require('./ccd-matter')
 
     var Demo = {};
     Matter.Demo = Demo;
@@ -477,6 +478,8 @@
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
                 }
+                // console.log(scenario.engine)
+                // assert(false)
 
                 Engine.update(scenario.engine);
 

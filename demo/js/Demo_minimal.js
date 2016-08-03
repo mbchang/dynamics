@@ -25,7 +25,7 @@
         var assert = require('assert')
         var utils = require('../../utils')
         var sleep = require('sleep')
-        var PImage = require('pureimage');
+        // var PImage = require('pureimage');
         require('./Examples')
         var env = process.argv.slice(2)[0]
         if (env == null)
@@ -101,9 +101,9 @@
             // var buf = new Buffer(data, 'base64');
             // fs.writeFile('image.png', buf);
             // document.write('<img src="'+img+'"/>');  // how do I save this?
-            PImage.encodePNG(img, fs.createWriteStream('out.png'), function(err) {
-            console.log("wrote out the png file to out.png");
-        });
+            // PImage.encodePNG(img, fs.createWriteStream('out.png'), function(err) {
+            // console.log("wrote out the png file to out.png");
+            // });
         });
 
         if (demo.render) {
@@ -131,7 +131,7 @@
             }
         }
 
-        var mass_colors = {'1':'#C7F464', '25':'#FF6B6B'}// TODO eventually call Example[config.env].mass_colors
+        var mass_colors = {'1':'#C7F464', '15':'#FF6B6B', '30':'#4ECDC4'}// TODO eventually call Example[config.env].mass_colors
 
 
         Example[config.env](demo, config)
@@ -166,15 +166,20 @@
                 }
                 body.render.lineWidth = 5
 
-                console.log(body)
+                // console.log(body)
 
                 Body.setPosition(body, trajectories[id][i].position)
+                Body.setVelocity(body, trajectories[id][i].velocity)
+                if (trajectories[id][i].mass == 1) {
+                    console.log(trajectories[id][i].velocity)
+                    console.log(trajectories[id][i].position)
+                }
             }
 
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 100 );
+                setTimeout( f, 200 );
             }
         }
         f();
