@@ -446,8 +446,12 @@
         //     schema: ' [:bar] :current/:total :percent :elapseds :etas',
         //     total : num_samples
         // });
+        demo.max_velocity = 60; // TODO later move this to a config
+        let s = 0;
+        while (s < num_samples) {
 
-        for (let s = 0; s < num_samples; s++) {
+        // }
+        // for (let s = 0; s < num_samples; s++) {
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
@@ -470,6 +474,7 @@
 
             assert(entity_ids.length == scenario.params.num_obj)
 
+            var should_break = false
             // run the engine
             for (let i = 0; i < sim_options.steps; i++) {
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
@@ -478,7 +483,23 @@
                         let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
                     }
+
+                    // check for invalid conditions
+                    if (trajectory[id][i]['velocity'].x > demo.max_velocity || trajectory[id][i]['velocity'].y > demo.max_velocity) {
+                        should_break = true;
+                        console.log('Set should_break to true. max velocity', demo.max_velocity)
+                        console.log('this velocity', trajectory[id][i]['velocity'])
+                        break;
+                    }
+                    if (trajectory[id][i]['position'].x > demo.width || trajectory[id][i]['position'].x < 0 ||
+                        trajectory[id][i]['position'].y > demo.height || trajectory[id][i]['position'].y < 0) {
+                        should_break = true;
+                        console.log('Set should_break to true. demo.engine.world.bounds', demo.engine.world.bounds)
+                        console.log('this position', trajectory[id][i]['position'])
+                        break;
+                    }
                 }
+                if (should_break) {break;}
 
                 Engine.update(scenario.engine);
 
@@ -495,7 +516,12 @@
                     });
                 }
             }
-            trajectories[s] = trajectory;
+            if (should_break) {
+                console.log('Break. Trying again.')
+            } else {  // valid trajectory
+                trajectories[s] = trajectory;  // basically I can't reach this part
+                s++;
+            }
         }
         return trajectories;
     };
