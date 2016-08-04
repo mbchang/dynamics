@@ -102,17 +102,18 @@ function data_process:unnormalize(normalized_trajectories)
     return unnormalized
 end
 
-function data_process:mass2onehot(mass)
-    local index = torch.find(torch.Tensor(self.masses), mass)[1]
+
+function data_process:num2onehot(value, categories)
+    local index = torch.find(torch.Tensor(categories), value)[1]
     assert(not(index == nil))
-    local onehot = torch.zeros(#self.masses)
+    local onehot = torch.zeros(#categories)
     onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
     return onehot
 end
 
-function data_process:onehot2mass(onehot)
+function data_process:onehot2num(onehot, categories)
     assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
-    return self.masses[torch.find(onehot, 1)[1]]
+    return categories[torch.find(onehot, 1)[1]]
 end
 
 function data_process:mass2onehotall(trajectories)
@@ -129,7 +130,8 @@ function data_process:mass2onehotall(trajectories)
     masses:resize(num_ex*num_obj*num_steps, #self.masses)
 
     for row=1,masses:size(1) do
-        masses[{{row}}] = self:mass2onehot(masses[{{row},{1}}]:sum())
+        -- masses[{{row}}] = self:mass2onehot(masses[{{row},{1}}]:sum())
+        masses[{{row}}] = self:num2onehot(masses[{{row},{1}}]:sum(), self.masses)
     end
     masses:resize(num_ex, num_obj, num_steps, #self.masses)
 
@@ -152,7 +154,7 @@ function data_process:onehot2massall(trajectoriesonehot)
     onehot_masses:resize(num_ex*num_obj*num_steps, #self.masses)
 
     for row=1,onehot_masses:size(1) do
-        masses[{{row}}] = self:onehot2mass(torch.squeeze(onehot_masses[{{row}}]))
+        masses[{{row}}] = self:onehot2num(torch.squeeze(onehot_masses[{{row}}]), self.masses)
     end
     masses:resize(num_ex, num_obj, num_steps, 1)
 

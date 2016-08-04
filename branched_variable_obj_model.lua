@@ -172,7 +172,6 @@ end
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
 -- maybe I can output a mask? then I can rename this function to neighborhood_mask
 function model:select_neighbors(input)
-    -- local threshold = self.mp.nbrhdsize*config_args.circle_radius
     local threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- TODO! make this be dependent on the object id!!!!!
 
     local neighbor_masks = {}
