@@ -2175,7 +2175,7 @@ if (!_isBrowser) {
             // self.engine.world.gravity.x = 0;
             self.engine.enableSleeping = true
 
-
+            self.sizemul = 1
             self.world = self.engine.world;
 
 
@@ -2188,7 +2188,7 @@ if (!_isBrowser) {
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
             var x = demo.cx
             var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size*body_opts.sizemul, self.params.size*body_opts.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: 1})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul})
             Body.setVelocity(lastBlock, { x: 0, y: 0 })
             World.add(self.world, lastBlock)
 
@@ -2198,7 +2198,7 @@ if (!_isBrowser) {
                 // x = gaussian(x, variance).ppf(Math.random())
                 x = demo.cx
                 y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size*body_opts.sizemul, self.params.size*body_opts.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: 1})  // stack upwards
+                var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul})  // stack upwards
                 Body.setVelocity(lastBlock, { x: 0, y: 0 })
                 lastBlock = block;
                 World.add(self.world, lastBlock)
