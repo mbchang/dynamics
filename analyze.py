@@ -10,7 +10,11 @@ def read_experiment_log(logfile):
 
         {'train':[train_losses], 'val': [val_losses], 'test': [test_losses]}
     """
-    log = open(logfile).readlines()
+    try:
+        log = open(logfile).readlines()
+    except:
+        print logfile, 'does not exist'
+        return {'train': [0]*100, 'val': [0]*100, 'test': [0]*100}
     log = [row.strip().split("\t") for row in log]
     logdata = np.array([map(float, row) for row in log[1:]]) # 0: train, 1: val, 2: test
     logdata = np.exp(logdata)  # convert to normal space
@@ -55,31 +59,40 @@ experiments = [
                 # 'balls_n2_t60_ex50000__balls_n2_t60_ex50000_batchnorm',
                 # 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every5000',
 
-                # 'balls_n8_t60_ex50000__balls_n8_t60_ex50000_lrdecay_every2500',
+                # number of balls
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000',
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_lrdecay_every2500',
                 # 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every2500',
-                # 'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
-                # 'balls_n9_t60_ex50000__balls_n9_t60_ex50000_lrdecay_every2500',
                 # 'balls_n6_t60_ex50000__balls_n6_t60_ex50000_lrdecay_every2500',
+                # 'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
+                # 'balls_n8_t60_ex50000__balls_n8_t60_ex50000_lrdecay_every2500',
+                # 'balls_n9_t60_ex50000__balls_n9_t60_ex50000_lrdecay_every2500',
+                # 'balls_n10_t60_ex50000__balls_n10_t60_ex50000_lrdecay_every2500',
 
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind',
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3e-5',
+
+                # baseline models
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3-e5_lineardecoder',
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind_lineardecoder',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000',
-                # # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000',
-                # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000',
-                # # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr3e-3',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr7e-4',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr5e-4',
 
+                # generalization task
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000',
+                'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000',
+                'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000',
+
+                # concatenate generalization task
                 # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_modelcat_lr3e-05',
                 # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3e-05',
                 # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_modelcat_lr3e-05',
 
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecayevery5000',
 
-
+                # this is for mass with masses {1,25} 
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr3e-3',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr7e-4',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr5e-4',
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every2500', 
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every2500', 
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every5000', 
@@ -93,18 +106,62 @@ experiments = [
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every5000', 
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every5000',
 
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past10',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past9',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past8',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past7',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past6',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past5',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past4',
-                'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past3',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past10',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past9',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past8',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past7',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past6',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past5',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past4',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past3',
+                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000',
 
+
+                # prediction
+                # bffobj initial test
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelbffobj',  
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',  
+
+                # ffobj with nbrhd initial test'
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.001_modelffobj',
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.001_modelffobj',
+
+
+                # bffobj generalization test
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+
+
+                # generalization experiments 2
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
                 ]
 
-epochs = [20, 40, 60, 80, 100]
+# epochs = [20, 40, 60, 80, 100]
+epochs = [45]
+# epochs = [1,2, 3]
 val_losses = gather_val_losses(experiments, epochs)
 val_losses = sort_best(val_losses, epochs)
 pprint.pprint(val_losses)

@@ -63,7 +63,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
     local decoder_in = nn.JoinTable(2)({orig_state, rnn_out})  -- TODO: figure out what dimension this is
 
     local decoder_preout, decoder_net
-    if num_layers == 0 then
+    if num_layers == 0 or num_layers == 1 then
         decoder_net = nn.Linear(decoder_in_dim, out_dim)
     else
         decoder_net = nn.Sequential()

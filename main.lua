@@ -51,7 +51,7 @@ cmd:option('-num_past', 2, 'number of past timesteps')
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
 cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-max_iter', 1500000, 'max number of iterations')
+cmd:option('-max_iter', 3000000, 'max number of iterations (some huge number)')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
@@ -87,18 +87,19 @@ if mp.server == 'pc' then
     mp.max_iter = 10000
     -- mp.lrdecay = 0.99
     mp.nbrhd = true
-    mp.lrdecayafter = 100
-    mp.lrdecay_every = 10
-    mp.lr = 3e-5
+    mp.lrdecayafter = 1000
+    mp.lrdecay_every = 1000
+    mp.layers = 1
+    -- mp.lr = 3e-5
     mp.model = 'bffobj'
     mp.val_window = 5
-    mp.val_eps = 1e-4
+    mp.val_eps = 2e-5
 	mp.seq_length = 10  -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
     mp.print_every = 10
-    mp.save_every = 50
-    mp.val_every = 50
+    mp.save_every = 1000
+    mp.val_every = 1000
     mp.plot = false--true
 	mp.cuda = false
 else
@@ -305,8 +306,6 @@ function train(start_iter, epoch_num)
                 local checkpoint = {}
                 checkpoint.model = model  -- TODO: should I save the model.theta?
                 checkpoint.mp = mp
-                print(mp.lr)
-                print(checkpoint.mp.lr)
                 checkpoint.train_losses = train_losses
                 checkpoint.val_losses = val_losses
                 checkpoint.test_losses = test_losses

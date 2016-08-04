@@ -44,8 +44,19 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000','balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
 
+            # generalization 2
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000'}"},
+
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000','balls_n7_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000','balls_n8_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000','balls_n8_t60_ex50000'}"},
+
+            # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000','balls_n7_t60_ex50000','balls_n8_t60_ex50000'}"},
+
             # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
@@ -54,16 +65,19 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n10_t60_ex50000'}", 'test_dataset_folders': "{'balls_n10_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n3_t60_ex50000_m'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m'}"},
 
+            # 1,15,30 mass
+
+            {'dataset_folders':"{'balls_n3_t120_ex25000_m','balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n3_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
             ]
 
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')# + '_lrdecay_every2500'
-        for model in ['bffobj']:
+        for model in ['ffobj, bffobj']:
             for nbrhd in [True, False]:  
-                for layers in [1,2]:
-                    for lr in [3e-4,1e-3,3e-3]:
+                for layers in [3]:
+                    for lr in [3e-4]:
                         job['model'] = model
                         job['nbrhd'] = nbrhd
                         job['layers'] = layers

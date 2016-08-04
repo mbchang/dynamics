@@ -14,8 +14,8 @@ experiments = [
                 # 'balls_n6_t60_ex50000__balls_n6_t60_ex50000_lrdecay_every2500',
                 # 'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
                 # 'balls_n8_t60_ex50000__balls_n8_t60_ex50000_lrdecay_every2500',
-                'balls_n9_t60_ex50000__balls_n9_t60_ex50000_lrdecay_every2500',
-                'balls_n10_t60_ex50000__balls_n10_t60_ex50000_lrdecay_every2500',
+                # 'balls_n9_t60_ex50000__balls_n9_t60_ex50000_lrdecay_every2500',
+                # 'balls_n10_t60_ex50000__balls_n10_t60_ex50000_lrdecay_every2500',
 
 
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind',
@@ -37,17 +37,17 @@ experiments = [
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecayevery5000',
 
 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every2500', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every2500', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every5000', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every5000', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.001_lrdecay_every2500', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.001_lrdecay_every2500', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.001_lrdecay_every5000', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.001_lrdecay_every5000', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every2500', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every2500', 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every5000', 
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every2500',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every2500',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every5000',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every5000',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.001_lrdecay_every2500',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.001_lrdecay_every2500',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.001_lrdecay_every5000',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.001_lrdecay_every5000',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every2500',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every2500',
+                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every5000',
                 # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every5000',
 
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past10',
@@ -59,6 +59,66 @@ experiments = [
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past4',
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past3',
 
+                # all of the above have been plotted after the experiments finished or ran out of time. Possibly not simulated.
+
+                # bffobj initial test
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_nbrhd_lr0.0003_modelbffobj', # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_nbrhd_lr0.001_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_nbrhd_lr0.003_modelbffobj',  # killed
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelbffobj',  
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.001_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.003_modelbffobj',  # killed
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',  
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.001_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.003_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_lr0.0003_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_lr0.001_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_lr0.003_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_lr0.0003_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_lr0.001_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_lr0.003_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_lr0.0003_modelbffobj', # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_lr0.001_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_lr0.003_modelbffobj',  # killed
+
+                # ffobj with nbrhd initial test'
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_nbrhd_lr0.0003_modelffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_nbrhd_lr0.001_modelffobj',  # killed
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers1_nbrhd_lr0.003_modelffobj',  # killed
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.001_modelffobj',
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.003_modelffobj',  # killed
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.001_modelffobj',
+                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.003_modelffobj',  # killed
+
+                # bffobj generalization test
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+
+                # generalization test 2
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
                 ]
 
 # specify paths
@@ -92,7 +152,7 @@ for experiment_folder in experiments:
         command = 'th plot_results.lua -infolder ' + experiment_folder
         print command
         os.system(command)
-        print 'plot hidden state'
-        plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
+        # print 'plot hidden state'
+        # plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
     except KeyboardInterrupt:
         sys.exit(0)
