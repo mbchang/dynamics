@@ -382,7 +382,7 @@
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
         demo.config.sizes = [0.5, 1, 2]  // multiples
-        demo.config.object_base_size = {'ball': 60, 'obstacle': 120, 'block': 80 }  // radius of ball, side of square obstacle, long side of block
+        demo.config.object_base_size = {'ball': 60, 'obstacle': 120, 'block': 40 }  // radius of ball, side of square obstacle, long side of block
         demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
         demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
         demo.config.f = 0 // default? [0,1]
@@ -455,12 +455,9 @@
         //     schema: ' [:bar] :current/:total :percent :elapseds :etas',
         //     total : num_samples
         // });
-        demo.max_velocity = 60; // TODO later move this to a config
 
         // TODO! join sim_options with config.
-
-
-
+        console.log(sim_options)
 
         let s = 0;
         while (s < num_samples) {
@@ -512,9 +509,9 @@
                     if (should_break) {break;}
 
                     // check for invalid conditions
-                    if (Math.abs(trajectory[id][i]['velocity'].x) > demo.max_velocity || Math.abs(trajectory[id][i]['velocity'].y) > demo.max_velocity) {
+                    if (Math.abs(trajectory[id][i]['velocity'].x) > demo.config.max_velocity || Math.abs(trajectory[id][i]['velocity'].y) > demo.config.max_velocity) {
                         should_break = true;
-                        console.log('Set should_break to true. max velocity', demo.max_velocity)
+                        console.log('Set should_break to true. max velocity', demo.config.max_velocity)
                         console.log('this velocity', trajectory[id][i]['velocity'])
                         break;
                     }
@@ -527,7 +524,7 @@
                     }
                     // console.log(body)
                     // assert(false)
-                    console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity, 'sizemul', body.sizemul, 'objtype', body.objtype, 'radius', body.circleRadius)
+                    console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass)
                     // // assert(false)
 
                 }

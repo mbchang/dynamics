@@ -2028,9 +2028,7 @@ if (!_isBrowser) {
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                            variableMass: options.variableMass,
                            friction: options.friction,
-                          //  // max_v0: 10,
-                          // max_v0: 5,
-                           obj_radius: 60 };
+                           obj_radius: demo.config.object_base_size.ball };
 
             if (options.variableMass) {
                 self.params.max_v0 = 20
@@ -2057,12 +2055,12 @@ if (!_isBrowser) {
             // this is defined here
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = [1, 5, 25] // let's just try mass of 20 for now
+                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
             } else {
                 self.possible_masses = [1]
             }
 
-            self.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
+            self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
 
             return self
         };
@@ -2170,7 +2168,7 @@ if (!_isBrowser) {
             }
 
             self.params = {num_obj: options.numObj,
-                          size: 40 };
+                          size: demo.config.object_base_size.block };
             self.engine = demo.engine,
 
             // self.engine.world.gravity.y = 0;
