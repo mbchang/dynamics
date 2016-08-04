@@ -14,6 +14,8 @@ local args = {
         max_iters_per_json=100,  -- TODO
         subdivide=true,
         circle_radius=60, -- only applicable to balls!
+        object_base_size={ball=60, obstacle=120, block=80},  -- radius, length, block
+        oids = {1:ball, 2: obstacle, 3: block}
 
         -- world params
         cx=400, -- 2*cx is width of world

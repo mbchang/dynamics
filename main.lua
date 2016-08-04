@@ -38,8 +38,8 @@ cmd:option('-test_dataset_folders', '', 'dataset folder')
 
 -- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
-cmd:option('-nbrhd', true, 'restrict attention to neighborhood')
-cmd:option('-nbrhdsize', 3, 'number of radii out to look. nbhrdsize of 2 is when they exactly touching')
+cmd:option('-nbrhd', false, 'restrict attention to neighborhood')
+cmd:option('-nbrhdsize', 4, 'number of radii out to look. nbhrdsize of 2 is when they exactly touching')
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')

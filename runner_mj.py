@@ -56,7 +56,7 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000','balls_n7_t60_ex50000','balls_n8_t60_ex50000'}"},
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
-            # {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
+            {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
@@ -66,23 +66,24 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000_m'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m'}"},
 
             # 1,15,30 mass
-
-            {'dataset_folders':"{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
+            # {'dataset_folders':"{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
             ]
 
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
-        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')# + '_lrdecay_every2500'
+        job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
         for model in ['bffobj']:
             for nbrhd in [True]:  
-                for layers in [3]:
-                    for lr in [3e-4]:
-                        job['model'] = model
-                        job['nbrhd'] = nbrhd
-                        job['layers'] = layers
-                        job['lr'] = lr
-                        actual_jobs.append(copy.deepcopy(job))
+                for nbhrdsize in [1.5, 3, 4.5]:
+                    for layers in [3]:
+                        for lr in [3e-4]:
+                            job['model'] = model
+                            job['nbrhd'] = nbrhd
+                            job['layers'] = layers
+                            job['lr'] = lr
+                            job['nbrhdsize'] = nbhrdsize
+                            actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 
