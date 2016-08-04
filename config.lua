@@ -25,6 +25,5 @@ local args = {
 
 args.position_normalize_constant = math.max(args.cx,args.cy)*2
 args.ossi = args.si.m[1]  -- object_state_start_index: CHANGE THIS WHEN YOU ADD STUFF TO RAW STATE INDICES!
-args.neighborhood = 1.5 -- number of object radii that we consider the neighborhood
 
 return args

@@ -33,7 +33,7 @@ def gather_val_losses(experiments, epochs):
         experiment_folder = os.path.join(out_root, experiment_folder)
 
         # read in the experiment log
-        exp_val_losses = read_experiment_log(os.path.join(experiment_folder,'experiment.log'))['val']
+        exp_val_losses = read_experiment_log(os.path.join(experiment_folder,'experiment.log'))['test']
         for epoch in epochs:
             if len(exp_val_losses) >= epoch:
                 val_losses[epoch][os.path.basename(experiment_folder)] = exp_val_losses[epoch]
@@ -160,7 +160,7 @@ experiments = [
                 ]
 
 # epochs = [20, 40, 60, 80, 100]
-epochs = [45]
+epochs = [53]
 # epochs = [1,2, 3]
 val_losses = gather_val_losses(experiments, epochs)
 val_losses = sort_best(val_losses, epochs)
