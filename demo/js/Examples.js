@@ -2084,7 +2084,8 @@ if (!_isBrowser) {
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
-                                 objtype: "ball"
+                                 objtype: "ball",
+                                 sizemul: 1
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2093,7 +2094,7 @@ if (!_isBrowser) {
                 }
 
                 let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
-                                        self.params.obj_radius, body_opts)
+                                        self.params.obj_radius*body_opts.sizemul, body_opts)
 
                 body.render.fillStyle = self.mass_colors[self.m[i]]//'#4ECDC4'
                 body.render.strokeStyle = '#FFA500'// orange
@@ -2189,7 +2190,7 @@ if (!_isBrowser) {
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
             var x = demo.cx
             var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1, objtype: 'block'})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size*body_opts.sizemul, self.params.size*body_opts.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: 1})
             Body.setVelocity(lastBlock, { x: 0, y: 0 })
             World.add(self.world, lastBlock)
 
@@ -2199,7 +2200,7 @@ if (!_isBrowser) {
                 // x = gaussian(x, variance).ppf(Math.random())
                 x = demo.cx
                 y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1, objtype: 'block'})  // stack upwards
+                var block = Bodies.rectangle(x, y, self.params.size*body_opts.sizemul, self.params.size*body_opts.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: 1})  // stack upwards
                 Body.setVelocity(lastBlock, { x: 0, y: 0 })
                 lastBlock = block;
                 World.add(self.world, lastBlock)

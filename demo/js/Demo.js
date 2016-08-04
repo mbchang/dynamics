@@ -498,7 +498,7 @@
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                     trajectory[id][i] = {};
                     let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
-                    for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity', 'objtype']){
+                    for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity', 'objtype', 'sizemul']){
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
 
                         // check if undefined.
@@ -525,8 +525,9 @@
                         console.log('this position', trajectory[id][i]['position'])
                         break;
                     }
-
-                    console.log('step', i, 'object id', body.id, 'position', body.position, 'velocity', body.velocity, 'sleeping', body.isSleeping, 'objtype', body.objtype)
+                    // console.log(body)
+                    // assert(false)
+                    console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity, 'sizemul', body.sizemul, 'objtype', body.objtype, 'radius', body.circleRadius)
                     // // assert(false)
 
                 }
@@ -641,6 +642,12 @@
                     alias: 'm',
                     type: 'Boolean',
                     description: 'include variable mass',
+                    required: false
+                }, {
+                    option: 'variableSize',
+                    alias: 'z',
+                    type: 'Boolean',
+                    description: 'include variable size',
                     required: false
                 }, {
                     option: 'image',
