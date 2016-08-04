@@ -26,7 +26,7 @@
         var utils = require('../../utils');
         var mkdirp = require('mkdirp');
         var fs = require('fs');
-        var PImage = require('pureimage');
+        // var PImage = require('pureimage');
         // var ProgressBar = require('node-progress-bars');
         require('./Examples')
         module.exports = Demo;
@@ -77,7 +77,6 @@
             // run the engine
             demo.runner = Engine.run(demo.engine);
             demo.runner.isFixed = true
-            demo.runner.delta = 1
 
             // // get container element for the canvas
             demo.container = document.getElementById('canvas-container');  // this requires a browser
@@ -108,6 +107,7 @@
             if (window.location.hash.length !== 0) {
                 demo.sceneName = window.location.hash.replace('#', '').replace('-inspect', '');
             }
+
         } else {
             if (options.image) {
                 // run the engine
@@ -379,6 +379,14 @@
         config = {}
         config.cx = 400;
         config.cy = 300;
+        // config.masses = [1, 5, 25]
+        // config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
+        // config.sizes = [0.5, 1, 2]  // multiples
+        // config.objects = ['ball', 'obstacle', 'block']  // squares are obstacles
+        // config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
+        // config.f = 0 // default? [0,1]
+        // config.p = 0 // default? [0,1,2]
+
 
         demo.cx = config.cx;
         demo.cy = config.cy;
@@ -479,13 +487,22 @@
             for (let i = 0; i < sim_options.steps; i++) {
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                     trajectory[id][i] = {};
+                    let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                     for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity']){
-                        let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
+
+                        // check if undefined.
+                        if (!(typeof trajectory[id][i][k] !== 'undefined')) {  // it could that 0 is false!
+                            should_break = true;
+                            console.log('trajectory[id][i][k] is undefined', trajectory[id][i][k])
+                            console.log('id',id,'i',i,'k',k)
+                            break;
+                        }
                     }
+                    if (should_break) {break;}
 
                     // check for invalid conditions
-                    if (trajectory[id][i]['velocity'].x > demo.max_velocity || trajectory[id][i]['velocity'].y > demo.max_velocity) {
+                    if (Math.abs(trajectory[id][i]['velocity'].x) > demo.max_velocity || Math.abs(trajectory[id][i]['velocity'].y) > demo.max_velocity) {
                         should_break = true;
                         console.log('Set should_break to true. max velocity', demo.max_velocity)
                         console.log('this velocity', trajectory[id][i]['velocity'])
@@ -498,6 +515,10 @@
                         console.log('this position', trajectory[id][i]['position'])
                         break;
                     }
+
+                    // console.log('object id', body.id, 'position', body.position, 'velocity', body.velocity)
+                    // // assert(false)
+
                 }
                 if (should_break) {break;}
 
@@ -510,10 +531,10 @@
 
                 if (sim_options.image) {
                     Render.world(demo.render)
-                    let filename = 'out'+i+'_'+s+'.png'  // TODO! rename
-                    PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
-                        console.log("wrote out the png file to out"+filename);
-                    });
+                    // let filename = 'out'+i+'_'+s+'.png'  // TODO! rename
+                    // PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
+                    //     console.log("wrote out the png file to out"+filename);
+                    // });
                 }
             }
             if (should_break) {
@@ -655,7 +676,9 @@
     // main
     if (!_isBrowser) {
         const cmd_options = Demo.process_cmd_options();
+        console.log('processed command options')
         var demo = Demo.init(cmd_options)  // don't set the scene name yet
+        console.log('initialized. generating data')
         Demo.generate_data(demo, cmd_options);
     }
 })();

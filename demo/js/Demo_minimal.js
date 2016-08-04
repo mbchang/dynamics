@@ -131,7 +131,7 @@
             }
         }
 
-        var mass_colors = {'1':'#C7F464', '15':'#FF6B6B', '30':'#4ECDC4'}// TODO eventually call Example[config.env].mass_colors
+        var mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}// TODO eventually call Example[config.env].mass_colors
 
 
         Example[config.env](demo, config)
@@ -139,7 +139,7 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[1]  // extra 0 for batch mode
+        var trajectories = data[7]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 

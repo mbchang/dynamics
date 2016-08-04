@@ -1509,19 +1509,51 @@ if (!_isBrowser) {
 
     var World = Matter.World,
         Bodies = Matter.Bodies,
-        Composites = Matter.Composites;
+        Composites = Matter.Composites,
+        Body = Matter.Body;
 
-    Example.stress = function(demo) {
+    Example.stress = function(demo) {  // stress
         var engine = demo.engine,
             world = engine.world;
+        console.log('stress')
+        // body_opts = {friction:Infinity, frictionAir:0, frictionStatic:Infinity, restitution:0}
+        demo.runner.isFixed = true
+        engine.positionIterations = 100
+        engine.velocityIterations = 100
+        body_opts = {restitution:0, friction:Infinity}
 
-        var stack = Composites.stack(90, 50, 18, 15, 0, 0, function(x, y) {
-            return Bodies.rectangle(x, y, 35, 35);   
-        // var stack = Composites.stack(90, 50, 18, 4, 0, 0, function(x, y) {
-            // return Bodies.rectangle(x, y, 35, 35, {slop: 0});
+        engine.world.gravity.y = 0;  // toggling this removes the bounce
+
+        // // var stack = Composites.stack(90, 50, 18, 15, 0, 0, function(x, y) {
+        // //     return Bodies.rectangle(x, y, 35, 35, body_opts);   
+        var stack = Composites.stack(400, 320, 1, 8, 0, 0, function(x, y) {
+            return Bodies.rectangle(x, y, 35, 35, body_opts);
         });
 
         World.add(world, stack);
+
+        // demo.cx = 400
+        // demo.cy = 300
+        // var block_size = 40
+
+        // var x = demo.cx
+        // var y = 2*demo.cy - block_size/2
+
+        // // bottom block
+        // var lastBlock = Bodies.rectangle(x, y, block_size, block_size, {restitution: 0, mass: 1})
+        // Body.setVelocity(lastBlock, { x: 0, y: 0 })
+        // World.add(engine.world, lastBlock)
+
+        // // stack upwards
+        // for (var i = 1; i < 10; i ++) {
+        //     x = demo.cx
+        //     y = y - block_size
+        //     var block = Bodies.rectangle(x, y, block_size, block_size, {restitution: 0, mass: 1})
+        //     Body.setVelocity(lastBlock, { x: 0, y: 0 })
+        //     lastBlock = block;
+        //     World.add(engine.world, lastBlock)
+        // }
+
 
         var renderOptions = demo.render.options;
         renderOptions.showAngleIndicator = false;
@@ -2001,7 +2033,7 @@ if (!_isBrowser) {
                            obj_radius: 60 };
 
             if (options.variableMass) {
-                self.params.max_v0 = 15
+                self.params.max_v0 = 20
             } else {
                 self.params.max_v0 = 20
             }
@@ -2025,12 +2057,12 @@ if (!_isBrowser) {
             // this is defined here
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = [1, 15, 30] // let's just try mass of 20 for now
+                self.possible_masses = [1, 5, 25] // let's just try mass of 20 for now
             } else {
                 self.possible_masses = [1]
             }
 
-            self.mass_colors = {'1':'#C7F464', '15':'#FF6B6B', '30':'#4ECDC4'}
+            self.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
 
             return self
         };
@@ -2069,11 +2101,6 @@ if (!_isBrowser) {
 
 
                 Body.setVelocity(body, self.v0[i])
-
-                // console.log(body.continuous+0.01)
-                // console.log(body)
-                // assert(false)
-
 
                 // add body to world
                 World.add(self.engine.world, body);
@@ -2144,7 +2171,14 @@ if (!_isBrowser) {
             self.params = {num_obj: options.numObj,
                           size: 40 };
             self.engine = demo.engine,
+
+            // self.engine.world.gravity.y = 0;
+            // self.engine.world.gravity.x = 0;
+
+
             self.world = self.engine.world;
+
+
             return self;
         }
         Tower.init = function(self){
@@ -2162,6 +2196,7 @@ if (!_isBrowser) {
             var variance = 100  // 80
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
+                // x = demo.cx
                 y = y - self.params.size
                 var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1})  // stack upwards
                 Body.setVelocity(lastBlock, { x: 0, y: 0 })
