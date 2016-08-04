@@ -382,12 +382,12 @@
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
         demo.config.sizes = [0.5, 1, 2]  // multiples
-        demo.config.objects = ['ball', 'obstacle', 'block']  // squares are obstacles
+        demo.config.object_base_size = {'ball': 60, 'obstacle': 120, 'block': 80 }  // radius of ball, side of square obstacle, long side of block
+        demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
         demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
         demo.config.f = 0 // default? [0,1]
         demo.config.p = 0 // default? [0,1,2]
         demo.config.max_velocity = 60
-
 
         demo.cx = demo.config.cx;
         demo.cy = demo.config.cy;
@@ -456,6 +456,12 @@
         //     total : num_samples
         // });
         demo.max_velocity = 60; // TODO later move this to a config
+
+        // TODO! join sim_options with config.
+
+
+
+
         let s = 0;
         while (s < num_samples) {
 
@@ -464,6 +470,8 @@
         // for (let s = 0; s < num_samples; s++) {
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
+            // console.log(demo.engine)
+            // assert(false)
             var trajectory = []
             // bar.tick()
             console.log(s)
@@ -490,7 +498,7 @@
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                     trajectory[id][i] = {};
                     let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
-                    for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity']){
+                    for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity', 'objtype']){
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
 
                         // check if undefined.
@@ -518,7 +526,7 @@
                         break;
                     }
 
-                    // console.log('object id', body.id, 'position', body.position, 'velocity', body.velocity)
+                    console.log('step', i, 'object id', body.id, 'position', body.position, 'velocity', body.velocity, 'sleeping', body.isSleeping, 'objtype', body.objtype)
                     // // assert(false)
 
                 }

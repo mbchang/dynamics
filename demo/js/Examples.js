@@ -2084,7 +2084,7 @@ if (!_isBrowser) {
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
-                                 // continuous: 1
+                                 objtype: "ball"
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2174,6 +2174,7 @@ if (!_isBrowser) {
 
             // self.engine.world.gravity.y = 0;
             // self.engine.world.gravity.x = 0;
+            self.engine.enableSleeping = true
 
 
             self.world = self.engine.world;
@@ -2188,17 +2189,17 @@ if (!_isBrowser) {
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
             var x = demo.cx
             var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1, objtype: 'block'})
             Body.setVelocity(lastBlock, { x: 0, y: 0 })
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
             var variance = 100  // 80
             for (var i = 1; i < self.params.num_obj; i ++) {
-                x = gaussian(x, variance).ppf(Math.random())
-                // x = demo.cx
+                // x = gaussian(x, variance).ppf(Math.random())
+                x = demo.cx
                 y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1})  // stack upwards
+                var block = Bodies.rectangle(x, y, self.params.size, self.params.size, {label: "Entity", restitution: 0, mass: 1, objtype: 'block'})  // stack upwards
                 Body.setVelocity(lastBlock, { x: 0, y: 0 })
                 lastBlock = block;
                 World.add(self.world, lastBlock)

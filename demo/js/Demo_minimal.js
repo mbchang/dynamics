@@ -139,7 +139,7 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[7]  // extra 0 for batch mode
+        var trajectories = data[0]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 
