@@ -524,7 +524,7 @@
                     }
                     // console.log(body)
                     // assert(false)
-                    console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass)
+                    // console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass)
                     // // assert(false)
 
                 }
