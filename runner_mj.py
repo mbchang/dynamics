@@ -67,15 +67,15 @@ def create_jobs(dry_run, mode, ext):
 
             # 1,15,30 mass
 
-            {'dataset_folders':"{'balls_n3_t120_ex25000_m','balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n3_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
+            {'dataset_folders':"{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
             ]
 
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')# + '_lrdecay_every2500'
-        for model in ['ffobj, bffobj']:
-            for nbrhd in [True, False]:  
+        for model in ['bffobj']:
+            for nbrhd in [True]:  
                 for layers in [3]:
                     for lr in [3e-4]:
                         job['model'] = model
