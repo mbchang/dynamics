@@ -438,7 +438,6 @@ end
 
 
 function save_ex_pred_json(example, jsonfile, current_dataset)
-    -- local flags = pls.split(mp.dataset_folder, '_')
     local flags = pls.split(mp.test_dataset_folders[current_dataset], '_')
 
     local world_config = {

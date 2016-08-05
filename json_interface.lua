@@ -1,6 +1,24 @@
 require 'json'
 local args = require 'config'
 local tablex = require 'pl.tablex'
+local stringx = require 'pl.stringx'
+
+-- balls_n8_t60_s50000_mjs2
+function get_global_params(jsonfile)
+    local g=0  -- false by default
+    local f=0  -- false by default
+    local p=0  -- false by default
+    if stringx.count(jsonfile, '_g') == 1 then 
+        g = 1
+    end
+    if stringx.count(jsonfile, '_f') == 1 then
+        f = 1
+    end
+    if stringx.count(jsonfile, '_p') == 1 then
+        p = 1
+    end
+    return g, f, p
+end
 
 
 -- from matter-js dump
@@ -13,6 +31,8 @@ function load_data_json(jsonfile)
     local num_obj = #trajectories[1]
     local T = #trajectories[1][1]
     assert(num_examples <= args.max_iters_per_json)
+
+    local g,f,p = get_global_params(jsonfile)
 
     -- TODO: adapt to include other information
     for e=1,num_examples do
@@ -28,7 +48,12 @@ function load_data_json(jsonfile)
                 trajectories[e][i][t][args.rsi.a] = state.angle
                 trajectories[e][i][t][args.rsi.av] = state.angularVelocity
                 trajectories[e][i][t][args.rsi.m] = state.mass
-                trajectories[e][i][t][args.rsi.oid] = 1
+                trajectories[e][i][t][args.rsi.oid] = args.oids[state.objtype]
+                trajectories[e][i][t][args.rsi.os] = state.sizemul
+                trajectories[e][i][t][args.rsi.g] = g
+                trajectories[e][i][t][args.rsi.f] = f
+                trajectories[e][i][t][args.rsi.p] = p
+                -- print(trajectories[e][i][t])
             end
         end
     end
@@ -36,6 +61,8 @@ function load_data_json(jsonfile)
     trajectories = torch.Tensor(trajectories)
     return trajectories
 end
+
+
 
 function data2table(data)
     -- data: (bsize, num_obj, num_steps, dim)
@@ -56,25 +83,25 @@ function data2table(data)
                 trajectories[e][i][t].velocity = {x=state[args.rsi.vx],
                                                   y=state[args.rsi.vy]}
                 trajectories[e][i][t].angle = state[args.rsi.a]
-                trajectories[e][i][t].anglularVelocity = state[args.rsi.av]
+                trajectories[e][i][t].angularVelocity = state[args.rsi.av]
                 trajectories[e][i][t].mass = state[args.rsi.m]
+                trajectories[e][i][t].objtype = args.roids[state[args.rsi.oid]]
+                trajectories[e][i][t].sizemul = state[args.rsi.os]
             end
         end
     end
     return trajectories
 end
-
+    
 -- to matter-js dump
 function dump_data_json(data, jsonfile)
     -- data: (bsize, num_obj, num_steps, dim)
     local trajectories = data2table(data)
-    json.save(jsonfile, trajectories)
+    json.save(jsonfile, {trajectories=trajectories})
     return trajectories
 end
 
 
--- local d = load_data_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json')
--- dump_data_json(d, '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls_dump.json')
--- local d2 = load_data_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/balls.json')
---
--- print((d-d2):sum())
+-- local d = load_data_json('../data/tower_n8_t75_ex1_m_rd/jsons/tower_n8_t75_ex1_m_rd_chksize1_0.json')
+-- dump_data_json(d, '../data/tower_n8_t75_ex1_m_rd/jsons/tower_n8_t75_ex1_m_rd_chksize1_0_dump.json')
+-- local d2 = load_data_json('../data/tower_n8_t75_ex1_m_rd/jsons/tower_n8_t75_ex1_m_rd_chksize1_0_dump.json')

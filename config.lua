@@ -1,3 +1,18 @@
+--px: position x
+--py: position y
+--vx: velocity x
+--vy: velocity y
+--a: angle
+--av: angular velocity
+--m: mass {4.0, 1.0, 16.0, 1e30} (4)
+--oid: object id {ball=1, obstacle=2, block=3} (3)
+--os: object sizes {0.5, 1, 2} (3)
+--g: gravity {on, off} (2)
+--f: friction {on, off} (2)
+--p: pairwise {on, off} (2)
+
+-- total: 22
+
 local args = {
 
         -- datasaver
@@ -5,18 +20,18 @@ local args = {
         velocity_normalize_constant=50,
         angle_normalize_constant=2*math.pi,
         relative=true,
-        masses={15.0, 1.0, 30.0, 1e30},  -- for now only the first two are used
-        rsi={px=1, py=2, vx=3, vy=4, a=5, av=6, m=7, oid=8},  -- raw state indicies
-        si={px=1, py=2, vx=3, vy=4, a=5, av=6, m={7,10}, oid=11},  -- state indices
+        masses={4.0, 1.0, 16.0, 1e30},  -- for now only the first two are used
+        rsi={px=1, py=2, vx=3, vy=4, a=5, av=6, m=7, oid=8, os=9, g=10, f=11, p=12},  -- raw state indicies
+        si={px=1, py=2, vx=3, vy=4, a=5, av=6, m={7,10}, oid={11,13}, os={14,16}, g={17,18}, f={19,20}, p={21,22}},  -- state indices
         permute_context=false,
         shuffle=true,
         maxwinsize=60,
         max_iters_per_json=100,  -- TODO
         subdivide=true,
-        circle_radius=60, -- only applicable to balls!
         object_base_size={ball=60, obstacle=120, block=80},  -- radius, length, block
         object_sizes={0.5, 1, 2}, -- multiplies object_base_size
         oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
+        roids = {'ball', 'obstacle', 'block'},  -- reverse oids
 
         -- world params
         cx=400, -- 2*cx is width of world

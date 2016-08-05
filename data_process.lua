@@ -146,6 +146,7 @@ end
 function onehotall2objtype()
 end
 
+
 function data_process:num2onehotall(selected, categories)
     local num_ex = selected:size(1)
     local num_obj = selected:size(2)
@@ -161,6 +162,7 @@ function data_process:num2onehotall(selected, categories)
     selected:resize(num_ex, num_obj, num_steps, #categories)
     return selected
 end
+
 
 function data_process:onehot2numall(onehot_selected, categories)
     local num_ex = onehot_selected:size(1)
