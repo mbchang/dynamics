@@ -109,8 +109,6 @@ function model.create(mp_, preload, model_path)
             self.identitycriterion:cuda()
         end
     end
-    -- print(self.network)
-    -- assert(false)
 
     self.theta = {}
     self.theta.params, self.theta.grad_params = self.network:getParameters()

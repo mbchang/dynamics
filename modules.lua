@@ -38,7 +38,7 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
-                {num_future, object_dim},{{1,4},{5,object_dim}})
+                {num_future, object_dim},{{1,6},{7,object_dim}})
                 (decoder_preout):split(2)  -- contains info about objectdim!
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
@@ -88,7 +88,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
     -- ------------------------------------------------
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
-                {num_future, object_dim},{{1,4},{5,object_dim}})
+                {num_future, object_dim},{{1,6},{7,object_dim}})
                 (decoder_preout):split(2)  -- contains info about objectdim!
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
