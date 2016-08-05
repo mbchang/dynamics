@@ -17,10 +17,10 @@ local args = {
 
         -- datasaver
         -- position_normalize_constant=800,  -- TODO change
-        velocity_normalize_constant=50,
+        velocity_normalize_constant=60,
         angle_normalize_constant=2*math.pi,
         relative=true,
-        masses={4.0, 1.0, 16.0, 1e30},  -- for now only the first two are used
+        masses={5.0, 1.0, 25.0, 1e30},  -- for now only the first two are used
         rsi={px=1, py=2, vx=3, vy=4, a=5, av=6, m=7, oid=8, os=9, g=10, f=11, p=12},  -- raw state indicies
         si={px=1, py=2, vx=3, vy=4, a=5, av=6, m={7,10}, oid={11,13}, os={14,16}, g={17,18}, f={19,20}, p={21,22}},  -- state indices
         permute_context=false,
@@ -28,7 +28,7 @@ local args = {
         maxwinsize=60,
         max_iters_per_json=100,  -- TODO
         subdivide=true,
-        object_base_size={ball=60, obstacle=120, block=80},  -- radius, length, block
+        object_base_size={ball=60, obstacle=120, block=40},  -- radius, length, block
         object_sizes={0.5, 1, 2}, -- multiplies object_base_size
         oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
         roids = {'ball', 'obstacle', 'block'},  -- reverse oids
