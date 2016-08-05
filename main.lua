@@ -133,7 +133,7 @@ else
 end
 
 mp.winsize = mp.num_past + mp.num_future
-mp.object_dim = config_args.si.oid-- TODO! make this more versatile! (don't hardcode it to oid)
+mp.object_dim = config_args.si.p[2]-- TODO! make this more versatile! (don't hardcode it to oid)
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 if mp.model == 'crnn' then 
