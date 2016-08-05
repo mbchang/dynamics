@@ -41,6 +41,9 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.maxwinsize = args.maxwinsize
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
+    self.oid_ids = args.oid_ids
+    self.obj_sizes = args.object_sizes
+    self.boolean = args.boolean
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
     self.bsize = args.batch_size
     self.shuffle = args.shuffle
@@ -117,33 +120,79 @@ function data_process:onehot2num(onehot, categories)
 end
 
 function gravity2onehotall()
+    local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.g-1}}]:clone()
+    local after = trajectories[{{},{},{},{self.rsi.g+1,-1}}]:clone()
+    local gravity = trajectories[{{},{},{},{self.rsi.g}}]:clone()
+
+    gravity = self:num2onehotall(gravity, self.boolean)
+
+    -- join
+    local trajectoriesonehot = torch.cat({before, gravity, after}, 4)
+    return trajectoriesonehot
 end
 
 function onehotall2gravity()
 end
 
 function friction2onehotall()
+    local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.f-1}}]:clone()
+    local after = trajectories[{{},{},{},{self.rsi.f+1,-1}}]:clone()
+    local friction = trajectories[{{},{},{},{self.rsi.f}}]:clone()
+
+    friction = self:num2onehotall(friction, self.boolean)
+
+    -- join
+    local trajectoriesonehot = torch.cat({before, friction, after}, 4)
+    return trajectoriesonehot
 end
 
 function onehotall2friction()
 end
 
+-- this assumes that pairwise is the last element!
 function pairwise2onehotall()
+    local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.p-1}}]:clone()
+    local pairwise = trajectories[{{},{},{},{self.rsi.p}}]:clone()
+
+    pairwise = self:num2onehotall(pairwise, self.boolean)
+
+    -- join
+    local trajectoriesonehot = torch.cat({before, pairwise}, 4)
+    return trajectoriesonehot
 end
 
 function onehotall2pairwise()
 end
 
 function size2onehotall()
+    local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.os-1}}]:clone()
+    local after = trajectories[{{},{},{},{self.rsi.os+1,-1}}]:clone()
+    local obj_sizes = trajectories[{{},{},{},{self.rsi.os}}]:clone()
+
+    obj_sizes = self:num2onehotall(obj_sizes, self.obj_sizes)
+
+    -- join
+    local trajectoriesonehot = torch.cat({before, obj_sizes, after}, 4)
+    return trajectoriesonehot
 end
 
 function onehotall2size()
 end
 
 function objtype2onehotall()
+    local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.oid-1}}]:clone()
+    local after = trajectories[{{},{},{},{self.rsi.oid+1,-1}}]:clone()
+    local objtypes = trajectories[{{},{},{},{self.rsi.oid}}]:clone()
+
+    objtypes = self:num2onehotall(objtypes, self.oid_ids)
+
+    -- join
+    local trajectoriesonehot = torch.cat({before, objtypes, after}, 4)
+    return trajectoriesonehot
 end
 
 function onehotall2objtype()
+
 end
 
 

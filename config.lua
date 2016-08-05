@@ -32,6 +32,8 @@ local args = {
         object_sizes={0.5, 1, 2}, -- multiplies object_base_size
         oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
         roids = {'ball', 'obstacle', 'block'},  -- reverse oids
+        oid_ids = {1,2,3}
+        boolean = {0,1}
 
         -- world params
         cx=400, -- 2*cx is width of world
