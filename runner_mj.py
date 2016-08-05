@@ -56,7 +56,7 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000','balls_n4_t60_ex50000','balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000','balls_n7_t60_ex50000','balls_n8_t60_ex50000'}"},
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000'}"},
-            {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n5_t60_ex50000'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000'}"},
             # {'dataset_folders':"{'balls_n7_t60_ex50000'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000'}"},
@@ -67,6 +67,10 @@ def create_jobs(dry_run, mode, ext):
 
             # 1,15,30 mass
             # {'dataset_folders':"{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
+            
+            # test prediction and mass
+            {'dataset_folders':"{'balls_n4_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rd'}"},
+            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rd'}"},
             ]
 
     actual_jobs = []
@@ -75,9 +79,9 @@ def create_jobs(dry_run, mode, ext):
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
         for model in ['bffobj']:
             for nbrhd in [True]:  
-                for nbhrdsize in [1.5, 3, 4.5]:
-                    for layers in [3]:
-                        for lr in [3e-4]:
+                for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
+                    for layers in [3]:  # [2,3,4]
+                        for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             job['model'] = model
                             job['nbrhd'] = nbrhd
                             job['layers'] = layers

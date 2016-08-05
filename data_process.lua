@@ -108,8 +108,6 @@ end
 
 function data_process:num2onehot(value, categories)
     local index = torch.find(torch.Tensor(categories), value)[1]
-    -- print('value', value)
-    -- print('categories', categories)
     assert(not(index == nil))
     local onehot = torch.zeros(#categories)
     onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
