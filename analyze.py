@@ -61,7 +61,7 @@ experiments = [
 
                 # number of balls
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_lrdecay_every2500',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_lrdecay_every2500',
                 # 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every2500',
                 # 'balls_n6_t60_ex50000__balls_n6_t60_ex50000_lrdecay_every2500',
                 # 'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
@@ -77,9 +77,9 @@ experiments = [
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind_lineardecoder',
 
                 # generalization task
-                'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000',
-                'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000',
-                'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000',
+                # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000',
+                # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000',
 
                 # concatenate generalization task
                 # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_modelcat_lr3e-05',
@@ -120,19 +120,19 @@ experiments = [
                 # prediction
                 # bffobj initial test
                 # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelbffobj',  
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',  
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',  
 
                 # ffobj with nbrhd initial test'
                 # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelffobj',
                 # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.001_modelffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
                 # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.001_modelffobj',
 
 
                 # bffobj generalization test
-                'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
 
 
                 # generalization experiments 2
@@ -157,10 +157,19 @@ experiments = [
                 # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
                 # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
                 # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
+                
+                # bffobj experiments with ACTUAL nbhrd
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize4_lr0.0003_modelbffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize1.5_lr0.0003_modelbffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize3_lr0.0003_modelbffobj',
+                'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
+
+
                 ]
 
 # epochs = [20, 40, 60, 80, 100]
-epochs = [53]
+epochs = [33]
 # epochs = [1,2, 3]
 val_losses = gather_val_losses(experiments, epochs)
 val_losses = sort_best(val_losses, epochs)
