@@ -119,7 +119,7 @@ function data_process:onehot2num(onehot, categories)
     return categories[torch.find(onehot, 1)[1]]
 end
 
-function gravity2onehotall()
+function data_process:gravity2onehotall(trajectories)
     local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.g-1}}]:clone()
     local after = trajectories[{{},{},{},{self.rsi.g+1,-1}}]:clone()
     local gravity = trajectories[{{},{},{},{self.rsi.g}}]:clone()
@@ -131,10 +131,19 @@ function gravity2onehotall()
     return trajectoriesonehot
 end
 
-function onehotall2gravity()
+function data_process:onehotall2gravity(trajectoriesonehot)
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.g[1]-1}}]:clone()
+    local after = trajectoriesonehot[{{},{},{},{self.si.g[2]+1,-1}}]:clone()
+    local onehot_gravity = trajectoriesonehot[{{},{},{},{unpack(self.si.g)}}]:clone()
+
+    local gravity = self:onehot2numall(onehot_gravity, self.boolean)
+
+    -- join
+    local trajectories = torch.cat({before, gravity, after}, 4)
+    return trajectories
 end
 
-function friction2onehotall()
+function data_process:friction2onehotall(trajectories)
     local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.f-1}}]:clone()
     local after = trajectories[{{},{},{},{self.rsi.f+1,-1}}]:clone()
     local friction = trajectories[{{},{},{},{self.rsi.f}}]:clone()
@@ -146,11 +155,20 @@ function friction2onehotall()
     return trajectoriesonehot
 end
 
-function onehotall2friction()
+function data_process:onehotall2friction(trajectoriesonehot)
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.f[1]-1}}]:clone()
+    local after = trajectoriesonehot[{{},{},{},{self.si.f[2]+1,-1}}]:clone()
+    local onehot_friction = trajectoriesonehot[{{},{},{},{unpack(self.si.f)}}]:clone()
+
+    local friction = self:onehot2numall(onehot_friction, self.boolean)
+
+    -- join
+    local trajectories = torch.cat({before, friction, after}, 4)
+    return trajectories
 end
 
 -- this assumes that pairwise is the last element!
-function pairwise2onehotall()
+function data_process:pairwise2onehotall(trajectories)
     local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.p-1}}]:clone()
     local pairwise = trajectories[{{},{},{},{self.rsi.p}}]:clone()
 
@@ -161,10 +179,18 @@ function pairwise2onehotall()
     return trajectoriesonehot
 end
 
-function onehotall2pairwise()
+function data_process:onehotall2pairwise(trajectoriesonehot)
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.p[1]-1}}]:clone()
+    local onehot_pairwise = trajectoriesonehot[{{},{},{},{unpack(self.si.p)}}]:clone()
+
+    local pairwise = self:onehot2numall(onehot_pairwise, self.boolean)
+
+    -- join
+    local trajectories = torch.cat({before, pairwise, after}, 4)
+    return trajectories
 end
 
-function size2onehotall()
+function data_process:size2onehotall(trajectories)
     local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.os-1}}]:clone()
     local after = trajectories[{{},{},{},{self.rsi.os+1,-1}}]:clone()
     local obj_sizes = trajectories[{{},{},{},{self.rsi.os}}]:clone()
@@ -176,10 +202,19 @@ function size2onehotall()
     return trajectoriesonehot
 end
 
-function onehotall2size()
+function data_process:onehotall2size(trajectoriesonehot)
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.os[1]-1}}]:clone()
+    local after = trajectoriesonehot[{{},{},{},{self.si.os[2]+1,-1}}]:clone()
+    local onehot_obj_sizes = trajectoriesonehot[{{},{},{},{unpack(self.si.os)}}]:clone()
+
+    local obj_sizes = self:onehot2numall(onehot_obj_sizes, self.obj_sizes)
+
+    -- join
+    local trajectories = torch.cat({before, obj_sizes, after}, 4)
+    return trajectories
 end
 
-function objtype2onehotall()
+function data_process:objtype2onehotall(trajectories)
     local before = trajectories[{{},{},{},{self.rsi.px, self.rsi.oid-1}}]:clone()
     local after = trajectories[{{},{},{},{self.rsi.oid+1,-1}}]:clone()
     local objtypes = trajectories[{{},{},{},{self.rsi.oid}}]:clone()
@@ -191,8 +226,16 @@ function objtype2onehotall()
     return trajectoriesonehot
 end
 
-function onehotall2objtype()
+function data_process:onehotall2objtype(trajectoriesonehot)
+    local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.oid[1]-1}}]:clone()
+    local after = trajectoriesonehot[{{},{},{},{self.si.oid[2]+1,-1}}]:clone()
+    local onehot_objtypes = trajectoriesonehot[{{},{},{},{unpack(self.si.oid)}}]:clone()
 
+    local objtypes = self:onehot2numall(onehot_objtypes, self.oid_ids)
+
+    -- join
+    local trajectories = torch.cat({before, objtypes, after}, 4)
+    return trajectories
 end
 
 
@@ -251,7 +294,28 @@ function data_process:onehot2massall(trajectoriesonehot)
 
     -- join
     local trajectories = torch.cat({before, masses, after}, 4)
+    return trajectories
+end
 
+
+function data_process:properties2onehotall(data)  -- (num_ex, num_obj, num_steps, obj_dim)
+    local data = self:mass2onehotall(data)
+    data = self:objtype2onehotall(data)
+    data = self:size2onehotall(data)
+    data = self:gravity2onehotall(data)
+    data = self:friction2onehotall(data)
+    data = self:pairwise2onehotall(data)
+    return data
+end
+
+function data_process:onehot2propertiesall(trajectoriesonehot)
+    local trajectories = onehot2massall(trajectoriesonehot)
+    trajectories = onehot2massall(trajectoriesonehot)
+    trajectories = onehotall2objtype(trajectoriesonehot)
+    trajectories = onehotall2size(trajectoriesonehot)
+    trajectories = gravity2onehotall(trajectoriesonehot)
+    trajectories = friction2onehotall(trajectoriesonehot)
+    trajectories = pairwise2onehotall(trajectoriesonehot)
     return trajectories
 end
 
@@ -504,6 +568,7 @@ function data_process:json2batches(jsonfile)
     assert(data:size(3) == self.maxwinsize)
     data = self:normalize(data)
     data = self:mass2onehotall(data)  -- (num_ex, num_obj, num_steps, obj_dim)
+    -- data = self:properties2onehotall(data)
     local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
     return self:split2batchesall(focus, context)
 end
@@ -527,6 +592,7 @@ function data_process:record_trajectories(batch, config, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
     local trajectories = self:onehot2massall(trajectories)
+    -- local trajectories = self:onehot2propertiesall(trajectories)
     local unnormalized = self:unnormalize(trajectories)
     -- dump_data_json(unnormalized, jsonfile)
     local batch_table = data2table(unnormalized)
