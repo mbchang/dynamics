@@ -116,47 +116,87 @@ function data_process:onehot2num(onehot, categories)
     return categories[torch.find(onehot, 1)[1]]
 end
 
+function gravity2onehotall()
+end
+
+function onehotall2gravity()
+end
+
+function friction2onehotall()
+end
+
+function onehotall2friction()
+end
+
+function pairwise2onehotall()
+end
+
+function onehotall2pairwise()
+end
+
+function size2onehotall()
+end
+
+function onehotall2size()
+end
+
+function objtype2onehotall()
+end
+
+function onehotall2objtype()
+end
+
+function data_process:num2onehotall(selected, categories)
+    local num_ex = selected:size(1)
+    local num_obj = selected:size(2)
+    local num_steps = selected:size(3)
+
+    -- expand
+    selected = torch.repeatTensor(selected, 1, 1, 1, #categories)  -- I just want to tile on the last dimension
+    selected:resize(num_ex*num_obj*num_steps, #categories)
+
+    for row=1,selected:size(1) do
+        selected[{{row}}] = self:num2onehot(selected[{{row},{1}}]:sum(), categories)
+    end
+    selected:resize(num_ex, num_obj, num_steps, #categories)
+    return selected
+end
+
+function data_process:onehot2numall(onehot_selected, categories)
+    local num_ex = onehot_selected:size(1)
+    local num_obj = onehot_selected:size(2)
+    local num_steps = onehot_selected:size(3)
+
+    local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
+    onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
+
+    for row=1,onehot_masses:size(1) do
+        selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
+    end
+    selected:resize(num_ex, num_obj, num_steps, 1)
+    return selected
+end
+
+
 function data_process:mass2onehotall(trajectories)
     local before = trajectories[{{},{},{},{self.rsi.px, self.si.m[1]-1}}]:clone()
     local after = trajectories[{{},{},{},{self.rsi.m+1,-1}}]:clone()
     local masses = trajectories[{{},{},{},{self.rsi.m}}]:clone()
 
-    local num_ex = masses:size(1)
-    local num_obj = masses:size(2)
-    local num_steps = masses:size(3)
-
-    -- expand
-    masses = torch.repeatTensor(masses, 1, 1, 1, #self.masses)  -- I just want to tile on the last dimension
-    masses:resize(num_ex*num_obj*num_steps, #self.masses)
-
-    for row=1,masses:size(1) do
-        -- masses[{{row}}] = self:mass2onehot(masses[{{row},{1}}]:sum())
-        masses[{{row}}] = self:num2onehot(masses[{{row},{1}}]:sum(), self.masses)
-    end
-    masses:resize(num_ex, num_obj, num_steps, #self.masses)
+    masses = self:num2onehotall(masses, self.masses)
 
     -- join
     local trajectoriesonehot = torch.cat({before, masses, after}, 4)
     return trajectoriesonehot
 end
 
--- Do I need a onehot2massall method?
+
 function data_process:onehot2massall(trajectoriesonehot)
     local before = trajectoriesonehot[{{},{},{},{self.si.px, self.si.m[1]-1}}]:clone()
     local after = trajectoriesonehot[{{},{},{},{self.si.m[2]+1,-1}}]:clone()
     local onehot_masses = trajectoriesonehot[{{},{},{},{unpack(self.si.m)}}]:clone()
 
-    local num_ex = onehot_masses:size(1)
-    local num_obj = onehot_masses:size(2)
-    local num_steps = onehot_masses:size(3)
-
-    local masses = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
-    onehot_masses:resize(num_ex*num_obj*num_steps, #self.masses)
-
-    for row=1,onehot_masses:size(1) do
-        masses[{{row}}] = self:onehot2num(torch.squeeze(onehot_masses[{{row}}]), self.masses)
-    end
-    masses:resize(num_ex, num_obj, num_steps, 1)
+    local masses = self:onehot2numall(onehot_masses, self.masses)
 
     -- join
     local trajectories = torch.cat({before, masses, after}, 4)
@@ -198,21 +238,6 @@ function data_process:expand_for_each_object(unfactorized)
 
                 -- permute here
                 assert(this:size()[1] == other:size()[1])
-                -- this: (num_samples, winsize, 8)
-                -- other: (num_samples, num_other_particles, winsize, 8)
-                -- local num_other_particles = other:size(2)
-                -- for j = 1, num_other_particles do
-                --
-                --     local permuted_other = torch.cat(permute(other),1)
-                --     assert(permuted_other:size(1) == factorial(num_other_particles))
-                --     for k = 1, factorial(num_other_particles) do
-                --         focus[#focus+1] = this
-                --     end
-                --     context[#context+1] = permuted_other
-                --
-                --     -- focus[#focus+1] = this
-                --     -- context[#context+1] = other
-                -- end
                 focus[#focus+1] = this
                 context[#context+1] = other
             end
