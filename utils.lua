@@ -286,3 +286,17 @@ function alleq(tableoftables)
     end
     return true
 end
+
+function alleq_tensortable(tableoftensors)
+    if #tableoftensors <=1 then 
+        return true
+    else
+        local reference = tableoftensors[1]
+        for i=2,#tableoftensors do
+            if not(reference:equal(tableoftensors[i])) then
+                return false
+            end
+        end
+        return true
+    end
+end
