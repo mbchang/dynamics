@@ -32,7 +32,7 @@ initialize_positions = function(num_obj, obj_radius, rand_pos_fn){
             // true if overlaps
             while ((function(){
                     for (var j = 0; j < p0.length; j++) {
-                        if (euc_dist(proposed_pos, p0[j]) < 1.5*obj_radius) {
+                        if (euc_dist(proposed_pos, p0[j]) < 2.5*obj_radius) {
                             return true;
                         }
                     }
