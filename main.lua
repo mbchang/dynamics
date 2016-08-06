@@ -85,11 +85,11 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 100
+    mp.max_iter = 100000
     -- mp.lrdecay = 0.99
     mp.nbrhd = true
-    mp.lrdecayafter = 1000
-    mp.lrdecay_every = 1000
+    mp.lrdecayafter = 50000
+    mp.lrdecay_every = 2500
     mp.layers = 1
     -- mp.lr = 3e-5
     mp.model = 'bffobj'
@@ -98,9 +98,9 @@ if mp.server == 'pc' then
 	mp.seq_length = 10  -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
-    mp.print_every = 10
-    mp.save_every = 1000
-    mp.val_every = 1000
+    mp.print_every = 100
+    mp.save_every = 10000
+    mp.val_every = 10000
     mp.plot = false--true
 	mp.cuda = false
 else
@@ -364,7 +364,7 @@ end
 function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local test_loss, prediction = model:fp(params_, batch)
         sum_loss = sum_loss + test_loss
@@ -379,7 +379,7 @@ function generate_onehot_hypotheses(num_hypotheses)
     local hypotheses = {}
     for i=1,num_hypotheses do
         local hypothesis = torch.zeros(num_hypotheses)
-        hypothesis[{{1}}]:fill(1)
+        hypothesis[{{i}}]:fill(1)
         table.insert(hypotheses, hypothesis)
     end
     return hypotheses
@@ -391,7 +391,7 @@ function infer_properties(dataloader, params_, property, method)
     if property == 'mass' then
         si_indices = config_args.si.m
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        hypotheses = generate_onehot_hypotheses(num_hypotheses)
+        hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
     elseif property == 'size' then 
         assert(false, property..'not implemented')
     end
@@ -406,7 +406,7 @@ function infer_properties(dataloader, params_, property, method)
 end
 
 -- copies batch
-function apply_hypothesis(batch, hypothesis, si_indices)
+function apply_hypothesis(batch, hyp, si_indices)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
     this_past = this_past:clone()
     context_past = context_past:clone()
@@ -431,30 +431,37 @@ function max_likelihood(dataloader, params_, hypotheses, si_indices)
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.num_batches do
-        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-        local best_loss = torch.Tensor(mp.batch_size):fill(math.huge)
-        local best_hypothesis = torch.zeros(mp.batch_size,#si_indices)
-        local ground_truth = ground_truth_property(batch, hypotheses, si_indices)
+        local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
+        local best_hypotheses = torch.zeros(mp.batch_size,#hypotheses)
+
+
         for j,h in pairs(hypotheses) do
-            local hypothesis_batch = apply_hypothesis(batch, h, si_indices)
-            local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)
+            local hypothesis_batch = apply_hypothesis(batch, h, si_indices)  -- good
+            local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
 
             -- test_loss is a tensor of size bsize
-            local update_indices = test_loss:lt(best_loss):nonzero()
+            local update_indices = test_losses:lt(best_losses):nonzero()
 
-            --best_loss should equal test loss at the indices where test loss < best_loss
-            best_loss:indexCopy(1,update_indices,test_loss:index(1,update_indices))  -- TODO! Test if this works
+            if update_indices:nElement() > 0 then
+                update_indices = torch.squeeze(update_indices,2)
+                --best_loss should equal test loss at the indices where test loss < best_loss
+                best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))  -- TODO! Test if this works
 
-            -- best_hypotheses should equal h at the indices where test loss < best_loss
-            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,#update_indices,1))
+                -- best_hypotheses should equal h at the indices where test loss < best_loss
+                best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
+            end
+            -- check that everything has been updated
+            assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
+            assert(not(best_hypotheses:equal(torch.zeros(mp.batch_size,#hypotheses))))
         end
 
         -- now that you have best_hypothesis, compare best_hypotheses with truth
         -- need to construct true hypotheses based on this_past, hypotheses as parameters
         local this_past = batch[1]:clone()
-        local ground_truth = this_past[{{},{},si_indices}]
-        local num_equal = ground_truth:eq(best_hypothesis):nonzero():sum()
+        local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
+        local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(#hypotheses):sum()
         num_correct = num_correct + num_equal
         count = count + mp.batch_size
     end
@@ -466,6 +473,17 @@ function validate()
     local train_loss = test(train_test_loader, model.theta.params, false)
     local val_loss = test(val_loader, model.theta.params, false)
     local test_loss = test(test_loader, model.theta.params, false)
+
+    -- local train_loss = 0
+    -- local val_loss = 0
+    -- local test_loss = 0
+
+    print('infer mass')
+    print('TODO: make sure test_loader is reset, if needed!')  -- TODO!
+    local mass_accuracy = infer_properties(test_loader, model.theta.params, 'mass', 'max_likelihood')
+    print('mass accuracy', mass_accuracy)
+
+
     print('train loss\t'..train_loss..
             '\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
 

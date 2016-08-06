@@ -271,7 +271,7 @@ function model:fp_batch(params_, batch, sim)
     end
 
     collectgarbage()
-    return torch.cat(loss_all), prediction
+    return torch.Tensor(loss_all), prediction
 end
 
 
