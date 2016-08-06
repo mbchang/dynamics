@@ -75,12 +75,10 @@ local M
 -- world constants
 local subsamp = 1
 
--- mp.input_dim = mp.object_dim*mp.num_past
--- mp.out_dim = mp.object_dim*mp.num_future
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_dataset_folders,'\"',''))())
 mp.savedir = mp.logs_root .. '/' .. mp.name
-mp.relative=true -- TODO: address this!
+mp.relative=true -- TODO_lowpriority: address this!
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then
@@ -95,7 +93,7 @@ local model, test_loader, modelfile, dp
 function inittest(preload, model_path, opt)
     print("Network parameters:")
     print(mp.test_dataset_folders)
-    dp = data_process.create(jsonfile, outfile, config_args)  -- TODO: actually you might want to load configs, hmmm so does eval need jsonfile, outfile?
+    dp = data_process.create(jsonfile, outfile, config_args)
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
     local data_loader_args = {data_root=mp.data_root..'/',
@@ -108,7 +106,7 @@ function inittest(preload, model_path, opt)
                               sim=opt.sim,
                               cuda=mp.cuda
                             }
-    test_loader = D.create('testset', tablex.deepcopy(data_loader_args))  -- TODO: Testing on trainset
+    test_loader = D.create('testset', tablex.deepcopy(data_loader_args))
     modelfile = model_path
     print("Initialized Network")
 end
@@ -118,7 +116,6 @@ function backprop2input()
 
     -- get batch
     local batch = test_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
-    -- NOTE CHANGE BATCH HERE
     local this, context, y, mask = unpack(batch)
     local x = {this=this,context=context}
 
@@ -232,10 +229,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
 
-        local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- TODO: perhaps here I should tell it what my desired windowsize should be
+        local batch, current_dataset = dataloader:sample_sequential_batch(false)
 
         -- get data
-        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
+        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)
 
         -- crop to number of timestesp
         y_orig = y_orig[{{},{1, numsteps}}]
@@ -280,10 +277,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local y = future[{{},{j},{t}}]
                 y:resize(mp.batch_size, mp.num_future, mp.object_dim)
 
-                local batch = {this, context, y, _, mask} -- TODO: this may be the problem!
+                local batch = {this, context, y, _, mask}
 
                 -- predict
-                local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
+                local loss, pred = model:fp(params_,batch,true)
                 avg_loss = avg_loss + loss
                 count = count + 1
 
@@ -296,7 +293,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 end
 
                 -- restore object properties because we aren't learning them
-                pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]  -- NOTE! THIS DOESN'T TAKE ANGLE INTO ACCOUNT!
+                pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]
 
                 -- update position
                 pred = model:update_position(this, pred)
@@ -308,7 +305,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 if pred[{{},{},config_args.si.oid[1]}]:equal(convert_type(torch.ones(mp.batch_size,1), mp.cuda)) then
                     pred[{{},{},{config_args.si.a,config_args.si.av}}]:zero()
                 end
-                
+
                 pred = unsqueeze(pred, 2)
 
                 -- write into pred_sim
@@ -432,7 +429,7 @@ function plot_hid_state(fname, x,y)
     gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
     gnuplot.xlabel('Euclidean Distance')
     gnuplot.ylabel('Hidden State Norm')
-    gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')  -- TODO
+    gnuplot.title('Pairwise Hidden State as a Function of Distance from Focus Object')
     gnuplot.plot(x, y, '+')
     gnuplot.plotflush()
     print('Saved plot of hidden state to '..mp.savedir..'/'..fname..'.png')
@@ -475,7 +472,7 @@ end
 
 function getLastSnapshot(network_name)
 
-    -- TODO: this should be replaced by savedir!
+    -- TODO_lowpriority: this should be replaced by savedir!
     local res_file = io.popen("ls -t "..mp.logs_root..'/'..network_name..
                                 " | grep -i epoch | head -n 1")
     local status, result = pcall(function()
@@ -490,8 +487,6 @@ function getLastSnapshot(network_name)
 end
 
 function run_inspect_hidden_state()
-    -- print(mp.name)
-
     local snapshot = getLastSnapshot(mp.name)
     local snapshotfile = mp.savedir ..'/'..snapshot
     print('Snapshot file: '..snapshotfile)

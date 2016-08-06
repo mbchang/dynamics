@@ -365,15 +365,100 @@ function test(dataloader, params_, saveoutput)
     local sum_loss = 0
     for i = 1,dataloader.num_batches do
         if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
-
         local batch = dataloader:sample_sequential_batch(false)
-
         local test_loss, prediction = model:fp(params_, batch)
         sum_loss = sum_loss + test_loss
     end
     local avg_loss = sum_loss/dataloader.num_batches
     collectgarbage()
     return avg_loss
+end
+
+-- a table of onehot tensors of size num_hypotheses
+function generate_onehot_hypotheses(num_hypotheses)
+    local hypotheses = {}
+    for i=1,num_hypotheses do
+        local hypothesis = torch.zeros(num_hypotheses)
+        hypothesis[{{1}}]:fill(1)
+        table.insert(hypotheses, hypothesis)
+    end
+    return hypotheses
+end
+
+function infer_properties(dataloader, params_, property, method)
+    -- TODO for other properties
+    local hypotheses, si_indices, num_hypotheses
+    if property == 'mass' then
+        si_indices = config_args.si.m
+        num_hypotheses = si_indices[2]-si_indices[1]+1
+        hypotheses = generate_onehot_hypotheses(num_hypotheses)
+    elseif property == 'size' then 
+        assert(false, property..'not implemented')
+    end
+
+    local accuracy
+    if method == 'backprop' then 
+        accuracy = backprop2input(dataloader, params_, hypotheses, si_indices)
+    elseif method == 'max_likelihood' then
+        accuracy = max_likelihood(dataloader, params_, hypotheses, si_indices)
+    end
+    return accuracy
+end
+
+-- copies batch
+function apply_hypothesis(batch, hypothesis, si_indices)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+    this_past = this_past:clone()
+    context_past = context_past:clone()
+    this_future = this_future:clone()
+    context_future = context_future:clone()
+
+    -- I should apply the hypothesis to the entire batch?
+    -- later I will have to compare to the original to measure accuracy.
+    -- well since I'm going to go through all hypotheses anyways it don't have
+    -- to worry about things within the batch. But I have to save the original
+    -- this_past for ground truth so that I can compare and measure how many 
+    -- within the batch, after I applied all my hypotheses, had the best error.
+    local num_ex = this_past:size(1)
+    local num_context = this_past:size(2)
+    this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_context, 1)
+
+    return {this_past, context_past, this_future, context_future, mask}
+end
+
+
+function max_likelihood(dataloader, params_, hypotheses, si_indices)
+    local num_correct = 0
+    local count = 0
+    for i = 1, dataloader.num_batches do
+        if mp.server == 'pc ' then xlua.progress(i, dataloader.num_batches) end
+        local batch = dataloader:sample_sequential_batch(false)
+        local best_loss = torch.Tensor(mp.batch_size):fill(math.huge)
+        local best_hypothesis = torch.zeros(mp.batch_size,#si_indices)
+        local ground_truth = ground_truth_property(batch, hypotheses, si_indices)
+        for j,h in pairs(hypotheses) do
+            local hypothesis_batch = apply_hypothesis(batch, h, si_indices)
+            local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)
+
+            -- test_loss is a tensor of size bsize
+            local update_indices = test_loss:lt(best_loss):nonzero()
+
+            --best_loss should equal test loss at the indices where test loss < best_loss
+            best_loss:indexCopy(1,update_indices,test_loss:index(1,update_indices))  -- TODO! Test if this works
+
+            -- best_hypotheses should equal h at the indices where test loss < best_loss
+            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,#update_indices,1))
+        end
+
+        -- now that you have best_hypothesis, compare best_hypotheses with truth
+        -- need to construct true hypotheses based on this_past, hypotheses as parameters
+        local this_past = batch[1]:clone()
+        local ground_truth = this_past[{{},{},si_indices}]
+        local num_equal = ground_truth:eq(best_hypothesis):nonzero():sum()
+        num_correct = num_correct + num_equal
+        count = count + mp.batch_size
+    end
+    return num_correct/count
 end
 
 
