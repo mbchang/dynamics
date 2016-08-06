@@ -58,6 +58,7 @@ cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-val_window', 10, 'for testing convergence')
 cmd:option('-val_eps', 1.5e-5, 'for testing convergence')  -- 1e-5
+cmd:option('-im', false, 'infer mass')
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
@@ -85,7 +86,7 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 100000
+    mp.max_iter = 60
     -- mp.lrdecay = 0.99
     mp.nbrhd = true
     mp.lrdecayafter = 50000
@@ -93,14 +94,15 @@ if mp.server == 'pc' then
     mp.layers = 1
     -- mp.lr = 3e-5
     mp.model = 'bffobj'
+    mp.im = true
     mp.val_window = 5
     mp.val_eps = 2e-5
 	mp.seq_length = 10  -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
-    mp.print_every = 100
+    mp.print_every = 10
     mp.save_every = 10000
-    mp.val_every = 10000
+    mp.val_every = 20
     mp.plot = false--true
 	mp.cuda = false
 else
@@ -199,9 +201,15 @@ function inittrain(preload, model_path)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
+    if mp.im then
+        inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'infer.log'))
+    end
     if mp.plot == false then
         trainLogger.showPlot = false
         experimentLogger.showPlot = false
+        if mp.im then
+            inferenceLogger.showPlot = false
+        end
     end
 
     -- save args
@@ -474,18 +482,18 @@ function validate()
     local val_loss = test(val_loader, model.theta.params, false)
     local test_loss = test(test_loader, model.theta.params, false)
 
-    -- local train_loss = 0
-    -- local val_loss = 0
-    -- local test_loss = 0
+    local log_string = 'train loss\t'..train_loss..
+                      '\tval loss\t'..val_loss..
+                      '\ttest_loss\t'..test_loss
 
-    print('infer mass')
-    print('TODO: make sure test_loader is reset, if needed!')  -- TODO!
-    local mass_accuracy = infer_properties(test_loader, model.theta.params, 'mass', 'max_likelihood')
-    print('mass accuracy', mass_accuracy)
+    if mp.im then
+        local mass_accuracy = infer_properties(val_loader, model.theta.params, 'mass', 'max_likelihood')
+        log_string = log_string..'\tmass accuracy\t'..mass_accuracy
+        inferenceLogger:add{['Mass accuracy (val set)'] = mass_accuracy}
+        inferenceLogger:style{['Mass accuracy (val set)'] = '~'}
+    end
 
-
-    print('train loss\t'..train_loss..
-            '\tval loss\t'..val_loss..'\ttest_loss\t'..test_loss)
+    print(log_string)
 
     -- Save logs
     experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),

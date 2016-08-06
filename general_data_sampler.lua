@@ -33,6 +33,8 @@ function general_datasampler.create(dataset_name, args)
 
     local self = {}
     setmetatable(self, general_datasampler)
+    self.args = args
+    self.dataset_name = dataset_name
     self.current_batch = 0
     self.data_root = args.data_root
     self.dataset_folders = args.dataset_folders
@@ -48,8 +50,8 @@ function general_datasampler.create(dataset_name, args)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
     self.datasamplers = {}
     for i, dataset_folder in pairs(self.dataset_folders) do
-        args.dataset_folder=self.data_root..dataset_folder
-        self.datasamplers[i] = D.create(dataset_name, args)
+        self.args.dataset_folder=self.data_root..dataset_folder
+        self.datasamplers[i] = D.create(self.dataset_name, self.args)
     end
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.total_batches end,
@@ -63,6 +65,22 @@ function general_datasampler.create(dataset_name, args)
 
     collectgarbage()
     return self
+end
+
+function general_datasampler:reset()
+    self.datasamplers = {}
+    for i, dataset_folder in pairs(self.dataset_folders) do
+        self.args.dataset_folder=self.data_root..dataset_folder
+        self.datasamplers[i] = D.create(self.dataset_name, self.args)
+    end
+    self.num_batches = plseq.reduce(function(x,y) return x + y end,
+                            plseq.map(function(x) return x.total_batches end,
+                                self.datasamplers))
+    self.current_batch = 0
+    self.current_sampled_id = nil
+    self.current_dataset = 1
+    self.has_seen_all_batches = false
+    self.has_reported = false
 end
 
 -- this samples the current dataset randomly but sample_sequential_batch does not!
