@@ -190,7 +190,7 @@ experiments = [
                 ]
 
 # epochs = [20, 40, 60, 80, 100]
-epochs = [5]
+epochs = [9]
 # epochs = [1,2, 3]
 val_losses = gather_val_losses(experiments, epochs)
 val_losses = sort_best(val_losses, epochs)

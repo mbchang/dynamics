@@ -36,7 +36,6 @@ function merge_tables(t1, t2)
 end
 
 -- merge t2 into t1
--- TODO do set functions
 function merge_tables_by_value(t1, t2)
     -- Merges t2 and t1, overwriting t1 keys by t2 keys when applicable
     for k,v in pairs(t1) do assert(type(k) == 'number') end

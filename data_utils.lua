@@ -125,13 +125,13 @@ function crop_future(tensor, reshapesize, cropdim)
     --hacky
     if crop:dim() == 3 then
         assert(cropdim[1]==2)
-        crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8) -- TODO the -1 should be a function of 1+num_future
+        crop = crop[{{},{1,cropdim[2]},{}}]  -- (num_samples x num_future x 8)
         crop = crop:reshape(reshapesize[1], cropdim[2] * mp.object_dim)
     else
         assert(crop:dim()==4 and cropdim[1] == 3)
         crop = crop[{{},{},{1,cropdim[2]},{}}]
         crop = crop:reshape(reshapesize[1], mp.seq_length,
-                            cropdim[2] * mp.object_dim)   -- TODO RESIZE THIS (use reshape size here)
+                            cropdim[2] * mp.object_dim)
     end
     return crop
 end

@@ -45,7 +45,7 @@ function datasampler.create(dataset_name, args)
     self.num_future=args.num_future
     self.relative=args.relative
     self.shuffle=args.shuffle
-    self.subdivide = args.subdivide  -- TODO!
+    self.subdivide = args.subdivide
     self.sim=args.sim
     self.cuda=args.cuda
     assert(self.num_past + self.num_future <= self.winsize)
@@ -108,10 +108,7 @@ end
 
 function datasampler:relative_batch(batch, rta)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
-
-    -- TODO: use config args for this!
     this_future = data_process.relative_pair(this_past, this_future, rta)
-
     return {this_past, context_past, this_future, context_future, mask}
 end
 

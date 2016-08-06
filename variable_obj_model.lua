@@ -491,7 +491,7 @@ function model:sim(batch)
 
             -- -- relative coords for next timestep
             if mp.relative then
-                pred = data_process:relative_pair(this, pred, true)
+                pred = data_process.relative_pair(this, pred, true)
             end
 
             -- restore object properties because we aren't learning them
@@ -536,7 +536,7 @@ function model:sim(batch)
     local context_pred = pred_sim[{{},{2,-1}}]
 
     if mp.relative then
-        y_orig = data_process:relative_pair(this_orig, y_orig, true)
+        y_orig = data_process.relative_pair(this_orig, y_orig, true)
     end
 
     -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)

@@ -48,11 +48,11 @@ function general_datasampler.create(dataset_name, args)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
     self.datasamplers = {}
     for i, dataset_folder in pairs(self.dataset_folders) do
-        args.dataset_folder=self.data_root..dataset_folder -- NOTE HARDCODED!
+        args.dataset_folder=self.data_root..dataset_folder
         self.datasamplers[i] = D.create(dataset_name, args)
     end
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
-                            plseq.map(function(x) return x.total_batches end,  -- TODO!
+                            plseq.map(function(x) return x.total_batches end,
                                 self.datasamplers))
     print(self.dataset_name..': num_batches: '..self.num_batches)
     self.current_sampled_id = nil

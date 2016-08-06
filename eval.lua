@@ -297,13 +297,18 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- restore object properties because we aren't learning them
                 pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]  -- NOTE! THIS DOESN'T TAKE ANGLE INTO ACCOUNT!
-                
+
                 -- update position
                 pred = model:update_position(this, pred)
 
                 -- update angle
                 pred = model:update_angle(this, pred)
-                -- pred = unsqueezer:forward(pred)
+
+                -- if object is ball, then angle and angular velocity are 0
+                if pred[{{},{},config_args.si.oid[1]}]:equal(convert_type(torch.ones(mp.batch_size,1), mp.cuda)) then
+                    pred[{{},{},{config_args.si.a,config_args.si.av}}]:zero()
+                end
+                
                 pred = unsqueeze(pred, 2)
 
                 -- write into pred_sim
