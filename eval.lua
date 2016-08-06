@@ -15,7 +15,6 @@ require 'data_utils'
 local tablex = require 'pl.tablex'
 local pls = require 'pl.stringx'
 
--- require 'nn'
 require 'rnn'  -- also installs moses (https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md), like underscore.js
 require 'torch'
 require 'nngraph'
@@ -45,7 +44,6 @@ cmd:option('-seed', true, 'manual seed or not')
 -- dataset
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
--- cmd:option('-gt', false, 'saving ground truth')  -- 0.001
 cmd:option('-ns', 3, 'number of test batches')
 cmd:option('-steps', 58, 'steps to simulate')
 cmd:text()
@@ -424,9 +422,8 @@ function inspect_hidden_state(dataloader, params_)
 end
 
 
--- todo: move this to plot_results
+-- TODO_lowpriority: move this to plot_results
 function plot_hid_state(fname, x,y)
-    -- plot scatter plot. TODO: later move this to an independent function
     gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
     gnuplot.xlabel('Euclidean Distance')
     gnuplot.ylabel('Hidden State Norm')

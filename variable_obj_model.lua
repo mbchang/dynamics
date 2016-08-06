@@ -9,7 +9,6 @@ require 'modules'
 
 nngraph.setDebug(true)
 
-nbrhd = false  -- later make this a flag!
 
 -- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
@@ -131,7 +130,7 @@ function model:unpack_batch(batch, sim)
 
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim,
-            'Your batch size or input dim is wrong')  -- TODO RESIZE THIS
+            'Your batch size or input dim is wrong')  -- TODO_lowpriority RESIZE THIS
     assert(context:size(1) == mp.batch_size and
             context:size(2)==torch.find(mask,1)[1]
             and context:size(3) == mp.input_dim)
@@ -151,7 +150,7 @@ function model:unpack_batch(batch, sim)
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     -- TODO! change nbrhd to flag
-    if nbrhd then  
+    if self.mp.nbrhd then  
         self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
@@ -492,7 +491,7 @@ function model:sim(batch)
 
             -- -- relative coords for next timestep
             if mp.relative then
-                pred = data_process.relative_pair(this, pred, true)
+                pred = data_process:relative_pair(this, pred, true)
             end
 
             -- restore object properties because we aren't learning them
@@ -537,7 +536,7 @@ function model:sim(batch)
     local context_pred = pred_sim[{{},{2,-1}}]
 
     if mp.relative then
-        y_orig = data_process.relative_pair(this_orig, y_orig, true)
+        y_orig = data_process:relative_pair(this_orig, y_orig, true)
     end
 
     -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)

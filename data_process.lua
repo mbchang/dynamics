@@ -51,7 +51,6 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.outfolder = outfolder -- save stuff to here.
 
     -- here you can also include have world parameters
-    -- not that object id includes whether it is stationary or not
 
     return self
 end
@@ -61,9 +60,9 @@ function data_process.relative_pair(past, future, relative_to_absolute)
 
     -- TODO: use config args for this!
     if relative_to_absolute then
-        future[{{},{},{1,4}}] = future[{{},{},{1,4}}] + past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
+        future[{{},{},{1,6}}] = future[{{},{},{1,6}}] + past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     else
-        future[{{},{},{1,4}}] = future[{{},{},{1,4}}] - past[{{},{-1},{1,4}}]:expandAs(future[{{},{},{1,4}}])
+        future[{{},{},{1,6}}] = future[{{},{},{1,6}}] - past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     end
     return future
 end
@@ -145,7 +144,7 @@ function data_process:onehot2numall(onehot_selected, categories)
     local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
     onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
 
-    for row=1,onehot_masses:size(1) do
+    for row=1,onehot_selected:size(1) do
         selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
     end
     selected:resize(num_ex, num_obj, num_steps, 1)
@@ -204,7 +203,6 @@ function data_process:onehot2propertiesall(trajectoriesonehot)
 end
 
 
--- TODO: when spliting in time, should I split in the split2batches, or in the xpand_for_each_object?
 
 --[[ Expands the number of examples per batch to have an example per particle
     Input: unfactorized: (num_samples x num_obj x windowsize x 8)
@@ -220,7 +218,6 @@ function data_process:expand_for_each_object(unfactorized)
     local context = {}
     if num_obj > 1 then
         for i=1,num_obj do  -- this is doing it in transpose order
-            -- NOTE: the one-hot encoding has 4 values, and if the last value is 1 that means it is the stationary ball!
             local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same
 
             if this[{{},{},{},{self.si.oid[2]}}]:sum() == 0 then -- only do it if the particle is not stationary obstacle
@@ -235,7 +232,7 @@ function data_process:expand_for_each_object(unfactorized)
                                 unfactorized[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x 8)
                 end
 
-                -- TODO should permute here
+                -- TODOlowpriority should permute here
                 assert(this:size()[1] == other:size()[1])
                 focus[#focus+1] = this
                 context[#context+1] = other
@@ -262,21 +259,19 @@ end
 -- we also should have a method that divides the focus and context into past and future
 -- this assumes we are predicting for everybody
 function data_process:condense(focus, context)
-
-    -- duplicates may exist, they may not
+    -- duplicates may exist, they may not because each object gets a chance to a focus object
+    -- so the same set of trajectories would appear num_obj times
     focus = unsqueeze(focus, 2)
-    -- TODO: get rid of duplicates!
+    -- TODO_lowpriority get rid of duplicates!
     return torch.cat({focus, context},2)
 end
 
--- TODO: when spliting in time, should I split in the split2batches, or in the xpand_for_each_object?
 -- data:
 function data_process:split2batches(data)
     print(data:size())
     local num_examples = data:size(1)
     -- here you should split through time
 
-    -- assert(num_examples % self.bsize == 0)  -- TODO take care of this!
     local num_chunks = math.ceil(num_examples/self.bsize)
     print('Splitting '..num_examples..' examples into '..num_chunks..
             ' batches of size at most '..self.bsize)
@@ -383,7 +378,7 @@ function data_process:create_datasets_batches()
     local total_samples = tonumber(extract_flag(flags, 'ex'))
     local num_obj = tonumber(extract_flag(flags, 'n'))
     local num_steps = tonumber(extract_flag(flags, 't'))
-    local num_batches = total_samples*num_obj/self.bsize -- TODO: this can change based on on how you want to process num_steps!
+    local num_batches = total_samples*num_obj/self.bsize
     print(num_obj..' objects '..num_steps..' steps '..total_samples..
         ' samples yields '..num_batches..' batches')
     local num_train, num_val, num_test = self:split_datasets_sizes(num_batches)
@@ -429,7 +424,7 @@ function data_process:create_datasets_batches()
             counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
         end
     else
-        -- verify that all batches have been saved TODO
+        -- verify that all batches have been saved TODOlowpriority
         -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
     end
 end
@@ -447,15 +442,12 @@ function data_process:split2batchesall(focus, context)
     return all_batches
 end
 
--- TODO: when spliting in time, should I split in the split2batchesall, or in the xpand_for_each_object?
 function data_process:json2batches(jsonfile)
     local data = load_data_json(jsonfile)
     assert(data:size(3) == self.maxwinsize)
     data = self:normalize(data)
-    -- data = self:mass2onehotall(data)  -- (num_ex, num_obj, num_steps, obj_dim)
     data = self:properties2onehotall(data)
-    -- assert(false)
-    local focus, context = self:expand_for_each_object(data)-- TODO include object id in expand for each object
+    local focus, context = self:expand_for_each_object(data)
     return self:split2batchesall(focus, context)
 end
 
@@ -466,8 +458,6 @@ function data_process:create_datasets()
     local all_batches = self:json2batches(jsonfile)
     local datasets = self:split2datasets(all_batches)
     self:save_batches(datasets, self.outfolder)
-
-    -- TODO: you should also save a sort of config file in the folder such that you can match the winsize and stuff in your dataloader, for example
 end
 
 -- this method converts torch back to json file
@@ -477,10 +467,8 @@ end
 function data_process:record_trajectories(batch, config, jsonfile)
     -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
-    -- local trajectories = self:onehot2massall(trajectories)
     local trajectories = self:onehot2propertiesall(trajectories)
     local unnormalized = self:unnormalize(trajectories)
-    -- dump_data_json(unnormalized, jsonfile)
     local batch_table = data2table(unnormalized)
     json.save(jsonfile, {trajectories=batch_table,config=config})
 end

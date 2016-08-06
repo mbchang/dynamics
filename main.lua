@@ -81,7 +81,7 @@ mp = cmd:parse(arg)
 if mp.server == 'pc' then
     mp.data_root = 'mj_data'
     mp.logs_root = 'logs'
-    mp.winsize = 3 -- total number of frames  -- TODO! winsize should be num_past + num_future!
+    mp.winsize = 3 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
@@ -133,7 +133,7 @@ else
 end
 
 mp.winsize = mp.num_past + mp.num_future
-mp.object_dim = config_args.si.p[2]-- TODO! make this more versatile! (don't hardcode it to oid)
+mp.object_dim = config_args.si.p[2]
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 if mp.model == 'crnn' then 
@@ -216,10 +216,9 @@ function initsavebatches()
     for _, dataset_folder in pairs(mp.dataset_folders) do
         local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
         if not paths.dirp(data_folder) then
-            local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'--..'/'..mp.dataset_folder..'.json' -- REDO!
-            local outfolder = mp.data_root..'/'..dataset_folder..'/batches'  -- TODO: make this some global thing!
-            print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..outfolder)
-            local dp = data_process.create(jsonfolder, outfolder, config_args)
+            local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
+            print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
+            local dp = data_process.create(jsonfolder, data_folder, config_args)
             dp:create_datasets_batches()
         else
             print('Batches for '..dataset_folder..' already made')
@@ -305,13 +304,12 @@ function train(start_iter, epoch_num)
                 model.network:clearState()
 
                 local checkpoint = {}
-                checkpoint.model = model  -- TODO: should I save the model.theta?
+                checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
                 checkpoint.mp = mp
                 checkpoint.train_losses = train_losses
                 checkpoint.val_losses = val_losses
                 checkpoint.test_losses = test_losses
                 checkpoint.iters = t
-                -- checkpoint.lr = mp.lr
                 torch.save(model_file, checkpoint)
                 print('Saved model')
             end
@@ -327,7 +325,6 @@ function train(start_iter, epoch_num)
                 print('Average change in val loss over '..mp.val_window..
                         ' validations: '..val_avg_delta)
                 -- test if the loss is going down. the average pairwise delta should be negative, and the last should be less than the first
-                -- TODO should we also test if the last one is less than the first?
                 if val_avg_delta < 0 and torch.lt(max_val_loss_idx,min_val_loss_idx) then
                     print('Loss is decreasing')
                     -- if not we can lower the learning rate
@@ -341,10 +338,8 @@ function train(start_iter, epoch_num)
                 print((max_val_loss-min_val_loss)[1])
                 if (max_val_loss-min_val_loss)[1] < mp.val_eps then
                     print('That is less than '..mp.val_eps..'. Converged.')
-                    -- TODO! Can stop the training
                     break
                 end
-                -- TODO: figure out waht a good val_eps should be
             end
         end
 

@@ -133,13 +133,13 @@ function model:unpack_batch(batch, sim)
 
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim,
-            'Your batch size or input dim is wrong')  -- TODO RESIZE THIS
+            'Your batch size or input dim is wrong')
     assert(context:size(1) == mp.batch_size and
             context:size(2)==torch.find(mask,1)[1]
             and context:size(3) == mp.input_dim)
 
     assert(this_future:size(1) == mp.batch_size and
-            this_future:size(2) == mp.out_dim)  -- TODO RESIZE THIS
+            this_future:size(2) == mp.out_dim)
 
     -- here you have to create a table of tables
     -- this: (bsize, input_dim)
@@ -151,7 +151,6 @@ function model:unpack_batch(batch, sim)
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
-    -- TODO! change nbrhd to flag
     if self.mp.nbrhd then  
         self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
     else
@@ -273,53 +272,17 @@ function model:bp(batch, prediction, sim)
 
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
     -- self.network:backward(input,d_pred)  -- updates grad_params
-
-    --self.network.modules[1]: ParallelTable
-    --self.network.modules[1].modules[1]: pairwise
-    --self.network.modules[1].modules[2]: identity
-
     ------------------------------------------------------------------
-    -- here do the local neighborhood thing: 
-    -- replace self.network:backward with decoder:backward, then zero out the
-    -- gradients for the far away ones and then continue to backprop. 
-    -- note that first you should test that doing backward in two steps works
-    -- before you think about doing the zeroing out
-    -- print(input[1][1][1])
-    -- for i=1,#input[1] do
-    --     for j=1,2 do
-    --         print(i,j)
-    --         print(input[1][i][j]:norm())
-    --         print(self.network.modules[1].modules[1].modules[1].output[i][j]:norm())  -- the sequencer's output for zero input is not 0!
-    --     end
-    -- end
-    -- ok, so the input norm is all 0!
-    -- p = self.network.modules[1].modules[1].modules[1].modules[1].modules[1].modules[1]:parameters()
-    -- print(p)
-    -- print(p[1]) -- weights 1
-    -- print(p[2])  -- bias 1
-    -- print(p[3])  -- weights 2
-    -- print(p[4]) -- bias 2
-    -- -- turns out that this is nonzero because of bias
-    -- print(self.network.modules[1].modules[1].modules[1].modules[1].modules[1].modules[1].output)  -- this is nonzero because of ReLU?
-
+    -- neighborhood
 
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
-    -- print(decoder_in[1])
     local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].modules[1].modules[1].output
-    -- print(caddtable_in[1])  -- 0 because bias is 0
     local d_caddtable = self.network.modules[1].modules[1].modules[2]:backward(caddtable_in, d_decoder[1])
     d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
-    -- print(d_caddtable[1])
     local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
     local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
-    -- print(d_identity)
-    -- assert(false)
-    -- d_input = {d_pairwise, d_identity}
-
     ------------------------------------------------------------------
-
-
     collectgarbage()
     return self.theta.grad_params
 end
@@ -338,7 +301,7 @@ function model:update_position(this, pred)
 
     local this, pred = this:clone(), pred:clone()
     local lastpos = (this[{{},{-1},{px,py}}]:clone()*pnc)
-    local lastvel = (this[{{},{-1},{vx,vy}}]:clone()*vnc)  -- TODO: this is without subsampling make sure that this is correct!
+    local lastvel = (this[{{},{-1},{vx,vy}}]:clone()*vnc)
     local currpos = (pred[{{},{},{px,py}}]:clone()*pnc)
     local currvel = (pred[{{},{},{vx,vy}}]:clone()*vnc)
 
@@ -367,7 +330,6 @@ function model:update_angle(this, pred)
 
     local this, pred = this:clone(), pred:clone()
 
-    -- TODO: use config!
     local last_angle = this[{{},{-1},{a}}]:clone()*anc
     local last_angular_velocity = this[{{},{-1},{av}}]:clone()*anc
     local curr_angle = pred[{{},{},{a}}]:clone()*anc
@@ -393,14 +355,14 @@ end
 -- return a table of euc dist between this and each of context
 -- size is the number of items in context
 -- is this for the last timestep of this?
--- TODO: later we can plot for all timesteps
+-- TODO_lowpriority: later we can plot for all timesteps
 function model:get_euc_dist(this, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep
     local px = config_args.si.px
     local py = config_args.si.py
 
-    local this_pos = this[{{},{t},{px, py}}]  -- TODO: use config args
+    local this_pos = this[{{},{t},{px, py}}]
     local context_pos = context[{{},{},{t},{px, py}}]
     local euc_dists = self:euc_dist(this_pos:repeatTensor(1,num_context,1), context_pos)
     euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
@@ -511,7 +473,7 @@ function model:sim(batch)
             local y = future[{{},{j},{t}}]
             y:resize(mp.batch_size, mp.num_future, mp.object_dim)
 
-            local batch = {this, context, y, _, mask} -- TODO: this may be the problem!
+            local batch = {this, context, y, _, mask}
 
             -- predict
             local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
@@ -523,7 +485,7 @@ function model:sim(batch)
 
             -- -- relative coords for next timestep
             if mp.relative then
-                pred = data_process.relative_pair(this, pred, true)
+                pred = data_process:relative_pair(this, pred, true)
             end
 
             -- restore object properties because we aren't learning them
@@ -568,7 +530,7 @@ function model:sim(batch)
     local context_pred = pred_sim[{{},{2,-1}}]
 
     if mp.relative then
-        y_orig = data_process.relative_pair(this_orig, y_orig, true)
+        y_orig = data_process:relative_pair(this_orig, y_orig, true)
     end
 
     -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
