@@ -88,7 +88,7 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 60
     -- mp.lrdecay = 0.99
-    mp.nbrhd = true
+    mp.nbrhd = false
     mp.lrdecayafter = 50000
     mp.lrdecay_every = 2500
     mp.layers = 1
@@ -238,9 +238,6 @@ end
 function feval_train(params_)  -- params_ should be first argument
 
     local batch = train_loader:sample_priority_batch(mp.sharpen)
-    -- local batch = train_loader:sample_sequential_batch(true)
-    -- print(batch)
-
     -- {
     --   1 : FloatTensor - size: 5x2x11
     --   2 : FloatTensor - size: 5x4x2x11
@@ -248,6 +245,9 @@ function feval_train(params_)  -- params_ should be first argument
     --   4 : FloatTensor - size: 5x4x1x11
     --   5 : FloatTensor - size: 10
     -- }
+    -- local batch = train_loader:sample_sequential_aggregated_batch(10, false)
+    -- print(batch)
+    -- assert(false)
 
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
@@ -435,6 +435,121 @@ function apply_hypothesis(batch, hyp, si_indices)
 end
 
 
+function backprop2input(dataloader, params_, si_indices)
+    local num_correct = 0
+    local count = 0
+    local batch_group_size = 1000
+    for i = 1, dataloader.num_batches, batch_group_size do
+        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
+        
+        local batch = dataloader:sample_sequential_batch(false)
+
+        -- return best_hypotheses by backpropagating to the input
+        --  initial hypothesis should be 0.5 in all the indices
+        local hypothesis_length = si_indices[2]-si_indices[1]+1
+        local initial_hypothesis = torch.Tensor(hypothesis_length):fill(0.5)
+        local hypothesis_batch = apply_hypothesis(batch, initial_hypothesis, si_indices)  -- good
+
+        local this_past_orig, context_past_orig, this_future_orig, context_future_orig, mask_orig = unpack(hypothesis_batch)
+
+        -- TODO: keep track of whether it is okay to let this_past, context_past, this_future, context_future, mask get mutated!
+        -- closure: returns loss, grad_Input
+        -- out of scope: batch, si_indices
+        function feval_b2i(this_past_hypothesis)
+            -- build modified batch
+            local updated_hypothesis_batch = {this_past_hypothesis, context_past_orig:clone(), this_future_orig:clone(), context_future_orig:clone(), mask_orig:clone()}
+
+            model.network:clearState() -- zeros out gradInput
+
+            local loss, prediction = model:fp(params_, updated_hypothesis_batch)
+            local d_input = model:bp_input(updated_hypothesis_batch,prediction)
+
+            -- 0. Get names
+            local d_pairwise = d_input[1]
+            local d_identity = d_input[2]
+
+            -- 1. assert that all the d_inputs in pairwise are equal
+            local d_focus_in_pairwise = {}
+            for i=1,#d_pairwise do
+                table.insert(d_focus_in_pairwise, d_pairwise[i][1])
+            end
+            assert(alleq_tensortable(d_focus_in_pairwise))
+
+            -- 2. Get the gradients that you need to add
+            local d_pairwise_focus = d_pairwise[1][1]:clone()  -- pick first one
+            local d_identity_focus = d_identity:clone()
+            assert(d_pairwise_focus:isSameSizeAs(d_identity_focus))
+
+            -- 3. Add the gradients
+            local d_focus = d_pairwise_focus + d_identity_focus
+
+            -- 4. Zero out everything except the property that you are performing inference on
+            d_focus:resize(mp.batch_size, mp.num_past, mp.object_dim)
+            if si_indices[1] > 1 then
+                d_focus[{{},{},{1,si_indices[1]-1}}]:zero()
+            end
+            if si_indices[2] < mp.object_dim then
+                d_focus[{{},{},{1,si_indices[2]+1}}]:zero()
+            end
+            d_focus:resize(mp.batch_size, mp.num_past*mp.object_dim)
+
+            -- 6. Check that weights have not been changed
+                -- check that all the gradParams are 0 in the network
+            assert(model.theta.grad_params:norm() == 0)
+
+            collectgarbage()
+            return loss, d_focus -- f(x), df/dx
+        end
+
+        local num_iters = 10 -- TODO: change this (perhaps you can check for convergence. you just need rough convergence)
+        local b2i_optstate = {learningRate = 0.01}  -- TODO tune this 
+        local this_past_hypothesis = this_past_orig:clone()
+
+        -- get old model parameters
+
+        for t=1,num_iters do
+
+            local new_this_past_hypothesis, train_loss = optimizer(feval_b2i,
+                                this_past_hypothesis, b2i_optstate)  -- next batch
+
+            -- 1. Check that the model parameters have not changed
+            assert(model.theta.parameters:equal(old_model_parameters))
+
+            -- 2. Check that the input focus object has changed 
+                -- do this outside of feval
+                -- very unlikely they are equal, unless gradient was 0
+            assert(not(this_past_hypothesis:equal(new_this_past_hypothesis)))
+
+            -- 3. update this_past
+            this_past_hypothesis = new_this_past_hypothesis  -- TODO: can just update it above
+            collectgarbage()
+        end
+
+        -- now you have a this_past as your hypothesis. Select and binarize.
+        -- TODO check that this properly gets mutated
+        this_past_hypothesis[{{},{},si_indices}] = binarize(this_past_hypothesis[{{},{},si_indices}]) -- NOTE you are assuming the num_future is 1
+
+        -- now that you have best_hypothesis, compare best_hypotheses with truth
+        -- need to construct true hypotheses based on this_past, hypotheses as parameters
+        local ground_truth = torch.squeeze(this_past_orig[{{},{-1},si_indices}])  -- object properties always the same across time
+        local num_equal = ground_truth:eq(this_past_hypothesis[{{},{},si_indices}]):sum(2):eq(hypothesis_length):sum()
+        num_correct = num_correct + num_equal
+        count = count + mp.batch_size
+        collectgarbage()
+    end
+    return num_correct/count
+end
+
+-- selects max over each row in last axis
+-- makes the max one and everything else 0
+function binarize(tensor)
+    local y, i = torch.max(tensor, tensor:dim())
+    tensor:zero()
+    tensor:indexFill(tensor:dim(), torch.squeeze(i,tensor:dim()), 1)
+    return tensor
+end
+
+
 function max_likelihood(dataloader, params_, hypotheses, si_indices)
     local num_correct = 0
     local count = 0
@@ -443,7 +558,6 @@ function max_likelihood(dataloader, params_, hypotheses, si_indices)
         local batch = dataloader:sample_sequential_batch(false)
         local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
         local best_hypotheses = torch.zeros(mp.batch_size,#hypotheses)
-
 
         for j,h in pairs(hypotheses) do
             local hypothesis_batch = apply_hypothesis(batch, h, si_indices)  -- good
@@ -472,6 +586,7 @@ function max_likelihood(dataloader, params_, hypotheses, si_indices)
         local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(#hypotheses):sum()
         num_correct = num_correct + num_equal
         count = count + mp.batch_size
+        collectgarbage()
     end
     return num_correct/count
 end

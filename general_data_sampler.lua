@@ -125,17 +125,53 @@ function general_datasampler:sample_sequential_batch(modulo)
     return batch, self.current_dataset
 end
 
+-- note that this is specific to your physics dataset because of the mask!
+-- NOTE also that all batches here must be from the same dataset!
+function general_datasampler:sample_sequential_aggregated_batch(batch_group_size, modulo)
+    -- initially table of tables
+    local aggregated_batch = {
+                                {}, -- this_pasts
+                                {}, -- context_pasts
+                                {}, -- this_futures
+                                {}, -- context_futures
+                                {}, -- masks
+                            }
+
+    -- 1. populate aggregated_batch with tables
+    for i=1,batch_group_size do
+        local batch = self:sample_sequential_batch(modulo)
+        for j=1,#batch do
+            table.insert(aggregated_batch[j], batch[j])
+        end
+    end
+
+    -- 2. concatenate
+    for j=1,#aggregated_batch-1 do
+        aggregated_batch[j] = torch.cat(aggregated_batch[j],1)  -- concat along batch dim
+        assert(aggregated_batch[j]:size(1) == mp.batch_size*batch_group_size)
+    end
+
+    print(aggregated_batch)
+    assert(false)
+
+    -- 3. take only the first "batch" in mask
+    local mask_dim = aggregated_batch[5]:size(1)/batch_group_size
+    aggregated_batch[5] = aggregated_batch[5][{{1, mask_dim}}]
+
+    return aggregated_batch
+end
+
 
 return general_datasampler
 
 
--- dataset_names = "{'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}"
--- -- dataset_names = "{'balls_n20_t60_ex100','balls_n1_t60_ex10'}"
--- -- dataset_names = "{'balls_n20_t60_ex100'}"
---
+-- dataset_names = {'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}
+-- -- -- dataset_names = "{'balls_n20_t60_ex100','balls_n1_t60_ex10'}"
+-- -- -- dataset_names = "{'balls_n20_t60_ex100'}"
+-- --
 -- local data_loader_args = {
 --                         dataset_names = dataset_names,
---                         dataset_folder='mj_data'..'/',--..dataset_names,  -- NOTE THESE ARE THE DATASET NAMES!
+--                         dataset_folders={'mj_data/balls_n3_t60_ex20','mj_data/balls_n6_t60_ex20','mj_data/balls_n5_t60_ex20'},
 --                         maxwinsize=60,
 --                         winsize=10, -- not sure if this should be in mp
 --                         num_past=2,
@@ -144,8 +180,8 @@ return general_datasampler
 --                         sim=false,
 --                         cuda=false
 --                         }
---
+-- --
 -- gd = general_datasampler.create('trainset', data_loader_args)
--- for i = 1, 100 do
---     gd:sample_priority_batch(1)
+-- for i = 1, 100, 10 do
+--     gd:sample_sequential_aggregated_batch(10, false)
 -- end

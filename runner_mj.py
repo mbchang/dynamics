@@ -69,8 +69,21 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}", 'test_dataset_folders': "{'balls_n4_t120_ex25000_m','balls_n5_t120_ex25000_m'}"},
             
             # test prediction and mass
-            {'dataset_folders':"{'balls_n4_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rd'}"},
-            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rd'}"},
+            # these are for the rd without 2.5 buffer
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rd'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rd'}"},
+
+            # actual experiments
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rd'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m_rd'}"},
+            # {'dataset_folders':"{'balls_n5_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000_rd'}"},
+            {'dataset_folders':"{'balls_n5_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000_m_rd'}"},
+            # {'dataset_folders':"{'balls_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rd'}"},
+            {'dataset_folders':"{'balls_n6_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rd'}"},
+            # {'dataset_folders':"{'balls_n7_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_rd'}"},
+            {'dataset_folders':"{'balls_n7_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_m_rd'}"},
+            # {'dataset_folders':"{'balls_n8_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rd'}"},
+            {'dataset_folders':"{'balls_n8_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rd'}"},
             ]
 
     actual_jobs = []
@@ -82,12 +95,14 @@ def create_jobs(dry_run, mode, ext):
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
                     for layers in [3]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
-                            job['model'] = model
-                            job['nbrhd'] = nbrhd
-                            job['layers'] = layers
-                            job['lr'] = lr
-                            job['nbrhdsize'] = nbhrdsize
-                            actual_jobs.append(copy.deepcopy(job))
+                            for im in [True]:
+                                job['model'] = model
+                                job['nbrhd'] = nbrhd
+                                job['layers'] = layers
+                                job['lr'] = lr
+                                job['nbrhdsize'] = nbhrdsize
+                                job['im'] = im
+                                actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 

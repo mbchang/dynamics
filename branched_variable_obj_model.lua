@@ -318,9 +318,90 @@ function model:bp(batch, prediction, sim)
     d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
     local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
     local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
+    local d_input = {d_pairwise, d_identity}
+
     ------------------------------------------------------------------
     collectgarbage()
     return self.theta.grad_params
+end
+
+-- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
+-- local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
+-- a lot of instantiations of split_output
+function model:bp_input(batch, prediction, sim)
+    self.theta.grad_params:zero() -- the d_parameters
+    local input, this_future = self:unpack_batch(batch, sim)
+
+    local splitter = split_output(self.mp)
+
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction))
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(this_future))
+
+    -- NOTE! is there a better loss function for angle?
+    self.identitycriterion:forward(p_pos, gt_pos)
+    local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
+
+    self.criterion:forward(p_vel, gt_vel)
+    local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+    d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
+
+    self.identitycriterion:forward(p_ang, gt_ang)
+    local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
+
+    self.criterion:forward(p_ang_vel, gt_ang_vel)
+    local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+    d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
+
+    self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
+    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+
+    local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
+    -- self.network:backward(input,d_pred)  -- updates grad_params
+    ------------------------------------------------------------------
+    -- neighborhood
+
+    local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
+    local d_decoder = self.network.modules[2]:updateGradInput(decoder_in, d_pred)
+    local caddtable_in = self.network.modules[1].modules[1].modules[1].output
+    local d_caddtable = self.network.modules[1].modules[1].modules[2]:updateGradInput(caddtable_in, d_decoder[1])
+    d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
+    local d_pairwise = self.network.modules[1].modules[1].modules[1]:updateGradInput(input[1], d_caddtable)
+    local d_identity = self.network.modules[1].modules[2]:updateGradInput(input[2], d_decoder[2])
+    local d_input = {d_pairwise, d_input}
+    return d_input
+
+    -- -- 1. assert that all the d_inputs in pairwise are equal
+    -- local d_focus_in_pairwise = {}
+    -- for i=1,#d_pairwise do
+    --     table.insert(d_focus_in_pairwise, d_pairwise[i][1])
+    -- end
+    -- assert(alleq_tensortable(d_focus_in_pairwise))
+
+    -- -- 2. Get the gradients that you need to add
+    -- local d_pairwise_focus = d_pairwise[1][1]:clone()  -- pick first one
+    -- local d_identity_focus = d_identity:clone()
+    -- assert(d_pairwise_focus:isSameSizeAs(d_identity_focus))
+
+    -- -- 3. Add the gradients
+    -- local d_focus = d_pairwise_focus + d_identity_focus
+
+    -- -- 4. Construct a d_input with the desired gradients
+    --     -- zero the gradInput for context
+    --     -- assert that all the gradInput for context are 0 as well
+    -- local modified_d_pairwise = {}
+    -- for o=1,#d_pairwise do
+    --     local d_pair = {d_focus, convert_type(torch.zeros(mp.batch_size, mp.object_dim), mp.cuda)}  -- I don't want to clone d_focus here right?
+    --     table.insert(modified_d_pairwise, d_pair)
+    -- end
+
+    -- -- 5. Check that weights have not been changed
+    --     -- check that all the gradParams are 0 in the network
+    -- assert(self.theta.grad_params:norm() == 0)
+
+    -- local modified_d_input = {modified_d_pairwise, d_focus}
+
+    -- return modified_d_input
 end
 
 function model:update_position(this, pred)
