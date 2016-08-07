@@ -397,7 +397,8 @@ function infer_properties(dataloader, params_, property, method)
     -- TODO for other properties
     local hypotheses, si_indices, num_hypotheses
     if property == 'mass' then
-        si_indices = config_args.si.m
+        si_indices = tablex.deepcopy(config_args.si.m)
+        si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
     elseif property == 'size' then 
@@ -430,7 +431,6 @@ function apply_hypothesis(batch, hyp, si_indices)
     local num_ex = this_past:size(1)
     local num_context = this_past:size(2)
     this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_context, 1)
-
     return {this_past, context_past, this_future, context_future, mask}
 end
 
@@ -593,9 +593,14 @@ end
 
 
 function validate()
-    local train_loss = test(train_test_loader, model.theta.params, false)
-    local val_loss = test(val_loader, model.theta.params, false)
-    local test_loss = test(test_loader, model.theta.params, false)
+    -- local train_loss = test(train_test_loader, model.theta.params, false)
+    -- local val_loss = test(val_loader, model.theta.params, false)
+    -- local test_loss = test(test_loader, model.theta.params, false)
+
+
+    local train_loss = 0
+    local val_loss = 0
+    local test_loss = 0
 
     local log_string = 'train loss\t'..train_loss..
                       '\tval loss\t'..val_loss..
