@@ -458,17 +458,16 @@
 
         // TODO! join sim_options with config.
         console.log(sim_options)
+        if (sim_options.env == 'tower') {
+            var num_unstable = 0
+            var num_stable = 0
+        }
 
         let s = 0;
         while (s < num_samples) {
-
-
-        // }
-        // for (let s = 0; s < num_samples; s++) {
+            console.log('...........')
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
-            // console.log(demo.engine)
-            // assert(false)
             var trajectory = []
             // bar.tick()
             console.log(s)
@@ -522,7 +521,7 @@
                         console.log('this position', trajectory[id][i]['position'])
                         break;
                     }
-                    console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity)//, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass, 'inverseMass', body.inverseMass)
+                    // console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity)//, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass, 'inverseMass', body.inverseMass)
                 }
                 if (should_break) {break;}
 
@@ -531,9 +530,6 @@
                 if (sim_options.image) {
                     demo.render.context.fillStyle = 'white'
                     demo.render.context.fillRect(0,0,demo.width,demo.height)
-                }
-
-                if (sim_options.image) {
                     Render.world(demo.render)
                     // let filename = 'out'+i+'_'+s+'.png'  // TODO! rename
                     // PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
@@ -541,14 +537,42 @@
                     // });
                 }
             }
+
             if (should_break) {
                 console.log('Break. Trying again.')
             } else {  // valid trajectory
+                // hereif it 
+                if (sim_options.env == 'tower') {
+                    // console.log(trajectory.)
+                    console.log('euc dist', is_stable_trajectory(trajectory))
+                    console.log('stable?', is_stable_trajectory(trajectory) < 20)
+                    if (is_stable_trajectory(trajectory) > 20) {
+                        num_unstable ++
+                    } else {
+                        num_stable ++
+                    }
+
+                    if (num_stable > num_samples/2) {
+                        console.log('num_stable > num_samples/2. Want more unstable')
+                        num_stable -- 
+                        continue
+                    } else if (num_unstable > num_samples/2) {
+                        console.log('num_unstable > num_samples/2. Want more stable')
+                        num_unstable --
+                        continue
+                    }
+                }
+                console.log('added')
                 trajectories[s] = trajectory;  // basically I can't reach this part
                 s++;
             }
         }
-        return trajectories;
+
+        if (sim_options.env == 'tower') {
+            console.log(num_unstable, 'unstable out of', num_samples, 'samples')
+        }
+
+        return trajectories, num_unstable;  // NOTE TOWER
     };
 
     Demo.create_json_fname = function(samples, id, sim_options) {  // later add in the indices are something
@@ -590,14 +614,30 @@
     Demo.generate_data = function(demo, sim_options) {
         const max_iters_per_json = 100;
         const chunks = chunk(sim_options.samples, max_iters_per_json)
+
+
+        // tower
+        let num_unstable = 0
+
         for (let j=0; j < chunks.length; j++){
             let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
-            let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
-            jsonfile.writeFileSync(sim_file,
-                                {trajectories:trajectories, config:sim_options}
-                                );
-            console.log('Wrote to ' + sim_file)
+            // let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
+
+            // jsonfile.writeFileSync(sim_file,
+            //                     {trajectories:trajectories, config:sim_options}
+            //                     );
+            // console.log('Wrote to ' + sim_file)
+
+            // tower
+            let trajectories, num_unstable_chunk = Demo.simulate(demo, chunks[j], sim_options, j);
+            num_unstable += num_unstable_chunk
+
         }
+
+
+        // tower
+        console.log(num_unstable, 'unstable out of', sim_options.samples, 'samples')
+
     };
 
     Demo.process_cmd_options = function() {

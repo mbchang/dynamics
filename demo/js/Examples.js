@@ -2186,7 +2186,7 @@ if (!_isBrowser) {
             self.hv = initialize_hv(self.params.num_obj)
 
             let eps = 0.0001  // to prevent bounce-back
-            let variance = 80
+            let variance = 28
             let x = demo.cx
             let y = 2*demo.cy
             let past_offset = 0
@@ -2213,15 +2213,53 @@ if (!_isBrowser) {
                 Body.setAngle(block, self.hv[i])
                 Body.setVelocity(block, { x: 0, y: 0 })
                 World.add(self.world, block)
-
                 past_offset = offset
             }
+
+            // center of masses, with self.coms[0] being the com of the bottom block
+            self.coms = center_of_mass(self.world.bodies)
+            self.stable = Tower.is_stable_config(self.params.size*self.sizemul, self.world.bodies, self.coms)
+            console.log('is stable config', self.stable)
+        }
+        Tower.is_stable_config = function(block_width, bodies, coms) {
+            // check if it is stable
+            // A block will fall if and only if the center of mass 
+            // of all blocks above it, including itself, 
+            // does not fall on top of the block under it.
+            let stable = true;
+            if (bodies.length == 0) {
+                return stable
+            } else {
+                for (let j = 1; j < bodies.length; j++) {
+                    // boundaries of the block below
+                    let below_left, below_right
+                    let below = bodies[j-1]
+                    if (below.angle == 0) {  // vertical
+                        below_left = below.position.x - block_width/2
+                        below_right = below.position.x + block_width/2
+                    } else {  // horizontal
+                        below_left = below.position.x - 3*block_width/2
+                        below_right = below.position.x + 3*block_width/2
+                    }
+                    // console.log(coms[j])
+                    // console.log(below_left)
+                    // console.log(below_right)
+
+                    if (coms[j] < below_left || coms[j] > below_right) {
+                        stable = false
+                        console.log('unstable')
+                        // break
+                    }
+                }
+            }
+            return stable
         }
 
         var tower = Tower.create(cmd_options);
         Tower.init(tower);
         return tower;
     };
+
 
 })();
 (function() {
