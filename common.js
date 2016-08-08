@@ -59,6 +59,17 @@ initialize_velocities = function(num_obj, max_v0) {
     return v0;
 }
 
+initialize_hv = function(num_obj) {
+    var a0 = [];
+    for (var i = 0; i < num_obj; i++) {
+
+        // generate random initial angles b/w -max_a0 and max_a0 inclusive
+        var a = Math.floor(Math.random()*2)*Math.PI/2
+        a0.push(a)
+    }
+    return a0;
+}
+
 initialize_angles = function(num_obj, max_a0) {
     var a0 = [];
     for (var i = 0; i < num_obj; i++) {

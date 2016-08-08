@@ -2028,14 +2028,8 @@ if (!_isBrowser) {
             self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
                            variableMass: options.variableMass,
                            friction: options.friction,
+                           max_v0: 20,
                            obj_radius: demo.config.object_base_size.ball };
-
-            if (options.variableMass) {
-                self.params.max_v0 = 20
-            } else {
-                self.params.max_v0 = 20
-            }
-            // console.log(self.params.max_v0)
 
             self.engine = demo.engine;
             self.engine.world.gravity.x = 0;
@@ -2163,6 +2157,88 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
+                options.numObj = 10
+            }
+
+            self.params = {num_obj: options.numObj,
+                           variableMass: options.variableMass,
+                           size: demo.config.object_base_size.block,
+                           lw_ratio: 3};  // length to width ratio if it is 
+            self.engine = demo.engine,
+
+            self.engine.enableSleeping = true
+
+            self.sizemul = 1
+            self.world = self.engine.world;
+
+            if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
+                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+            } else {
+                self.possible_masses = [1]
+            }
+
+            self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
+
+            return self;
+        }
+        Tower.init = function(self){
+
+            self.hv = initialize_hv(self.params.num_obj)
+
+            let eps = 0.0001  // to prevent bounce-back
+            let variance = 80
+            let x = demo.cx
+            let y = 2*demo.cy
+            let past_offset = 0
+            let offset
+
+            // stack upwards
+            for (let i = 0; i < self.params.num_obj; i ++) {
+                //update offset
+                if (self.hv[i] == 0) {
+                    offset = 3*self.params.size*self.sizemul/2
+                } else {
+                    offset = self.params.size*self.sizemul/2
+                }
+
+                if (i == 0) {
+                    x = demo.cx
+                } else {
+                    x = gaussian(x, variance).ppf(Math.random())
+                }
+                y = y - (past_offset + offset) + eps // hmmm, this seems to solve it?
+
+                var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, 3*self.params.size*self.sizemul, 
+                        {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul, friction: 1})
+                Body.setAngle(block, self.hv[i])
+                Body.setVelocity(block, { x: 0, y: 0 })
+                World.add(self.world, block)
+
+                past_offset = offset
+            }
+        }
+
+        var tower = Tower.create(cmd_options);
+        Tower.init(tower);
+        return tower;
+    };
+
+})();
+(function() {
+
+    var World = Matter.World,
+        Body = Matter.Body,
+        Composites = Matter.Composites;
+
+    Example.squaretower = function(demo, cmd_options) {
+        var SquareTower = {}
+        SquareTower.create = function(options){
+            var self = {}
+            // these should not be mutated
+
+            // default
+            if (!(typeof options !== 'undefined' &&  options)) {
+                var options = {}
                 options.numObj = 6
             }
 
@@ -2170,7 +2246,6 @@ if (!_isBrowser) {
                           size: demo.config.object_base_size.block };
             self.engine = demo.engine,
 
-            // self.engine.world.gravity.y = 0;
             self.engine.enableSleeping = true
 
             self.sizemul = 1
@@ -2179,7 +2254,7 @@ if (!_isBrowser) {
 
             return self;
         }
-        Tower.init = function(self){
+        SquareTower.init = function(self){
             // set the first object
             // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
             // var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
@@ -2211,9 +2286,9 @@ if (!_isBrowser) {
             }
         }
 
-        var tower = Tower.create(cmd_options);
-        Tower.init(tower);
-        return tower;
+        var squaretower = SquareTower.create(cmd_options);
+        SquareTower.init(squaretower);
+        return SquareTower;
     };
 
 })();
