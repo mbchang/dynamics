@@ -2043,8 +2043,6 @@ if (!_isBrowser) {
                 self.engine.world.gravity.y = 0;
             }
 
-            // demo.runner.isFixed = true
-
             // function
             self.rand_pos = function() {
                 return rand_pos(
@@ -2079,6 +2077,7 @@ if (!_isBrowser) {
             for (i = 0; i < self.params.num_obj; i++) {
                 let body_opts = {restitution: 1,
                                  mass: self.m[i],
+                                 // inverseMass:
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
@@ -2172,7 +2171,6 @@ if (!_isBrowser) {
             self.engine = demo.engine,
 
             // self.engine.world.gravity.y = 0;
-            // self.engine.world.gravity.x = 0;
             self.engine.enableSleeping = true
 
             self.sizemul = 1
@@ -2186,22 +2184,30 @@ if (!_isBrowser) {
             // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
             // var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
             //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
+
+            var eps = 0.0001  // to prevent bounce-back
+
             var x = demo.cx
             var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
-            var lastBlock = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul})
+            var lastBlock = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, 
+                        {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul, friction: 1})
             Body.setVelocity(lastBlock, { x: 0, y: 0 })
             World.add(self.world, lastBlock)
 
             // // set the rest of the objects
-            var variance = 100  // 80
+            var variance = 80  // 80
             for (var i = 1; i < self.params.num_obj; i ++) {
-                // x = gaussian(x, variance).ppf(Math.random())
-                x = demo.cx
-                y = y - self.params.size
-                var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul})  // stack upwards
+                x = gaussian(x, variance).ppf(Math.random())
+                // x = demo.cx
+                y = y - self.params.size + eps // hmmm, this seems to solve it?
+                var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, 
+                        {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul, friction: 1})  // stack upwards
                 Body.setVelocity(lastBlock, { x: 0, y: 0 })
                 lastBlock = block;
                 World.add(self.world, lastBlock)
+
+                // console.log(lastBlock)
+                // console.log(lastBlock.parts)
             }
         }
 

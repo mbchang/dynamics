@@ -409,10 +409,10 @@
         var world_border = Composite.create({label:'Border'});
 
         Composite.add(world_border, [
-            Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })
+            Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // top
+            Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
+            Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }), // right
+            Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
         ]);
 
         World.add(world, world_border)  // its parent is a circular reference!
@@ -522,11 +522,7 @@
                         console.log('this position', trajectory[id][i]['position'])
                         break;
                     }
-                    // console.log(body)
-                    // assert(false)
-                    // console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass)
-                    // // assert(false)
-
+                    console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity)//, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass, 'inverseMass', body.inverseMass)
                 }
                 if (should_break) {break;}
 

@@ -185,7 +185,7 @@
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 200 );
+                setTimeout( f, 10 );
             }
         }
         f();
