@@ -544,10 +544,10 @@
                 if (sim_options.env == 'tower') {
                     if (i == 59) {
                         console.log('euc dist', i, is_stable_trajectory(trajectory))
-                        console.log('stable?', i, is_stable_trajectory(trajectory) < 5)
+                        console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
                     } else if (i == 119) {
                         console.log('euc dist', i, is_stable_trajectory(trajectory))
-                        console.log('stable?', i, is_stable_trajectory(trajectory) < 5)
+                        console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
                     } 
                     // else if (i == 239) {
                     //     console.log(i)
@@ -565,7 +565,7 @@
                     // console.log(trajectory.)
                     // console.log('euc dist', is_stable_trajectory(trajectory))
                     // console.log('stable?', is_stable_trajectory(trajectory) < 5)
-                    if (is_stable_trajectory(trajectory) > 5) {
+                    if (is_stable_trajectory(trajectory) > stability_threshold) {
                         num_unstable ++
                     } else {
                         num_stable ++
@@ -659,10 +659,10 @@
                 num_unstable += num_unstable_chunk
                 num_comunstable += com_num_unstable_chunk
 
-                // jsonfile.writeFileSync(sim_file,
-                //                     {trajectories:trajectories, config:sim_options}
-                //                     );
-                // console.log('Wrote to ' + sim_file)
+                jsonfile.writeFileSync(sim_file,
+                                    {trajectories:trajectories, config:sim_options}
+                                    );
+                console.log('Wrote to ' + sim_file)
             } else {
                 let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
 
