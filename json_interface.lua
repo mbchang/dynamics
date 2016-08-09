@@ -49,16 +49,16 @@ function load_data_json(jsonfile)
                 trajectories[e][i][t][args.rsi.av] = state.angularVelocity
                 trajectories[e][i][t][args.rsi.m] = state.mass
                 -- print(state.objtype)
-                -- if not(state.objtype == 'ball') then 
-                --     print(e,i,t)
-                --     print(state.objtype)
-                --     assert(false) 
-                -- end
+                if not(state.objtype == 'block') then 
+                    print(e,i,t)
+                    print(state.objtype)
+                    assert(false) 
+                end
                 trajectories[e][i][t][args.rsi.oid] = args.oids[state.objtype]
-                -- if not (trajectories[e][i][t][args.rsi.oid] == 1) then 
-                --     print(trajectories[e][i][t][args.rsi.oid])
-                --     assert(false)
-                -- end
+                if not (trajectories[e][i][t][args.rsi.oid] == 3) then 
+                    print(trajectories[e][i][t][args.rsi.oid])
+                    assert(false)
+                end
                 trajectories[e][i][t][args.rsi.os] = state.sizemul
                 trajectories[e][i][t][args.rsi.g] = g
                 trajectories[e][i][t][args.rsi.f] = f
