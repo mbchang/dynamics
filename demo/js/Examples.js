@@ -2006,6 +2006,7 @@ if (!_isBrowser) {
 
     var World = Matter.World,
         Bodies = Matter.Bodies,
+        Composite = Matter.Composite,
         Composites = Matter.Composites,
         Body = Matter.Body,
         Common = Matter.Common;
@@ -2054,6 +2055,20 @@ if (!_isBrowser) {
 
             self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
 
+            // border
+            var world_border = Composite.create({label:'Border'});
+
+            Composite.add(world_border, [
+                Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // top
+                Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
+                Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }), // right
+                Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
+            ]);
+
+            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+
+
+
             return self
         };
 
@@ -2071,7 +2086,6 @@ if (!_isBrowser) {
             for (i = 0; i < self.params.num_obj; i++) {
                 let body_opts = {restitution: 1,
                                  mass: self.m[i],
-                                 // inverseMass:
                                  inertia: Infinity,  //rotation
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
@@ -2146,6 +2160,7 @@ if (!_isBrowser) {
 
     var World = Matter.World,
         Body = Matter.Body,
+        Composite = Matter.Composite,
         Composites = Matter.Composites;
 
     Example.tower = function(demo, cmd_options) {
@@ -2161,7 +2176,7 @@ if (!_isBrowser) {
             }
 
             self.params = {num_obj: options.numObj,
-                           variableMass: options.variableMass,
+                           variableMass: false, //options.variableMass,
                            size: demo.config.object_base_size.block,
                            lw_ratio: 3};  // length to width ratio if it is 
             self.engine = demo.engine,
@@ -2179,14 +2194,27 @@ if (!_isBrowser) {
 
             self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
 
+            // border
+            var world_border = Composite.create({label:'Border'});
+
+            Composite.add(world_border, [
+                Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
+            ]);
+
+            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+
             return self;
         }
         Tower.init = function(self){
 
+
+            // generate massses
+            self.m = initialize_masses(self.params.num_obj, self.possible_masses)
+
             self.hv = initialize_hv(self.params.num_obj)
 
             let eps = 0.0001  // to prevent bounce-back
-            let variance = 28
+            let variance = 20
             let x = demo.cx
             let y = 2*demo.cy
             let past_offset = 0
@@ -2209,9 +2237,14 @@ if (!_isBrowser) {
                 y = y - (past_offset + offset) + eps // hmmm, this seems to solve it?
 
                 var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, 3*self.params.size*self.sizemul, 
-                        {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul, friction: 1})
+                        {label: "Entity", restitution: 0, mass: self.m[i], objtype: 'block', sizemul: self.sizemul, friction: 1})
                 Body.setAngle(block, self.hv[i])
                 Body.setVelocity(block, { x: 0, y: 0 })
+
+                block.render.fillStyle = self.mass_colors[self.m[i]]//'#4ECDC4'
+                block.render.strokeStyle = '#FFA500'// orange
+                block.render.lineWidth = 5
+
                 World.add(self.world, block)
                 past_offset = offset
             }
@@ -2219,7 +2252,7 @@ if (!_isBrowser) {
             // center of masses, with self.coms[0] being the com of the bottom block
             self.coms = center_of_mass(self.world.bodies)
             self.stable = Tower.is_stable_config(self.params.size*self.sizemul, self.world.bodies, self.coms)
-            console.log('is stable config', self.stable)
+            // console.log('is stable config', self.stable)
         }
         Tower.is_stable_config = function(block_width, bodies, coms) {
             // check if it is stable
@@ -2241,13 +2274,10 @@ if (!_isBrowser) {
                         below_left = below.position.x - 3*block_width/2
                         below_right = below.position.x + 3*block_width/2
                     }
-                    // console.log(coms[j])
-                    // console.log(below_left)
-                    // console.log(below_right)
 
                     if (coms[j] < below_left || coms[j] > below_right) {
                         stable = false
-                        console.log('unstable')
+                        // console.log('unstable')
                         // break
                     }
                 }

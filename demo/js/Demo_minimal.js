@@ -52,6 +52,7 @@
         //TODO: note that here you should load the demo engine with the json file
 
         // load the config file here.
+        console.log(json_data)
         let data = json_data.trajectories
         let config = json_data.config
         console.log(config)
@@ -146,7 +147,7 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[3]  // extra 0 for batch mode
+        var trajectories = data[1]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
 

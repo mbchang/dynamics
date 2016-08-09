@@ -406,16 +406,16 @@
             demo.render.canvas.width = demo.width
         }
 
-        var world_border = Composite.create({label:'Border'});
+        // var world_border = Composite.create({label:'Border'});
 
-        Composite.add(world_border, [
-            Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // top
-            Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
-            Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }), // right
-            Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
-        ]);
+        // Composite.add(world_border, [
+        //     Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // top
+        //     Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
+        //     Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }), // right
+        //     Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
+        // ]);
 
-        World.add(world, world_border)  // its parent is a circular reference!
+        // World.add(world, world_border)  // its parent is a circular reference!
 
         if (demo.mouseConstraint) {
             World.add(world, demo.mouseConstraint);
@@ -461,11 +461,13 @@
         if (sim_options.env == 'tower') {
             var num_unstable = 0
             var num_stable = 0
+            var com_num_unstable = 0
+            var com_num_stable = 0
         }
 
         let s = 0;
         while (s < num_samples) {
-            console.log('...........')
+            // console.log('...........')
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
@@ -536,6 +538,22 @@
                     //     console.log("wrote out the png file to out"+filename);
                     // });
                 }
+
+
+                if (sim_options.env == 'tower') {
+                    if (i == 59) {
+                        console.log('euc dist', i, is_stable_trajectory(trajectory))
+                        console.log('stable?', i, is_stable_trajectory(trajectory) < 5)
+                    } else if (i == 119) {
+                        console.log('euc dist', i, is_stable_trajectory(trajectory))
+                        console.log('stable?', i, is_stable_trajectory(trajectory) < 5)
+                    } 
+                    // else if (i == 239) {
+                    //     console.log(i)
+                    //     console.log('euc dist', is_stable_trajectory(trajectory))
+                    //     console.log('stable?', is_stable_trajectory(trajectory) < 5)
+                    // }
+                }
             }
 
             if (should_break) {
@@ -544,12 +562,17 @@
                 // hereif it 
                 if (sim_options.env == 'tower') {
                     // console.log(trajectory.)
-                    console.log('euc dist', is_stable_trajectory(trajectory))
-                    console.log('stable?', is_stable_trajectory(trajectory) < 20)
-                    if (is_stable_trajectory(trajectory) > 20) {
+                    // console.log('euc dist', is_stable_trajectory(trajectory))
+                    // console.log('stable?', is_stable_trajectory(trajectory) < 5)
+                    if (is_stable_trajectory(trajectory) > 5) {
                         num_unstable ++
                     } else {
                         num_stable ++
+                    }
+                    if (scenario.stable) {
+                        com_num_stable ++
+                    } else {
+                        com_num_unstable ++
                     }
 
                     if (num_stable > num_samples/2) {
@@ -562,17 +585,19 @@
                         continue
                     }
                 }
-                console.log('added')
+                // console.log('added')
                 trajectories[s] = trajectory;  // basically I can't reach this part
                 s++;
             }
         }
 
         if (sim_options.env == 'tower') {
-            console.log(num_unstable, 'unstable out of', num_samples, 'samples')
+            // console.log(num_unstable, 'unstable threshold', com_num_unstable, 'unstable com out of', num_samples, 'samples')
+            return [trajectories, num_unstable, com_num_unstable];  // NOTE TOWER
+        } else {
+            return trajectories
         }
 
-        return trajectories, num_unstable;  // NOTE TOWER
     };
 
     Demo.create_json_fname = function(samples, id, sim_options) {  // later add in the indices are something
@@ -617,26 +642,41 @@
 
 
         // tower
-        let num_unstable = 0
+        if (sim_options.env == 'tower') {
+            var num_unstable = 0
+            var num_comunstable = 0
+        }
 
         for (let j=0; j < chunks.length; j++){
             let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
-            // let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
 
-            // jsonfile.writeFileSync(sim_file,
-            //                     {trajectories:trajectories, config:sim_options}
-            //                     );
-            // console.log('Wrote to ' + sim_file)
+            if (sim_options.env == 'tower') {
+                let output = Demo.simulate(demo, chunks[j], sim_options, j);
+                let trajectories = output[0]
+                let num_unstable_chunk = output[1]
+                let com_num_unstable_chunk = output[2]
+                num_unstable += num_unstable_chunk
+                num_comunstable += com_num_unstable_chunk
 
-            // tower
-            let trajectories, num_unstable_chunk = Demo.simulate(demo, chunks[j], sim_options, j);
-            num_unstable += num_unstable_chunk
+                // jsonfile.writeFileSync(sim_file,
+                //                     {trajectories:trajectories, config:sim_options}
+                //                     );
+                // console.log('Wrote to ' + sim_file)
+            } else {
+                let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
 
+                jsonfile.writeFileSync(sim_file,
+                                    {trajectories:trajectories, config:sim_options}
+                                    );
+                console.log('Wrote to ' + sim_file)
+            }
         }
 
 
         // tower
-        console.log(num_unstable, 'unstable out of', sim_options.samples, 'samples')
+        if (sim_options.env == 'tower') {
+            console.log(num_unstable, 'unstable threshold', num_comunstable, 'unstable com out of', sim_options.samples, 'samples')
+        }
 
     };
 
