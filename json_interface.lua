@@ -8,7 +8,7 @@ function get_global_params(jsonfile)
     local g=0  -- false by default
     local f=0  -- false by default
     local p=0  -- false by default
-    if stringx.count(jsonfile, '_g') == 1 then 
+    if stringx.count(jsonfile, '_g') == 1 or not(string.find(jsonfile, 'tower') == nil) then  -- if tower is in jsonfile, then also turn gravity on!
         g = 1
     end
     if stringx.count(jsonfile, '_f') == 1 then

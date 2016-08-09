@@ -38,7 +38,7 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.anc = args.angle_normalize_constant
     self.relative = args.relative -- bool
     self.masses = args.masses -- {0.33, 1.0, 3.0, 1e30}
-    self.maxwinsize = args.maxwinsize
+    -- self.maxwinsize = args.maxwinsize
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.oid_ids = args.oid_ids
@@ -51,6 +51,11 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.outfolder = outfolder -- save stuff to here.
 
     -- here you can also include have world parameters
+    if not(string.find(self.jsonfolder, 'tower') == nil) then
+        self.maxwinsize = args.maxwinsize_long
+    else
+        self.maxwinsize = args.maxwinsize
+    end
 
     return self
 end
@@ -444,9 +449,10 @@ end
 
 function data_process:json2batches(jsonfile)
     local data = load_data_json(jsonfile)
+    -- print(data)
     assert(data:size(3) == self.maxwinsize)
-    data = self:normalize(data)
-    data = self:properties2onehotall(data)
+    data = self:normalize(data)  -- good
+    data = self:properties2onehotall(data)  -- good
     local focus, context = self:expand_for_each_object(data)
     return self:split2batchesall(focus, context)
 end

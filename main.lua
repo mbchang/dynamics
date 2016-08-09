@@ -87,14 +87,12 @@ if mp.server == 'pc' then
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
     mp.max_iter = 60
-    -- mp.lrdecay = 0.99
     mp.nbrhd = true
     mp.lrdecayafter = 50000
     mp.lrdecay_every = 2500
     mp.layers = 1
-    -- mp.lr = 3e-5
     mp.model = 'bffobj'
-    mp.im = true
+    mp.im = false
     mp.val_window = 5
     mp.val_eps = 2e-5
 	mp.seq_length = 10  -- for the concatenate model
@@ -593,9 +591,13 @@ end
 
 
 function validate()
-    local train_loss = test(train_test_loader, model.theta.params, false)
+    -- local train_loss = test(train_test_loader, model.theta.params, false)
     local val_loss = test(val_loader, model.theta.params, false)
-    local test_loss = test(test_loader, model.theta.params, false)
+    -- local test_loss = test(test_loader, model.theta.params, false)
+
+    local train_loss = 0
+    local test_loss = 0
+
 
 
     local log_string = 'train loss\t'..train_loss..

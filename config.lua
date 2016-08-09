@@ -25,6 +25,7 @@ local args = {
         permute_context=false,
         shuffle=true,
         maxwinsize=60,
+        maxwinsize_long=120,
         max_iters_per_json=100,  -- TODO
         subdivide=true,
         object_base_size={ball=60, obstacle=120, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
