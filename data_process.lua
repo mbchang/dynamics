@@ -224,19 +224,11 @@ function data_process:expand_for_each_object(unfactorized)
     if num_obj > 1 then
         for i=1,num_obj do  -- this is doing it in transpose order
             local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same
-
-            -- print(this[{{},{},{},{self.si.oid[2]}}]:sum())  -- this is a problem!
-            -- print(this[{{1},{1},{1,2},{}}])
-            -- print(self.si.oid[2])
-            -- assert(false)
             local ball_index = self.si.oid[1]
             local obstacle_index = self.si.oid[1]+1
             local block_index = self.si.oid[2]
 
             if this[{{},{},{},{obstacle_index}}]:sum() == 0 then -- only do it if the particle is not stationary obstacle
-                -- print(this)
-                -- assert(false)
-
 
                 this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
                 local other

@@ -591,12 +591,12 @@ end
 
 
 function validate()
-    -- local train_loss = test(train_test_loader, model.theta.params, false)
+    local train_loss = test(train_test_loader, model.theta.params, false)
     local val_loss = test(val_loader, model.theta.params, false)
-    -- local test_loss = test(test_loader, model.theta.params, false)
+    local test_loss = test(test_loader, model.theta.params, false)
 
-    local train_loss = 0
-    local test_loss = 0
+    -- local train_loss = 0
+    -- local test_loss = 0
 
 
 
