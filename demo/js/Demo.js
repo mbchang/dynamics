@@ -463,6 +463,7 @@
             var num_stable = 0
             var com_num_unstable = 0
             var com_num_stable = 0
+            var stability_threshold = 5
         }
 
         let s = 0;
