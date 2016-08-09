@@ -156,7 +156,7 @@ function model:unpack_batch(batch, sim)
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
-            table.insert(self.neighbor_masks, torch.ones(mp.batch_size))
+            table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))
         end
     end
     input = self:apply_neighbor_mask(input, self.neighbor_masks)
@@ -169,13 +169,31 @@ end
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
 -- maybe I can output a mask? then I can rename this function to neighborhood_mask
 function model:select_neighbors(input)
-    local threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- TODO! make this be dependent on the object id!!!!!
+    -- local threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- TODO! make this be dependent on the object id!!!!!
+
 
     local neighbor_masks = {}
     for i, pair in pairs(input) do
         -- reshape
         local this = pair[1]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
         local context = pair[2]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+
+        -- make threshold depend on object id!
+        local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
+        local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
+        local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
+        local template_ball = template:clone()
+        local template_block = template:clone()
+        template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
+        template_block[{{},{},{config_args.oids.block}}]:fill(1)
+
+        if oid_onehot:equal(template_ball) then
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball 
+        elseif oid_onehot:equal(template_block) then
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.block
+        else
+            assert(false, 'Unknown object id')
+        end
 
         -- compute where they will be in the next timestep
         local this_pos_next = self:update_position_one(this)
