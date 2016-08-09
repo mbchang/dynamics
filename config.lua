@@ -16,7 +16,6 @@
 local args = {
 
         -- datasaver
-        -- position_normalize_constant=800,  -- TODO change
         velocity_normalize_constant=60,
         angle_normalize_constant=2*math.pi,
         relative=true,
@@ -28,7 +27,7 @@ local args = {
         maxwinsize=60,
         max_iters_per_json=100,  -- TODO
         subdivide=true,
-        object_base_size={ball=60, obstacle=120, block=40},  -- radius, length, block
+        object_base_size={ball=60, obstacle=120, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
         object_sizes={0.5, 1, 2}, -- multiplies object_base_size
         oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
         roids = {'ball', 'obstacle', 'block'},  -- reverse oids

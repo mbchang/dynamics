@@ -136,34 +136,35 @@ experiments = [
                 # RD dataset with 2.5 buffer
                 'balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 'balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 'balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 'balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
 
-                'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
+                # 'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
                 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',  # killed
                 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',
+                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',  # killed
                 'balls_n3_t60_ex50000_m_rd__balls_n3_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n3_t60_ex50000_m_rd__balls_n3_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',
+                # 'balls_n3_t60_ex50000_m_rd__balls_n3_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',  # killed
                 'balls_n5_t60_ex50000_m_rd__balls_n5_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n5_t60_ex50000_m_rd__balls_n5_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',
+                # 'balls_n5_t60_ex50000_m_rd__balls_n5_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',  # killed
                 'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',
+                # 'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',  # killed
                 'balls_n7_t60_ex50000_m_rd__balls_n7_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n7_t60_ex50000_m_rd__balls_n7_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',
+                # 'balls_n7_t60_ex50000_m_rd__balls_n7_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',  # killed
                 'balls_n8_t60_ex50000_m_rd__balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n8_t60_ex50000_m_rd__balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',
-                'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                'balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
+                # 'balls_n8_t60_ex50000_m_rd__balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_im_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
+                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
+                # 'balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed 
+                # 'balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed 
+                # 'balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
+                # 'balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
+                # 'balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
+                # 'balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
+                # 'balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed 
+                # 'balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers4_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',  # killed
 
 
                 ]

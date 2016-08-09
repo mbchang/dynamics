@@ -88,7 +88,7 @@ if mp.server == 'pc' then
 	mp.batch_size = 5 --1
     mp.max_iter = 60
     -- mp.lrdecay = 0.99
-    mp.nbrhd = false
+    mp.nbrhd = true
     mp.lrdecayafter = 50000
     mp.lrdecay_every = 2500
     mp.layers = 1
@@ -569,7 +569,7 @@ function max_likelihood(dataloader, params_, hypotheses, si_indices)
             if update_indices:nElement() > 0 then
                 update_indices = torch.squeeze(update_indices,2)
                 --best_loss should equal test loss at the indices where test loss < best_loss
-                best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))  -- TODO! Test if this works
+                best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))
 
                 -- best_hypotheses should equal h at the indices where test loss < best_loss
                 best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
