@@ -40,15 +40,15 @@ def create_jobs(dry_run, ext):
     toch_root = '/om/user/mbchang/physics/lua'
 
     # world parameters
-    num_objs = [3,4,5,6,7,8]  # how far should we go? Let's say the max is 20. Should we include 1?
+    num_objs = [6,8,10]  # how far should we go? Let's say the max is 20. Should we include 1?
     friction = [False]
     gravity = [False]
-    masses = [False, True]  # TODO
-    envs = ['balls']
+    masses = [False]  # TODO
+    envs = ['tower']
 
     # mj data generation
-    steps = 60
-    samples = 50000
+    steps = 120
+    samples = 25000
 
     # generate json files
     generator = 'node ' + mj_root + 'demo/js/Demo.js'
