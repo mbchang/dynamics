@@ -6,6 +6,7 @@ require 'Base'
 require 'IdentityCriterion'
 require 'data_utils'
 require 'modules'
+local data_process = require 'data_process'
 
 nngraph.setDebug(true)
 
@@ -159,10 +160,71 @@ function model:unpack_batch(batch, sim)
             table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))
         end
     end
-    input = self:apply_neighbor_mask(input, self.neighbor_masks)
+    input = self:apply_mask(input, self.neighbor_masks)
+
+    ------------------------------------------------------------------
+    -- collision filter
+    -- input, this_past, this_future = self:collision_filter(batch, input, this_past)
+
+    -- assert(false)
     ------------------------------------------------------------------
 
     return {input, this_past}, this_future
+end
+
+-- zero out the examples in which this_past and this_future 
+-- are less than the given angle
+-- NOTE that when you do forward pass, you'd have to do something different when you average!
+-- NOTE that if we do this after we apply neighbor mask, then we could norm that is 0!
+-- we have to deal with that. Wait that should be fine, because collision filter just calculates based on batch
+-- return input, this_future
+function model:collision_filter(batch, input, this_past)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+
+    -- I could compute manual dot product
+    -- this_past: (bsize, numpast, objdim)
+    -- this_future: (bsize, numfuture, objdim)
+    local past = this_past:clone()
+    local future = this_future:clone()
+    future = data_process.relative_pair(past, future, true)
+
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local past_vel = torch.squeeze(past[{{},{-1},{vx, vy}}],2)
+    local future_vel = torch.squeeze(future[{{},{},{vx, vy}}],2)
+
+    local past_vel_norm = torch.norm(past_vel,2,2)
+    local future_vel_norm = torch.norm(future_vel,2,2)
+    local both_norm = torch.cmul(past_vel_norm, future_vel_norm)
+
+    -- manually perform dot product
+    local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
+    -- local cos_theta = torch.cdiv(dot, both_norm:expandAs(dot)) -- numerical issues here
+    -- local theta = torch.acos(cos_theta)
+
+    -- you could just only include those for which dot is < 0
+    local collision_mask = dot:le(0):float()
+    print(collision_mask)
+    local mask_this = collision_mask:view(mp.batch_size,1,1)
+    local pairs_collision_mask = {}
+    for i=1,context_past:size(2) do
+        table.insert(pairs_collision_mask, collision_mask)
+    end
+    -- local mask_context = collision_mask:view(mp.batch_size,1,1,1)
+
+    -- apply to input
+    -- for i, x in pairs(input) do
+    local input = self:apply_mask(input, pairs_collision_mask)
+
+    local masked_this_past = this_past:clone():cmul(mask_this:expandAs(this_past))
+    -- local masked_context_past = context_past:clone():cmul(mask_context:expandAs(context_past))
+    local masked_this_future = this_future:clone():cmul(mask_this:expandAs(this_future))
+    -- local masked_context_future = context_future:clone():cmul(mask_context:expandAs(context_future))
+
+    masked_this_past:resize(masked_this_past:size(1), masked_this_past:size(2)*masked_this_past:size(3))
+    masked_this_future:resize(masked_this_future:size(1),masked_this_future:size(2)*masked_this_future:size(3))
+
+    return input, masked_this_past, masked_this_future
 end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
@@ -210,14 +272,14 @@ function model:select_neighbors(input)
 end
 
 -- we mask out this as well, because it is as if that interaction didn't happen
-function model:apply_neighbor_mask(input, neighbor_mask)
-    assert(#neighbor_mask == #input)
+function model:apply_mask(input, batch_mask)
+    assert(#batch_mask == #input)
     for i, x in pairs(input) do 
         if type(x) == 'table' then
-            x[1] = torch.cmul(x[1],neighbor_mask[i]:view(mp.batch_size,1):expandAs(x[1]))
-            x[2] = torch.cmul(x[2], neighbor_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
+            x[1] = torch.cmul(x[1],batch_mask[i]:view(mp.batch_size,1):expandAs(x[1]))
+            x[2] = torch.cmul(x[2], batch_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
         else
-            x = torch.cmul(x, neighbor_mask[i]:view(mp.batch_size,1):expandAs(x):float())
+            x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())
             input[i] = x -- it doesn't actually automatically mutate
         end
     end
@@ -248,6 +310,27 @@ function model:fp(params_, batch, sim)
     local loss_vel = self.criterion:forward(p_vel, gt_vel)
     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
     local loss = loss_vel + loss_ang_vel
+
+    -- print(this_future)
+
+    -- the collision mask would be reflected in this_future
+    -- what happens when this_future is all 0? do we just declare loss as 0?
+    -- but then what do we divide with for accuracy?
+
+    -- print(p_vel:size())  -- (bsize, num_future, 2)
+    -- print(p_ang_vel:size())  -- (bsize, num_future, 1)
+    -- print(this_future:size())
+    -- assert(false)
+
+    -- actually, we shouldn't be dividing by nElement if we are masking out the collisions
+    -- let's find the batches that are nonzero here
+    -- there is no way an entire
+    -- local pass_through = 
+
+
+
+
+
     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
 
     collectgarbage()
@@ -331,7 +414,7 @@ function model:bp(batch, prediction, sim)
     local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].modules[1].modules[1].output
     local d_caddtable = self.network.modules[1].modules[1].modules[2]:backward(caddtable_in, d_decoder[1])
-    d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
+    d_caddtable = self:apply_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
     local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
     local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
     local d_input = {d_pairwise, d_identity}
@@ -381,7 +464,7 @@ function model:bp_input(batch, prediction, sim)
     local d_decoder = self.network.modules[2]:updateGradInput(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].modules[1].modules[1].output
     local d_caddtable = self.network.modules[1].modules[1].modules[2]:updateGradInput(caddtable_in, d_decoder[1])
-    d_caddtable = self:apply_neighbor_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
+    d_caddtable = self:apply_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
     local d_pairwise = self.network.modules[1].modules[1].modules[1]:updateGradInput(input[1], d_caddtable)
     local d_identity = self.network.modules[1].modules[2]:updateGradInput(input[2], d_decoder[2])
     local d_input = {d_pairwise, d_input}
