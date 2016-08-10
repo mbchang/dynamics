@@ -204,7 +204,7 @@ function model:collision_filter(batch, input, this_past)
 
     -- you could just only include those for which dot is < 0
     local collision_mask = dot:le(0):float()
-    print(collision_mask)
+    -- print(collision_mask)
     local mask_this = collision_mask:view(mp.batch_size,1,1)
     local pairs_collision_mask = {}
     for i=1,context_past:size(2) do
@@ -311,27 +311,34 @@ function model:fp(params_, batch, sim)
     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
     local loss = loss_vel + loss_ang_vel
 
-    -- print(this_future)
 
-    -- the collision mask would be reflected in this_future
-    -- what happens when this_future is all 0? do we just declare loss as 0?
-    -- but then what do we divide with for accuracy?
+    -- loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
 
+
+    --------------------------------------------------------------
     -- print(p_vel:size())  -- (bsize, num_future, 2)
     -- print(p_ang_vel:size())  -- (bsize, num_future, 1)
-    -- print(this_future:size())
-    -- assert(false)
 
-    -- actually, we shouldn't be dividing by nElement if we are masking out the collisions
-    -- let's find the batches that are nonzero here
-    -- there is no way an entire
-    -- local pass_through = 
+    local num_pass_through
+    if this_future:norm() == 0 then
+        num_pass_through = 0
+    else
+        num_pass_through = this_future:sum(2):nonzero():size(1)
+    end
+    local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
+    local pangvel_nElement = num_pass_through*mp.num_future*1
+    -- print(num_pass_through)
+    -- print('pvel', pvel_nElement)
+    -- print('pangvel',pangvel_nElement)
 
 
+    if (pvel_nElement+pangvel_nElement) <= 0 then
+        loss = 0
+    else
+        loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
+    end
+    -- print('loss', loss)
 
-
-
-    loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
 
     collectgarbage()
     return loss, prediction

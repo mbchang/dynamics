@@ -584,6 +584,16 @@ function max_likelihood(dataloader, params_, hypotheses, si_indices)
         local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(#hypotheses):sum()
         num_correct = num_correct + num_equal
         count = count + mp.batch_size
+
+
+        -- collision filter version
+        -- local this_past = batch[1]:clone()
+        -- local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
+        -- local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(#hypotheses):sum()
+        -- num_correct = num_correct + num_equal
+        -- count = count + mp.batch_size
+
+
         collectgarbage()
     end
     return num_correct/count
