@@ -164,7 +164,7 @@ function model:unpack_batch(batch, sim)
 
     ------------------------------------------------------------------
     -- collision filter
-    -- input, this_past, this_future = self:collision_filter(batch, input, this_past)
+    -- input, this_past, this_future = self:collision_filter(batch, input, this_past)  -- uncomment if you want to do collision filter
 
     -- assert(false)
     ------------------------------------------------------------------
@@ -316,6 +316,7 @@ function model:fp(params_, batch, sim)
 
 
     --------------------------------------------------------------
+    -- this works
     -- print(p_vel:size())  -- (bsize, num_future, 2)
     -- print(p_ang_vel:size())  -- (bsize, num_future, 1)
 
@@ -327,19 +328,11 @@ function model:fp(params_, batch, sim)
     end
     local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
     local pangvel_nElement = num_pass_through*mp.num_future*1
-    -- print(num_pass_through)
-    -- print('pvel', pvel_nElement)
-    -- print('pangvel',pangvel_nElement)
-
-
     if (pvel_nElement+pangvel_nElement) <= 0 then
         loss = 0
     else
         loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
     end
-    -- print('loss', loss)
-
-
     collectgarbage()
     return loss, prediction
 end
@@ -373,6 +366,41 @@ function model:fp_batch(params_, batch, sim)
         local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
         local loss = loss_vel + loss_ang_vel
         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
+
+
+        -- if collision filter is applied, then you should look at the indices of this_future
+        local pass_through_indices = torch.squeeze(this_future:sum(2),2):nonzero()
+        -- print(pass_through_indices)
+        if pass_through_indices:eq(i):sum() <= 0 then -- batch i is nonzero here
+            loss = 0
+        end
+        -- otherwise, the loss is the same.
+
+        -- if this_future:sum(2)
+        -- print(this_future)
+        -- print()
+        -- assert(false)
+
+        -- local num_pass_through
+        -- if this_future:norm() == 0 then
+        --     num_pass_through = 0
+        -- else
+        --     num_pass_through = this_future:sum(2):nonzero():size(1)
+        -- end
+        -- local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
+        -- local pangvel_nElement = num_pass_through*mp.num_future*1
+        -- if (pvel_nElement+pangvel_nElement) <= 0 then
+        --     loss = 0
+        -- else
+        --     loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
+        -- end
+
+
+        -- LOOK AT THIS BELOW!
+        -- hmmm, if the collision filter is applied, then the loss would be 0 here right?
+
+
+
         table.insert(loss_all, loss)
     end
 

@@ -92,7 +92,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 2500
     mp.layers = 1
     mp.model = 'bffobj'
-    mp.im = false
+    mp.im = true
     mp.val_window = 5
     mp.val_eps = 2e-5
 	mp.seq_length = 10  -- for the concatenate model
@@ -587,6 +587,9 @@ function max_likelihood(dataloader, params_, hypotheses, si_indices)
 
 
         -- collision filter version
+        -- all I have to do is to adjust num_correct and count based on collision filter
+        -- note that num_correct should be <= the num_passthrough in collision filter
+        -- perhaps I can look at the rows of prediction? that should work right?
         -- local this_past = batch[1]:clone()
         -- local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
         -- local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(#hypotheses):sum()
@@ -601,12 +604,13 @@ end
 
 
 function validate()
-    local train_loss = test(train_test_loader, model.theta.params, false)
-    local val_loss = test(val_loader, model.theta.params, false)
-    local test_loss = test(test_loader, model.theta.params, false)
+    -- local train_loss = test(train_test_loader, model.theta.params, false)
+    -- local val_loss = test(val_loader, model.theta.params, false)
+    -- local test_loss = test(test_loader, model.theta.params, false)
 
-    -- local train_loss = 0
-    -- local test_loss = 0
+    local train_loss = 0
+    local val_loss = 0
+    local test_loss = 0
 
 
 
