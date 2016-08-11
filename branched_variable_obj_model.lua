@@ -164,9 +164,9 @@ function model:unpack_batch(batch, sim)
 
     ------------------------------------------------------------------
     -- collision filter
-    -- input, this_past, this_future = self:collision_filter(batch, input, this_past)  -- uncomment if you want to do collision filter
-
-    -- assert(false)
+    -- if mp.cf then
+    --     input, this_past, this_future = self:collision_filter(batch, input, this_past)  -- uncomment if you want to do collision filter
+    -- end 
     ------------------------------------------------------------------
 
     return {input, this_past}, this_future
@@ -177,55 +177,55 @@ end
 -- NOTE that when you do forward pass, you'd have to do something different when you average!
 -- NOTE that if we do this after we apply neighbor mask, then we could norm that is 0!
 -- we have to deal with that. Wait that should be fine, because collision filter just calculates based on batch
--- return input, this_future
-function model:collision_filter(batch, input, this_past)
-    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+-- -- return input, this_future
+-- function model:collision_filter(batch, input, this_past)
+--     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
-    -- I could compute manual dot product
-    -- this_past: (bsize, numpast, objdim)
-    -- this_future: (bsize, numfuture, objdim)
-    local past = this_past:clone()
-    local future = this_future:clone()
-    future = data_process.relative_pair(past, future, true)
+--     -- I could compute manual dot product
+--     -- this_past: (bsize, numpast, objdim)
+--     -- this_future: (bsize, numfuture, objdim)
+--     local past = this_past:clone()
+--     local future = this_future:clone()
+--     future = data_process.relative_pair(past, future, true)
 
-    local vx = config_args.si.vx
-    local vy = config_args.si.vy
-    local past_vel = torch.squeeze(past[{{},{-1},{vx, vy}}],2)
-    local future_vel = torch.squeeze(future[{{},{},{vx, vy}}],2)
+--     local vx = config_args.si.vx
+--     local vy = config_args.si.vy
+--     local past_vel = torch.squeeze(past[{{},{-1},{vx, vy}}],2)
+--     local future_vel = torch.squeeze(future[{{},{},{vx, vy}}],2)
 
-    local past_vel_norm = torch.norm(past_vel,2,2)
-    local future_vel_norm = torch.norm(future_vel,2,2)
-    local both_norm = torch.cmul(past_vel_norm, future_vel_norm)
+--     local past_vel_norm = torch.norm(past_vel,2,2)
+--     local future_vel_norm = torch.norm(future_vel,2,2)
+--     local both_norm = torch.cmul(past_vel_norm, future_vel_norm)
 
-    -- manually perform dot product
-    local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
-    -- local cos_theta = torch.cdiv(dot, both_norm:expandAs(dot)) -- numerical issues here
-    -- local theta = torch.acos(cos_theta)
+--     -- manually perform dot product
+--     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
+--     -- local cos_theta = torch.cdiv(dot, both_norm:expandAs(dot)) -- numerical issues here
+--     -- local theta = torch.acos(cos_theta)
 
-    -- you could just only include those for which dot is < 0
-    local collision_mask = dot:le(0):float()
-    -- print(collision_mask)
-    local mask_this = collision_mask:view(mp.batch_size,1,1)
-    local pairs_collision_mask = {}
-    for i=1,context_past:size(2) do
-        table.insert(pairs_collision_mask, collision_mask)
-    end
-    -- local mask_context = collision_mask:view(mp.batch_size,1,1,1)
+--     -- you could just only include those for which dot is < 0
+--     local collision_mask = dot:le(0):float()
+--     -- print(collision_mask)
+--     local mask_this = collision_mask:view(mp.batch_size,1,1)
+--     local pairs_collision_mask = {}
+--     for i=1,context_past:size(2) do
+--         table.insert(pairs_collision_mask, collision_mask)
+--     end
+--     -- local mask_context = collision_mask:view(mp.batch_size,1,1,1)
 
-    -- apply to input
-    -- for i, x in pairs(input) do
-    local input = self:apply_mask(input, pairs_collision_mask)
+--     -- apply to input
+--     -- for i, x in pairs(input) do
+--     local input = self:apply_mask(input, pairs_collision_mask)
 
-    local masked_this_past = this_past:clone():cmul(mask_this:expandAs(this_past))
-    -- local masked_context_past = context_past:clone():cmul(mask_context:expandAs(context_past))
-    local masked_this_future = this_future:clone():cmul(mask_this:expandAs(this_future))
-    -- local masked_context_future = context_future:clone():cmul(mask_context:expandAs(context_future))
+--     local masked_this_past = this_past:clone():cmul(mask_this:expandAs(this_past))
+--     -- local masked_context_past = context_past:clone():cmul(mask_context:expandAs(context_past))
+--     local masked_this_future = this_future:clone():cmul(mask_this:expandAs(this_future))
+--     -- local masked_context_future = context_future:clone():cmul(mask_context:expandAs(context_future))
 
-    masked_this_past:resize(masked_this_past:size(1), masked_this_past:size(2)*masked_this_past:size(3))
-    masked_this_future:resize(masked_this_future:size(1),masked_this_future:size(2)*masked_this_future:size(3))
+--     masked_this_past:resize(masked_this_past:size(1), masked_this_past:size(2)*masked_this_past:size(3))
+--     masked_this_future:resize(masked_this_future:size(1),masked_this_future:size(2)*masked_this_future:size(3))
 
-    return input, masked_this_past, masked_this_future
-end
+--     return input, masked_this_past, masked_this_future
+-- end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
@@ -311,28 +311,26 @@ function model:fp(params_, batch, sim)
     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
     local loss = loss_vel + loss_ang_vel
 
-
-    -- loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
-
+    loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
 
     --------------------------------------------------------------
-    -- this works
-    -- print(p_vel:size())  -- (bsize, num_future, 2)
-    -- print(p_ang_vel:size())  -- (bsize, num_future, 1)
+    -- -- this works
+    -- -- print(p_vel:size())  -- (bsize, num_future, 2)
+    -- -- print(p_ang_vel:size())  -- (bsize, num_future, 1)
 
-    local num_pass_through
-    if this_future:norm() == 0 then
-        num_pass_through = 0
-    else
-        num_pass_through = this_future:sum(2):nonzero():size(1)
-    end
-    local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
-    local pangvel_nElement = num_pass_through*mp.num_future*1
-    if (pvel_nElement+pangvel_nElement) <= 0 then
-        loss = 0
-    else
-        loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
-    end
+    -- local num_pass_through
+    -- if this_future:norm() == 0 then
+    --     num_pass_through = 0
+    -- else
+    --     num_pass_through = this_future:sum(2):nonzero():size(1)
+    -- end
+    -- local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
+    -- local pangvel_nElement = num_pass_through*mp.num_future*1
+    -- if (pvel_nElement+pangvel_nElement) <= 0 then
+    --     loss = 0
+    -- else
+    --     loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
+    -- end
     collectgarbage()
     return loss, prediction
 end
@@ -367,40 +365,15 @@ function model:fp_batch(params_, batch, sim)
         local loss = loss_vel + loss_ang_vel
         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
 
-
         -- if collision filter is applied, then you should look at the indices of this_future
-        local pass_through_indices = torch.squeeze(this_future:sum(2),2):nonzero()
-        -- print(pass_through_indices)
-        if pass_through_indices:eq(i):sum() <= 0 then -- batch i is nonzero here
-            loss = 0
-        end
-        -- otherwise, the loss is the same.
-
-        -- if this_future:sum(2)
-        -- print(this_future)
-        -- print()
-        -- assert(false)
-
-        -- local num_pass_through
-        -- if this_future:norm() == 0 then
-        --     num_pass_through = 0
-        -- else
-        --     num_pass_through = this_future:sum(2):nonzero():size(1)
+        -- you should ignore 0 loss downstream.
+        -- although this should work if cf is false
+        -- if mp.cf then
+        --     local pass_through_indices = torch.squeeze(this_future:sum(2),2):nonzero()
+        --     if pass_through_indices:eq(i):sum() <= 0 then -- batch i is nonzero here
+        --         loss = 0
+        --     end
         -- end
-        -- local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
-        -- local pangvel_nElement = num_pass_through*mp.num_future*1
-        -- if (pvel_nElement+pangvel_nElement) <= 0 then
-        --     loss = 0
-        -- else
-        --     loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
-        -- end
-
-
-        -- LOOK AT THIS BELOW!
-        -- hmmm, if the collision filter is applied, then the loss would be 0 here right?
-
-
-
         table.insert(loss_all, loss)
     end
 
