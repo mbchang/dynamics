@@ -86,7 +86,10 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n8_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rd'}"},
 
 
-            {'dataset_folders':"{'tower_n6_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rd'}"},
+            # {'dataset_folders':"{'tower_n6_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rd'}"},
+
+            {'dataset_folders':"{'balls_n3_t60_ex50000_rd','balls_n4_t60_ex50000_rd','balls_n5_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rd','balls_n7_t60_ex50000_rd','balls_n8_t60_ex50000_rd'}"},
+
 
             ]
 
@@ -97,18 +100,18 @@ def create_jobs(dry_run, mode, ext):
         for model in ['bffobj']:
             for nbrhd in [True]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [3]:  # [2,3,4]
+                    for layers in [2,3,4]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             for im in [False]:
-                                for veps in [0, 1.5e-9, 1.5e-8, 1.5e-7, 1.5e-6]:
-                                    job['model'] = model
-                                    job['nbrhd'] = nbrhd
-                                    job['layers'] = layers
-                                    job['lr'] = lr
-                                    job['nbrhdsize'] = nbhrdsize
-                                    job['im'] = im
-                                    job['val_eps'] = veps
-                                    actual_jobs.append(copy.deepcopy(job))
+                                # for veps in [0, 1.5e-9, 1.5e-8, 1.5e-7, 1.5e-6]:
+                                job['model'] = model
+                                job['nbrhd'] = nbrhd
+                                job['layers'] = layers
+                                job['lr'] = lr
+                                job['nbrhdsize'] = nbhrdsize
+                                job['im'] = im
+                                # job['val_eps'] = veps
+                                actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 
@@ -124,24 +127,28 @@ def create_jobs(dry_run, mode, ext):
             if isinstance(job[flag], bool):
                 if job[flag]:
                     jobname = jobname + "_" + flag
-                    flagstring = flagstring + " -" + flag
+                    if not (mode == 'sim' or mode == 'minf'):
+                        flagstring = flagstring + " -" + flag
                 else:
                     print "WARNING: Excluding 'False' flag " + flag
             else:
                 if flag in ['dataset_folders', 'test_dataset_folders']:
                     # eval.lua does not have a 'dataset_folders' flag
-                    if not(mode == 'sim' and flag == 'dataset_folders'):
-                        flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')
+                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders'):
+                        flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')                        
                 else:
                     if flag not in ['name']:
                         jobname = jobname + "_" + flag  + str(job[flag])
-                        flagstring = flagstring + " -" + flag + " " + str(job[flag])
+                        if (mode == 'sim' or mode == 'minf') and flag not in ['test_dataset_folders', 'name']:
+                            pass
+                        else:
+                            flagstring = flagstring + " -" + flag + " " + str(job[flag])
 
         flagstring = flagstring + " -name " + jobname + " -mode " + mode 
 
         if mode == 'exp':
             prefix = 'th main.lua'
-        elif mode == 'sim':
+        elif mode == 'sim' or mode == 'minf':
             prefix = 'th eval.lua'
         else:
             assert False, 'Unknown mode'
@@ -166,6 +173,9 @@ def predict(dry_run):
 
 def sim(dry_run):
     create_jobs(dry_run=dry_run, mode='sim', ext='_sim')
+
+def minf(dry_run):
+    create_jobs(dry_run=dry_run, mode='minf', ext='_minf')
 
 def to_slurm(jobname, jobcommand, dry_run):
     # jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
@@ -193,3 +203,4 @@ def to_slurm(jobname, jobcommand, dry_run):
 dry_run = '--rd' not in sys.argv # real deal
 run_experiment(dry_run)
 # sim(dry_run)
+# minf(dry_run)

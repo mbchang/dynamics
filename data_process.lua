@@ -51,6 +51,8 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.outfolder = outfolder -- save stuff to here.
 
     -- here you can also include have world parameters
+    print(jsonfolder)
+    print(outfolder)
     if not(string.find(self.jsonfolder, 'tower') == nil) then
         self.maxwinsize = args.maxwinsize_long
     else
@@ -227,9 +229,7 @@ function data_process:expand_for_each_object(unfactorized)
             local ball_index = self.si.oid[1]
             local obstacle_index = self.si.oid[1]+1
             local block_index = self.si.oid[2]
-
             if this[{{},{},{},{obstacle_index}}]:sum() == 0 then -- only do it if the particle is not stationary obstacle
-
                 this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
                 local other
                 if i == 1 then
@@ -251,8 +251,6 @@ function data_process:expand_for_each_object(unfactorized)
         local this = unfactorized[{{},{i},{},{}}]
         focus[#focus+1] = torch.squeeze(this,2) -- (num_samples x windowsize x objdim)
     end
-
-    print(focus)
 
     focus = torch.cat(focus,1)  -- concatenate along batch dimension
 

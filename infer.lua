@@ -1,4 +1,5 @@
 local data_process = require 'data_process'
+-- local M = require 'branched_variable_obj_model'
 
 -- a table of onehot tensors of size num_hypotheses
 function generate_onehot_hypotheses(num_hypotheses)
@@ -11,7 +12,7 @@ function generate_onehot_hypotheses(num_hypotheses)
     return hypotheses
 end
 
-function infer_properties(model, dataloader, params_, property, method)
+function infer_properties(model, dataloader, params_, property, method, cf)
     -- TODO for other properties
     local hypotheses, si_indices, num_hypotheses
     if property == 'mass' then
@@ -25,9 +26,9 @@ function infer_properties(model, dataloader, params_, property, method)
 
     local accuracy
     if method == 'backprop' then 
-        accuracy = backprop2input(model, dataloader, params_, hypotheses, si_indices)
+        accuracy = backprop2input(model, dataloader, params_, hypotheses, si_indices, cf)
     elseif method == 'max_likelihood' then
-        accuracy = max_likelihood(model, dataloader, params_, hypotheses, si_indices)
+        accuracy = max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
     end
     return accuracy
 end
@@ -168,7 +169,7 @@ function binarize(tensor)
 end
 
 
-function max_likelihood(model, dataloader, params_, hypotheses, si_indices)
+function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.num_batches do
@@ -203,7 +204,7 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices)
         local this_past = batch[1]:clone()
         local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
 
-        if mp.cf then 
+        if cf then 
             local collision_filter_mask = collision_filter(batch)
             local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
             if ground_truth_filtered:norm() > 0 then

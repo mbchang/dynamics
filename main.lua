@@ -93,7 +93,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 2500
     mp.layers = 1
     mp.model = 'bffobj'
-    mp.im = true
+    mp.im = false
     mp.cf = true
     mp.val_window = 5
     mp.val_eps = 2e-5
@@ -245,9 +245,6 @@ function feval_train(params_)  -- params_ should be first argument
     --   4 : FloatTensor - size: 5x4x1x11
     --   5 : FloatTensor - size: 10
     -- }
-    -- local batch = train_loader:sample_sequential_aggregated_batch(10, false)
-    -- print(batch)
-    -- assert(false)
 
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
@@ -308,6 +305,8 @@ function train(start_iter, epoch_num)
             if (t-start_iter+1) % mp.save_every == 0 then
                 local model_file = string.format('%s/epoch%.2f_%.4f.t7',
                                             mp.savedir, epoch_num, v_val_loss)
+                -- local model_file = string.format('%s/epoch%.2f_%.4f.t7',
+                --                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
                 model.network:clearState()
 
@@ -391,15 +390,13 @@ function validate()
     -- local val_loss = 0
     -- local test_loss = 0
 
-
-
     local log_string = 'train loss\t'..train_loss..
                       '\tval loss\t'..val_loss..
                       '\ttest_loss\t'..test_loss
 
     if mp.im then
         require 'infer'
-        local mass_accuracy = infer_properties(model, val_loader, model.theta.params, 'mass', 'max_likelihood')
+        local mass_accuracy = infer_properties(model, val_loader, model.theta.params, 'mass', 'max_likelihood', mp.cf)
         log_string = log_string..'\tmass accuracy\t'..mass_accuracy
         inferenceLogger:add{['Mass accuracy (val set)'] = mass_accuracy}
         inferenceLogger:style{['Mass accuracy (val set)'] = '~'}

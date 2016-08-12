@@ -5,6 +5,7 @@ require 'nngraph'
 require 'Base'
 require 'IdentityCriterion'
 require 'data_utils'
+require 'infer'
 require 'modules'
 local data_process = require 'data_process'
 
@@ -250,6 +251,25 @@ function model:fp(params_, batch, sim)
     local loss = loss_vel + loss_ang_vel
 
     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
+
+    --------------------------------------------------------------
+    -- TODO YOU HAVE TO REDO AVERAGING IN test() and possibly sim()!
+    -- if mp.cf then 
+    --     local collision_mask = collision_filter(batch)
+    --     local num_pass_through = collision_mask:sum()
+    --     prediction:cmul(collision_mask:expandAs(prediction):float())
+
+    --     local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
+    --     local pangvel_nElement = num_pass_through*mp.num_future*1
+    --     if (pvel_nElement+pangvel_nElement) <= 0 then
+    --         loss = 0
+    --     else
+    --         loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
+    --     end
+    -- else
+    --     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
+    -- end
+    
     collectgarbage()
     return loss, prediction
 end
@@ -323,8 +343,13 @@ function model:bp(batch, prediction, sim)
     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
-    -- self.network:backward(input,d_pred)  -- updates grad_params
     ------------------------------------------------------------------
+    -- if mp.cf then
+    --     local collision_mask = collision_filter(batch)
+    --     d_pred:cmul(collision_mask:expandAs(d_pred):float())
+    -- end
+    ------------------------------------------------------------------
+
     -- neighborhood
 
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
@@ -676,5 +701,5 @@ function model:sim(batch)
     --                         current_dataset)
     -- end
 end
-
+-- print('LOADED ME')
 return model

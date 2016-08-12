@@ -54,7 +54,7 @@ mp = cmd:parse(arg)
 if mp.server == 'pc' then
     mp.data_root = 'mj_data'
     mp.logs_root = 'logs'
-    mp.winsize = 10 -- total number of frames
+    mp.winsize = 3 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
@@ -62,7 +62,7 @@ if mp.server == 'pc' then
 	mp.num_threads = 1
 	mp.cuda = false
 else
-	mp.winsize = 10  -- total number of frames
+	mp.winsize = 3  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
 	mp.seq_length = 10
@@ -92,8 +92,7 @@ local model, test_loader, modelfile, dp
 
 function inittest(preload, model_path, opt)
     print("Network parameters:")
-    print(mp.test_dataset_folders)
-    dp = data_process.create(jsonfile, outfile, config_args)
+    dp = data_process.create(model_path, model_path, config_args)  -- jsonfile and outfile are unpopopulated!  Let's just fill them with the model_path?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
     local data_loader_args = {data_root=mp.data_root..'/',
@@ -103,10 +102,14 @@ function inittest(preload, model_path, opt)
                               num_past=mp.num_past,
                               num_future=mp.num_future,
                               relative=mp.relative,
+                              subdivide=opt.subdivide,
+                              shuffle=config_args.shuffle, -- TODO test if this makes a difference
                               sim=opt.sim,
                               cuda=mp.cuda
                             }
     test_loader = D.create('testset', tablex.deepcopy(data_loader_args))
+    -- test_loader = D.create('valset', tablex.deepcopy(data_loader_args))
+
     modelfile = model_path
     print("Initialized Network")
 end
@@ -497,7 +500,7 @@ function run_inspect_hidden_state()
     config_args = saved_args.config_args
 
     model_deps(mp.model)
-    inittest(true, snapshotfile, {sim=false})  -- assuming the mp.savedir doesn't change
+    inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
 
     inspect_hidden_state(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
@@ -516,9 +519,52 @@ function predict_simulate_all()
     config_args = saved_args.config_args
 
     model_deps(mp.model)
-    inittest(true, snapshotfile, {sim=true})  -- assuming the mp.savedir doesn't change
+    inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
+
+    -- print(model)
+    -- assert(false)
     simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
+
+
+function mass_inference()
+    -- iterate through snapshots
+    local res_file = io.popen("ls -t "..mp.logs_root..'/'..mp.name..
+                            " | grep -i epoch")
+    local checkpoints = {}
+    while true do
+        local result = res_file:read()
+        if result == nil then break end
+        print('Adding snapshot: '..result)
+        table.insert(checkpoints, result)
+    end
+
+    local inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'infer_cf.log'))
+    inferenceLogger.showPlot = false
+
+    -- iterate through checkpoints backwards (least recent to most recent)
+    for i=#checkpoints,1,-1 do
+        local snapshot = checkpoints[i]
+        print('Mass inference on snapshot '..snapshot)
+        local snapshotfile = mp.savedir ..'/'..snapshot
+        local checkpoint = torch.load(snapshotfile)
+        local saved_args = torch.load(mp.savedir..'/args.t7')
+        mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
+        config_args = saved_args.config_args
+        model_deps(mp.model)
+        inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
+        require 'infer'
+
+        -- save num_correct into a file
+        local cf = true
+        local accuracy = infer_properties(model, test_loader, checkpoint.model.theta.params, 'mass', 'max_likelihood', cf)
+        print('Accuracy',accuracy)
+        inferenceLogger:add{['Mass accuracy (test set)'] = accuracy}
+        inferenceLogger:style{['Mass accuracy (test set)'] = '~'}
+    end
+    print('Finished mass inference')
+end
+
 
 function predict_b2i()
     local snapshot = getLastSnapshot(mp.name)
@@ -554,6 +600,8 @@ if mp.mode == 'sim' then
     -- run_inspect_hidden_state() -- I'm just getting the hidden state here
 elseif mp.mode == 'hid' then
     run_inspect_hidden_state()
+elseif mp.mode == 'minf' then
+    mass_inference()
 elseif mp.mode == 'b2i' then
     predict_b2i()
 elseif mp.mode == 'pred' then
