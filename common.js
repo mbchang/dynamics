@@ -104,6 +104,18 @@ initialize_masses = function(num_obj, possible_masses) {
     return masses;
 }
 
+initialize_sizes = function(num_obj, possible_sizes) {
+    // TODO: this should be categorical!
+    var sizes = [];
+    for (var i = 0; i < num_obj; i++) {
+
+        // choose a random mass in the list of possible_masses
+        var s = Math.floor(Math.random()*possible_sizes.length)
+        sizes.push(possible_sizes[s])
+    }
+    return sizes;
+}
+
 // assume trajectories ordered from bottom to top
 is_stable_trajectory = function(trajectories) {
     // not stable if top block's y position is different it's original y position by a factor of a block length
