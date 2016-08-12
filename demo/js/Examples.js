@@ -2154,7 +2154,7 @@ if (!_isBrowser) {
                            max_v0: 20,
                            obj_radius: demo.config.object_base_size.ball,
                            obstacle_side: demo.config.object_base_size.obstacle};
-            console.log(self.params.obstacle_side)
+            // console.log(self.params.obstacle_side)
 
             self.engine = demo.engine;
             self.engine.world.gravity.x = 0;
@@ -2164,7 +2164,7 @@ if (!_isBrowser) {
 
             // function
             self.rand_pos = function() {
-                console.log(options)
+                // console.log(options)
                 let max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
                 return rand_pos(
                     {hi: 2*demo.cx - max_obj_size - 1, lo: max_obj_size + 1},
@@ -2240,7 +2240,7 @@ if (!_isBrowser) {
 
 
                 Body.setVelocity(body, self.v0[i])
-                console.log(body)
+                // console.log(body)
 
                 // add body to world
                 World.add(self.engine.world, body);
@@ -2249,22 +2249,24 @@ if (!_isBrowser) {
 
              // now set the obstacles
              for (let i = self.params.num_balls; i < self.params.num_obj; i ++) {
-                console.log(i)
+                // console.log(i)
                     let body_opts = {restitution: 1,
                                      isStatic:true,
+                                     mass: 1e30, // some really huge mass
                                      label: "Entity",
                                      objtype: "obstacle",
                                      sizemul: 1
                                  }
-                console.log(self.params.obstacle_side)
+                // console.log(self.params.obstacle_side)
                 let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
                                                 self.params.obstacle_side*(self.s[i-self.params.num_balls]), 
                                                 self.params.obstacle_side*(self.s[i-self.params.num_balls]), 
                                                 body_opts)
-                console.log(obstacle)
+                // console.log(obstacle)
+                // assert(false)
                 World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
              }
-             console.log(self.engine.world.bodies)
+             // console.log(self.engine.world.bodies)
 
         };
 

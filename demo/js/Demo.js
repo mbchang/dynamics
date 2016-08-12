@@ -504,6 +504,13 @@
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
 
                         // check if undefined.
+                        // if (k=='mass' && body.objtype == 'obstacle') {
+                        //     console.log(body)
+                        //     console.log(trajectory[id][i][k])
+                        //     console.log(!(typeof trajectory[id][i][k] !== 'undefined'))  // hmm it doesn't catch this!
+                        //     console.log('hey')
+                        //     assert(false)
+                        // }
                         if (!(typeof trajectory[id][i][k] !== 'undefined')) {  // it could that 0 is false!
                             should_break = true;
                             console.log('trajectory[id][i][k] is undefined', trajectory[id][i][k])
@@ -611,6 +618,9 @@
         // should do this using some map function TODO
         if (sim_options.variableMass) {
             experiment_string += '_m' 
+        }
+        if (sim_options.variableSize) {
+            experiment_string += '_z' 
         }
         if (sim_options.gravity) {
             experiment_string += '_gf' //+ sim_options.gravity //TODO: type?

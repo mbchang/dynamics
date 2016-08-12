@@ -40,15 +40,16 @@ def create_jobs(dry_run, ext):
     toch_root = '/om/user/mbchang/physics/lua'
 
     # world parameters
-    num_objs = [6,8,10]  # how far should we go? Let's say the max is 20. Should we include 1?
+    num_objs = [6]  # how far should we go? Let's say the max is 20. Should we include 1?
     friction = [False]
     gravity = [False]
     masses = [False]  # TODO
-    envs = ['tower']
+    sizes = [False]
+    envs = ['mixed']
 
     # mj data generation
-    steps = 120
-    samples = 25000
+    steps = 60
+    samples = 50000
 
     # generate json files
     generator = 'node ' + mj_root + 'demo/js/Demo.js'
@@ -58,19 +59,21 @@ def create_jobs(dry_run, ext):
     jobs = []
     for n in num_objs:
         for m in masses:
-            for g in gravity:
-                for f in friction:
-                    for e in envs:
-                        job = OrderedDict()
-                        job['e'] = e
-                        job['n'] = n
-                        job['t'] = steps
-                        job['s'] = samples
-                        job['m'] = m
-                        job['g'] = g
-                        job['f'] = f 
-                        jobs.append(job)
-                        # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
+            for z in sizes:
+                for g in gravity:
+                    for f in friction:
+                        for e in envs:
+                            job = OrderedDict()
+                            job['e'] = e
+                            job['n'] = n
+                            job['t'] = steps
+                            job['s'] = samples
+                            job['m'] = m
+                            job['g'] = g
+                            job['f'] = f 
+                            job['z'] = z
+                            jobs.append(job)
+                            # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
 
     if dry_run:
         print "NOT starting jobs:"
