@@ -448,7 +448,7 @@
     };
 
     // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
-    Demo.simulate = function(demo, num_samples, sim_options, batch) {
+    Demo.simulate = function(demo, num_samples, sim_options, startstep) {
         var trajectories = []
 
         // var bar = new ProgressBar({
@@ -466,9 +466,12 @@
             var stability_threshold = 5
         }
 
-        let s = 0;
+        if (!(typeof startstep !== 'undefined' &&  startstep)) {
+            var startstep = 0
+        }
+
+        let s = startstep;
         while (s < num_samples) {
-            // console.log('...........')
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
@@ -562,9 +565,6 @@
             } else {  // valid trajectory
                 // hereif it 
                 if (sim_options.env == 'tower') {
-                    // console.log(trajectory.)
-                    // console.log('euc dist', is_stable_trajectory(trajectory))
-                    // console.log('stable?', is_stable_trajectory(trajectory) < 5)
                     if (is_stable_trajectory(trajectory) > stability_threshold) {
                         num_unstable ++
                     } else {
@@ -638,45 +638,54 @@
     };
 
     Demo.generate_data = function(demo, sim_options) {
-        const max_iters_per_json = 100;
-        const chunks = chunk(sim_options.samples, max_iters_per_json)
+        const max_iters_per_json = 10;
 
-
-        // tower
-        if (sim_options.env == 'tower') {
-            var num_unstable = 0
-            var num_comunstable = 0
+        if (!(typeof sim_options.startstep !== 'undefined' &&  sim_options.startstep)) {
+            sim_options.startstep = 0
         }
 
-        for (let j=0; j < chunks.length; j++){
-            let sim_file = Demo.create_json_fname(chunks[j], j, sim_options)
+        const chunks = chunk(sim_options.samples, max_iters_per_json, sim_options.startstep)  // this should take sim_options.startstep as a parameter!
+        let num_examples_left = chunks.reduce(function(a, b) { return a + b; }, 0);
 
+        if (sim_options.startstep < sim_options.samples) {
+            // tower
             if (sim_options.env == 'tower') {
-                let output = Demo.simulate(demo, chunks[j], sim_options, j);
-                let trajectories = output[0]
-                let num_unstable_chunk = output[1]
-                let com_num_unstable_chunk = output[2]
-                num_unstable += num_unstable_chunk
-                num_comunstable += com_num_unstable_chunk
-
-                jsonfile.writeFileSync(sim_file,
-                                    {trajectories:trajectories, config:sim_options}
-                                    );
-                console.log('Wrote to ' + sim_file)
-            } else {
-                let trajectories = Demo.simulate(demo, chunks[j], sim_options, j);
-
-                jsonfile.writeFileSync(sim_file,
-                                    {trajectories:trajectories, config:sim_options}
-                                    );
-                console.log('Wrote to ' + sim_file)
+                var num_unstable = 0
+                var num_comunstable = 0
             }
-        }
+
+            for (let j=0; j < chunks.length; j++){
+                let chunk_number = j + (sim_options.samples-num_examples_left)/max_iters_per_json // +1?
+                let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
+
+                if (sim_options.env == 'tower') {
+                    let output = Demo.simulate(demo, chunks[j], sim_options);  // add sim_options.start_step here
+                    let trajectories = output[0]
+                    let num_unstable_chunk = output[1]
+                    let com_num_unstable_chunk = output[2]
+                    num_unstable += num_unstable_chunk
+                    num_comunstable += com_num_unstable_chunk
+
+                    jsonfile.writeFileSync(sim_file,
+                                        {trajectories:trajectories, config:sim_options}
+                                        );
+                    console.log('Wrote to ' + sim_file)
+                } else {
+                    let trajectories = Demo.simulate(demo, chunks[j], sim_options);
+
+                    jsonfile.writeFileSync(sim_file,
+                                        {trajectories:trajectories, config:sim_options}
+                                        );
+                    console.log('Wrote to ' + sim_file)
+                }
+            }
 
 
-        // tower
-        if (sim_options.env == 'tower') {
-            console.log(num_unstable, 'unstable threshold', num_comunstable, 'unstable com out of', sim_options.samples, 'samples')
+            // tower
+            if (sim_options.env == 'tower') {
+                console.log(num_unstable, 'unstable threshold', num_comunstable, 'unstable com out of', sim_options.samples, 'samples')
+            }
+
         }
 
     };
@@ -747,6 +756,12 @@
                     alias: 'p',
                     type: 'Boolean',
                     description: 'include pairwise forces',
+                    default: false  // TODO: should this be int or boolean?
+                }, {
+                    option: 'startstep', // TODO
+                    alias: 'y',
+                    type: 'Int',
+                    description: 'starting step to generation',
                     default: false  // TODO: should this be int or boolean?
                 }]
         });

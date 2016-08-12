@@ -9,8 +9,9 @@ copy = function(thing) {
 };
 
 // chunk n into chunks of size k or less (last chunk will have size <= k)
-chunk = function(n, k) {
+chunk = function(n, k, start) {
     let chunks = [];
+    n -= start
     while (n > k) {
         chunks.push(k);
         n -= k;
