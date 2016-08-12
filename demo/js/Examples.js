@@ -2122,6 +2122,146 @@ if (!_isBrowser) {
 (function() {
 
     var World = Matter.World,
+        Bodies = Matter.Bodies,
+        Composite = Matter.Composite,
+        Composites = Matter.Composites,
+        Body = Matter.Body,
+        Common = Matter.Common;
+
+    Example.mixed = function(demo, cmd_options) {
+        var Mixed = {}
+
+        Mixed.create = function(options) {
+            var self = {}; // instance of the Balls class
+
+            // default
+            if (!(typeof options !== 'undefined' &&  options)) {
+                var options = {}
+                options.numObj = 5
+                options.variableMass = true
+                options.friction = false
+            }
+
+            // these should not be mutated
+            self.params = {
+                           num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+                           num_balls: Math.floor(options.numObj/2),
+                           num_obstacles: Math.ceil(options.numObj/2),
+                           variableMass: options.variableMass,
+                           friction: options.friction,
+                           max_v0: 20,
+                           obj_radius: demo.config.object_base_size.ball,
+                           obstacle_side: demo.config.object_base_size.obstacle};
+
+            self.engine = demo.engine;
+            self.engine.world.gravity.x = 0;
+            if (!(typeof options.gravity !== 'undefined' && options.gravity)) {
+                self.engine.world.gravity.y = 0;
+            }
+
+            // function
+            self.rand_pos = function() {
+                return rand_pos(
+                    {hi: 2*demo.cx - self.params.obj_radius - 1, lo: self.params.obj_radius + 1},
+                    {hi: 2*demo.cy - self.params.obj_radius - 1, lo: self.params.obj_radius + 1});
+                };
+
+            // this is defined here
+
+            if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
+                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+            } else {
+                self.possible_masses = [1]
+            }
+
+            self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
+
+            // border
+            var world_border = Composite.create({label:'Border'});
+
+            Composite.add(world_border, [
+                Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // top
+                Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
+                Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }), // right
+                Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
+            ]);
+
+            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+
+            return self
+        };
+
+        Mixed.init = function(self) {  // hockey is like self here
+            // generate positions
+            self.p0 = initialize_positions(self.params.num_obj, self.params.obj_radius, self.rand_pos)
+
+            // generate random velocities
+            self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
+
+            // generate massses
+            self.m = initialize_masses(self.params.num_balls, self.possible_masses)
+
+            // set positions
+            for (let i = 0; i < self.params.num_balls; i++) {
+                let body_opts = {restitution: 1,
+                                 mass: self.m[i],
+                                 inertia: Infinity,  //rotation
+                                 inverseInertia: 0,  // rotation
+                                 label: "Entity",
+                                 objtype: "ball",
+                                 sizemul: 1
+                             }
+                if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
+                    body_opts.friction = 0;
+                    body_opts.frictionAir = 0;
+                    body_opts.frictionStatic = 0;
+                }
+
+                let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
+                                        self.params.obj_radius*body_opts.sizemul, body_opts)
+
+                body.render.fillStyle = self.mass_colors[self.m[i]]//'#4ECDC4'
+                body.render.strokeStyle = '#FFA500'// orange
+                body.render.lineWidth = 5
+
+
+                Body.setVelocity(body, self.v0[i])
+                console.log(body)
+
+                // add body to world
+                World.add(self.engine.world, body);
+             }
+
+
+             // now set the obstacles
+             for (let i = self.params.num_balls; i < self.params.num_obj; i ++) {
+                console.log(i)
+                    let body_opts = {restitution: 1,
+                                     isStatic:true,
+                                     label: "Entity",
+                                     objtype: "obstacle",
+                                     sizemul: 1
+                                 }
+                console.log(self.params.obstacle_side)
+                console.log(self.sizemul)
+                let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, self.params.obstacle_side*body_opts.sizemul, self.params.obstacle_side*body_opts.sizemul, 
+                        body_opts)
+                console.log(obstacle)
+                World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+             }
+             console.log(self.engine.world.bodies)
+
+        };
+
+        var mixed = Mixed.create(cmd_options);
+        Mixed.init(mixed);
+        return mixed;
+    };
+
+})();
+(function() {
+
+    var World = Matter.World,
         Body = Matter.Body,
         Composites = Matter.Composites;
 
