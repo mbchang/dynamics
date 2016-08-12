@@ -638,7 +638,7 @@
     };
 
     Demo.generate_data = function(demo, sim_options) {
-        const max_iters_per_json = 10;
+        const max_iters_per_json = 100;
 
         if (!(typeof sim_options.startstep !== 'undefined' &&  sim_options.startstep)) {
             sim_options.startstep = 0
