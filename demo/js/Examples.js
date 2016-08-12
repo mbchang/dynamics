@@ -2139,6 +2139,7 @@ if (!_isBrowser) {
                 var options = {}
                 options.numObj = 5
                 options.variableMass = false
+                options.variableSize = true
                 options.friction = false
             }
 
@@ -2148,6 +2149,7 @@ if (!_isBrowser) {
                            num_balls: Math.floor(options.numObj/2),
                            num_obstacles: Math.ceil(options.numObj/2),
                            variableMass: options.variableMass,
+                           variableSize: options.variableSize,
                            friction: options.friction,
                            max_v0: 20,
                            obj_radius: demo.config.object_base_size.ball,
@@ -2175,6 +2177,12 @@ if (!_isBrowser) {
                 self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
             } else {
                 self.possible_masses = [1]
+            }
+
+            if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
+                self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
+            } else {
+                self.possible_sizes = [1]
             }
 
             self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
@@ -2205,7 +2213,7 @@ if (!_isBrowser) {
             self.m = initialize_masses(self.params.num_balls, self.possible_masses)
 
             // generae obstacle sizes
-            self.s = initialize_sizes(self.params.num_obstacles, demo.config.sizes)
+            self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
 
             // set positions
             for (let i = 0; i < self.params.num_balls; i++) {
