@@ -1,5 +1,4 @@
 require 'torch'
---require 'metaparams'
 require 'gnuplot'
 require 'paths'
 require 'utils'

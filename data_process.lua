@@ -379,6 +379,20 @@ function data_process:sample_save_single_batch(batch, dataset_ids, counters, lim
     return counters
 end
 
+function data_process:iter_files_ordered(folder)
+-- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_188.json
+-- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_189.json
+-- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_190.json
+-- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_191.json
+-- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_192.json
+    local files = {}
+    for f in paths.iterfiles(folder) do
+        table.insert(files, f)
+    end
+    table.sort(files)  -- mutates files
+    return files
+end
+
 -- this sampling scheme is pretty complex, but it is random
 -- if max_iters_per_json is a multiple of batch_size, then it should be fine
 function data_process:create_datasets_batches()
@@ -399,6 +413,10 @@ function data_process:create_datasets_batches()
 
     -- now, let's implement the queue
     local leftover_examples = {}
+
+    -- local ordered_files = self:iter_files_ordered(self.jsonfolder)
+    -- for _, jsonfile in pairs(ordered_files) do 
+
     for jsonfile in paths.iterfiles(self.jsonfolder) do  -- order doesn't matter
        local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))  -- note that this may not all be the same batch size! They will even out at the end though
        print('new batches')

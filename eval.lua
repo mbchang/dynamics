@@ -91,7 +91,7 @@ local model, test_loader, modelfile, dp
 ------------------------------- Helper Functions -------------------------------
 
 function inittest(preload, model_path, opt)
-    print("Network parameters:")
+    -- print("Network parameters:")
     dp = data_process.create(model_path, model_path, config_args)  -- jsonfile and outfile are unpopopulated!  Let's just fill them with the model_path?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
@@ -520,9 +520,8 @@ function predict_simulate_all()
 
     model_deps(mp.model)
     inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
-
-    -- print(model)
-    -- assert(false)
+    print('Network parameters')
+    print(mp)
     simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
 
