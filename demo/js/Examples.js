@@ -2204,7 +2204,9 @@ if (!_isBrowser) {
 
         Mixed.init = function(self) {  // hockey is like self here
             // generate positions
-            self.p0 = initialize_positions(self.params.num_obj, self.params.obj_radius, self.rand_pos)
+            let object_size = self.params.obj_radius*self.possible_sizes[self.possible_sizes.length-1]  // if not variableSize, then sizemul will be 1 anyway
+
+            self.p0 = initialize_positions(self.params.num_obj, object_size, self.rand_pos)
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
