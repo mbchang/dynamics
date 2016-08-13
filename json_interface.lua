@@ -48,30 +48,14 @@ function load_data_json(jsonfile)
                 trajectories[e][i][t][args.rsi.a] = state.angle
                 trajectories[e][i][t][args.rsi.av] = state.angularVelocity
                 trajectories[e][i][t][args.rsi.m] = state.mass
-                -- print(state.objtype)
-                -- if (state.objtype == 'ball') then 
-                --     print(e,i,t)
-                --     print(state.objtype)
-                --     print(state)
-                --     print(trajectories[e][i][t])  -- here is a problem! index 7 is not getting populated?
-                --     assert(false) 
-                -- end
                 trajectories[e][i][t][args.rsi.oid] = args.oids[state.objtype]
-                -- if not (trajectories[e][i][t][args.rsi.oid] == 3) then 
-                --     print(trajectories[e][i][t][args.rsi.oid])
-                --     assert(false)
-                -- end
                 trajectories[e][i][t][args.rsi.os] = state.sizemul
                 trajectories[e][i][t][args.rsi.g] = g
                 trajectories[e][i][t][args.rsi.f] = f
                 trajectories[e][i][t][args.rsi.p] = p
-                -- print(state)
-                -- print(trajectories[e][i][t])  -- here is a problem! index 7 is not getting populated?
-                -- print(s)
             end
         end
     end
-    -- assert(false)
 
     trajectories = torch.Tensor(trajectories)
     return trajectories

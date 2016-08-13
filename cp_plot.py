@@ -147,6 +147,10 @@ experiments = [
                 'balls_n7_t60_ex50000_m_rd__balls_n7_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
                 'balls_n8_t60_ex50000_m_rd__balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
 
+                # try different models for mass (did not do mass inference here)
+                'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
 
                 # tower 6 blocks (variance for 10 blocks though)
                 'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
@@ -168,6 +172,11 @@ experiments = [
                 # for towers: try batch norm
 
                 # for balls: try doing inference on only the examples where there is a collision. But how to decide? Perhaps you can say if the reversal is > 90 degree then it is a collision? You can also test by angle
+                
+                # balls generalization
+                'balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 ]
 
 # specify paths
