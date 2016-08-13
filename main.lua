@@ -87,22 +87,22 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 60
+    mp.max_iter = 200
     mp.nbrhd = true
-    mp.lrdecayafter = 50000
-    mp.lrdecay_every = 2500
+    mp.lrdecayafter = 5
+    mp.lrdecay_every = 5
     mp.layers = 1
     mp.model = 'bffobj'
     mp.im = false
-    mp.cf = true
+    mp.cf = false
     mp.val_window = 5
     mp.val_eps = 2e-5
 	mp.seq_length = 10  -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
-    mp.print_every = 10
-    mp.save_every = 100
-    mp.val_every = 20
+    mp.print_every = 1
+    mp.save_every = 50
+    mp.val_every = 50
     mp.plot = false--true
 	mp.cuda = false
 else
@@ -172,7 +172,7 @@ local train_losses, val_losses, test_losses = {},{},{}
 ------------------------------- Helper Functions -------------------------------
 
 -- initialize
-function inittrain(preload, model_path)
+function inittrain(preload, model_path, iters)
     print("Network parameters:")
     print(mp)
     local data_loader_args = {data_root=mp.data_root..'/',
@@ -199,7 +199,15 @@ function inittrain(preload, model_path)
     print(model.network)
     print(model.theta.params:nElement(), 'parameters')
 
-    trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'train.log'))
+    local train_log_file
+    if iters then
+        train_log_file = 'train_'..iters..'.log'
+    else
+        train_log_file = 'train.log'
+    end
+
+
+    trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', train_log_file))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
     if mp.im then
         inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'infer.log'))
@@ -294,7 +302,7 @@ function train(start_iter, epoch_num)
 
         -- validate
         if (t-start_iter+1) % mp.val_every == 0 then
-            v_train_loss, v_val_loss, v_tets_loss = validate()
+            v_train_loss, v_val_loss, v_test_loss = validate()
             train_losses[#train_losses+1] = v_train_loss
             val_losses[#val_losses+1] = v_val_loss
             test_losses[#test_losses+1] = v_test_loss
@@ -358,7 +366,8 @@ function train(start_iter, epoch_num)
             print('Learning rate is now '..optim_state.learningRate)
         end
 
-        if (t-start_iter+1) % train_loader.num_batches == 0 then
+        -- if (t-start_iter+1) % train_loader.num_batches == 0 then
+        if t % train_loader.num_batches == 0 then
             epoch_num = t / train_loader.num_batches + 1
         end
 
@@ -387,7 +396,7 @@ function validate()
     local test_loss = test(test_loader, model.theta.params, false)
 
     -- local train_loss = 0
-    -- local val_loss = 0
+    -- -- local val_loss = 0
     -- local test_loss = 0
 
     local log_string = 'train loss\t'..train_loss..
@@ -439,30 +448,129 @@ function run_experiment()
 end
 
 
+function predict_simulate_all()
+    -- print(mp.name)
+
+    local snapshot = getLastSnapshot(mp.name)
+    local snapshotfile = mp.savedir ..'/'..snapshot
+    print(snapshotfile)
+    local checkpoint = torch.load(snapshotfile)
+
+    local saved_args = torch.load(mp.savedir..'/args.t7')
+    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
+    config_args = saved_args.config_args
+
+    model_deps(mp.model)
+    inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
+
+    -- print(model)
+    -- assert(false)
+    simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
+end
+
+-- will have to change this soon
+function read_log_file_3vals(logfile)
+    local data1 = {}
+    local data2 = {}
+    local data3 = {}
+    for line in io.lines(logfile) do
+        local x = filter(function(x) return not(x=='') end,
+                            stringx.split(line:gsub("%s+", ","),','))
+        data1[#data1+1] = tonumber(x[1]) --ignores the string at the top
+        data2[#data2+1] = tonumber(x[2]) --ignores the string at the top
+        data3[#data3+1] = tonumber(x[3]) --ignores the string at the top
+    end
+
+    local data = torch.cat({torch.Tensor(data1), torch.Tensor(data2), torch.Tensor(data3)}, 2)
+
+    -- test convergence
+    local val = data[{{},{2}}]
+    for w =3, data:size(1) do
+        local valwin = torch.exp(val[{{-w,-1}}])
+        local max_val_loss, max_val_loss_idx = torch.max(valwin,1)
+        local min_val_loss, min_val_loss_idx = torch.min(valwin,1)
+        local val_avg_delta = (valwin[{{2,-1}}] - valwin[{{1,-2}}]):mean()
+        local abs_delta = (max_val_loss-min_val_loss):sum()
+        -- print(w, 'max', max_val_loss:sum(), 'maxid', max_val_loss_idx:sum(),
+        --       'min', min_val_loss:sum(), 'minid', min_val_loss_idx:sum(),
+        --       'avg_delta', val_avg_delta, 'abs_delta', abs_delta)
+    end
+
+    return data
+end
+
 -- UPDATE
 function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
-    print(snapshot)
-    -- local checkpoint = torch.load(mp.savedir ..'/'..snapshot)
--- hardcoded
-    local checkpoint = torch.load('logs/balls_n3_t60_ex20,balls_n6_t60_ex20,balls_n5_t60_ex20/epoch1.00_0.0469.t7')
+    local snapshotfile = mp.savedir ..'/'..snapshot
+    print(snapshotfile)
+    local checkpoint = torch.load(snapshotfile)
+    local saved_args = torch.load(mp.savedir..'/args.t7')
+    mp = checkpoint.mp  -- completely overwrite  good
+    mp.mode = 'expload'
+    -- local iters = mp.val_every * #checkpoint.val_losses + 1  -- correct
+    local iters = checkpoint.iters + 1
 
-    mp = checkpoint.mp  -- completely overwrite  NOTE!
+    train_losses = checkpoint.train_losses
+    val_losses = checkpoint.val_losses
+    test_losses = checkpoint.test_losses
 
-    print(mp.lr)
+    local logs_losses = read_log_file_3vals(mp.savedir..'/experiment.log')
 
-    assert(false)
-    inittrain(true, mp.savedir ..'/'..snapshot)  -- assuming the mp.savedir doesn't change
+    -- because previously we had not saved test_losses.
+    if #test_losses == 0 then
+        -- read it from the experiment log file
+        test_losses = torch.exp(torch.squeeze(logs_losses[{{},{3}}])):totable()  -- TODO! you need to do torch exp here!
+        assert(#test_losses==#train_losses)
+    end
+
+
+    if ((iters-1) >= mp.lrdecayafter and (iters-1) % mp.lrdecay_every == 0) then
+        mp.lr = mp.lr*mp.lrdecay  -- because we usually decay right after we save?
+    end
+    optim_state = {learningRate   = mp.lr}
+    print('Learning rate is now '..optim_state.learningRate)
+
+    config_args = saved_args.config_args
+    model_deps(mp.model)
+    inittrain(true, mp.savedir ..'/'..snapshot, iters)  -- assuming the mp.savedir doesn't change
+
+    -- you should now write the experiment logger
+    -- you won't be able to write the train logger though! You'd have to save the original file
+    assert(#train_losses==#val_losses and #train_losses==#test_losses)
+    for i=1,#train_losses do
+        local train_loss = train_losses[i]
+        local val_loss = val_losses[i]
+        local test_loss = test_losses[i]
+        experimentLogger:add{['log MSE loss (train set)'] =  torch.log(train_loss),
+                             ['log MSE loss (val set)'] =  torch.log(val_loss),
+                             ['log MSE loss (test set)'] =  torch.log(test_loss)}
+        experimentLogger:style{['log MSE loss (train set)'] = '~',
+                               ['log MSE loss (val set)'] = '~',
+                               ['log MSE loss (test set)'] = '~'}
+    end
 
     -- These are things you have to set; although priority sampler might not be reset
-    local iters = mp.val_every * #checkpoint.val_losses + 1
-    -- local epoch_num = math.floor(iters / train_loader.num_batches) + 1
-    local epoch_num = 1
+    local epoch_num = math.floor(iters / train_loader.num_batches) + 1
 
-    mp.lr = 1.077384359378e-05
-    optim_state = {learningRate   = mp.lr}
 
     experiment(iters, epoch_num)
+end
+
+function model_deps(modeltype)
+    if modeltype == 'lstmobj' or
+            modeltype == 'ffobj' or
+                    modeltype == 'gruobj' then
+        M = require 'variable_obj_model'
+    elseif modeltype == 'bffobj' then
+        M = require 'branched_variable_obj_model'
+    elseif modeltype == 'lstmtime' then
+        M = require 'lstm_model'
+    elseif modeltype == 'ff' then
+        M = require 'feed_forward_model'
+    else
+        error('Unrecognized model')
+    end
 end
 
 function getLastSnapshot(network_name)
