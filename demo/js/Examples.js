@@ -2138,9 +2138,9 @@ if (!_isBrowser) {
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
                 options.numObj = 6
-                options.variableMass = false
-                options.variableSize = false
-                options.variableObstacles = false
+                options.variableMass = true
+                options.variableSize = true
+                options.variableObstacles = true
                 options.friction = false
             }
 

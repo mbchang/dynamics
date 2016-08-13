@@ -44,7 +44,8 @@ def create_jobs(dry_run, ext):
     friction = [False]
     gravity = [False]
     masses = [False]  # TODO
-    sizes = [True]
+    sizes = [True, False]
+    num_obstacles = [True, False]
     envs = ['mixed']
 
     # mj data generation
@@ -60,20 +61,22 @@ def create_jobs(dry_run, ext):
     for n in num_objs:
         for m in masses:
             for z in sizes:
-                for g in gravity:
-                    for f in friction:
-                        for e in envs:
-                            job = OrderedDict()
-                            job['e'] = e
-                            job['n'] = n
-                            job['t'] = steps
-                            job['s'] = samples
-                            job['m'] = m
-                            job['g'] = g
-                            job['f'] = f 
-                            job['z'] = z
-                            jobs.append(job)
-                            # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
+                for o in num_obstacles:
+                    for g in gravity:
+                        for f in friction:
+                            for e in envs:
+                                job = OrderedDict()
+                                job['e'] = e
+                                job['n'] = n
+                                job['t'] = steps
+                                job['s'] = samples
+                                job['m'] = m
+                                job['g'] = g
+                                job['f'] = f 
+                                job['z'] = z
+                                job['o'] = o
+                                jobs.append(job)
+                                # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
 
     if dry_run:
         print "NOT starting jobs:"
