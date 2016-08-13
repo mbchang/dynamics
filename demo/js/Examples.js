@@ -2137,24 +2137,34 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 5
+                options.numObj = 6
                 options.variableMass = false
-                options.variableSize = true
+                options.variableSize = false
+                options.variableObstacles = false
                 options.friction = false
             }
 
             // these should not be mutated
             self.params = {
                            num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
-                           num_balls: Math.floor(options.numObj/2),
-                           num_obstacles: Math.ceil(options.numObj/2),
                            variableMass: options.variableMass,
                            variableSize: options.variableSize,
+                           variableObstacles: options.variableObstacles,
                            friction: options.friction,
                            max_v0: 20,
                            obj_radius: demo.config.object_base_size.ball,
                            obstacle_side: demo.config.object_base_size.obstacle};
-            // console.log(self.params.obstacle_side)
+
+            // or, a more sophisticated scheme:
+            console.assert(self.params.num_obj <= 6) // six is the max number that the window size can handle.
+            if (self.params.variableObstacles) {
+                self.params.num_obstacles = Math.floor(Math.random()*self.params.num_obj)  // can have 0 to n-1 obstacles
+            } else {
+                self.params.num_obstacles = Math.floor(self.params.num_obj/2)  // can have 0 to n-1 obstacles
+            }
+            self.params.num_balls = self.params.num_obj - self.params.num_obstacles
+            console.assert(self.params.num_balls >= 1)
+
 
             self.engine = demo.engine;
             self.engine.world.gravity.x = 0;
@@ -2164,7 +2174,6 @@ if (!_isBrowser) {
 
             // function
             self.rand_pos = function() {
-                // console.log(options)
                 let max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
                 return rand_pos(
                     {hi: 2*demo.cx - max_obj_size - 1, lo: max_obj_size + 1},
@@ -2204,18 +2213,33 @@ if (!_isBrowser) {
 
         Mixed.init = function(self) {  // hockey is like self here
             // generate positions
-            let object_size = self.params.obj_radius*self.possible_sizes[self.possible_sizes.length-1]  // if not variableSize, then sizemul will be 1 anyway
+            // let object_size = self.params.obj_radius*self.possible_sizes[self.possible_sizes.length-1]  // if not variableSize, then sizemul will be 1 anyway
 
-            self.p0 = initialize_positions(self.params.num_obj, object_size, self.rand_pos)
+            // generae obstacle sizes
+            self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
+
+            // construct sample sizes
+            let sampled_sizes = []
+            for (let i = 0; i < self.params.num_balls; i ++){
+                sampled_sizes.push(1*self.params.obj_radius)
+            }
+            // console.log(sampled_sizes)
+            for (let i = self.params.num_balls; i < self.params.num_obj; i ++) {
+                // console.log('.....')
+                // console.log('self.params.obstacle_side', self.params.obstacle_side)
+                // console.log('sampled_sizes', sampled_sizes)
+                // console.log('self.s[i-self.params.num_balls]', self.s[i-self.params.num_balls])
+                // console.log('self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)', self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2))
+                sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
+            }
+
+            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos)
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
 
             // generate massses
             self.m = initialize_masses(self.params.num_balls, self.possible_masses)
-
-            // generae obstacle sizes
-            self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
 
             // set positions
             for (let i = 0; i < self.params.num_balls; i++) {

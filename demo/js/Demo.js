@@ -381,7 +381,7 @@
         demo.config.cy = 300;
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
-        demo.config.sizes = [0.5, 1, 2]  // multiples
+        demo.config.sizes = [2/3, 1, 3/2]  // multiples
         demo.config.object_base_size = {'ball': 60, 'obstacle': 80, 'block': 20 }  // radius of ball, side of square obstacle, long side of block
         demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
         demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
@@ -622,6 +622,9 @@
         if (sim_options.variableSize) {
             experiment_string += '_z' 
         }
+        if (sim_options.variableObstacles) {
+            experiment_string += '_o' 
+        }
         if (sim_options.gravity) {
             experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
         }
@@ -742,6 +745,12 @@
                     alias: 'z',
                     type: 'Boolean',
                     description: 'include variable size',
+                    required: false
+                }, {
+                    option: 'variableObstacles',
+                    alias: 'o',
+                    type: 'Boolean',
+                    description: 'true if number of obstacles is variable',
                     required: false
                 }, {
                     option: 'image',

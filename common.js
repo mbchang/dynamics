@@ -47,6 +47,53 @@ initialize_positions = function(num_obj, obj_radius, rand_pos_fn){
     return p0;
 }
 
+initialize_positions_variable_size = function(num_obj, sampled_sizes, rand_pos_fn){
+    var p0 = [];  // initial positions
+
+    // console.log(sampled_sizes)
+
+    // set positions
+    for (var i = 0; i < num_obj; i++) {
+        let num_iters = 0
+        let should_break = false
+
+        // generate random initial positions by rejection sampling
+        if (p0.length == 0) {  // assume that num_obj > 0
+            p0.push(rand_pos_fn());
+        } else {
+            var proposed_pos = rand_pos_fn();
+            // true if overlaps
+            while ((function(){
+                    for (var j = 0; j < p0.length; j++) {
+                        let other_size = sampled_sizes[j]  // this is the raw size, sizemul already incorporated. For an obstacle, let it be the diagonal from the center?
+                        let this_size = sampled_sizes[i]
+                        let min_distance = other_size + this_size
+                        // console.log('min_dist',i,j,min_distance)
+
+                        if (euc_dist(proposed_pos, p0[j]) < 1.25*min_distance) {
+                            // num_iters ++
+                            // if (num_iters > 100) {
+                            //     should_break = true
+                            //     break
+                            // }
+                            return true;
+                        }
+                    }
+                    // if (should_break) {
+                    //     break
+                    // }
+
+                    return false;
+                })()){
+                // keep trying until you get a match
+                proposed_pos = rand_pos_fn();
+            }
+            p0.push(proposed_pos);
+        }
+    }
+    return p0;
+}
+
 initialize_velocities = function(num_obj, max_v0) {
     var v0 = [];
     for (var i = 0; i < num_obj; i++) {
@@ -209,6 +256,7 @@ if (!_isBrowser) {
         this.initialize_positions = initialize_positions
         this.initialize_velocities = initialize_velocities
         this.initialize_hv = initialize_hv
+        this.initialize_positions_variable_size = initialize_positions_variable_size
     };
 }
 
