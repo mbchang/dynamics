@@ -414,10 +414,31 @@ function data_process:create_datasets_batches()
     -- now, let's implement the queue
     local leftover_examples = {}
 
-    -- local ordered_files = self:iter_files_ordered(self.jsonfolder)
-    -- for _, jsonfile in pairs(ordered_files) do 
+    ----------------------------------------------------------
+    -- it's a good thing I don't need to do leftover examples
 
-    for jsonfile in paths.iterfiles(self.jsonfolder) do  -- order doesn't matter
+    -- local counters = {trainset=3400, valset=750, testset=750}
+    -- -- now I need to figure out which jsons have not been seen yet.
+    -- local count_logfile = 'tower_n10_t120_ex25000_rd_count.txt'
+    -- local seen_jsons = {}
+    -- for line in io.lines(count_logfile) do table.insert(seen_jsons, line) end
+
+    -- TODODO
+    local ordered_files = self:iter_files_ordered(self.jsonfolder)
+    for _, jsonfile in pairs(ordered_files) do 
+    --      if not(isin(jsonfile, jsons)) do
+    --          then do the stuff
+    ----------------------------------------------------------
+
+
+    -- for jsonfile in paths.iterfiles(self.jsonfolder) do  -- order doesn't matter
+
+        ----------------------------------------------------------
+        -- if not(isin(jsonfile, seen_jsons)) then
+
+        ----------------------------------------------------------
+
+
        local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))  -- note that this may not all be the same batch size! They will even out at the end though
        print('new batches')
        print(new_batches)
@@ -434,6 +455,9 @@ function data_process:create_datasets_batches()
             end
            collectgarbage()
        end
+       ----------------------------------------------------------
+       -- end
+       ----------------------------------------------------------
     end
     -- now concatenate all the leftover_batches. They had better be a multiple of self.bsize
     leftover_examples = join_table_of_tables(leftover_examples)

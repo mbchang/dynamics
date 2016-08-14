@@ -231,6 +231,7 @@ function initsavebatches()
     config_args.batch_size = mp.batch_size
     for _, dataset_folder in pairs(mp.dataset_folders) do
         local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
+        -- TODODO
         if not paths.dirp(data_folder) then
             local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
             print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
@@ -239,6 +240,15 @@ function initsavebatches()
         else
             print('Batches for '..dataset_folder..' already made')
         end
+        -------------------------
+            -- local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
+            -- print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
+            -- local dp = data_process.create(jsonfolder, data_folder, config_args)
+            -- dp:create_datasets_batches()
+
+
+
+        -------------------------
     end
 end
 
