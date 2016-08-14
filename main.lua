@@ -70,8 +70,8 @@ cmd:option('-plot', false, 'turn on/off plot')
 
 -- every options
 cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 10000, 'save every number of batches')
-cmd:option('-val_every',10000,'val every number of batches')
+cmd:option('-save_every', 10000, 'save every number of batches')  -- this should be every 100000
+cmd:option('-val_every',10000,'val every number of batches') -- this should be every 100000 
 cmd:option('-lrdecay_every',2500,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 
@@ -111,7 +111,7 @@ else
     mp.num_future = 1
 	mp.seq_length = 10   -- for the concatenate model
 	mp.num_threads = 4
-	mp.cuda = true
+	mp.cuda = false
 end
 
 local M
@@ -412,13 +412,13 @@ function validate()
                       '\tval loss\t'..val_loss..
                       '\ttest_loss\t'..test_loss
 
-    if mp.im then
-        require 'infer'
-        local mass_accuracy = infer_properties(model, val_loader, model.theta.params, 'mass', 'max_likelihood', mp.cf)
-        log_string = log_string..'\tmass accuracy\t'..mass_accuracy
-        inferenceLogger:add{['Mass accuracy (val set)'] = mass_accuracy}
-        inferenceLogger:style{['Mass accuracy (val set)'] = '~'}
-    end
+    -- if mp.im then
+    --     require 'infer'
+    --     local mass_accuracy = infer_properties(model, val_loader, model.theta.params, 'mass', 'max_likelihood', mp.cf)
+    --     log_string = log_string..'\tmass accuracy\t'..mass_accuracy
+    --     inferenceLogger:add{['Mass accuracy (val set)'] = mass_accuracy}
+    --     inferenceLogger:style{['Mass accuracy (val set)'] = '~'}
+    -- end
 
     print(log_string)
 

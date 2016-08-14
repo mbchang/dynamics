@@ -21,7 +21,9 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
     elseif property == 'size' then 
-        assert(false, property..'not implemented')
+        si_indices = tablex.deepcopy(config_args.si.os)
+        num_hypotheses = si_indices[2]-si_indices[1]+1
+        hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
     end
 
     local accuracy

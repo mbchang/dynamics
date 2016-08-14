@@ -67,7 +67,7 @@ else
     mp.num_future = 1
 	mp.seq_length = 10
 	mp.num_threads = 4
-	mp.cuda = true
+	mp.cuda = false
 end
 
 local M
@@ -114,107 +114,107 @@ function inittest(preload, model_path, opt)
     print("Initialized Network")
 end
 
-function backprop2input()
-    -- for one input
+-- function backprop2input()
+--     -- for one input
 
-    -- get batch
-    local batch = test_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
-    local this, context, y, mask = unpack(batch)
-    local x = {this=this,context=context}
+--     -- get batch
+--     local batch = test_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
+--     local this, context, y, mask = unpack(batch)
+--     local x = {this=this,context=context}
 
-    if not sim then
-        y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
-                            {2,mp.num_future})
-    end
-    -- convert_type
+--     if not sim then
+--         y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
+--                             {2,mp.num_future})
+--     end
+--     -- convert_type
 
-    -- unpack inputs
-    local this_past     = convert_type(x.this:clone(), mp.cuda)
-    local context       = convert_type(x.context:clone(), mp.cuda)
-    local this_future   = convert_type(y:clone(), mp.cuda)
+--     -- unpack inputs
+--     local this_past     = convert_type(x.this:clone(), mp.cuda)
+--     local context       = convert_type(x.context:clone(), mp.cuda)
+--     local this_future   = convert_type(y:clone(), mp.cuda)
 
-    function feval_back2mass(inp)
-        -- inp is this_past
-        -- forward
-        local splitter = split_output(mp)
-        local preproc = preprocess_input(mask)
-        if mp.cuda then preproc:cuda() end
-        local input = preproc:forward{inp,context}  -- this changes, context doesn't
-        if torch.find(mask,1)[1] == 1 then input = {input} end
+--     function feval_back2mass(inp)
+--         -- inp is this_past
+--         -- forward
+--         local splitter = split_output(mp)
+--         local preproc = preprocess_input(mask)
+--         if mp.cuda then preproc:cuda() end
+--         local input = preproc:forward{inp,context}  -- this changes, context doesn't
+--         if torch.find(mask,1)[1] == 1 then input = {input} end
 
-        local prediction = model.network:forward(input)
-        local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
-        local gt_pos, gt_vel, gt_obj_prop =
-                            unpack(split_output(mp):forward(this_future))
-        local loss = model.criterion:forward(p_vel, gt_vel)
+--         local prediction = model.network:forward(input)
+--         local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
+--         local gt_pos, gt_vel, gt_obj_prop =
+--                             unpack(split_output(mp):forward(this_future))
+--         local loss = model.criterion:forward(p_vel, gt_vel)
 
-        -- backward
-        local d_pos = model.identitycriterion:backward(p_pos, gt_pos)
-        local d_vel = model.criterion:backward(p_vel, gt_vel)
-        local d_obj_prop = model.identitycriterion:backward(p_obj_prop,
-                                                            gt_obj_prop)
-        local d_pred = splitter:backward({prediction},
-                                        {d_pos, d_vel, d_obj_prop})
+--         -- backward
+--         local d_pos = model.identitycriterion:backward(p_pos, gt_pos)
+--         local d_vel = model.criterion:backward(p_vel, gt_vel)
+--         local d_obj_prop = model.identitycriterion:backward(p_obj_prop,
+--                                                             gt_obj_prop)
+--         local d_pred = splitter:backward({prediction},
+--                                         {d_pos, d_vel, d_obj_prop})
 
-        local g_input = model.network:backward(input, d_pred)
-        if torch.find(mask,1)[1] == 1 then g_input = g_input[1] end
-        preproc:updateGradInput(inp, g_input)
+--         local g_input = model.network:backward(input, d_pred)
+--         if torch.find(mask,1)[1] == 1 then g_input = g_input[1] end
+--         preproc:updateGradInput(inp, g_input)
 
-        collectgarbage()
-        return loss, preproc.gradInput[1]  -- this should have been updated
-    end
+--         collectgarbage()
+--         return loss, preproc.gradInput[1]  -- this should have been updated
+--     end
 
-    local b2i_optstate = {learningRate = 0.01}
+--     local b2i_optstate = {learningRate = 0.01}
 
-    -- infer the masses of ALL THE BALLS (or just you?)
-    -- for now let's just infer the mass of you
+--     -- infer the masses of ALL THE BALLS (or just you?)
+--     -- for now let's just infer the mass of you
 
-    -- or should I preface the network with a wrapper that selects the input, because rmsprop expects a tensor!
+--     -- or should I preface the network with a wrapper that selects the input, because rmsprop expects a tensor!
 
-    -- perturb
-    -- this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
-    -- this_past[{{},{},{5}}]:fill(1)
-    -- this_past[{{},{},{6,8}}]:fill(0)
-    -- this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
+--     -- perturb
+--     -- this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
+--     -- this_past[{{},{},{5}}]:fill(1)
+--     -- this_past[{{},{},{6,8}}]:fill(0)
+--     -- this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
 
-    print('initial input')
-    print(this_past[{{1},{1,9}}])
-    t = 1
-    while t <= 100 do
-        local old_this = this_past:clone()
+--     print('initial input')
+--     print(this_past[{{1},{1,9}}])
+--     t = 1
+--     while t <= 100 do
+--         local old_this = this_past:clone()
 
-        -- pass in input to rmsprop: automatically modifies this_past
-        local _, loss = optim.rmsprop(feval_back2mass, this_past, b2i_optstate)  -- not getting updates! (or implicilty updated)
+--         -- pass in input to rmsprop: automatically modifies this_past
+--         local _, loss = optim.rmsprop(feval_back2mass, this_past, b2i_optstate)  -- not getting updates! (or implicilty updated)
 
-        -- modify only the mass
-        old_this:resize(mp.batch_size, mp.num_past, mp.object_dim)
-        this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
+--         -- modify only the mass
+--         old_this:resize(mp.batch_size, mp.num_past, mp.object_dim)
+--         this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
 
-        -- [{{5,8}}] is the one-hot mass
-        this_past[{{},{},{1,4}}] = old_this[{{},{},{1,4}}]
-        this_past[{{},{},{9}}] = old_this[{{},{},{9}}]
+--         -- [{{5,8}}] is the one-hot mass
+--         this_past[{{},{},{1,4}}] = old_this[{{},{},{1,4}}]
+--         this_past[{{},{},{9}}] = old_this[{{},{},{9}}]
 
-        this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
+--         this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
 
-        if t % 10 == 0 then
-            b2i_optstate.learningRate = b2i_optstate.learningRate * 0.99
-        end
+--         if t % 10 == 0 then
+--             b2i_optstate.learningRate = b2i_optstate.learningRate * 0.99
+--         end
 
-        if t % 10 == 0 then
-            print(this_past[{{1},{1,9}}])
-        end
+--         if t % 10 == 0 then
+--             print(this_past[{{1},{1,9}}])
+--         end
 
-        if t % 10 == 0 then
-            print(loss[1])
-        end
-        -- if (this_past-target_input):norm() < 1e-5 then
-        --     break
-        -- end
-        t = t + 1
-    end
-    print ('final input after '..t..' iterations')
-    print(this_past[{{1},{1,9}}])
-end
+--         if t % 10 == 0 then
+--             print(loss[1])
+--         end
+--         -- if (this_past-target_input):norm() < 1e-5 then
+--         --     break
+--         -- end
+--         t = t + 1
+--     end
+--     print ('final input after '..t..' iterations')
+--     print(this_past[{{1},{1,9}}])
+-- end
 
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
@@ -525,8 +525,7 @@ function predict_simulate_all()
     simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
 
-
-function mass_inference()
+function inference(logfile, property, method, cf)
     -- iterate through snapshots
     local res_file = io.popen("ls -t "..mp.logs_root..'/'..mp.name..
                             " | grep -i epoch")
@@ -538,13 +537,13 @@ function mass_inference()
         table.insert(checkpoints, result)
     end
 
-    local inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'infer_cf.log'))
+    local inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', logfile))
     inferenceLogger.showPlot = false
 
     -- iterate through checkpoints backwards (least recent to most recent)
     for i=#checkpoints,1,-1 do
         local snapshot = checkpoints[i]
-        print('Mass inference on snapshot '..snapshot)
+        print(property..' inference on snapshot '..snapshot)
         local snapshotfile = mp.savedir ..'/'..snapshot
         local checkpoint = torch.load(snapshotfile)
         local saved_args = torch.load(mp.savedir..'/args.t7')
@@ -555,13 +554,22 @@ function mass_inference()
         require 'infer'
 
         -- save num_correct into a file
-        local cf = true
-        local accuracy = infer_properties(model, test_loader, checkpoint.model.theta.params, 'mass', 'max_likelihood', cf)
+        -- local cf = true
+        local accuracy = infer_properties(model, test_loader, checkpoint.model.theta.params, property, method, cf)
         print('Accuracy',accuracy)
-        inferenceLogger:add{['Mass accuracy (test set)'] = accuracy}
-        inferenceLogger:style{['Mass accuracy (test set)'] = '~'}
+        inferenceLogger:add{[property..' accuracy (test set)'] = accuracy}
+        inferenceLogger:style{[property..' accuracy (test set)'] = '~'}
     end
-    print('Finished mass inference')
+    print('Finished '..property..' inference')
+end
+
+
+function mass_inference()
+    inference('mass_infer_cf.log', 'mass', 'max_likelihood', true)
+end
+
+function size_inference()
+    inference('size_infer_cf.log', 'size', 'max_likelihood', true)
 end
 
 
