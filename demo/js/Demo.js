@@ -650,8 +650,35 @@
         return sim_file;
     };
 
+
+    Demo.generate_chunk = function(chunks, chunk_number, sim_options, num_unstable, num_comunstable) {
+        let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
+
+        if (sim_options.env == 'tower') {
+            let output = Demo.simulate(demo, chunks[j], sim_options);  // add sim_options.start_step here
+            let trajectories = output[0]
+            let num_unstable_chunk = output[1]
+            let com_num_unstable_chunk = output[2]
+            num_unstable += num_unstable_chunk
+            num_comunstable += com_num_unstable_chunk
+
+            jsonfile.writeFileSync(sim_file,
+                                {trajectories:trajectories, config:sim_options}
+                                );
+            console.log('Wrote to ' + sim_file)
+        } else {
+            let trajectories = Demo.simulate(demo, chunks[j], sim_options);
+
+            jsonfile.writeFileSync(sim_file,
+                                {trajectories:trajectories, config:sim_options}
+                                );
+            console.log('Wrote to ' + sim_file)
+        }
+        return [num_unstable, num_comunstable]  // do I need to return chunks?
+    }
+
     Demo.generate_data = function(demo, sim_options) {
-        const max_iters_per_json = 100;
+        const max_iters_per_json = 100; 
 
         if (!(typeof sim_options.startstep !== 'undefined' &&  sim_options.startstep)) {
             sim_options.startstep = 0
@@ -669,6 +696,11 @@
 
             for (let j=0; j < chunks.length; j++){
                 let chunk_number = j + (sim_options.samples-num_examples_left)/max_iters_per_json // +1?
+
+                // this should be put into a separate method!
+                // TODODO
+                // chunk_number = 0  // comment this out if you are doing all of the data generation!
+
                 let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
 
                 if (sim_options.env == 'tower') {
@@ -691,6 +723,13 @@
                                         );
                     console.log('Wrote to ' + sim_file)
                 }
+                // TODODO
+
+                // return // comment this out if you are doing all of the data generation!
+
+                // let unstable_counts = Demo.generate_chunk(chunks, chunk_number, sim_options, num_unstable, num_comunstable)
+                // num_unstable = unstable_counts[0]
+                // num_comunstable = unstable_counts[1]
             }
 
 
