@@ -2138,9 +2138,9 @@ if (!_isBrowser) {
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
                 options.numObj = 6
-                options.variableMass = true
+                options.variableMass = false
                 options.variableSize = true
-                options.variableObstacles = true
+                options.variableObstacles = false
                 options.friction = false
             }
 
@@ -2266,7 +2266,6 @@ if (!_isBrowser) {
 
 
                 Body.setVelocity(body, self.v0[i])
-                // console.log(body)
 
                 // add body to world
                 World.add(self.engine.world, body);
@@ -2275,13 +2274,12 @@ if (!_isBrowser) {
 
              // now set the obstacles
              for (let i = self.params.num_balls; i < self.params.num_obj; i ++) {
-                // console.log(i)
                     let body_opts = {restitution: 1,
                                      isStatic:true,
                                      mass: 1e30, // some really huge mass
                                      label: "Entity",
                                      objtype: "obstacle",
-                                     sizemul: 1
+                                     sizemul: self.s[i-self.params.num_balls]  // sizemul is wrong!!!!!!!!!!!!!!!!
                                  }
                 // console.log(self.params.obstacle_side)
                 let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
@@ -2292,7 +2290,6 @@ if (!_isBrowser) {
                 // assert(false)
                 World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
              }
-             // console.log(self.engine.world.bodies)
 
         };
 
