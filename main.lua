@@ -87,7 +87,7 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 200
+    mp.max_iter = 500
     mp.nbrhd = true
     mp.lrdecayafter = 5
     mp.lrdecay_every = 5

@@ -568,8 +568,14 @@ function mass_inference()
     inference('mass_infer_cf.log', 'mass', 'max_likelihood', true)
 end
 
+-- note that here we need to do inference on the context!
 function size_inference()
-    inference('size_infer_cf.log', 'size', 'max_likelihood', true)
+    inference('size_infer_cf.log', 'size', 'max_likelihood_context', true)
+end
+
+-- note that here we need to do inference on the context!
+function objtype_inference()
+    inference('objtype_infer_cf.log', 'objtype', 'max_likelihood_context', true)
 end
 
 
@@ -609,6 +615,8 @@ elseif mp.mode == 'hid' then
     run_inspect_hidden_state()
 elseif mp.mode == 'minf' then
     mass_inference()
+elseif mp.mode == 'sinf' then
+    size_inference()
 elseif mp.mode == 'b2i' then
     predict_b2i()
 elseif mp.mode == 'pred' then
