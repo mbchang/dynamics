@@ -227,7 +227,6 @@ end
 
 function initsavebatches()
     mp.cuda = false
-    mp.cunn = false
     config_args.batch_size = mp.batch_size
     for _, dataset_folder in pairs(mp.dataset_folders) do
         local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
@@ -542,6 +541,10 @@ function run_experiment_load()
     print('Learning rate is now '..optim_state.learningRate)
 
     config_args = saved_args.config_args
+
+    -- if mp.server == 'op' then mp.cuda = true end
+
+
     model_deps(mp.model)
     inittrain(true, mp.savedir ..'/'..snapshot, iters)  -- assuming the mp.savedir doesn't change
 
@@ -597,6 +600,7 @@ end
 if mp.mode == 'exp' then
     initsavebatches()
     print('Running experiment.')
+    -- if mp.server == 'op' then mp.cuda = true end
     run_experiment()
 elseif mp.mode == 'expload' then
     run_experiment_load()
