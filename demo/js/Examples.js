@@ -2225,11 +2225,6 @@ if (!_isBrowser) {
             }
             // console.log(sampled_sizes)
             for (let i = self.params.num_balls; i < self.params.num_obj; i ++) {
-                // console.log('.....')
-                // console.log('self.params.obstacle_side', self.params.obstacle_side)
-                // console.log('sampled_sizes', sampled_sizes)
-                // console.log('self.s[i-self.params.num_balls]', self.s[i-self.params.num_balls])
-                // console.log('self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)', self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2))
                 sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
@@ -2283,18 +2278,89 @@ if (!_isBrowser) {
                                  }
                 // console.log(self.params.obstacle_side)
                 let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
-                                                self.params.obstacle_side*(self.s[i-self.params.num_balls]), 
-                                                self.params.obstacle_side*(self.s[i-self.params.num_balls]), 
+                                                // self.params.obstacle_side*(self.s[i-self.params.num_balls]), 
+                                                // self.params.obstacle_side*(self.s[i-self.params.num_balls]), 
+                                                self.params.obstacle_side*body_opts.sizemul, 
+                                                self.params.obstacle_side*body_opts.sizemul, 
                                                 body_opts)
-                // console.log(obstacle)
-                // assert(false)
                 World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
              }
 
         };
 
+
+        Mixed.init_from_trajectories = function(self, trajectories) {
+            // set positions
+            for (let i = 0; i < self.params.num_obj; i++) {
+
+                if (trajectories[i][1].objtype=='ball') {
+                    // console.log(trajectories[i][1])
+                    let body_opts = {restitution: 1,
+                                 mass: trajectories[i][1].mass,
+                                 inertia: Infinity,  //rotation
+                                 inverseInertia: 0,  // rotation
+                                 label: "Entity",
+                                 objtype: trajectories[i][1].objtype,
+                                 sizemul: trajectories[i][1].sizemul
+                             }
+                    if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
+                        body_opts.friction = 0;
+                        body_opts.frictionAir = 0;
+                        body_opts.frictionStatic = 0;
+                    }
+                    let pos = trajectories[i][1].position
+                    // console.log('pos')
+                    // console.log(pos)
+                    let body = Bodies.circle(pos.x, pos.y,
+                                            self.params.obj_radius*body_opts.sizemul, body_opts)
+
+                    body.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                    body.render.strokeStyle = '#FFA500'// orange
+                    body.render.lineWidth = 5
+
+                    // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
+                    // console.log('before')
+                    // console.log(body.velocity)
+                    Body.setVelocity(body, trajectories[i][1].velocity)
+                    // console.log('after')
+                    // console.log(body)
+                    // console.log(body.velocity)
+                    // console.log(body)
+                    // console.assert(false)
+
+                    // add body to world
+                    World.add(self.engine.world, body);
+                } else if (trajectories[i][1].objtype=='obstacle')  {
+                    let body_opts = {restitution: 1,
+                                     isStatic:true,
+                                     mass: trajectories[i][1].mass, // some really huge mass
+                                     label: "Entity",
+                                     objtype: trajectories[i][1].objtype,
+                                     sizemul: trajectories[i][1].sizemul
+                                 }
+                    // console.log('obs')
+                    // console.log(trajectories[i][1])
+                    let pos = trajectories[i][1].position
+                    let obstacle = Bodies.rectangle(pos.x, pos.y, 
+                                                    self.params.obstacle_side*body_opts.sizemul, 
+                                                    self.params.obstacle_side*body_opts.sizemul, 
+                                                    body_opts)
+                    // console.log(obstacle)
+                    World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+                }
+             }
+        };
+
         var mixed = Mixed.create(cmd_options);
-        Mixed.init(mixed);
+        console.log('cmd_options')
+        console.log(cmd_options)
+        if (!(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
+            console.log('init')
+            Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
+        } else {
+            console.log('init_from_trajectories')
+            Mixed.init_from_trajectories(mixed, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+        }
         return mixed;
     };
 

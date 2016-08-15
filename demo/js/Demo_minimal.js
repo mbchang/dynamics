@@ -142,20 +142,23 @@
         var mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}// TODO eventually call Example[config.env].mass_colors
 
 
-        Example[config.env](demo, config)
 
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[4]  // extra 0 for batch mode
+        var trajectories = data[1]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
+        config.trajectories = trajectories
 
-        console.log(trajectories)
+        Example[config.env](demo, config)  // here you have to assign balls initial positions according to the initial timestep of trajectories.
+
+        // here you have to 
+        console.log(config)
 
         var i = 0
         function f() {
-            console.log( i );
+            console.log( 'i', i );
             var entities = Composite.allBodies(demo.engine.world)
                 .filter(function(elem) {
                             return elem.label === 'Entity';
@@ -173,8 +176,15 @@
                     body.render.strokeStyle = '#551A8B'// orange #551A8B is purple
                 }
                 body.render.lineWidth = 5
+
+                console.log('set position')
+
                 Body.setPosition(body, trajectories[id][i].position)
                 Body.setVelocity(body, trajectories[id][i].velocity)
+
+                // console.log(trajectories[id][i].position)
+                // console.log(trajectories[id][i].velocity)
+
                 Body.setAngle(body, trajectories[id][i].angle)
                 if (trajectories[id][i].mass == 1) {
                     console.log(id)
