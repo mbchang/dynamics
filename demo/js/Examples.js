@@ -2140,7 +2140,7 @@ if (!_isBrowser) {
                 options.numObj = 6
                 options.variableMass = false
                 options.variableSize = true
-                options.variableObstacles = false
+                options.variableObstacles = true
                 options.friction = false
             }
 
