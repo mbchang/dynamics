@@ -181,7 +181,11 @@ end
 
 function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, obstacle_mask)
     if cf then 
-        local collision_filter_mask = collision_filter(batch)
+        -- local collision_filter_mask = collision_filter(batch)
+        -- print(collision_filter_mask)
+        local collision_filter_mask = wall_collision_filter(batch)
+        -- print(collision_filter_mask)
+        -- assert(false)
 
         if obstacle_mask then
             collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
@@ -243,6 +247,10 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
+
+        -- TODO: here compute a mask for whether you collide with another ball
+
+
         local hypothesis_length = si_indices[2]-si_indices[1]+1
         local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, 0)
         -- now that you have best_hypothesis, compare best_hypotheses with truth
@@ -259,7 +267,7 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
     else 
         accuracy =num_correct/count
     end
-    print(count)
+    print(count..' collisions out of '..dataloader.num_batches*mp.batch_size..' examples')
     return accuracy
 end
 
@@ -295,7 +303,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
     else 
         accuracy =num_correct/count
     end
-    print(count)
+    print(count..' collisions with obstacles out of '..dataloader.num_batches*mp.batch_size..' examples')
     return accuracy
 end
 
@@ -333,4 +341,133 @@ function collision_filter(batch)
     -- you could just only include those for which dot is < 0
     local collision_mask = dot:le(0)
     return collision_mask
+end
+
+
+-- zero out collisions with walls
+function wall_collision_filter(batch)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+
+    -- I could compute manual dot product
+    -- this_past: (bsize, numpast, objdim)
+    -- this_future: (bsize, numfuture, objdim)
+    local past = this_past:clone()
+    local future = this_future:clone()
+    future = data_process.relative_pair(past, future, true)
+
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local past_vel = torch.squeeze(past[{{},{-1},{vx, vy}}],2)  -- (bsize, 2)
+    local future_vel = torch.squeeze(future[{{},{},{vx, vy}}],2)
+
+    local past_vel_norm = torch.norm(past_vel,2,2)
+    local future_vel_norm = torch.norm(future_vel,2,2)
+    local both_norm = torch.cmul(past_vel_norm, future_vel_norm)
+
+    -- manually perform dot product
+    local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
+    -- local cos_theta = torch.cdiv(dot, both_norm:expandAs(dot)) -- numerical issues here
+    -- local theta = torch.acos(cos_theta)
+
+    -- you could just only include those for which dot is < 0
+    local collision_mask = dot:le(0)
+
+
+    -- HACK
+    -- local collision_mask = torch.Tensor({1,0,1,1,0}):byte()
+
+    -- for wall collision:
+    -- get the direction of the velocity at time t. The normal of the wall dotted with that velocity should be positive.
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local future_pos = torch.squeeze(future[{{},{},{px, py}}],2)  -- see where the ball is at the tiem of collision  (bsize, 2)
+
+    -- now let's check where the wall is
+    local leftwall = 0
+    local topwall = 0
+    local rightwall = 2*config_args.cx
+    local bottomwall = 2*config_args.cy
+    local walls = (torch.Tensor{leftwall, topwall, rightwall, bottomwall})/config_args.position_normalize_constant  -- size (4)  -- TODO! You have to normalize!
+
+    -- TODO check that these directions are correct
+    local leftwall_normal = torch.Tensor({{1,0}})
+    local topwall_normal = torch.Tensor({{0,1}})
+    local rightwall_normal = torch.Tensor({{-1,0}})
+    local bottomwall_normal = torch.Tensor({{0,-1}})
+    local wall_normals = torch.cat({leftwall_normal, topwall_normal, rightwall_normal, bottomwall_normal},1)  -- (4,2)
+
+    -- print('walls')
+    -- print(walls)
+    -- print('wall_normals')
+    -- print(wall_normals)
+    -- find the nearest wall. Need to project the point on the normal down to the wall. Actually this can be found with a simple difference of coordinates
+    -- print('future_pos[{{},{1}}]')
+    -- print(future_pos[{{},{1}}])
+    local future_pos_components = torch.cat({future_pos[{{},{1}}], future_pos[{{},{2}}], future_pos[{{},{1}}], future_pos[{{},{2}}]})  -- (bsize, 4) {x,y,x,y}
+    -- print('future_pos_components')
+    -- print(future_pos_components)
+    -- local d2leftwall = torch.abs(past_pos[1] - leftwall) -- x
+    -- local d2topwall = torch.abs(past_pos[2]- topwall) -- y
+    -- local d2rightwall = torch.abs(past_pos[1] - rightwall) -- x
+    -- local d2bottomwall = torch.abs(past_pos[2] -bottomwall) --y
+    local d2wall = torch.abs(future_pos_components-walls:view(1,4):expandAs(future_pos_components))  -- works  (bisze, 4)
+    -- print('d2wall')
+    -- print(d2wall)
+
+    -- filter out the walls that are > 2*obj_radius away. Perhaps do this in a vector form
+    -- select the close wall
+    local close_walls_filter = d2wall:le(2*config_args.object_base_size.ball/config_args.position_normalize_constant)  -- one ball diameter  (bsize,4)
+
+    -- print('close_walls_filter')
+    -- print(close_walls_filter)
+
+    -- dot the wall's normal with your velocity vector
+    -- what if two walls are equally close?
+    -- past_vel (bsize, 2)
+    -- wall_normals (4,2)
+    -- result (bsize, 4)
+    -- [i,j] means the dot product of the velocity of the ith example with the jth wall
+    -- you want the dot product to be negative, because the wall normal points away from the wall
+    local dot_with_wall_normal = torch.mm(past_vel, wall_normals:t())  -- (bsize, 4) 
+
+    -- print('dot_with_wall_normal')
+    -- print(dot_with_wall_normal)
+
+    local towards_wall_filter = dot_with_wall_normal:le(0)
+
+    -- print('towards_wall_filter')
+    -- print(towards_wall_filter)
+
+    -- you want to select the examples for which you are close to wall after collision and you were going towards it the previous timestep
+    -- it's ok if you don't actually hit the wall in the t+1 timestep. What we are checking is that it should be impossible for you
+    -- to hit another ball. So the inverse of this mask filters out all POTENTIAL collisions with walls, leaving true collisions with other objects
+
+    local close_to_wall_and_was_going_towards_some_wall_filter = torch.cmul(close_walls_filter, towards_wall_filter)  -- (bsize, 4)
+
+    -- print('close_to_wall_and_was_going_towards_some_wall_filter')
+    -- print(close_to_wall_and_was_going_towards_some_wall_filter)
+
+    -- this figures out which example in the batch has the potential for a wall collision.
+    -- do not consider these examples when you do collision filtering, because these rule out the possibility of a ball collision
+    local close_to_wall_and_was_going_towards_any_wall_filter = close_to_wall_and_was_going_towards_some_wall_filter:sum(2) -- (bsize)
+
+    -- print('close_to_wall_and_was_going_towards_any_wall_filter')
+    -- print(close_to_wall_and_was_going_towards_any_wall_filter)
+
+    -- take the inverse. The 1s in the follow mask are the only examples where there exists a possibility of a ball collision
+    local possible_object_collision = close_to_wall_and_was_going_towards_any_wall_filter:eq(0)  -- (bsize)
+
+    -- print('possible_object_collision')
+    -- print(possible_object_collision)
+
+
+    -- do an AND with the collision filter. this will give you the object collision
+    local object_collision_mask = torch.cmul(possible_object_collision, collision_mask)
+    -- print('collision_mask')
+    -- print(collision_mask)
+
+    -- print('object_collision_mask')
+    -- print(object_collision_mask)
+    -- assert(false)
+    return object_collision_mask
 end

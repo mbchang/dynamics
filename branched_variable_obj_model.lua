@@ -187,7 +187,7 @@ function model:select_neighbors(input)
         template_block[{{},{},{config_args.oids.block}}]:fill(1)
 
         if oid_onehot:equal(template_ball) then
-            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball 
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
         elseif oid_onehot:equal(template_block) then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.block
         else
