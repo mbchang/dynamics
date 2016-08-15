@@ -2113,8 +2113,47 @@ if (!_isBrowser) {
              }
         };
 
+
+        Balls.init_from_trajectories = function(self, trajectories) {
+            // set positions
+            for (i = 0; i < self.params.num_obj; i++) {
+                let body_opts = {restitution: 1,
+                                 mass: trajectories[i][1].mass,
+                                 inertia: Infinity,  //rotation
+                                 inverseInertia: 0,  // rotation
+                                 label: "Entity",
+                                 objtype: trajectories[i][1].objtype,
+                                 sizemul: trajectories[i][1].sizemul
+                             }
+                if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
+                    body_opts.friction = 0;
+                    body_opts.frictionAir = 0;
+                    body_opts.frictionStatic = 0;
+                }
+                let pos = trajectories[i][1].position
+                let body = Bodies.circle(pos.x, pos.y,
+                                        self.params.obj_radius*body_opts.sizemul, body_opts)
+
+                body.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                body.render.strokeStyle = '#FFA500'// orange
+                body.render.lineWidth = 5
+
+                Body.setVelocity(body, trajectories[i][1].velocity)
+
+                // add body to world
+                World.add(self.engine.world, body);
+             }
+        };  
+
         var balls = Balls.create(cmd_options);
-        Balls.init(balls);
+        if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
+            !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
+            console.log('init')
+            Balls.init(balls);  // perhaps here you could do something like Mixed.init_from_trajectories
+        } else {
+            console.log('init_from_trajectories')
+            Balls.init_from_trajectories(balls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+        }
         return balls;
     };
 
@@ -2294,7 +2333,6 @@ if (!_isBrowser) {
             for (let i = 0; i < self.params.num_obj; i++) {
 
                 if (trajectories[i][1].objtype=='ball') {
-                    // console.log(trajectories[i][1])
                     let body_opts = {restitution: 1,
                                  mass: trajectories[i][1].mass,
                                  inertia: Infinity,  //rotation
@@ -2309,8 +2347,6 @@ if (!_isBrowser) {
                         body_opts.frictionStatic = 0;
                     }
                     let pos = trajectories[i][1].position
-                    // console.log('pos')
-                    // console.log(pos)
                     let body = Bodies.circle(pos.x, pos.y,
                                             self.params.obj_radius*body_opts.sizemul, body_opts)
 
@@ -2319,14 +2355,7 @@ if (!_isBrowser) {
                     body.render.lineWidth = 5
 
                     // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
-                    // console.log('before')
-                    // console.log(body.velocity)
                     Body.setVelocity(body, trajectories[i][1].velocity)
-                    // console.log('after')
-                    // console.log(body)
-                    // console.log(body.velocity)
-                    // console.log(body)
-                    // console.assert(false)
 
                     // add body to world
                     World.add(self.engine.world, body);
@@ -2338,15 +2367,12 @@ if (!_isBrowser) {
                                      objtype: trajectories[i][1].objtype,
                                      sizemul: trajectories[i][1].sizemul
                                  }
-                    // console.log('obs')
-                    // console.log(trajectories[i][1])
                     let pos = trajectories[i][1].position
                     let obstacle = Bodies.rectangle(pos.x, pos.y, 
                                                     self.params.obstacle_side*body_opts.sizemul, 
                                                     self.params.obstacle_side*body_opts.sizemul, 
                                                     body_opts)
-                    // console.log(obstacle)
-                    World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+                    World.add(self.engine.world, obstacle);
                 }
              }
         };
@@ -2354,9 +2380,8 @@ if (!_isBrowser) {
         var mixed = Mixed.create(cmd_options);
         console.log('cmd_options')
         console.log(cmd_options)
-        if (_isBrowser) {
-            Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
-        } else if (!(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
+        if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
+            !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
             console.log('init')
             Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
