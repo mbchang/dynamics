@@ -43,28 +43,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
 end
 
 -- copies batch
-function apply_hypothesis(batch, hyp, si_indices)
-    local this_past, context_past, this_future, context_future, mask = unpack(batch)
-    this_past = this_past:clone()
-    context_past = context_past:clone()  -- (bsize, num_context, num_past, obj_dim)
-    this_future = this_future:clone()
-    context_future = context_future:clone()
-
-    -- I should apply the hypothesis to the entire batch?
-    -- later I will have to compare to the original to measure accuracy.
-    -- well since I'm going to go through all hypotheses anyways it don't have
-    -- to worry about things within the batch. But I have to save the original
-    -- this_past for ground truth so that I can compare and measure how many 
-    -- within the batch, after I applied all my hypotheses, had the best error.
-    local num_ex = this_past:size(1)
-    local num_past = this_past:size(2)
-
-    this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_past, 1)
-    return {this_past, context_past, this_future, context_future, mask}
-end
-
--- copies batch
-function apply_hypothesis_context(batch, hyp, si_indices, context_id)
+function apply_hypothesis(batch, hyp, si_indices, obj_id)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
     this_past = this_past:clone()
     context_past = context_past:clone()
@@ -75,7 +54,12 @@ function apply_hypothesis_context(batch, hyp, si_indices, context_id)
     local num_context = context_past:size(2)
     local num_past = context_past:size(3)
 
-    context_past[{{},{context_id},{},si_indices}] = torch.repeatTensor(hyp, num_ex, 1, num_past, 1)
+    if obj_id == 0 then  -- protocol for this
+        this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_past, 1)
+    else
+        context_past[{{},{obj_id},{},si_indices}] = torch.repeatTensor(hyp, num_ex, 1, num_past, 1)
+    end
+
     return {this_past, context_past, this_future, context_future, mask}
 end
 
@@ -195,70 +179,73 @@ function binarize(tensor)
 end
 
 
+function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf)
+    if cf then 
+        local collision_filter_mask = collision_filter(batch)
+        local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
+        if ground_truth_filtered:norm() > 0 then
+            -- here you can update count
+            -- now select only the indices in ground_truth filtered and best_hypotheses to compare
+            local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
+
+            local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
+            ground_truth_filtered:resize(num_pass_through, hypothesis_length)
+            best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)
+
+            local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
+            num_correct = num_correct + num_equal
+            count = count + num_pass_through
+        end
+    else
+        local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(hypothesis_length):sum()
+        num_correct = num_correct + num_equal
+        count = count + mp.batch_size
+    end
+    return num_correct, count
+end
+
+
+function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
+    local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
+    local best_hypotheses = torch.zeros(mp.batch_size,#hypotheses)
+    local hypothesis_length = si_indices[2]-si_indices[1]+1
+
+    for j,h in pairs(hypotheses) do
+        local hypothesis_batch = apply_hypothesis(batch, h, si_indices, context_id)  -- good
+        local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
+
+        -- test_loss is a tensor of size bsize
+        local update_indices = test_losses:lt(best_losses):nonzero()
+
+        if update_indices:nElement() > 0 then
+            update_indices = torch.squeeze(update_indices,2)
+            --best_loss should equal test loss at the indices where test loss < best_loss
+            best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))
+
+            -- best_hypotheses should equal h at the indices where test loss < best_loss
+            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
+        end
+        -- check that everything has been updated
+        assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
+        assert(not(best_hypotheses:equal(torch.zeros(mp.batch_size,hypothesis_length))))
+    end
+    return best_hypotheses
+end
+
 function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-        local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
-        local best_hypotheses = torch.zeros(mp.batch_size,#hypotheses)
         local hypothesis_length = si_indices[2]-si_indices[1]+1
-
-        for j,h in pairs(hypotheses) do
-            local hypothesis_batch = apply_hypothesis(batch, h, si_indices)  -- good
-            local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
-
-            -- test_loss is a tensor of size bsize
-            local update_indices = test_losses:lt(best_losses):nonzero()
-
-            if update_indices:nElement() > 0 then
-                update_indices = torch.squeeze(update_indices,2)
-                --best_loss should equal test loss at the indices where test loss < best_loss
-                best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))
-
-                -- best_hypotheses should equal h at the indices where test loss < best_loss
-                best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
-            end
-            -- check that everything has been updated
-            assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
-            assert(not(best_hypotheses:equal(torch.zeros(mp.batch_size,hypothesis_length))))
-        end
-
+        local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, 0)
         -- now that you have best_hypothesis, compare best_hypotheses with truth
         -- need to construct true hypotheses based on this_past, hypotheses as parameters
         local this_past = batch[1]:clone()
         local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
+        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf)
 
-        -- print('ground truth size')
-        -- print(ground_truth:size())
-
-        if cf then 
-            local collision_filter_mask = collision_filter(batch)
-            local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
-            -- print('ground truth filtered')
-            -- print(ground_truth_filtered:size())
-            if ground_truth_filtered:norm() > 0 then
-                -- here you can update count
-                -- now select only the indices in ground_truth filtered and best_hypotheses to compare
-                local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
-                -- print('best hypotheses filtered')
-                -- print(best_hypotheses_filtered:size())
-                -- assert(false)
-
-                local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
-                ground_truth_filtered:resize(num_pass_through, hypothesis_length)
-                best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)
-
-                local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
-                num_correct = num_correct + num_equal
-                count = count + num_pass_through
-            end
-        else
-            local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(hypothesis_length):sum()
-            num_correct = num_correct + num_equal
-            count = count + mp.batch_size
-        end
         collectgarbage()
     end
     return num_correct/count
@@ -274,62 +261,14 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         local num_context = batch[2]:size(2)
 
         for context_id = 1, num_context do
-
-            local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
-            local best_hypotheses = torch.zeros(mp.batch_size,#hypotheses)
-
-            -- for this exmaple an obstacle is context_id 2
-            for j,h in pairs(hypotheses) do
-
-                local hypothesis_batch = apply_hypothesis_context(batch, h, si_indices, context_id)  -- CHANGED -- good
-
-                local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
-
-                -- test_loss is a tensor of size bsize
-                local update_indices = test_losses:lt(best_losses):nonzero()
-
-                if update_indices:nElement() > 0 then
-                    update_indices = torch.squeeze(update_indices,2)
-                    --best_loss should equal test loss at the indices where test loss < best_loss
-                    best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))
-
-                    -- best_hypotheses should equal h at the indices where test loss < best_loss
-                    best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
-                end
-                -- check that everything has been updated
-                assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
-                assert(not(best_hypotheses:equal(torch.zeros(mp.batch_size,hypothesis_length))))
-            end
-
+            local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
             -- now that you have best_hypothesis, compare best_hypotheses with truth
             -- need to construct true hypotheses based on this_past, hypotheses as parameters
             local context_past = batch[2]:clone()
             local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
             -- ground truth: (bsize, hypothesis_length)
-
-            if cf then 
-                local collision_filter_mask = collision_filter(batch)
-                local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
-                if ground_truth_filtered:norm() > 0 then
-                    -- here you can update count
-                    -- now select only the indices in ground_truth filtered and best_hypotheses to compare
-                    local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
-                    local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
-                    ground_truth_filtered:resize(num_pass_through, hypothesis_length)
-                    best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)
-
-                    local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
-                    num_correct = num_correct + num_equal
-                    count = count + num_pass_through
-                end
-            else
-                local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(hypothesis_length):sum()
-                num_correct = num_correct + num_equal
-                count = count + mp.batch_size
-            end
+            num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf)
             collectgarbage()
-
-
         end 
     end
     return num_correct/count
