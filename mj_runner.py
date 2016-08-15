@@ -44,8 +44,8 @@ def create_jobs(dry_run, ext):
     friction = [False]
     gravity = [False]
     masses = [False]  # TODO
-    sizes = [True, False]
-    num_obstacles = [True, False]
+    sizes = [True]
+    num_obstacles = [False]
     envs = ['mixed']
 
     # mj data generation

@@ -913,7 +913,7 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Common = Matter.Common;
 
-    Example.mixed = function(demo) {
+    Example.mixedShapes = function(demo) {
         var engine = demo.engine,
             world = engine.world;
 
