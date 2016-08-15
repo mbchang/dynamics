@@ -2354,7 +2354,9 @@ if (!_isBrowser) {
         var mixed = Mixed.create(cmd_options);
         console.log('cmd_options')
         console.log(cmd_options)
-        if (!(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
+        if (_isBrowser) {
+            Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
+        } else if (!(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
             console.log('init')
             Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
