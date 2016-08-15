@@ -179,9 +179,14 @@ function binarize(tensor)
 end
 
 
-function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf)
+function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, obstacle_mask)
     if cf then 
         local collision_filter_mask = collision_filter(batch)
+
+        if obstacle_mask then
+            collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
+        end
+
         local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
         if ground_truth_filtered:norm() > 0 then
             -- here you can update count
@@ -248,7 +253,14 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
 
         collectgarbage()
     end
-    return num_correct/count
+    local accuracy
+    if count == 0 then 
+        accuracy = 0
+    else 
+        accuracy =num_correct/count
+    end
+    print(count)
+    return accuracy
 end
 
 function max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf)
@@ -261,17 +273,30 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         local num_context = batch[2]:size(2)
 
         for context_id = 1, num_context do
+            -- here get the obstacle mask
+            local obstacle_index = config_args.si.oid[1]+1
+            local obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle
+
             local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
             -- now that you have best_hypothesis, compare best_hypotheses with truth
             -- need to construct true hypotheses based on this_past, hypotheses as parameters
             local context_past = batch[2]:clone()
             local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
+
             -- ground truth: (bsize, hypothesis_length)
-            num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf)
+            num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, obstacle_mask)
             collectgarbage()
         end 
     end
-    return num_correct/count
+
+    local accuracy
+    if count == 0 then 
+        accuracy = 0
+    else 
+        accuracy =num_correct/count
+    end
+    print(count)
+    return accuracy
 end
 
 
