@@ -108,7 +108,6 @@ function inittest(preload, model_path, opt)
                               cuda=mp.cuda
                             }
     test_loader = D.create('testset', tablex.deepcopy(data_loader_args))
-    -- test_loader = D.create('valset', tablex.deepcopy(data_loader_args))
 
     modelfile = model_path
     print("Initialized Network")

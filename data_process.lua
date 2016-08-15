@@ -74,12 +74,38 @@ function data_process.relative_pair(past, future, relative_to_absolute)
     return future
 end
 
+-- (num_examples, num_objects, timestesp, a, av)
+-- theta = theta-2pi if pi < theta < 2*pi
+-- transforms [0, 2pi]  --> [-pi, pi]
+function data_process:wrap_pi(angles)
+    local angles = angles:clone()
+    -- angles = torch.clamp(angle, 0, 2*math.pi)  -- just in case
+
+    local wrap_mask = angles:gt(math.pi)  -- add this to angles
+    -- print(wrap_mask)
+    local wrapped = torch.add(angles, -2*math.pi, wrap_mask:float())
+    return wrapped
+end
+
+-- (num_examples, num_objects, timestesp, a, av)
+-- theta = theta+2pi if -pi < theta < pi
+-- transforms [-pi, pi] --> [0, 2pi]
+
+function data_process:wrap_2pi(angles)
+    local angles = angles:clone()
+    -- angles = torch.clamp(angle, -math.pi, math.pi)  -- just in case
+
+    local wrap_mask = angles:lt(0)  -- add this to angles
+    local wrapped = torch.add(angles, 2*math.pi, wrap_mask:float())
+    return wrapped
+end
+
 -- trajectories: (num_examples, num_objects, timesteps, [px, py, vx, vy, mass])
 function data_process:normalize(unnormalized_trajectories)
     normalized = unnormalized_trajectories:clone()
 
     local px, py, vx, vy = self.rsi.px, self.rsi.py, self.rsi.vx, self.rsi.vy
-    local a, av = self.rsi.a, self.rsi.v
+    local a, av = self.rsi.a, self.rsi.av
 
     -- normalize position
     normalized[{{},{},{},{px,py}}] = normalized[{{},{},{},{px,py}}]/self.pnc
@@ -87,17 +113,23 @@ function data_process:normalize(unnormalized_trajectories)
     -- normalize velocity
     normalized[{{},{},{},{vx,vy}}] = normalized[{{},{},{},{vx,vy}}]/self.vnc
 
+    -- transforms [0, 2pi]  --> [-pi, pi]
+    normalized[{{},{},{},{a, av}}] = self:wrap_pi(normalized[{{},{},{},{a, av}}])
+
+
     -- normalize angle and angular velocity (assumes they are together)
     normalized[{{},{},{},{a, av}}] = normalized[{{},{},{},{a, av}}]/self.anc
 
     return normalized
 end
 
+
+
 function data_process:unnormalize(normalized_trajectories)
     unnormalized = normalized_trajectories:clone()
 
     local px, py, vx, vy = self.rsi.px, self.rsi.py, self.rsi.vx, self.rsi.vy
-    local a, av = self.rsi.a, self.rsi.v
+    local a, av = self.rsi.a, self.rsi.av
 
     -- normalize position
     unnormalized[{{},{},{},{px,py}}] = unnormalized[{{},{},{},{px,py}}]*self.pnc
@@ -107,6 +139,9 @@ function data_process:unnormalize(normalized_trajectories)
 
     -- normalize angle and angular velocity (assumes they are together)
     unnormalized[{{},{},{},{a, av}}] = unnormalized[{{},{},{},{a, av}}]*self.anc
+
+    -- transforms [-pi, pi] --> [0, 2pi]
+    normalized[{{},{},{},{a, av}}] = self:wrap_2pi(normalized[{{},{},{},{a, av}}])
 
     return unnormalized
 end

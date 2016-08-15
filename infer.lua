@@ -366,15 +366,9 @@ function wall_collision_filter(batch)
 
     -- manually perform dot product
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
-    -- local cos_theta = torch.cdiv(dot, both_norm:expandAs(dot)) -- numerical issues here
-    -- local theta = torch.acos(cos_theta)
 
     -- you could just only include those for which dot is < 0
     local collision_mask = dot:le(0)
-
-
-    -- HACK
-    -- local collision_mask = torch.Tensor({1,0,1,1,0}):byte()
 
     -- for wall collision:
     -- get the direction of the velocity at time t. The normal of the wall dotted with that velocity should be positive.
@@ -389,37 +383,23 @@ function wall_collision_filter(batch)
     local bottomwall = 2*config_args.cy
     local walls = (torch.Tensor{leftwall, topwall, rightwall, bottomwall})/config_args.position_normalize_constant  -- size (4)  -- TODO! You have to normalize!
 
-    -- TODO check that these directions are correct
     local leftwall_normal = torch.Tensor({{1,0}})
     local topwall_normal = torch.Tensor({{0,1}})
     local rightwall_normal = torch.Tensor({{-1,0}})
     local bottomwall_normal = torch.Tensor({{0,-1}})
     local wall_normals = torch.cat({leftwall_normal, topwall_normal, rightwall_normal, bottomwall_normal},1)  -- (4,2)
 
-    -- print('walls')
-    -- print(walls)
-    -- print('wall_normals')
-    -- print(wall_normals)
-    -- find the nearest wall. Need to project the point on the normal down to the wall. Actually this can be found with a simple difference of coordinates
-    -- print('future_pos[{{},{1}}]')
-    -- print(future_pos[{{},{1}}])
+    -- find the nearest wall. this can be found with a simple difference of coordinates
     local future_pos_components = torch.cat({future_pos[{{},{1}}], future_pos[{{},{2}}], future_pos[{{},{1}}], future_pos[{{},{2}}]})  -- (bsize, 4) {x,y,x,y}
-    -- print('future_pos_components')
-    -- print(future_pos_components)
     -- local d2leftwall = torch.abs(past_pos[1] - leftwall) -- x
     -- local d2topwall = torch.abs(past_pos[2]- topwall) -- y
     -- local d2rightwall = torch.abs(past_pos[1] - rightwall) -- x
     -- local d2bottomwall = torch.abs(past_pos[2] -bottomwall) --y
     local d2wall = torch.abs(future_pos_components-walls:view(1,4):expandAs(future_pos_components))  -- works  (bisze, 4)
-    -- print('d2wall')
-    -- print(d2wall)
 
     -- filter out the walls that are > 2*obj_radius away. Perhaps do this in a vector form
     -- select the close wall
     local close_walls_filter = d2wall:le(2*config_args.object_base_size.ball/config_args.position_normalize_constant)  -- one ball diameter  (bsize,4)
-
-    -- print('close_walls_filter')
-    -- print(close_walls_filter)
 
     -- dot the wall's normal with your velocity vector
     -- what if two walls are equally close?
@@ -429,14 +409,7 @@ function wall_collision_filter(batch)
     -- [i,j] means the dot product of the velocity of the ith example with the jth wall
     -- you want the dot product to be negative, because the wall normal points away from the wall
     local dot_with_wall_normal = torch.mm(past_vel, wall_normals:t())  -- (bsize, 4) 
-
-    -- print('dot_with_wall_normal')
-    -- print(dot_with_wall_normal)
-
     local towards_wall_filter = dot_with_wall_normal:le(0)
-
-    -- print('towards_wall_filter')
-    -- print(towards_wall_filter)
 
     -- you want to select the examples for which you are close to wall after collision and you were going towards it the previous timestep
     -- it's ok if you don't actually hit the wall in the t+1 timestep. What we are checking is that it should be impossible for you
@@ -444,30 +417,14 @@ function wall_collision_filter(batch)
 
     local close_to_wall_and_was_going_towards_some_wall_filter = torch.cmul(close_walls_filter, towards_wall_filter)  -- (bsize, 4)
 
-    -- print('close_to_wall_and_was_going_towards_some_wall_filter')
-    -- print(close_to_wall_and_was_going_towards_some_wall_filter)
-
     -- this figures out which example in the batch has the potential for a wall collision.
     -- do not consider these examples when you do collision filtering, because these rule out the possibility of a ball collision
     local close_to_wall_and_was_going_towards_any_wall_filter = close_to_wall_and_was_going_towards_some_wall_filter:sum(2) -- (bsize)
 
-    -- print('close_to_wall_and_was_going_towards_any_wall_filter')
-    -- print(close_to_wall_and_was_going_towards_any_wall_filter)
-
     -- take the inverse. The 1s in the follow mask are the only examples where there exists a possibility of a ball collision
     local possible_object_collision = close_to_wall_and_was_going_towards_any_wall_filter:eq(0)  -- (bsize)
 
-    -- print('possible_object_collision')
-    -- print(possible_object_collision)
-
-
     -- do an AND with the collision filter. this will give you the object collision
     local object_collision_mask = torch.cmul(possible_object_collision, collision_mask)
-    -- print('collision_mask')
-    -- print(collision_mask)
-
-    -- print('object_collision_mask')
-    -- print(object_collision_mask)
-    -- assert(false)
     return object_collision_mask
 end
