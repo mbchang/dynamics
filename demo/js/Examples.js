@@ -2392,43 +2392,7 @@ if (!_isBrowser) {
     };
 
 })();
-(function() {
 
-    var World = Matter.World,
-        Body = Matter.Body,
-        Composites = Matter.Composites;
-
-    Example.newtonsCradle = function(demo) {
-
-        var Cradle = {}
-        Cradle.create = function(){
-            var self = {}
-            // these should not be mutated
-            self.params = {num_obj: options.numObj};
-            self.engine = demo.engine,
-            self.world = self.engine.world;
-
-            if (_isBrowser) {
-                var renderOptions = demo.render.options;
-                renderOptions.showVelocity = true;
-            }
-            return self;
-        }
-        Cradle.init = function(self){
-
-            var cradle = Composites.newtonsCradle(280, 100, self.params.num_obj, 30, 200);
-            World.add(self.world, cradle);
-            Body.translate(cradle.bodies[0], { x: -180, y: -100 });
-
-            // TODO: For each body in newton's cradle, label it an entity
-        }
-
-        var cradle = Cradle.create();
-        Cradle.init(cradle);
-        return cradle;
-    };
-
-})();
 (function() {
 
     var World = Matter.World,
@@ -2527,6 +2491,37 @@ if (!_isBrowser) {
             self.stable = Tower.is_stable_config(self.params.size*self.sizemul, self.world.bodies, self.coms)
             // console.log('is stable config', self.stable)
         }
+        Tower.init_from_trajectories = function(self, trajectories){
+            // stack upwards
+            for (let i = 0; i < self.params.num_obj; i ++) {
+                let body_opts = {label: "Entity", 
+                                 restitution: 0, 
+                                 mass: trajectories[i][1].mass, 
+                                 objtype: trajectories[i][1].objtype,
+                                 sizemul: trajectories[i][1].sizemul, 
+                                 friction: 1}
+               let pos = trajectories[i][1].position          
+                var block = Bodies.rectangle(pos.x, pos.y, 
+                                             self.params.size*body_opts.sizemul, 
+                                             3*self.params.size*body_opts.sizemul, 
+                                             body_opts)
+                Body.setAngle(block, trajectories[i][1].angle)
+                Body.setVelocity(block, { x: 0, y: 0 })
+
+                block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                block.render.strokeStyle = '#FFA500'// orange
+                block.render.lineWidth = 5
+
+                World.add(self.world, block)
+            }
+
+            // center of masses, with self.coms[0] being the com of the bottom block
+            self.coms = center_of_mass(self.world.bodies)
+            self.stable = Tower.is_stable_config(self.params.size*self.sizemul, self.world.bodies, self.coms)
+            // console.log('is stable config', self.stable)
+        }
+
+
         Tower.is_stable_config = function(block_width, bodies, coms) {
             // check if it is stable
             // A block will fall if and only if the center of mass 
@@ -2559,8 +2554,18 @@ if (!_isBrowser) {
         }
 
         var tower = Tower.create(cmd_options);
-        Tower.init(tower);
+        console.log('cmd_options')
+        console.log(cmd_options)
+        if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
+            !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
+            console.log('init')
+            Tower.init(tower);  // perhaps here you could do something like Mixed.init_from_trajectories
+        } else {
+            console.log('init_from_trajectories')
+            Tower.init_from_trajectories(tower, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+        }
         return tower;
+
     };
 
 
@@ -2630,6 +2635,44 @@ if (!_isBrowser) {
         var squaretower = SquareTower.create(cmd_options);
         SquareTower.init(squaretower);
         return SquareTower;
+    };
+
+})();
+
+(function() {
+
+    var World = Matter.World,
+        Body = Matter.Body,
+        Composites = Matter.Composites;
+
+    Example.newtonsCradle = function(demo) {
+
+        var Cradle = {}
+        Cradle.create = function(){
+            var self = {}
+            // these should not be mutated
+            self.params = {num_obj: options.numObj};
+            self.engine = demo.engine,
+            self.world = self.engine.world;
+
+            if (_isBrowser) {
+                var renderOptions = demo.render.options;
+                renderOptions.showVelocity = true;
+            }
+            return self;
+        }
+        Cradle.init = function(self){
+
+            var cradle = Composites.newtonsCradle(280, 100, self.params.num_obj, 30, 200);
+            World.add(self.world, cradle);
+            Body.translate(cradle.bodies[0], { x: -180, y: -100 });
+
+            // TODO: For each body in newton's cradle, label it an entity
+        }
+
+        var cradle = Cradle.create();
+        Cradle.init(cradle);
+        return cradle;
     };
 
 })();
