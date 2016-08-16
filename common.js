@@ -47,10 +47,9 @@ initialize_positions = function(num_obj, obj_radius, rand_pos_fn){
     return p0;
 }
 
-initialize_positions_variable_size = function(num_obj, sampled_sizes, rand_pos_fn){
-    var p0 = [];  // initial positions
 
-    // console.log(sampled_sizes)
+initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, rand_pos_fn) {
+    var p0 = [];  // initial positions
 
     // set positions
     for (var i = 0; i < num_obj; i++) {
@@ -71,27 +70,55 @@ initialize_positions_variable_size = function(num_obj, sampled_sizes, rand_pos_f
                         // console.log('min_dist',i,j,min_distance)
 
                         if (euc_dist(proposed_pos, p0[j]) < 1.25*min_distance) {
-                            // num_iters ++
-                            // if (num_iters > 100) {
-                            //     should_break = true
-                            //     break
-                            // }
+                            // console.log('num_iters', num_iters)
+                            num_iters ++
+                            if (num_iters > 10) {
+                                should_break = true
+                                console.log('num_iters', num_iters, '> threshold. should_break set to true')
+                                break  // you will return false then THis breaks out of the entire while loop!
+                            }
                             return true;
                         }
                     }
-                    // if (should_break) {
-                    //     break
-                    // }
-
                     return false;
                 })()){
+                if (should_break) {
+                    console.log('breaking')
+                    break
+                }
                 // keep trying until you get a match
+                // console.log('num_iters', num_iters, 'propose pos')
                 proposed_pos = rand_pos_fn();
+            }
+
+            if (should_break) {
+                console.log('broke. returning error signal')
+                return [false, []]
             }
             p0.push(proposed_pos);
         }
     }
-    return p0;
+    return [true, p0];
+}
+
+initialize_positions_variable_size = function(num_obj, sampled_sizes, rand_pos_fn){
+    let counter = 0
+    let tolerance = 1000
+    while (true) {
+        console.log('proposing trajectory. counter:', counter)
+        let result = initialize_positions_variable_size_limited(num_obj, sampled_sizes, rand_pos_fn)
+        if (result[0]) {
+            console.log('succeeded')
+            return result[1]  // succeeded
+        } 
+        // otherwise keep going
+        counter ++
+        if (counter > tolerance) {
+            console.log('Too hard to get a set of positions')
+            assert(false)
+            break
+        }
+    }
 }
 
 initialize_velocities = function(num_obj, max_v0) {

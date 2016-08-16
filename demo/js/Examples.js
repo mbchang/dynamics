@@ -2148,7 +2148,7 @@ if (!_isBrowser) {
         var balls = Balls.create(cmd_options);
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            console.log('init')
+            // console.log('init')
             Balls.init(balls);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
             console.log('init_from_trajectories')
@@ -2378,11 +2378,11 @@ if (!_isBrowser) {
         };
 
         var mixed = Mixed.create(cmd_options);
-        console.log('cmd_options')
-        console.log(cmd_options)
+        // console.log('cmd_options')
+        // console.log(cmd_options)
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            console.log('init')
+            // console.log('init')
             Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
             console.log('init_from_trajectories')
@@ -2554,11 +2554,11 @@ if (!_isBrowser) {
         }
 
         var tower = Tower.create(cmd_options);
-        console.log('cmd_options')
-        console.log(cmd_options)
+        // console.log('cmd_options')
+        // console.log(cmd_options)
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            console.log('init')
+            // console.log('init')
             Tower.init(tower);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
             console.log('init_from_trajectories')

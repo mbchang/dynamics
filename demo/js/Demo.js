@@ -476,7 +476,9 @@
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
             // bar.tick()
+            // console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
             console.log(s)
+
 
             // initialize trajectory conatiner
             for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
