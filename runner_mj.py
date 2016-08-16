@@ -85,9 +85,12 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n8_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'balls_n8_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rd'}"},
 
+            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
+            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_stable'}"},
+            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_unstable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_unstable'}"},
 
             # {'dataset_folders':"{'tower_n6_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rd'}"},
-            # {'dataset_folders':"{'tower_n6_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rd'}"},
+            # {'dataset_folders':"{'tower_n8_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n8_t120_ex25000_rd'}"},
             # {'dataset_folders':"{'tower_n10_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n10_t120_ex25000_rd'}"},
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rd','balls_n4_t60_ex50000_rd','balls_n5_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rd','balls_n7_t60_ex50000_rd','balls_n8_t60_ex50000_rd'}"},
@@ -95,8 +98,12 @@ def create_jobs(dry_run, mode, ext):
 
             # mixed
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
-            # {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},
+
+
+
 
             ]
 
@@ -111,14 +118,14 @@ def create_jobs(dry_run, mode, ext):
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             for im in [False]:
                                 # for veps in [0]:
-                                job['model'] = model
-                                job['nbrhd'] = nbrhd
-                                job['layers'] = layers
-                                job['lr'] = lr
-                                job['nbrhdsize'] = nbhrdsize
-                                job['im'] = im
-                                # job['val_eps'] = veps
-                                actual_jobs.append(copy.deepcopy(job))
+                                    job['model'] = model
+                                    job['nbrhd'] = nbrhd
+                                    job['layers'] = layers
+                                    job['lr'] = lr
+                                    job['nbrhdsize'] = nbhrdsize
+                                    job['im'] = im
+                                    # job['val_eps'] = veps
+                                    actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 
@@ -134,19 +141,19 @@ def create_jobs(dry_run, mode, ext):
             if isinstance(job[flag], bool):
                 if job[flag]:
                     jobname = jobname + "_" + flag
-                    if not (mode == 'sim' or mode == 'minf'):
+                    if not (mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf'):
                         flagstring = flagstring + " -" + flag
                 else:
                     print "WARNING: Excluding 'False' flag " + flag
             else:
                 if flag in ['dataset_folders', 'test_dataset_folders']:
                     # eval.lua does not have a 'dataset_folders' flag
-                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders'):
+                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders'):
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')                        
                 else:
                     if flag not in ['name']:
                         jobname = jobname + "_" + flag  + str(job[flag])
-                        if (mode == 'sim' or mode == 'minf') and flag not in ['test_dataset_folders', 'name']:
+                        if (mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf') and flag not in ['test_dataset_folders', 'name']:
                             pass
                         else:
                             flagstring = flagstring + " -" + flag + " " + str(job[flag])
@@ -155,7 +162,7 @@ def create_jobs(dry_run, mode, ext):
 
         if mode == 'exp' or mode == 'expload':
             prefix = 'th main.lua'
-        elif mode == 'sim' or mode == 'minf':
+        elif mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf':
             prefix = 'th eval.lua'
         else:
             assert False, 'Unknown mode'
@@ -187,6 +194,12 @@ def sim(dry_run):
 def minf(dry_run):
     create_jobs(dry_run=dry_run, mode='minf', ext='_minf')
 
+def sinf(dry_run):
+    create_jobs(dry_run=dry_run, mode='sinf', ext='_sinf')
+
+def oinf(dry_run):
+    create_jobs(dry_run=dry_run, mode='oinf', ext='_oinf')
+
 def to_slurm(jobname, jobcommand, dry_run):
     # jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
     # jobname_formatted2 = jobname_formatted.replace('\\"','')
@@ -211,7 +224,11 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-run_experiment(dry_run)
+# run_experiment(dry_run)
 # run_experimentload(dry_run)
 # sim(dry_run)
 # minf(dry_run)
+# sinf(dry_run)
+oinf(dry_run)
+
+

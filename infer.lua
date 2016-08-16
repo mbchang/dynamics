@@ -20,24 +20,28 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
+        -- distance_threshold = 2*config_args.object_base_size.ball
+        distance_threshold = config_args.object_base_size.ball  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
+        distance_threshold = config_args.object_base_size.ball  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
         si_indices = tablex.deepcopy(config_args.si.oid)
         si_indices[2] = si_indices[2]-1  -- ignore jenga block
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
+        distance_threshold = config_args.object_base_size.ball  -- the smallest side of the obstacle. This makes a difference
     end
 
     local accuracy
     if method == 'backprop' then 
         accuracy = backprop2input(model, dataloader, params_, hypotheses, si_indices, cf)
     elseif method == 'max_likelihood' then
-        accuracy = max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
+        accuracy = max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     elseif method == 'max_likelihood_context' then
-        accuracy = max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf)
+        accuracy = max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     end
     return accuracy
 end
@@ -179,13 +183,9 @@ function binarize(tensor)
 end
 
 
-function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, obstacle_mask)
+function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
     if cf then 
-        -- local collision_filter_mask = collision_filter(batch)
-        -- print(collision_filter_mask)
-        local collision_filter_mask = wall_collision_filter(batch)
-        -- print(collision_filter_mask)
-        -- assert(false)
+        local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
 
         if obstacle_mask then
             collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
@@ -241,15 +241,12 @@ function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_leng
     return best_hypotheses
 end
 
-function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
+function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-
-        -- TODO: here compute a mask for whether you collide with another ball
-
 
         local hypothesis_length = si_indices[2]-si_indices[1]+1
         local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, 0)
@@ -257,7 +254,7 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf)
         -- need to construct true hypotheses based on this_past, hypotheses as parameters
         local this_past = batch[1]:clone()
         local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
-        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf)
+        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold)
 
         collectgarbage()
     end
@@ -282,8 +279,12 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
 
         for context_id = 1, num_context do
             -- here get the obstacle mask
-            local obstacle_index = config_args.si.oid[1]+1
-            local obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle
+            local obstacle_index, obstacle_mask
+            if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
+                obstacle_index = config_args.si.oid[1]+1
+                obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle
+                print('hey')
+            end
 
             local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
             -- now that you have best_hypothesis, compare best_hypotheses with truth
@@ -292,7 +293,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
 
             -- ground truth: (bsize, hypothesis_length)
-            num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, obstacle_mask)
+            num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
             collectgarbage()
         end 
     end
@@ -345,7 +346,7 @@ end
 
 
 -- zero out collisions with walls
-function wall_collision_filter(batch)
+function wall_collision_filter(batch, distance_threshold)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
     -- I could compute manual dot product
@@ -375,6 +376,13 @@ function wall_collision_filter(batch)
     local px = config_args.si.px
     local py = config_args.si.py
     local future_pos = torch.squeeze(future[{{},{},{px, py}}],2)  -- see where the ball is at the tiem of collision  (bsize, 2)
+    local past_pos = torch.squeeze(past[{{},{-1},{px,py}}], 2)  -- before collision
+
+    -- print(collision_mask)
+    -- print(future_pos*config_args.position_normalize_constant)
+    -- print(past_pos*config_args.position_normalize_constant)
+    -- print('>>>>>>>>>>>>>>>>>>>>')
+    -- assert(false)
 
     -- now let's check where the wall is
     local leftwall = 0
@@ -391,15 +399,24 @@ function wall_collision_filter(batch)
 
     -- find the nearest wall. this can be found with a simple difference of coordinates
     local future_pos_components = torch.cat({future_pos[{{},{1}}], future_pos[{{},{2}}], future_pos[{{},{1}}], future_pos[{{},{2}}]})  -- (bsize, 4) {x,y,x,y}
+    local past_pos_components = torch.cat({past_pos[{{},{1}}], past_pos[{{},{2}}], past_pos[{{},{1}}], past_pos[{{},{2}}]})
     -- local d2leftwall = torch.abs(past_pos[1] - leftwall) -- x
     -- local d2topwall = torch.abs(past_pos[2]- topwall) -- y
     -- local d2rightwall = torch.abs(past_pos[1] - rightwall) -- x
     -- local d2bottomwall = torch.abs(past_pos[2] -bottomwall) --y
     local d2wall = torch.abs(future_pos_components-walls:view(1,4):expandAs(future_pos_components))  -- works  (bisze, 4)
+    local d2wallpast = torch.abs(past_pos_components-walls:view(1,4):expandAs(past_pos_components))
 
-    -- filter out the walls that are > 2*obj_radius away. Perhaps do this in a vector form
+    -- filter out the walls that are > distance_threshold away. Perhaps do this in a vector form
     -- select the close wall
-    local close_walls_filter = d2wall:le(2*config_args.object_base_size.ball/config_args.position_normalize_constant)  -- one ball diameter  (bsize,4)
+    -- ultimately we want to guarantee that we don't collide with a wall
+    local close_walls_filter = d2wall:le(distance_threshold/config_args.position_normalize_constant)  -- one ball diameter  (bsize,4)
+    close_walls_filter:add(d2wallpast:le(distance_threshold/config_args.position_normalize_constant))  -- filter distance of past as well  -- wait if I add this in I get more examples?
+    close_walls_filter:clamp(0,1)
+    -- so :cmul does: filtering out the past will have < ones in the close_wall_filters, which means >= ones in the obstacle filter
+    -- what that means is that we will kick out the ones that have past AND future by the walls. 
+    -- but actually we want the OR. We want the ones whose past OR future are in the walls. Or do we?
+
 
     -- dot the wall's normal with your velocity vector
     -- what if two walls are equally close?

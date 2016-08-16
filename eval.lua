@@ -616,6 +616,8 @@ elseif mp.mode == 'minf' then
     mass_inference()
 elseif mp.mode == 'sinf' then
     size_inference()
+elseif mp.mode == 'oinf' then
+    objtype_inference()
 elseif mp.mode == 'b2i' then
     predict_b2i()
 elseif mp.mode == 'pred' then

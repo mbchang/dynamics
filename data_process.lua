@@ -141,7 +141,7 @@ function data_process:unnormalize(normalized_trajectories)
     unnormalized[{{},{},{},{a, av}}] = unnormalized[{{},{},{},{a, av}}]*self.anc
 
     -- transforms [-pi, pi] --> [0, 2pi]
-    normalized[{{},{},{},{a, av}}] = self:wrap_2pi(normalized[{{},{},{},{a, av}}])
+    unnormalized[{{},{},{},{a, av}}] = self:wrap_2pi(unnormalized[{{},{},{},{a, av}}])
 
     return unnormalized
 end
