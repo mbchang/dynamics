@@ -2067,7 +2067,7 @@ if (!_isBrowser) {
 
             World.add(self.engine.world, world_border)  // its parent is a circular reference!
 
-
+            self.group = Body.nextGroup(true);
 
             return self
         };
@@ -2090,7 +2090,7 @@ if (!_isBrowser) {
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
                                  objtype: "ball",
-                                 sizemul: 1
+                                 sizemul: 1,
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2123,7 +2123,8 @@ if (!_isBrowser) {
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
-                                 sizemul: trajectories[i][1].sizemul
+                                 sizemul: trajectories[i][1].sizemul,
+                                 collisionFilter: {group:self.group} // remove collision constraints
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2247,6 +2248,8 @@ if (!_isBrowser) {
 
             World.add(self.engine.world, world_border)  // its parent is a circular reference!
 
+            self.group = Body.nextGroup(true);
+
             return self
         };
 
@@ -2339,7 +2342,8 @@ if (!_isBrowser) {
                                  inverseInertia: 0,  // rotation
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
-                                 sizemul: trajectories[i][1].sizemul
+                                 sizemul: trajectories[i][1].sizemul,
+                                 collisionFilter: {group:self.group} // remove collision constraints
                              }
                     if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                         body_opts.friction = 0;
@@ -2409,7 +2413,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 10
+                options.numObj = 8
             }
 
             self.params = {num_obj: options.numObj,
@@ -2439,6 +2443,8 @@ if (!_isBrowser) {
             ]);
 
             World.add(self.engine.world, world_border)  // its parent is a circular reference!
+
+            self.group = Body.nextGroup(true);
 
             return self;
         }
@@ -2494,13 +2500,16 @@ if (!_isBrowser) {
         Tower.init_from_trajectories = function(self, trajectories){
             // stack upwards
             for (let i = 0; i < self.params.num_obj; i ++) {
+                // if (i==1) {
                 let body_opts = {label: "Entity", 
                                  restitution: 0, 
                                  mass: trajectories[i][1].mass, 
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul, 
-                                 friction: 1}
-               let pos = trajectories[i][1].position          
+                                 friction: 1,
+                                collisionFilter: {group:self.group} // remove collision constraints
+                             }
+                let pos = trajectories[i][1].position          
                 var block = Bodies.rectangle(pos.x, pos.y, 
                                              self.params.size*body_opts.sizemul, 
                                              3*self.params.size*body_opts.sizemul, 
@@ -2508,11 +2517,19 @@ if (!_isBrowser) {
                 Body.setAngle(block, trajectories[i][1].angle)
                 Body.setVelocity(block, { x: 0, y: 0 })
 
-                block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                if (i==1) {
+                    block.render.fillStyle = 'black'
+                } else {
+                    block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                }
+                // block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+
+
                 block.render.strokeStyle = '#FFA500'// orange
                 block.render.lineWidth = 5
 
                 World.add(self.world, block)
+                // }
             }
 
             // center of masses, with self.coms[0] being the com of the bottom block

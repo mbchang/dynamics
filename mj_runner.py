@@ -40,17 +40,17 @@ def create_jobs(dry_run, ext):
     toch_root = '/om/user/mbchang/physics/lua'
 
     # world parameters
-    num_objs = [6]  # how far should we go? Let's say the max is 20. Should we include 1?
+    num_objs = [4]  # how far should we go? Let's say the max is 20. Should we include 1?
     friction = [False]
     gravity = [False]
     masses = [False]  # TODO
-    sizes = [True]
+    sizes = [False]
     num_obstacles = [False]
-    envs = ['mixed']
+    envs = ['tower']
 
     # mj data generation
-    steps = 60
-    samples = 50000
+    steps = 120
+    samples = 25000
 
     # generate json files
     generator = 'node ' + mj_root + 'demo/js/Demo.js'
@@ -113,7 +113,7 @@ def create_jobs(dry_run, ext):
             to_slurm(jobname + ext, jobcommand, dry_run)
 
 def generate_data(dry_run):
-    create_jobs(dry_run=dry_run, ext='js2')  # the js extension is for positionIterations and velocityIterations = 100, and runner.isFixed
+    create_jobs(dry_run=dry_run, ext='stable_js2')  # the js extension is for positionIterations and velocityIterations = 100, and runner.isFixed
 
 def to_slurm(jobname, jobcommand, dry_run):
     print jobname

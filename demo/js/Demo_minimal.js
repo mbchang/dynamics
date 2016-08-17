@@ -146,7 +146,7 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[2]  // extra 0 for batch mode
+        var trajectories = data[8]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
         config.trajectories = trajectories
@@ -156,7 +156,13 @@
         // here you have to 
         console.log(config)
 
-        var i = 0
+        console.log(num_steps)
+        if (config.env=='tower') {
+            var i = 2  // if I set i to < 2 then I get very weird behavior
+        } else {
+            var i = 0
+        }
+
         function f() {
             console.log( 'i', i );
             var entities = Composite.allBodies(demo.engine.world)
@@ -169,7 +175,7 @@
             for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
-                body.render.fillStyle = mass_colors[trajectories[id][i].mass]//'#4ECDC4'
+                // body.render.fillStyle = mass_colors[trajectories[id][i].mass]//'#4ECDC4'
                 if (i < config.num_past) {
                     body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
                 } else {
@@ -178,25 +184,38 @@
                 body.render.lineWidth = 5
 
                 console.log('set position')
+                // let eps = 0.0001  // to prevent bounce-back
+
 
                 Body.setPosition(body, trajectories[id][i].position)
-                Body.setVelocity(body, trajectories[id][i].velocity)
+
+
+                // if (id == 0) {
+                //     Body.setPosition(body, trajectories[id][i].position)
+                // }
+
+                // Body.setVelocity(body, trajectories[id][i].velocity)
 
                 // console.log(trajectories[id][i].position)
                 // console.log(trajectories[id][i].velocity)
 
                 Body.setAngle(body, trajectories[id][i].angle)
                 if (trajectories[id][i].mass == 1) {
-                    console.log(id)
-                    console.log(trajectories[id][i].velocity)
-                    console.log(trajectories[id][i].position)
+                    if (id==0) {
+                        console.log(id)
+                        console.log(trajectories[id][i].velocity)
+                        console.log(body.velocity)
+                        console.log(trajectories[id][i].position)
+                        console.log(body.position)
+                        console.log(body.angle)
+                    }
                 }
             }
 
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 10 );
+                setTimeout( f, 50 );
             }
         }
         f();
