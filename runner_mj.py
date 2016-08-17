@@ -85,9 +85,9 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n8_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'balls_n8_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rd'}"},
 
-            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
-            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_stable'}"},
-            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_unstable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_unstable'}"},
+            {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
+            {'dataset_folders':"{'tower_n4_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_stable'}"},
+            {'dataset_folders':"{'tower_n4_t120_ex25000_rd_unstable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_unstable'}"},
 
             # {'dataset_folders':"{'tower_n6_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rd'}"},
             # {'dataset_folders':"{'tower_n8_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n8_t120_ex25000_rd'}"},
@@ -99,7 +99,7 @@ def create_jobs(dry_run, mode, ext):
             # mixed
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},
 
 
@@ -117,14 +117,14 @@ def create_jobs(dry_run, mode, ext):
                     for layers in [3]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             for im in [False]:
-                                # for veps in [0]:
+                                for veps in [0]:
                                     job['model'] = model
                                     job['nbrhd'] = nbrhd
                                     job['layers'] = layers
                                     job['lr'] = lr
                                     job['nbrhdsize'] = nbhrdsize
                                     job['im'] = im
-                                    # job['val_eps'] = veps
+                                    job['val_eps'] = veps
                                     actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
@@ -226,9 +226,9 @@ def to_slurm(jobname, jobcommand, dry_run):
 dry_run = '--rd' not in sys.argv # real deal
 # run_experiment(dry_run)
 # run_experimentload(dry_run)
-# sim(dry_run)
+sim(dry_run)
 # minf(dry_run)
 # sinf(dry_run)
-oinf(dry_run)
+# oinf(dry_run)
 
 
