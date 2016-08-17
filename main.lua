@@ -57,7 +57,7 @@ cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-val_window', 10, 'for testing convergence')
-cmd:option('-val_eps', 1.5e-5, 'for testing convergence')  -- 1e-5
+cmd:option('-val_eps', 1e-6, 'for testing convergence')  -- 1e-5
 cmd:option('-im', false, 'infer mass')
 cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
 
