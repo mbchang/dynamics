@@ -21,18 +21,18 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
         -- distance_threshold = 2*config_args.object_base_size.ball
-        distance_threshold = config_args.object_base_size.ball  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
-        distance_threshold = config_args.object_base_size.ball  -- the smallest side of the obstacle. This makes a difference
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
         si_indices = tablex.deepcopy(config_args.si.oid)
         si_indices[2] = si_indices[2]-1  -- ignore jenga block
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
-        distance_threshold = config_args.object_base_size.ball  -- the smallest side of the obstacle. This makes a difference
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     end
 
     local accuracy
@@ -283,7 +283,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
                 obstacle_index = config_args.si.oid[1]+1
                 obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle
-                print('hey')
+                -- print('hey')
             end
 
             local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
