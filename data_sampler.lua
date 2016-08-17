@@ -39,7 +39,14 @@ function datasampler.create(dataset_name, args)
     setmetatable(self, datasampler)
     self.dataset_folder=args.dataset_folder
     self.dataset_name=dataset_name
-    self.maxwinsize=args.maxwinsize
+
+    if not(string.find(self.dataset_folder, 'tower') == nil) then
+        self.maxwinsize = config_args.maxwinsize_long
+    else
+        self.maxwinsize = config_args.maxwinsize
+    end
+
+    -- self.maxwinsize=args.maxwinsize
     self.winsize=args.winsize
     self.num_past=args.num_past
     self.num_future=args.num_future

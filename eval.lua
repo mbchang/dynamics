@@ -52,7 +52,7 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
-    mp.data_root = 'mj_data'
+    mp.data_root = 'mj_data'    
     mp.logs_root = 'logs'
     mp.winsize = 3 -- total number of frames
     mp.num_past = 2 --10

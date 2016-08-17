@@ -17,7 +17,7 @@ local args = {
 
         -- datasaver
         velocity_normalize_constant=60,
-        angle_normalize_constant=2*math.pi, -- it should be 2*math.pi if you are in the range [0, 2pi]
+        angle_normalize_constant=math.pi, -- it should be 2*math.pi if you are in the range [0, 2pi]
         relative=true,
         masses={1.0, 5.0, 25.0, 1e30},  -- for now only the first two are used
         rsi={px=1, py=2, vx=3, vy=4, a=5, av=6, m=7, oid=8, os=9, g=10, f=11, p=12},  -- raw state indicies
