@@ -203,11 +203,14 @@
                 if (trajectories[id][i].mass == 1) {
                     if (id==0) {
                         console.log(id)
-                        console.log(trajectories[id][i].velocity)
-                        console.log(body.velocity)
-                        console.log(trajectories[id][i].position)
-                        console.log(body.position)
-                        console.log(body.angle)
+                        console.log('traj vel', trajectories[id][i].velocity)
+                        console.log('bod vel', body.velocity)
+                        console.log('traj pos', trajectories[id][i].position)
+                        console.log('bod pos', body.position)
+                        console.log('traj ang', trajectories[id][i].angle)
+                        console.log('bod ang', body.angle)
+                        console.log('traj angvel', trajectories[id][i].angularVelocity)
+                        console.log('bod angvel', body.angularVelocity)
                     }
                 }
             }

@@ -44,13 +44,14 @@ def create_jobs(dry_run, ext):
     friction = [False]
     gravity = [False]
     masses = [False]  # TODO
-    sizes = [False]
+    sizes = [True]
     num_obstacles = [False]
-    envs = ['tower']
+    envs = ['mixed']
+    drastic_size = [True]
 
     # mj data generation
-    steps = 120
-    samples = 25000
+    steps = 60
+    samples = 50000
 
     # generate json files
     generator = 'node ' + mj_root + 'demo/js/Demo.js'
@@ -62,21 +63,23 @@ def create_jobs(dry_run, ext):
         for m in masses:
             for z in sizes:
                 for o in num_obstacles:
-                    for g in gravity:
-                        for f in friction:
-                            for e in envs:
-                                job = OrderedDict()
-                                job['e'] = e
-                                job['n'] = n
-                                job['t'] = steps
-                                job['s'] = samples
-                                job['m'] = m
-                                job['g'] = g
-                                job['f'] = f 
-                                job['z'] = z
-                                job['o'] = o
-                                jobs.append(job)
-                                # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
+                    for d in drastic_size:
+                        for g in gravity:
+                            for f in friction:
+                                for e in envs:
+                                    job = OrderedDict()
+                                    job['e'] = e
+                                    job['n'] = n
+                                    job['t'] = steps
+                                    job['s'] = samples
+                                    job['m'] = m
+                                    job['g'] = g
+                                    job['f'] = f 
+                                    job['z'] = z
+                                    job['o'] = o
+                                    job['d'] = d
+                                    jobs.append(job)
+                                    # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
 
     if dry_run:
         print "NOT starting jobs:"
@@ -113,7 +116,7 @@ def create_jobs(dry_run, ext):
             to_slurm(jobname + ext, jobcommand, dry_run)
 
 def generate_data(dry_run):
-    create_jobs(dry_run=dry_run, ext='stable_js2')  # the js extension is for positionIterations and velocityIterations = 100, and runner.isFixed
+    create_jobs(dry_run=dry_run, ext='_js2')  # the js extension is for positionIterations and velocityIterations = 100, and runner.isFixed
 
 def to_slurm(jobname, jobcommand, dry_run):
     print jobname

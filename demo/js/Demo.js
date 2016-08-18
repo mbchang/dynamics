@@ -627,6 +627,9 @@
         if (sim_options.variableObstacles) {
             experiment_string += '_o' 
         }
+        if (sim_options.drasticSize) {
+            experiment_string += '_dras' 
+        }
         if (sim_options.gravity) {
             experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
         }
@@ -792,6 +795,12 @@
                     alias: 'o',
                     type: 'Boolean',
                     description: 'true if number of obstacles is variable',
+                    required: false
+                }, {
+                    option: 'drasticSize',
+                    alias: 'd',
+                    type: 'Boolean',
+                    description: 'true if size difference is drastic',
                     required: false
                 }, {
                     option: 'image',
