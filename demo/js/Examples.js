@@ -2124,7 +2124,7 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 collisionFilter: {group:self.group} // remove collision constraints
+                                 // collisionFilter: {group:self.group} // remove collision constraints  comment out because otherwise they may overlap.
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2177,7 +2177,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 4
+                options.numObj = 6
                 options.variableMass = false
                 options.variableSize = true
                 options.variableObstacles = true
@@ -2239,7 +2239,7 @@ if (!_isBrowser) {
 
             if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
                 if (self.params.drasticSize) {
-                    self.possible_sizes = [1/3, 3]
+                    self.possible_sizes = demo.config.drastic_sizes
                 } else {
                     self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
                 }
@@ -2355,7 +2355,7 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 collisionFilter: {group:self.group} // remove collision constraints
+                                 // collisionFilter: {group:self.group} // remove collision constraints
                              }
                     if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                         body_opts.friction = 0;
@@ -2428,7 +2428,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 4
+                options.numObj = 6
                 options.variableMass = false
                 options.variableSize = true
                 options.variableObstacles = true
@@ -2452,7 +2452,7 @@ if (!_isBrowser) {
             console.assert(self.params.variableObstacles)
 
             // or, a more sophisticated scheme:
-            console.assert(self.params.num_obj <= 6) // six is the max number that the window size can handle.
+            console.assert(self.params.num_obj <= 4) // four is the max number that the window size can handle.
             self.params.num_obstacles = Math.floor(Math.random()*self.params.num_obj)  // can have 0 to n-1 obstacles
             self.params.num_invis = Math.floor(Math.random()*(self.params.num_obj-self.params.num_obstacles))  // can have 0 to n-1 obstacles
             self.params.num_balls = self.params.num_obj - self.params.num_obstacles - self.params.num_invis // guarantee at least one ball.
@@ -2489,7 +2489,7 @@ if (!_isBrowser) {
 
             if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
                 if (self.params.drasticSize) {
-                    self.possible_sizes = [1/3, 3]
+                    self.possible_sizes = demo.config.drastic_sizes
                 } else {
                     self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
                 }
@@ -2532,7 +2532,9 @@ if (!_isBrowser) {
                 sampled_sizes.push(1*self.params.obj_radius)
             }
             for (let i = self.params.num_balls; i < self.params.num_balls+self.params.num_invis; i ++){
-                sampled_sizes.push(1*self.params.invis_side*0.5*Math.sqrt(2))
+                let short_side = self.s[i-(self.params.num_balls)]*self.params.invis_side
+                let long_side = 3*self.s[i-(self.params.num_balls)]*self.params.invis_side
+                sampled_sizes.push(Math.sqrt(Math.pow(short_side,2) + Math.pow(long_side,2)))  // wrong because iti s a rectangle!
             }
             // console.log(sampled_sizes)
             for (let i = self.params.num_balls+self.params.num_invis; i < self.params.num_obj; i ++) {
@@ -2588,7 +2590,7 @@ if (!_isBrowser) {
                                      mass: 1e30, // some really huge mass
                                      label: "Entity",
                                      objtype: "block",
-                                     sizemul: 3,  // sizemul is wrong!!!!!!!!!!!!!!!!
+                                     sizemul: demo.config.drastic_sizes[demo.config.drastic_sizes.length-1],  // sizemul is wrong!!!!!!!!!!!!!!!!
                                      collisionFilter: {
                                         category: self.invis_category,
                                         mask: self.invis_category
