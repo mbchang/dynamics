@@ -2428,7 +2428,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 6
+                options.numObj = 4
                 options.variableMass = false
                 options.variableSize = true
                 options.variableObstacles = true
@@ -2532,7 +2532,7 @@ if (!_isBrowser) {
                 sampled_sizes.push(1*self.params.obj_radius)
             }
             for (let i = self.params.num_balls; i < self.params.num_balls+self.params.num_invis; i ++){
-                sampled_sizes.push(1*self.params.invis_side**0.5*Math.sqrt(2))
+                sampled_sizes.push(1*self.params.invis_side*0.5*Math.sqrt(2))
             }
             // console.log(sampled_sizes)
             for (let i = self.params.num_balls+self.params.num_invis; i < self.params.num_obj; i ++) {
@@ -2588,7 +2588,7 @@ if (!_isBrowser) {
                                      mass: 1e30, // some really huge mass
                                      label: "Entity",
                                      objtype: "block",
-                                     sizemul: 2,  // sizemul is wrong!!!!!!!!!!!!!!!!
+                                     sizemul: 3,  // sizemul is wrong!!!!!!!!!!!!!!!!
                                      collisionFilter: {
                                         category: self.invis_category,
                                         mask: self.invis_category
@@ -2639,7 +2639,11 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 collisionFilter: {group:self.group} // remove collision constraints
+                                 collisionFilter: {
+                                    category: self.solid_category,
+                                    mask: self.solid_category
+                                 },
+                                 // collisionFilter: {group:self.group} // remove collision constraints
                              }
                     if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                         body_opts.friction = 0;
@@ -2659,13 +2663,39 @@ if (!_isBrowser) {
 
                     // add body to world
                     World.add(self.engine.world, body);
-                } else if (trajectories[i][1].objtype=='obstacle')  {
+                } else if (trajectories[i][1].objtype=='block')  {
                     let body_opts = {restitution: 1,
                                      isStatic:true,
                                      mass: trajectories[i][1].mass, // some really huge mass
                                      label: "Entity",
                                      objtype: trajectories[i][1].objtype,
-                                     sizemul: trajectories[i][1].sizemul
+                                     sizemul: trajectories[i][1].sizemul,
+                                     collisionFilter: {
+                                        category: self.invis_category,
+                                        mask: self.invis_category
+                                     },
+                                     // collisionFilter: {group:self.group}
+                                 }
+                    let pos = trajectories[i][1].position
+                    let obstacle = Bodies.rectangle(pos.x, pos.y, 
+                                                    self.params.invis_side*body_opts.sizemul, 
+                                                    self.params.invis_side*3*body_opts.sizemul, 
+                                                    body_opts)
+                    World.add(self.engine.world, obstacle);
+                }
+
+                else if (trajectories[i][1].objtype=='obstacle')  {
+                    let body_opts = {restitution: 1,
+                                     isStatic:true,
+                                     mass: trajectories[i][1].mass, // some really huge mass
+                                     label: "Entity",
+                                     objtype: trajectories[i][1].objtype,
+                                     sizemul: trajectories[i][1].sizemul,
+                                     collisionFilter: {
+                                        category: self.solid_category,
+                                        mask: self.solid_category
+                                     },
+                                     // collisionFilter: {group:self.group}
                                  }
                     let pos = trajectories[i][1].position
                     let obstacle = Bodies.rectangle(pos.x, pos.y, 

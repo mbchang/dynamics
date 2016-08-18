@@ -49,10 +49,10 @@ initialize_positions = function(num_obj, obj_radius, rand_pos_fn){
 
 
 initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, rand_pos_fn) {
-    var p0 = [];  // initial positions
+    let p0 = [];  // initial positions
 
     // set positions
-    for (var i = 0; i < num_obj; i++) {
+    for (let i = 0; i < num_obj; i++) {
         let num_iters = 0
         let should_break = false
 
@@ -60,7 +60,7 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
         if (p0.length == 0) {  // assume that num_obj > 0
             p0.push(rand_pos_fn());
         } else {
-            var proposed_pos = rand_pos_fn();
+            let proposed_pos = rand_pos_fn();
             // true if overlaps
             while ((function(){
                     for (var j = 0; j < p0.length; j++) {
@@ -72,7 +72,7 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
                         if (euc_dist(proposed_pos, p0[j]) < 1.25*min_distance) {
                             // console.log('num_iters', num_iters)
                             num_iters ++
-                            if (num_iters > 10) {
+                            if (num_iters > 20) {
                                 should_break = true
                                 console.log('num_iters', num_iters, '> threshold. should_break set to true')
                                 break  // you will return false then THis breaks out of the entire while loop!
