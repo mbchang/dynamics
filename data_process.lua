@@ -42,7 +42,6 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.oid_ids = args.oid_ids
-    self.obj_sizes = args.object_sizes
     self.boolean = args.boolean
     self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
     self.bsize = args.batch_size
@@ -57,6 +56,12 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
         self.maxwinsize = args.maxwinsize_long
     else
         self.maxwinsize = args.maxwinsize
+    end
+
+    if not(string.find(self.jsonfolder, '_dras_') == nil) then
+        self.obj_sizes = args.drastic_object_sizes
+    else 
+        self.obj_sizes = args.object_sizes
     end
 
     return self
@@ -149,6 +154,8 @@ end
 
 function data_process:num2onehot(value, categories)
     local index = torch.find(torch.Tensor(categories), value)[1]
+    -- print(value)
+    -- print(categories)
     assert(not(index == nil))
     local onehot = torch.zeros(#categories)
     onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
@@ -264,7 +271,7 @@ function data_process:expand_for_each_object(unfactorized)
             local ball_index = self.si.oid[1]
             local obstacle_index = self.si.oid[1]+1
             local block_index = self.si.oid[2]
-            if this[{{},{},{},{obstacle_index}}]:sum() == 0 then -- only do it if the particle is not stationary obstacle
+            if this[{{},{},{},{obstacle_index}}]:sum() == 0 or (not(string.find(self.jsonfolder, 'invisible') == nil) and this[{{},{},{},{block_index}}]:sum() == 0) then -- only do it if the particle is not stationary obstacle
                 this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
                 local other
                 if i == 1 then

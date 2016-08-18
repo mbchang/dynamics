@@ -60,6 +60,8 @@ cmd:option('-val_window', 10, 'for testing convergence')
 cmd:option('-val_eps', 1e-6, 'for testing convergence')  -- 1e-5
 cmd:option('-im', false, 'infer mass')
 cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
+cmd:option('-vlambda', 100, 'velocity penalization')
+cmd:option('-lambda', 100, 'angle penalization')
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
@@ -187,6 +189,8 @@ function inittrain(preload, model_path, iters)
                               shuffle=config_args.shuffle,
                               cuda=mp.cuda
                             }
+
+
     -- test_args is the same but with a different dataset_folder
     local test_args = tablex.deepcopy(data_loader_args)
     test_args.dataset_folders = mp.test_dataset_folders

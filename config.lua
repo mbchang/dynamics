@@ -30,6 +30,7 @@ local args = {
         subdivide=true,
         object_base_size={ball=60, obstacle=80, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
         object_sizes={2/3, 1, 3/2}, -- multiplies object_base_size
+        drastic_object_sizes={1/3, 1, 3}, -- multiplies object_base_size
         oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
         roids = {'ball', 'obstacle', 'block'},  -- reverse oids
         oid_ids = {1,2,3},
