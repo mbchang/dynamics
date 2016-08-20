@@ -269,7 +269,9 @@ function data_process:expand_for_each_object(unfactorized)
     local block_index = self.si.oid[2]
 
     local obj_index
-    if not(string.find(self.jsonfolder, 'balls') == nil) then
+    if not(string.find(self.jsonfolder, 'balls') == nil) or 
+            not(string.find(self.jsonfolder, 'mixed') == nil) or 
+            not(string.find(self.jsonfolder, 'invisible') == nil)then
         obj_index = self.si.oid[1]
     elseif not(string.find(self.jsonfolder, 'tower') == nil) then
         obj_index = self.si.oid[2]
@@ -398,7 +400,7 @@ function data_process:condense(focus, context)
 end
 
 -- data:
-function data_process:split2batches(data)
+function data_process:split2batches(data, truncate)
     print(data:size())
     local num_examples = data:size(1)
     -- here you should split through time
@@ -407,6 +409,15 @@ function data_process:split2batches(data)
     print('Splitting '..num_examples..' examples into '..num_chunks..
             ' batches of size at most '..self.bsize)
     local result = data:clone():split(self.bsize,1)
+    print(result)
+    if truncate then
+        if not(result[#result]:size(1) == self.bsize) then
+            print('Last element not equal to self.bsize. Going to take that out.')
+            print(result[#result]:size())
+        end
+        result = plt.sub(result, 1, #result-1)
+        print(result)
+    end
     return result
 end
 
@@ -567,9 +578,9 @@ function data_process:create_datasets_batches()
         assert(num_examples == total_samples*num_obj)
     end
     print('Total number of examples: '..num_examples)
-    local num_batches = total_samples*num_obj/self.bsize
-    print(num_obj..' objects '..num_steps..' steps '..total_samples..
-        ' samples yields '..num_batches..' batches')
+
+    local num_batches = math.floor(num_examples/self.bsize)
+    print('Number of batches:'..num_batches..' with batch size '..self.bsize)
     local num_train, num_val, num_test = self:split_datasets_sizes(num_batches)
     print('train: '..num_train..' val: '..num_val..' test: '..num_test)
 
@@ -627,13 +638,16 @@ function data_process:create_datasets_batches()
     end
     -- now concatenate all the leftover_batches. They had better be a multiple of self.bsize
     leftover_examples = join_table_of_tables(leftover_examples)
+    -- leftover_examples = join_table_of_tables({unpack(leftover_examples), unpack(leftover_examples)})  -- for debugging
+
     print('Merged leftover examples:')
     print(leftover_examples)
     if #leftover_examples > 0 then
-        assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))
-        assert(leftover_examples[1]:size(1) % self.bsize == 0)
-        assert(self:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
-        local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2])
+        assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))  -- check that focus and context have same number of batches
+        -- assert(leftover_examples[1]:size(1) % self.bsize == 0)  -- this is taken care of by our truncation = true below
+        -- assert(self:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
+        local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2], true)  -- guaranteed to output batches of self.bsize
+        assert(self:check_overflow(counters, limits) == #leftover_batches)  -- we have exactly enough batches left to fill the dataset quotas
         print('Saving leftover_batches')
         print(leftover_batches)
         for _, batch in pairs(leftover_batches) do
@@ -644,14 +658,15 @@ function data_process:create_datasets_batches()
         -- verify that all batches have been saved TODOlowpriority
         -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
     end
+    -- assert(false)
 end
 
 -- perfomrs split2batches on both focus and context and then merges result
 -- focus (num_samples*num_obj, num_steps, obj_dim)
 -- context (num_samples*num_obj, num_obj-1, num_steps, obj_dim)
-function data_process:split2batchesall(focus, context)
-    local focus_batches = self:split2batches(focus)
-    local context_batches = self:split2batches(context)
+function data_process:split2batchesall(focus, context, truncate)
+    local focus_batches = self:split2batches(focus, truncate)
+    local context_batches = self:split2batches(context, truncate)
     local all_batches = {}
     for b=1,#focus_batches do
         table.insert(all_batches, {focus_batches[b], context_batches[b]})
