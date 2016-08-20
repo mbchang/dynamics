@@ -369,6 +369,7 @@ function train(start_iter, epoch_num)
                     break
                 end
             end
+            assert(false)
         end
 
         -- lr decay

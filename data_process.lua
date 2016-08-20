@@ -260,23 +260,33 @@ end
             context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
         }
 --]]
-function data_process:expand_for_each_object(unfactorized)
+function data_process:expand_for_each_object2(unfactorized)
     local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(unfactorized:size()))
     local focus = {}
     local context = {}
     local ball_index = self.si.oid[1]
     local obstacle_index = self.si.oid[1]+1
     local block_index = self.si.oid[2]
+
+    local obj_index
+    if not(string.find(self.jsonfolder, 'balls') == nil) then
+        obj_index = self.si.oid[1]
+    elseif not(string.find(self.jsonfolder, 'tower') == nil) then
+        obj_index = self.si.oid[2]
+    else
+        assert(false, 'unknown focus object type')
+    end
+
     if num_obj > 1 then
         for i=1,num_obj do  -- this is doing it in transpose order
             -- some objects will be balls, some obstacles, some invisible.
             -- since we are iterating through all the object indicies, here we just have to find the balls. Then we find the context accordingly.
-            local ball_mask = torch.squeeze(unfactorized[{{},{i},{1},{ball_index}}]:eq(1)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
-            local num_selected = ball_mask:sum()
-            local ball_indices = torch.squeeze(ball_mask:nonzero())
+            local focus_obj_mask = torch.squeeze(unfactorized[{{},{i},{1},{obj_index}}]:eq(1)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
+            local num_selected = focus_obj_mask:sum()
+            local focus_obj_indices = torch.squeeze(focus_obj_mask:nonzero())
 
             -- the examples of unfactorized where object i is a ball
-            local selected_samples = unfactorized:clone():index(1,ball_indices)  -- (num_selected, num_obj, num_steps, object_dim)  -- unnecessary to clone
+            local selected_samples = unfactorized:clone():index(1,focus_obj_indices)  -- (num_selected, num_obj, num_steps, object_dim)  -- unnecessary to clone
             -- sanity check
             -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},self.si.oid}]))
             -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},{}}]))
@@ -302,7 +312,7 @@ function data_process:expand_for_each_object(unfactorized)
         end
     else
         -- make sure it is a ball
-        assert(torch.squeeze(unfactorized[{{},{i},{1},{ball_index}}]:eq(1)):sum()==num_samples)
+        assert(torch.squeeze(unfactorized[{{},{i},{1},{obj_index}}]:eq(1)):sum()==num_samples)
         local this = torch.squeeze(unfactorized[{{},{i},{},{}}],2)
         table.insert(focus, this)  -- (num_samples x num_steps x objdim)
         table.insert(context, torch.zeros(num_samples,1,num_steps,object_dim)) -- if just one object, then context is just zeross
@@ -310,6 +320,10 @@ function data_process:expand_for_each_object(unfactorized)
 
     focus = torch.cat(focus,1)  -- concatenate along batch dimension
     context = torch.cat(context,1)
+
+    -- print(focus)
+    -- print(focus:norm())
+    -- assert(false)
 
     -- TODO! Do I have to crop?
     return focus, context
@@ -325,49 +339,52 @@ end
 --             context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
 --         }
 -- --]]
--- function data_process:expand_for_each_object_orig(unfactorized)
---     local num_samples, num_obj, _, _ = unpack(torch.totable(unfactorized:size()))
---     local focus = {}
---     local context = {}
---     if num_obj > 1 then
---         for i=1,num_obj do  -- this is doing it in transpose order
---             local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same  -- NOT NECESSARILY TRUE!
---             local ball_index = self.si.oid[1]
---             local obstacle_index = self.si.oid[1]+1
---             local block_index = self.si.oid[2]
---             if this[{{},{},{},{obstacle_index}}]:sum() == 0 or (not(string.find(self.jsonfolder, 'invisible') == nil) and this[{{},{},{},{block_index}}]:sum() == 0) then -- only do it if the particle is not stationary obstacle
---                 this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
---                 local other
---                 if i == 1 then
---                     other = unfactorized[{{},{i+1,-1},{},{}}]
---                 elseif i == num_obj then
---                     other = unfactorized[{{},{1,i-1},{},{}}]
---                 else
---                     other = torch.cat(unfactorized[{{},{1,i-1},{},{}}],
---                                 unfactorized[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x 8)
---                 end
+function data_process:expand_for_each_object(unfactorized)
+    local num_samples, num_obj, _, _ = unpack(torch.totable(unfactorized:size()))
+    local focus = {}
+    local context = {}
+    if num_obj > 1 then
+        for i=1,num_obj do  -- this is doing it in transpose order
+            local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same  -- NOT NECESSARILY TRUE!
+            local ball_index = self.si.oid[1]
+            local obstacle_index = self.si.oid[1]+1
+            local block_index = self.si.oid[2]
+            if this[{{},{},{},{obstacle_index}}]:sum() == 0 or (not(string.find(self.jsonfolder, 'invisible') == nil) and this[{{},{},{},{block_index}}]:sum() == 0) then -- only do it if the particle is not stationary obstacle
+                this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
+                local other
+                if i == 1 then
+                    other = unfactorized[{{},{i+1,-1},{},{}}]
+                elseif i == num_obj then
+                    other = unfactorized[{{},{1,i-1},{},{}}]
+                else
+                    other = torch.cat(unfactorized[{{},{1,i-1},{},{}}],
+                                unfactorized[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x 8)
+                end
 
---                 -- TODOlowpriority should permute here
---                 assert(this:size()[1] == other:size()[1])
---                 focus[#focus+1] = this
---                 context[#context+1] = other
---             end
---         end
---     else
---         local this = unfactorized[{{},{i},{},{}}]
---         focus[#focus+1] = torch.squeeze(this,2) -- (num_samples x windowsize x objdim)
---     end
+                -- TODOlowpriority should permute here
+                assert(this:size()[1] == other:size()[1])
+                focus[#focus+1] = this
+                context[#context+1] = other
+            end
+        end
+    else
+        local this = unfactorized[{{},{i},{},{}}]
+        focus[#focus+1] = torch.squeeze(this,2) -- (num_samples x windowsize x objdim)
+    end
 
---     focus = torch.cat(focus,1)  -- concatenate along batch dimension
+    focus = torch.cat(focus,1)  -- concatenate along batch dimension
 
---     -- make context into Torch tensor if more than one particle. Otherwise {}
---     if next(context) then
---         context = torch.cat(context,1)
---         assert(focus:size(1) == context:size(1))
---         assert(context:size(2) == num_obj-1)
---     end
---     return focus, context
--- end
+    -- make context into Torch tensor if more than one particle. Otherwise {}
+    if next(context) then
+        context = torch.cat(context,1)
+        assert(focus:size(1) == context:size(1))
+        assert(context:size(2) == num_obj-1)
+    end
+    -- print(focus)
+    -- print(focus:norm())
+    -- assert(false)
+    return focus, context
+end
 
 
 -- we also should have a method that divides the focus and context into past and future
@@ -505,20 +522,30 @@ end
 function data_process:count_examples(jsonfolder)
     local ordered_files = self:iter_files_ordered(jsonfolder)
     local oid_index = self.rsi.oid
-    local ball_id = self.oid_ids[1]
+    local obj_id
+    if not(string.find(self.jsonfolder, 'balls') == nil) or 
+            not(string.find(self.jsonfolder, 'mixed') == nil) or 
+            not(string.find(self.jsonfolder, 'invisible') == nil)then
+        obj_id = self.oid_ids[1]
+    elseif not(string.find(self.jsonfolder, 'tower') == nil) then
+        obj_id = self.oid_ids[3]
+    else
+        assert(false, 'unknown focus object type')
+    end
     local num_examples = 0
     for _, jsonfile in pairs(ordered_files) do
         local data = load_data_json(paths.concat(jsonfolder,jsonfile))  -- (num_examples, num_obj, num_steps, object_raw_dim)
         local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(data:size()))
-        -- now count where there are balls
+        -- now count where there are balls (also works for tower)
         if num_obj > 1 then
             for i=1,num_obj do
-                local ball_mask = torch.squeeze(data[{{},{i},{1},{oid_index}}]:eq(ball_id)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
+                local ball_mask = torch.squeeze(data[{{},{i},{1},{oid_index}}]:eq(obj_id)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
                 local num_selected = ball_mask:sum()
                 num_examples = num_examples + num_selected
+                print(num_selected..' examples with focus object in '..jsonfile)
             end
         else
-            assert(torch.squeeze(unfactorized[{{},{i},{1},{oid_index}}]:eq(ball_id)):sum()==num_samples)
+            assert(torch.squeeze(unfactorized[{{},{i},{1},{oid_index}}]:eq(obj_id)):sum()==num_samples)
             num_examples = num_examples + num_samples
         end
     end
@@ -534,14 +561,12 @@ function data_process:create_datasets_batches()
     local num_obj = tonumber(extract_flag(flags, 'n'))
     local num_steps = tonumber(extract_flag(flags, 't'))
 
-    -- print('AAAAA')
-    -- print(self.jsonfolder)
-    -- self:count_examples(self.jsonfolder)
-    -- assert(false)
-
-
-
-
+    print('Counting Examples')
+    local num_examples = self:count_examples(self.jsonfolder)
+    if not(string.find(self.jsonfolder, 'tower') == nil) or not(string.find(self.jsonfolder, 'balls') == nil) then
+        assert(num_examples == total_samples*num_obj)
+    end
+    print('Total number of examples: '..num_examples)
     local num_batches = total_samples*num_obj/self.bsize
     print(num_obj..' objects '..num_steps..' steps '..total_samples..
         ' samples yields '..num_batches..' batches')
