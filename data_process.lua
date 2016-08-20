@@ -260,7 +260,7 @@ end
             context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
         }
 --]]
-function data_process:expand_for_each_object2(unfactorized)
+function data_process:expand_for_each_object(unfactorized)
     local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(unfactorized:size()))
     local focus = {}
     local context = {}
@@ -338,53 +338,53 @@ end
 --             focus: (num_samples*num_obj, num_steps, obj_dim)
 --             context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
 --         }
--- --]]
-function data_process:expand_for_each_object(unfactorized)
-    local num_samples, num_obj, _, _ = unpack(torch.totable(unfactorized:size()))
-    local focus = {}
-    local context = {}
-    if num_obj > 1 then
-        for i=1,num_obj do  -- this is doing it in transpose order
-            local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same  -- NOT NECESSARILY TRUE!
-            local ball_index = self.si.oid[1]
-            local obstacle_index = self.si.oid[1]+1
-            local block_index = self.si.oid[2]
-            if this[{{},{},{},{obstacle_index}}]:sum() == 0 or (not(string.find(self.jsonfolder, 'invisible') == nil) and this[{{},{},{},{block_index}}]:sum() == 0) then -- only do it if the particle is not stationary obstacle
-                this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
-                local other
-                if i == 1 then
-                    other = unfactorized[{{},{i+1,-1},{},{}}]
-                elseif i == num_obj then
-                    other = unfactorized[{{},{1,i-1},{},{}}]
-                else
-                    other = torch.cat(unfactorized[{{},{1,i-1},{},{}}],
-                                unfactorized[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x 8)
-                end
+-- -- --]]
+-- function data_process:expand_for_each_object(unfactorized)
+--     local num_samples, num_obj, _, _ = unpack(torch.totable(unfactorized:size()))
+--     local focus = {}
+--     local context = {}
+--     if num_obj > 1 then
+--         for i=1,num_obj do  -- this is doing it in transpose order
+--             local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same  -- NOT NECESSARILY TRUE!
+--             local ball_index = self.si.oid[1]
+--             local obstacle_index = self.si.oid[1]+1
+--             local block_index = self.si.oid[2]
+--             if this[{{},{},{},{obstacle_index}}]:sum() == 0 or (not(string.find(self.jsonfolder, 'invisible') == nil) and this[{{},{},{},{block_index}}]:sum() == 0) then -- only do it if the particle is not stationary obstacle
+--                 this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
+--                 local other
+--                 if i == 1 then
+--                     other = unfactorized[{{},{i+1,-1},{},{}}]
+--                 elseif i == num_obj then
+--                     other = unfactorized[{{},{1,i-1},{},{}}]
+--                 else
+--                     other = torch.cat(unfactorized[{{},{1,i-1},{},{}}],
+--                                 unfactorized[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x 8)
+--                 end
 
-                -- TODOlowpriority should permute here
-                assert(this:size()[1] == other:size()[1])
-                focus[#focus+1] = this
-                context[#context+1] = other
-            end
-        end
-    else
-        local this = unfactorized[{{},{i},{},{}}]
-        focus[#focus+1] = torch.squeeze(this,2) -- (num_samples x windowsize x objdim)
-    end
+--                 -- TODOlowpriority should permute here
+--                 assert(this:size()[1] == other:size()[1])
+--                 focus[#focus+1] = this
+--                 context[#context+1] = other
+--             end
+--         end
+--     else
+--         local this = unfactorized[{{},{i},{},{}}]
+--         focus[#focus+1] = torch.squeeze(this,2) -- (num_samples x windowsize x objdim)
+--     end
 
-    focus = torch.cat(focus,1)  -- concatenate along batch dimension
+--     focus = torch.cat(focus,1)  -- concatenate along batch dimension
 
-    -- make context into Torch tensor if more than one particle. Otherwise {}
-    if next(context) then
-        context = torch.cat(context,1)
-        assert(focus:size(1) == context:size(1))
-        assert(context:size(2) == num_obj-1)
-    end
-    -- print(focus)
-    -- print(focus:norm())
-    -- assert(false)
-    return focus, context
-end
+--     -- make context into Torch tensor if more than one particle. Otherwise {}
+--     if next(context) then
+--         context = torch.cat(context,1)
+--         assert(focus:size(1) == context:size(1))
+--         assert(context:size(2) == num_obj-1)
+--     end
+--     -- print(focus)
+--     -- print(focus:norm())
+--     -- assert(false)
+--     return focus, context
+-- end
 
 
 -- we also should have a method that divides the focus and context into past and future
