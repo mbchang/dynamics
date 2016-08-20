@@ -269,9 +269,6 @@ function data_process:expand_for_each_object(unfactorized)
     local block_index = self.si.oid[2]
     if num_obj > 1 then
         for i=1,num_obj do  -- this is doing it in transpose order
-            -- i = 3
-            -- print('..................................')
-
             -- some objects will be balls, some obstacles, some invisible.
             -- since we are iterating through all the object indicies, here we just have to find the balls. Then we find the context accordingly.
             local ball_mask = torch.squeeze(unfactorized[{{},{i},{1},{ball_index}}]:eq(1)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
