@@ -221,6 +221,13 @@ experiments = [
                 'mixed_n6_t60_ex50000_o_rd__mixed_n6_t60_ex50000_o_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 'mixed_n6_t60_ex50000_z_o_rd__mixed_n6_t60_ex50000_z_o_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
 
+                # debug mixed
+                'mixed_n6_t60_ex50000_z_dras_rd__mixed_n6_t60_ex50000_z_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
+                # invisible
+                'invisible_n5_t60_ex50000_z_o_dras_rd__invisible_n5_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
+
 
                 ]
 

@@ -280,10 +280,10 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         for context_id = 1, num_context do
             -- here get the obstacle mask
             local obstacle_index, obstacle_mask
+            -- if size inference then obstacle mask
             if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
                 obstacle_index = config_args.si.oid[1]+1
                 obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle
-                -- print('hey')
             end
 
             local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)

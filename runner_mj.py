@@ -88,7 +88,7 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
             # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_stable'}"},
             # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_unstable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_unstable'}"},
-            {'dataset_folders':"{'tower_n2_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n2_t120_ex25000_rd_stable'}"},
+            # {'dataset_folders':"{'tower_n2_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n2_t120_ex25000_rd_stable'}"},
 
 
             # {'dataset_folders':"{'tower_n6_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rd'}"},
@@ -103,9 +103,10 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_dras_rd'}"},
 
-
-
+            # invisible
+            # {'dataset_folders':"{'invisible_n6_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'invisible_n6_t60_ex50000_z_o_dras_rd'}"},
 
             ]
 
@@ -119,7 +120,7 @@ def create_jobs(dry_run, mode, ext):
                     for layers in [3]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             for im in [False]:
-                                for veps in [0]:
+                                # for veps in [0]:
                                     # for lda in [100,1000]:
                                     #     for vlda in [100,1000]:
                                             # for bnorm in [True, False]:
@@ -129,7 +130,7 @@ def create_jobs(dry_run, mode, ext):
                                                 job['lr'] = lr
                                                 job['nbrhdsize'] = nbhrdsize
                                                 job['im'] = im
-                                                job['val_eps'] = veps
+                                                # job['val_eps'] = veps
                                                 # job['lambda'] = lda
                                                 # job['vlambda'] = vlda
                                                 # job['batch_norm'] = bnorm
@@ -232,11 +233,11 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-run_experiment(dry_run)
+# run_experiment(dry_run)
 # run_experimentload(dry_run)
 # sim(dry_run)
 # minf(dry_run)
-# sinf(dry_run)
+sinf(dry_run)
 # oinf(dry_run)
 
 

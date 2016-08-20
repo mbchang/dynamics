@@ -60,8 +60,8 @@ cmd:option('-val_window', 10, 'for testing convergence')
 cmd:option('-val_eps', 1e-6, 'for testing convergence')  -- 1e-5
 cmd:option('-im', false, 'infer mass')
 cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
-cmd:option('-vlambda', 100, 'velocity penalization')
-cmd:option('-lambda', 100, 'angle penalization')
+cmd:option('-vlambda', 1, 'velocity penalization')
+cmd:option('-lambda', 1, 'angle penalization')
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
