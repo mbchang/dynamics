@@ -310,6 +310,8 @@ function data_process:expand_for_each_object(unfactorized)
 
     focus = torch.cat(focus,1)  -- concatenate along batch dimension
     context = torch.cat(context,1)
+
+    -- TODO! Do I have to crop?
     return focus, context
 end
 
@@ -483,11 +485,11 @@ function data_process:sample_save_single_batch(batch, dataset_ids, counters, lim
 end
 
 function data_process:iter_files_ordered(folder)
--- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_188.json
--- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_189.json
--- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_190.json
--- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_191.json
--- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_192.json
+    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_188.json
+    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_189.json
+    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_190.json
+    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_191.json
+    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_192.json
     local files = {}
     for f in paths.iterfiles(folder) do
         table.insert(files, f)
@@ -496,14 +498,50 @@ function data_process:iter_files_ordered(folder)
     return files
 end
 
+-- basically expands for each object first and counts the number of examples
+-- if all balls, then the num_examples = total_samples*num_obj
+-- this implementation depends on how expand_for_each_object is defined.
+-- works
+function data_process:count_examples(jsonfolder)
+    local ordered_files = self:iter_files_ordered(jsonfolder)
+    local oid_index = self.rsi.oid
+    local ball_id = self.oid_ids[1]
+    local num_examples = 0
+    for _, jsonfile in pairs(ordered_files) do
+        local data = load_data_json(paths.concat(jsonfolder,jsonfile))  -- (num_examples, num_obj, num_steps, object_raw_dim)
+        local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(data:size()))
+        -- now count where there are balls
+        if num_obj > 1 then
+            for i=1,num_obj do
+                local ball_mask = torch.squeeze(data[{{},{i},{1},{oid_index}}]:eq(ball_id)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
+                local num_selected = ball_mask:sum()
+                num_examples = num_examples + num_selected
+            end
+        else
+            assert(torch.squeeze(unfactorized[{{},{i},{1},{oid_index}}]:eq(ball_id)):sum()==num_samples)
+            num_examples = num_examples + num_samples
+        end
+    end
+    return num_examples
+end
+
 -- this sampling scheme is pretty complex, but it is random
 -- if max_iters_per_json is a multiple of batch_size, then it should be fine
 function data_process:create_datasets_batches()
     -- set up
     local flags = pls.split(string.gsub(self.jsonfolder,'/jsons',''), '_')
-    local total_samples = tonumber(extract_flag(flags, 'ex'))
+    local total_samples = tonumber(extract_flag(flags, 'ex'))  -- this is the number of trajectories
     local num_obj = tonumber(extract_flag(flags, 'n'))
     local num_steps = tonumber(extract_flag(flags, 't'))
+
+    -- print('AAAAA')
+    -- print(self.jsonfolder)
+    -- self:count_examples(self.jsonfolder)
+    -- assert(false)
+
+
+
+
     local num_batches = total_samples*num_obj/self.bsize
     print(num_obj..' objects '..num_steps..' steps '..total_samples..
         ' samples yields '..num_batches..' batches')

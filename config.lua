@@ -35,7 +35,7 @@ local args = {
 
         oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
         roids = {'ball', 'obstacle', 'block'},  -- reverse oids
-        oid_ids = {1,2,3},
+        oid_ids = {1,2,3},  -- the values of oids
         boolean = {0,1},
 
         -- world params
