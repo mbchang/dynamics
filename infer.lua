@@ -310,17 +310,9 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             -- if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
             if alleq({si_indices, config_args.si.os}) then
                 obstacle_index = config_args.si.oid[1]+1
-                -- print('a')
-                -- print(torch.squeeze(batch[2][{{},{context_id},{-1},{}}]))
-                -- print('b')
-                -- print(torch.squeeze(batch[2][{{},{context_id},{-1},{obstacle_index}}]))
                 -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
                 -- that is the problem. I didn't make a copy. 
                 obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
-                -- obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
-                -- print('c')
-                -- print(obstacle_mask)
-                -- assert(false)
             end
 
             local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
