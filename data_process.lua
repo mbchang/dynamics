@@ -285,32 +285,36 @@ function data_process:expand_for_each_object(unfactorized)
             -- since we are iterating through all the object indicies, here we just have to find the balls. Then we find the context accordingly.
             local focus_obj_mask = torch.squeeze(unfactorized[{{},{i},{1},{obj_index}}]:eq(1)) -- (num_samples)  -- we are only taking the first timestep because all timesteps are the same
             local num_selected = focus_obj_mask:sum()
-            local focus_obj_indices = torch.squeeze(focus_obj_mask:nonzero())
+            local focus_obj_indices = focus_obj_mask:nonzero()
 
             -- the examples of unfactorized where object i is a ball
-            local selected_samples = unfactorized:clone():index(1,focus_obj_indices)  -- (num_selected, num_obj, num_steps, object_dim)  -- unnecessary to clone
-            -- sanity check
-            -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},self.si.oid}]))
-            -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},{}}]))
-            -- print(torch.squeeze(selected_samples[{{},{i},{1}}]))
+            -- print(focus_obj_indices:nElement())
+            if focus_obj_indices:nElement() > 0 then  -- only construct examples if there are examples to construct.
+                focus_obj_indices = torch.squeeze(focus_obj_indices,2)
+                local selected_samples = unfactorized:clone():index(1,focus_obj_indices)  -- (num_selected, num_obj, num_steps, object_dim)  -- unnecessary to clone
+                -- sanity check
+                -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},self.si.oid}]))
+                -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},{}}]))
+                -- print(torch.squeeze(selected_samples[{{},{i},{1}}]))
 
-            -- now find the focus object
-            local this = torch.squeeze(selected_samples[{{},{i},{},{}}],2)
+                -- now find the focus object
+                local this = torch.squeeze(selected_samples[{{},{i},{},{}}],2)
 
-            -- now get the context objects
-            local others
-            if i == 1 then
-                others = selected_samples[{{},{i+1,-1},{},{}}]
-            elseif i == num_obj then
-                others = selected_samples[{{},{1,i-1},{},{}}]
-            else
-                others = torch.cat(selected_samples[{{},{1,i-1},{},{}}],
-                            selected_samples[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x object_dim)
+                -- now get the context objects
+                local others
+                if i == 1 then
+                    others = selected_samples[{{},{i+1,-1},{},{}}]
+                elseif i == num_obj then
+                    others = selected_samples[{{},{1,i-1},{},{}}]
+                else
+                    others = torch.cat(selected_samples[{{},{1,i-1},{},{}}],
+                                selected_samples[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x object_dim)
+                end
+
+                assert(this:size()[1] == others:size()[1])
+                table.insert(focus, this)
+                table.insert(context, others)
             end
-
-            assert(this:size()[1] == others:size()[1])
-            table.insert(focus, this)
-            table.insert(context, others)
         end
     else
         -- make sure it is a ball
@@ -560,6 +564,7 @@ function data_process:count_examples(jsonfolder)
             num_examples = num_examples + num_samples
         end
     end
+    collectgarbage()
     return num_examples
 end
 
@@ -580,7 +585,7 @@ function data_process:create_datasets_batches()
     print('Total number of examples: '..num_examples)
 
     local num_batches = math.floor(num_examples/self.bsize)
-    print('Number of batches:'..num_batches..' with batch size '..self.bsize)
+    print('Number of batches: '..num_batches..' with batch size '..self.bsize)
     local num_train, num_val, num_test = self:split_datasets_sizes(num_batches)
     print('train: '..num_train..' val: '..num_val..' test: '..num_test)
 

@@ -331,7 +331,7 @@ function model:bp(batch, prediction, sim)
     self.criterion:forward(p_vel, gt_vel)
     local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
     -- print('d_vel:norm()',d_vel:norm())
-    d_vel:mul(mp.vlambda)
+    -- d_vel:mul(mp.vlambda)
     d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
     self.identitycriterion:forward(p_ang, gt_ang)
@@ -340,7 +340,7 @@ function model:bp(batch, prediction, sim)
     self.criterion:forward(p_ang_vel, gt_ang_vel)
     local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
     -- print('d_ang_vel:norm()',d_ang_vel:norm())
-    d_ang_vel:mul(mp.lambda)
+    -- d_ang_vel:mul(mp.lambda)
     d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
     self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
