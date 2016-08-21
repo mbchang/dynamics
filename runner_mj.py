@@ -80,9 +80,9 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n5_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000_m_rd'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'balls_n6_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rd'}"},
-            {'dataset_folders':"{'balls_n7_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_rd'}"},
+            # {'dataset_folders':"{'balls_n7_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'balls_n7_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_m_rd'}"},
-            {'dataset_folders':"{'balls_n8_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rd'}"},
+            # {'dataset_folders':"{'balls_n8_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'balls_n8_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rd'}"},
 
             # {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
@@ -100,12 +100,12 @@ def create_jobs(dry_run, mode, ext):
 
             # mixed
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_rd'}"},
-            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
-            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},
-            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_dras_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_dras_rd'}"},
 
-            # invisible
+            # # invisible
             # {'dataset_folders':"{'invisible_n6_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'invisible_n6_t60_ex50000_z_o_dras_rd'}"},
             # {'dataset_folders':"{'invisible_n5_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'invisible_n5_t60_ex50000_z_o_dras_rd'}"},
 
@@ -193,7 +193,7 @@ def run_experiment(dry_run):
     create_jobs(dry_run=dry_run, mode='exp', ext='')
 
 def run_experimentload(dry_run):
-    create_jobs(dry_run=dry_run, mode='expload', ext='_expload1')
+    create_jobs(dry_run=dry_run, mode='expload', ext='_expload2')
 
 def predict(dry_run):
     create_jobs(dry_run=dry_run, mode='pred', ext='_predict')
@@ -235,10 +235,10 @@ def to_slurm(jobname, jobcommand, dry_run):
 
 dry_run = '--rd' not in sys.argv # real deal
 # run_experiment(dry_run)
-run_experimentload(dry_run)
+# run_experimentload(dry_run)
 # sim(dry_run)
 # minf(dry_run)
-# sinf(dry_run)
+sinf(dry_run)
 # oinf(dry_run)
 
 

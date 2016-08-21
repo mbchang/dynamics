@@ -1,8 +1,19 @@
 local data_process = require 'data_process'
+require 'utils'
 -- local M = require 'branched_variable_obj_model'
 
 -- a table of onehot tensors of size num_hypotheses
-function generate_onehot_hypotheses(num_hypotheses)
+function generate_onehot_hypotheses(num_hypotheses, indices)
+    local hypotheses = {}
+    for i=1,#indices do
+        local hypothesis = torch.zeros(num_hypotheses)
+        hypothesis[{{indices[i]}}]:fill(1)
+        table.insert(hypotheses, hypothesis)
+    end
+    return hypotheses
+end
+
+function generate_onehot_hypotheses_orig(num_hypotheses, indices)
     local hypotheses = {}
     for i=1,num_hypotheses do
         local hypothesis = torch.zeros(num_hypotheses)
@@ -14,24 +25,26 @@ end
 
 function infer_properties(model, dataloader, params_, property, method, cf)
     -- TODO for other properties
-    local hypotheses, si_indices, num_hypotheses
+    local hypotheses, si_indices, indices, num_hypotheses
     if property == 'mass' then
         si_indices = tablex.deepcopy(config_args.si.m)
-        si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
+        -- si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
+        indices = {1,2,3}
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
-        -- distance_threshold = 2*config_args.object_base_size.ball
+        hypotheses = generate_onehot_hypotheses(num_hypotheses,indices) -- good, works for mass
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
+        indices = {1,2,3}
+        hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good, works for batch_size
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
         si_indices = tablex.deepcopy(config_args.si.oid)
-        si_indices[2] = si_indices[2]-1  -- ignore jenga block
+        -- si_indices[2] = si_indices[2]-1  -- ignore jenga block
+        indices = {1,2}  -- this changes if we are in the invisible world!
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        hypotheses = generate_onehot_hypotheses(num_hypotheses) -- good
+        hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     end
 
@@ -59,8 +72,20 @@ function apply_hypothesis(batch, hyp, si_indices, obj_id)
     local num_past = context_past:size(3)
 
     if obj_id == 0 then  -- protocol for this
+        -- you should assert that si_indices is for mass.
+        assert(alleq({si_indices, config_args.si.m}))
         this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_past, 1)
     else
+        -- here you should see if si_indices are for object type. if your hypothesis is for a ball, then make mass = 1. If 
+        local ball_oid_onehot = torch.zeros(#config_args.oid_ids)
+        ball_oid_onehot[{{config_args.oid_ids[1]}}]:fill(1)
+        if (alleq({si_indices, config_args.si.oid})) and hyp:equal(ball_oid_onehot) then
+            local mass_one_hot = torch.zeros(#config_args.masses)
+            mass_one_hot[{{1}}]:fill(1) -- select mass=1
+            context_past[{{},{obj_id},{},config_args.si.m}] = mass_one_hot:view(1,1,1,#config_args.masses)
+                                                                    :expandAs(context_past[{{},{obj_id},{},config_args.si.m}])
+        end
+        -- now apply the hypothesis as usual
         context_past[{{},{obj_id},{},si_indices}] = torch.repeatTensor(hyp, num_ex, 1, num_past, 1)
     end
 
@@ -198,8 +223,8 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
             local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
 
             local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
-            ground_truth_filtered:resize(num_pass_through, hypothesis_length)
-            best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)
+            ground_truth_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
+            best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
 
             local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
             num_correct = num_correct + num_equal
@@ -216,7 +241,7 @@ end
 
 function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
     local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
-    local best_hypotheses = torch.zeros(mp.batch_size,#hypotheses)
+    local best_hypotheses = torch.zeros(mp.batch_size,hypothesis_length)
     local hypothesis_length = si_indices[2]-si_indices[1]+1
 
     for j,h in pairs(hypotheses) do
@@ -225,6 +250,7 @@ function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_leng
 
         -- test_loss is a tensor of size bsize
         local update_indices = test_losses:lt(best_losses):nonzero()
+        -- print('update_indices', update_indices)
 
         if update_indices:nElement() > 0 then
             update_indices = torch.squeeze(update_indices,2)
@@ -281,9 +307,20 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             -- here get the obstacle mask
             local obstacle_index, obstacle_mask
             -- if size inference then obstacle mask
-            if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
+            -- if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
+            if alleq({si_indices, config_args.si.os}) then
                 obstacle_index = config_args.si.oid[1]+1
-                obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle
+                -- print('a')
+                -- print(torch.squeeze(batch[2][{{},{context_id},{-1},{}}]))
+                -- print('b')
+                -- print(torch.squeeze(batch[2][{{},{context_id},{-1},{obstacle_index}}]))
+                -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
+                -- that is the problem. I didn't make a copy. 
+                obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                -- obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:resize(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                -- print('c')
+                -- print(obstacle_mask)
+                -- assert(false)
             end
 
             local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
