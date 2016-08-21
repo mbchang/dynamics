@@ -36,7 +36,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        indices = {1,2,3}
+        indices = {1,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good, works for batch_size
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
@@ -216,38 +216,10 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
             collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
         end
 
-        -- you can also go the collision_filter_mask:nonzero() route
-        -- print(collision_filter_mask:nonzero())
-
-        -- local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
-        -- if ground_truth_filtered:norm() > 0 then
-        --     -- here you can update count
-        --     -- now select only the indices in ground_truth filtered and best_hypotheses to compare
-        --     local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
-
-        --     local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
-        --     -- print(ground_truth_filtered)
-        --     ground_truth_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
-        --     -- print(ground_truth_filtered)
-        --     -- assert(false)
-        --     best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
-
-        --     local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
-        --     num_correct = num_correct + num_equal
-        --     count = count + num_pass_through
-        -- end
-
         -- alternate way using nonzero
-        -- print(collision_filter_mask)
         local collision_filter_indices = torch.squeeze(collision_filter_mask):nonzero()
         if collision_filter_indices:nElement() > 0 then
-            -- print(collision_filter_indices)
-            -- local a = torch.LongTensor{{5}}
-            -- print(a)
-            -- print(torch.squeeze(a,2))
             collision_filter_indices = torch.squeeze(collision_filter_indices,2)
-            -- print(collision_filter_indices)
-            -- assert(false)
             local ground_truth_filtered = ground_truth:clone():index(1,collision_filter_indices)
             local best_hypotheses_filtered = best_hypotheses:clone():index(1,collision_filter_indices)
             local num_pass_through = collision_filter_indices:size(1)
@@ -255,9 +227,6 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
             num_correct = num_correct + num_equal
             count = count + num_pass_through
         end
-
-
-
     else
         local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(hypothesis_length):sum()
         num_correct = num_correct + num_equal
