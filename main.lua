@@ -89,10 +89,10 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 500
+    mp.max_iter = 2000
     mp.nbrhd = true
-    mp.lrdecayafter = 5
-    mp.lrdecay_every = 5
+    mp.lrdecayafter = 500
+    mp.lrdecay_every = 500
     mp.layers = 1
     mp.model = 'bffobj'
     mp.im = false
@@ -103,8 +103,8 @@ if mp.server == 'pc' then
 	mp.num_threads = 1
     mp.shuffle = false
     mp.print_every = 1
-    mp.save_every = 50
-    mp.val_every = 50
+    mp.save_every = 500
+    mp.val_every = 500
     mp.plot = false--true
 	mp.cuda = false
 else

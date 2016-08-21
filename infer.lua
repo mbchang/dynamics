@@ -85,8 +85,12 @@ function apply_hypothesis(batch, hyp, si_indices, obj_id)
             context_past[{{},{obj_id},{},config_args.si.m}] = mass_one_hot:view(1,1,1,#config_args.masses)
                                                                     :expandAs(context_past[{{},{obj_id},{},config_args.si.m}])
         end
+        -- HERE NOTE THAT YOU ARE NOT FILTERING FOR OBSTACLE! YOU WILL FILTER LATER!
+        -- print(torch.squeeze(context_past[{{},{obj_id},{},si_indices}]))
+        -- print(hyp)
         -- now apply the hypothesis as usual
         context_past[{{},{obj_id},{},si_indices}] = torch.repeatTensor(hyp, num_ex, 1, num_past, 1)
+        -- print(torch.squeeze(context_past[{{},{obj_id},{},si_indices}]))
     end
 
     return {this_past, context_past, this_future, context_future, mask}
@@ -218,6 +222,7 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
 
         -- alternate way using nonzero
         local collision_filter_indices = torch.squeeze(collision_filter_mask):nonzero()
+        -- print('obstacle_mask', obstacle_mask)
         if collision_filter_indices:nElement() > 0 then
             collision_filter_indices = torch.squeeze(collision_filter_indices,2)
             local ground_truth_filtered = ground_truth:clone():index(1,collision_filter_indices)
@@ -232,6 +237,7 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
         num_correct = num_correct + num_equal
         count = count + mp.batch_size
     end
+    -- assert(false)
     return num_correct, count
 end
 
@@ -324,6 +330,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
             collectgarbage()
         end 
+        -- assert(false)
     end
 
     local accuracy
