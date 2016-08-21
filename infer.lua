@@ -216,20 +216,48 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
             collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
         end
 
-        local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
-        if ground_truth_filtered:norm() > 0 then
-            -- here you can update count
-            -- now select only the indices in ground_truth filtered and best_hypotheses to compare
-            local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
+        -- you can also go the collision_filter_mask:nonzero() route
+        -- print(collision_filter_mask:nonzero())
 
-            local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
-            ground_truth_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
-            best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
+        -- local ground_truth_filtered = ground_truth:maskedSelect(collision_filter_mask:expandAs(ground_truth))  -- this flattens it though!
+        -- if ground_truth_filtered:norm() > 0 then
+        --     -- here you can update count
+        --     -- now select only the indices in ground_truth filtered and best_hypotheses to compare
+        --     local best_hypotheses_filtered = best_hypotheses:maskedSelect(collision_filter_mask:expandAs(best_hypotheses))
 
+        --     local num_pass_through = ground_truth_filtered:size(1)/hypothesis_length
+        --     -- print(ground_truth_filtered)
+        --     ground_truth_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
+        --     -- print(ground_truth_filtered)
+        --     -- assert(false)
+        --     best_hypotheses_filtered:resize(num_pass_through, hypothesis_length)  -- check this!
+
+        --     local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
+        --     num_correct = num_correct + num_equal
+        --     count = count + num_pass_through
+        -- end
+
+        -- alternate way using nonzero
+        -- print(collision_filter_mask)
+        local collision_filter_indices = torch.squeeze(collision_filter_mask):nonzero()
+        if collision_filter_indices:nElement() > 0 then
+            -- print(collision_filter_indices)
+            -- local a = torch.LongTensor{{5}}
+            -- print(a)
+            -- print(torch.squeeze(a,2))
+            collision_filter_indices = torch.squeeze(collision_filter_indices,2)
+            -- print(collision_filter_indices)
+            -- assert(false)
+            local ground_truth_filtered = ground_truth:clone():index(1,collision_filter_indices)
+            local best_hypotheses_filtered = best_hypotheses:clone():index(1,collision_filter_indices)
+            local num_pass_through = collision_filter_indices:size(1)
             local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
             num_correct = num_correct + num_equal
             count = count + num_pass_through
         end
+
+
+
     else
         local num_equal = ground_truth:eq(best_hypotheses):sum(2):eq(hypothesis_length):sum()
         num_correct = num_correct + num_equal
@@ -406,12 +434,6 @@ function wall_collision_filter(batch, distance_threshold)
     local py = config_args.si.py
     local future_pos = torch.squeeze(future[{{},{},{px, py}}],2)  -- see where the ball is at the tiem of collision  (bsize, 2)
     local past_pos = torch.squeeze(past[{{},{-1},{px,py}}], 2)  -- before collision
-
-    -- print(collision_mask)
-    -- print(future_pos*config_args.position_normalize_constant)
-    -- print(past_pos*config_args.position_normalize_constant)
-    -- print('>>>>>>>>>>>>>>>>>>>>')
-    -- assert(false)
 
     -- now let's check where the wall is
     local leftwall = 0
