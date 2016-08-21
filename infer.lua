@@ -242,6 +242,7 @@ function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_leng
     local hypothesis_length = si_indices[2]-si_indices[1]+1
 
     for j,h in pairs(hypotheses) do
+        -- print(h)
         local hypothesis_batch = apply_hypothesis(batch, h, si_indices, context_id)  -- good
         local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
 
@@ -261,6 +262,7 @@ function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_leng
         assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
         assert(not(best_hypotheses:equal(torch.zeros(mp.batch_size,hypothesis_length))))
     end
+    -- assert(false)
     return best_hypotheses
 end
 
