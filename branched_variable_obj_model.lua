@@ -537,10 +537,7 @@ end
 
 -- b and a must be same size
 function model:euc_dist(a,b)
-    local diff = torch.squeeze(b - a, 3) -- (bsize, num_context, 2)
-    local diffsq = torch.pow(diff,2)
-    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
-    return euc_dists
+    return compute_euc_dist(a,b)
 end
 
 -- update position at time t to get position at t+1

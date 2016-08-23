@@ -100,10 +100,10 @@ def create_jobs(dry_run, mode, ext):
 
             # mixed
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},  # this does not use dras sizing
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_dras_rd'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},  # this does not use dras sizing
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_dras_rd'}"},
 
             # # invisible
             # {'dataset_folders':"{'invisible_n6_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'invisible_n6_t60_ex50000_z_o_dras_rd'}"},

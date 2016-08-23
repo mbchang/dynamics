@@ -113,6 +113,30 @@ function plot_experiment(logfile, savefile)
                  subsamplerate)
 end
 
+function plot_inference(infolder, savefile)
+    if paths.filep(infolder..'/mass_infer_cf.log') then
+        plot_minf(infolder..'/mass_infer_cf.log', infolder..'/mass_infer_cf.png')
+    end
+    if paths.filep(infolder..'/size_infer_cf.log') then
+        plot_minf(infolder..'/size_infer_cf.log', infolder..'/size_infer_cf.png')
+    end
+    if paths.filep(infolder..'/objtype_infer_cf.log') then
+        plot_minf(infolder..'/objtype_infer_cf.log', infolder..'/objtype_infer_cf.png')
+    end
+end
+
+function plot_minf(logfile, savefile)
+
+end
+
+function plot_sinf(logfile, savefile)
+
+end
+
+function plot_oinf(logfile, savefile)
+
+end
+
 -- todo: move this to plot_results
 function plot_hid_state(fname, x,y)
     -- plot scatter plot. TODO: later move this to an independent function

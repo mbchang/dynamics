@@ -1,6 +1,6 @@
 local data_process = require 'data_process'
 require 'utils'
--- local M = require 'branched_variable_obj_model'
+require 'torchx'
 
 -- a table of onehot tensors of size num_hypotheses
 function generate_onehot_hypotheses(num_hypotheses, indices)
@@ -36,6 +36,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
+        -- indices = {1,2,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
         indices = {1,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good, works for batch_size
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
@@ -86,11 +87,8 @@ function apply_hypothesis(batch, hyp, si_indices, obj_id)
                                                                     :expandAs(context_past[{{},{obj_id},{},config_args.si.m}])
         end
         -- HERE NOTE THAT YOU ARE NOT FILTERING FOR OBSTACLE! YOU WILL FILTER LATER!
-        -- print(torch.squeeze(context_past[{{},{obj_id},{},si_indices}]))
-        -- print(hyp)
         -- now apply the hypothesis as usual
         context_past[{{},{obj_id},{},si_indices}] = torch.repeatTensor(hyp, num_ex, 1, num_past, 1)
-        -- print(torch.squeeze(context_past[{{},{obj_id},{},si_indices}]))
     end
 
     return {this_past, context_past, this_future, context_future, mask}
@@ -214,15 +212,19 @@ end
 
 function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
     if cf then 
+        -- this filter has a 1 if the focus object reverse direction
         local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
 
         if obstacle_mask then
+            -- this obstacle mask has a 1 if the ground truth is from a particular context object
             collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
         end
 
-        -- alternate way using nonzero
+        -- after applying both filters, you have the examples in which the focus object
+        -- reverses direction and the object whose property you are inferring is an obstacle
+        -- you may now proceed.
+
         local collision_filter_indices = torch.squeeze(collision_filter_mask):nonzero()
-        -- print('obstacle_mask', obstacle_mask)
         if collision_filter_indices:nElement() > 0 then
             collision_filter_indices = torch.squeeze(collision_filter_indices,2)
             local ground_truth_filtered = ground_truth:clone():index(1,collision_filter_indices)
@@ -237,7 +239,6 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
         num_correct = num_correct + num_equal
         count = count + mp.batch_size
     end
-    -- assert(false)
     return num_correct, count
 end
 
@@ -248,27 +249,23 @@ function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_leng
     local hypothesis_length = si_indices[2]-si_indices[1]+1
 
     for j,h in pairs(hypotheses) do
-        -- print(h)
         local hypothesis_batch = apply_hypothesis(batch, h, si_indices, context_id)  -- good
         local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
 
         -- test_loss is a tensor of size bsize
         local update_indices = test_losses:lt(best_losses):nonzero()
-        -- print('update_indices', update_indices)
 
         if update_indices:nElement() > 0 then
             update_indices = torch.squeeze(update_indices,2)
             --best_loss should equal test loss at the indices where test loss < best_loss
-            best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))
-
+            best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices)) -- works
             -- best_hypotheses should equal h at the indices where test loss < best_loss
-            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
+            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))  -- works
         end
         -- check that everything has been updated
         assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
         assert(not(best_hypotheses:equal(torch.zeros(mp.batch_size,hypothesis_length))))
     end
-    -- assert(false)
     return best_hypotheses
 end
 
@@ -312,7 +309,6 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             -- here get the obstacle mask
             local obstacle_index, obstacle_mask
             -- if size inference then obstacle mask
-            -- if config_args.si.os[1] == si_indices[1] and config_args.si.os[2] == si_indices[2] then
             if alleq({si_indices, config_args.si.os}) then
                 obstacle_index = config_args.si.oid[1]+1
                 -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
@@ -330,7 +326,6 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
             collectgarbage()
         end 
-        -- assert(false)
     end
 
     local accuracy
@@ -371,8 +366,6 @@ function collision_filter(batch)
 
     -- manually perform dot product
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
-    -- local cos_theta = torch.cdiv(dot, both_norm:expandAs(dot)) -- numerical issues here
-    -- local theta = torch.acos(cos_theta)
 
     -- you could just only include those for which dot is < 0
     local collision_mask = dot:le(0)
@@ -381,6 +374,7 @@ end
 
 
 -- zero out collisions with walls
+-- good
 function wall_collision_filter(batch, distance_threshold)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
@@ -390,6 +384,7 @@ function wall_collision_filter(batch, distance_threshold)
     local past = this_past:clone()
     local future = this_future:clone()
     future = data_process.relative_pair(past, future, true)
+    assert(future:size(2)==1)  -- assuming future == 1 at the moment.
 
     local vx = config_args.si.vx
     local vy = config_args.si.vy
@@ -404,7 +399,7 @@ function wall_collision_filter(batch, distance_threshold)
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
 
     -- you could just only include those for which dot is < 0
-    local collision_mask = dot:le(0)
+    local collision_mask = dot:le(0) -- 1 if collision  -- good  (5 x 1)
 
     -- for wall collision:
     -- get the direction of the velocity at time t. The normal of the wall dotted with that velocity should be positive.
@@ -429,6 +424,7 @@ function wall_collision_filter(batch, distance_threshold)
     -- find the nearest wall. this can be found with a simple difference of coordinates
     local future_pos_components = torch.cat({future_pos[{{},{1}}], future_pos[{{},{2}}], future_pos[{{},{1}}], future_pos[{{},{2}}]})  -- (bsize, 4) {x,y,x,y}
     local past_pos_components = torch.cat({past_pos[{{},{1}}], past_pos[{{},{2}}], past_pos[{{},{1}}], past_pos[{{},{2}}]})
+
     -- local d2leftwall = torch.abs(past_pos[1] - leftwall) -- x
     -- local d2topwall = torch.abs(past_pos[2]- topwall) -- y
     -- local d2rightwall = torch.abs(past_pos[1] - rightwall) -- x
@@ -439,13 +435,15 @@ function wall_collision_filter(batch, distance_threshold)
     -- filter out the walls that are > distance_threshold away. Perhaps do this in a vector form
     -- select the close wall
     -- ultimately we want to guarantee that we don't collide with a wall
+    -- close_walls_filter: (bsize, 4). cwf[i,j] = 1 when the focus ball in example i is close to wall j (within the distance threshold)
     local close_walls_filter = d2wall:le(distance_threshold/config_args.position_normalize_constant)  -- one ball diameter  (bsize,4)
+
     close_walls_filter:add(d2wallpast:le(distance_threshold/config_args.position_normalize_constant))  -- filter distance of past as well  -- wait if I add this in I get more examples?
+
     close_walls_filter:clamp(0,1)
     -- so :cmul does: filtering out the past will have < ones in the close_wall_filters, which means >= ones in the obstacle filter
     -- what that means is that we will kick out the ones that have past AND future by the walls. 
     -- but actually we want the OR. We want the ones whose past OR future are in the walls. Or do we?
-
 
     -- dot the wall's normal with your velocity vector
     -- what if two walls are equally close?
@@ -455,6 +453,7 @@ function wall_collision_filter(batch, distance_threshold)
     -- [i,j] means the dot product of the velocity of the ith example with the jth wall
     -- you want the dot product to be negative, because the wall normal points away from the wall
     local dot_with_wall_normal = torch.mm(past_vel, wall_normals:t())  -- (bsize, 4) 
+
     local towards_wall_filter = dot_with_wall_normal:le(0)
 
     -- you want to select the examples for which you are close to wall after collision and you were going towards it the previous timestep
@@ -467,10 +466,148 @@ function wall_collision_filter(batch, distance_threshold)
     -- do not consider these examples when you do collision filtering, because these rule out the possibility of a ball collision
     local close_to_wall_and_was_going_towards_any_wall_filter = close_to_wall_and_was_going_towards_some_wall_filter:sum(2) -- (bsize)
 
-    -- take the inverse. The 1s in the follow mask are the only examples where there exists a possibility of a ball collision
+    -- take the inverse. The 1s in the follow mask are the only examples where there exists a possibility of a object collision (NOT WITH A WALL)
     local possible_object_collision = close_to_wall_and_was_going_towards_any_wall_filter:eq(0)  -- (bsize)
 
     -- do an AND with the collision filter. this will give you the object collision
     local object_collision_mask = torch.cmul(possible_object_collision, collision_mask)
+
     return object_collision_mask
+end
+
+-- returns the id of the context object if the example contains a valid context collision example
+-- a context collision example is valid if only 1 context object is within a certain distance threshold of the ball
+-- and they collided. This guarantees that that particular context object is the only object that could have possibly collided with 
+-- the focus object.
+function context_collision_filter(batch)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+
+    -- I could compute manual dot product
+    -- this_past: (bsize, numpast, objdim)
+    -- this_future: (bsize, numfuture, objdim)
+    local past = this_past:clone()
+    local future = this_future:clone()
+    future = data_process.relative_pair(past, future, true)
+
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local past_vel = torch.squeeze(past[{{},{-1},{vx, vy}}],2)  -- (bsize, 2)
+    local future_vel = torch.squeeze(future[{{},{},{vx, vy}}],2)
+
+    local past_vel_norm = torch.norm(past_vel,2,2)
+    local future_vel_norm = torch.norm(future_vel,2,2)
+    local both_norm = torch.cmul(past_vel_norm, future_vel_norm)
+
+    -- manually perform dot product
+    local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
+
+    -- you could just only include those for which dot is < 0
+    local collision_mask = dot:le(0) -- 1 if collision  -- good
+
+    -- for wall collision:
+    -- get the direction of the velocity at time t. The normal of the wall dotted with that velocity should be positive.
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local future_pos = torch.squeeze(future[{{},{},{px, py}}],2)  -- see where the ball is at the tiem of collision  (bsize, 2)
+    local past_pos = torch.squeeze(past[{{},{-1},{px,py}}], 2)  -- before collision
+
+    -- now that we know the position and velocity, we will look at the context objects.
+    -- for each context object, we first compute the distance. Any context object outside of the distance threshold is out.
+    -- this should correspond well with the nbrhd. Can we get access to the nbrhd mask?
+
+    -- only consider looking at the context if there is a collision at all
+    if collision_mask:sum() > 0 then
+        -- 1. They have to be within (obj_radius + obstacle_diagonal + vnc) of each other
+
+        local cpast = context_past:clone()
+        local cfuture = context_future:clone()
+        local num_context = context_past:size(2)
+
+        -- NOTE! Do we need to do relative for context future? -- Nope.
+        -- context past positions (bsize, num_context, 2)
+        local cpast_pos = torch.squeeze(cpast[{{},{},{-1},{px,py}}],3)
+        -- context future positions (bsize, num_context, 2)
+        local cfuture_pos = torch.squeeze(cpast[{{},{},{1},{px,py}}],3)  -- assuming that num_future is 1 at the moment.
+        -- assert context past positions = context future positions.
+        assert(cpast_pos:equal(cfuture_pos))
+
+
+        -- euc dist between "one" and each row of "many"
+        -- one: (bsize, 2)
+        -- many: (bsize, num_context, 2)
+        local function compute_euc_dist_o2m(one, many)
+            assert(a:dim()==2 and b:dim()==3)
+            assert(alleq({torch.totable(one:size()), {mp.batch_size, 2}}))
+            assert(alleq({torch.totable(many:size()), {mp.batch_size, num_context, 2}}))
+            local diff = many - one:view(mp.batch_size, 1, 2):expandAs(many)  -- (bsize, num_context, 2)
+            local diffsq = torch.pow(diff,2)
+            local euc_dists = torch.squeeze(torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}]))  -- (bsize, num_context)
+            return euc_dists
+        end
+
+        -- unnormalize the distances
+        -- euc_dist(past_pos, context past position): (bsize, num_context)
+        local euc_dist_past = compute_euc_dist_o2m(past_pos, cpast_pos)*config_args.position_normalize_constant
+        -- euc_dist(future_pos, context future position): (bsize, num_context)
+        local euc_dist_future = compute_euc_dist_o2m(future_pos, cfuture_pos)*config_args.position_normalize_constant
+
+        -- get the thresholds for each context (bsize, num_context)
+        -- WE ARE ASSUMING THAT THE FOCUS OBJECT IS A BALL AND HAS SIZE MULTIPLIER ONE! 
+        -- do an assert for this. Need to take object_type and size_multiplier into account.
+        -- not that here the distances are unnormalized.
+        -- assert for all rows of focus? NOTE THIS! Well, in expand_for_each_object, we've ensured that the focus object will always be a ball
+        assert(past[{{},{},{config_args.si.oid[1]}]:eq(1)) -- make sure it is a ball
+        assert(past[{{},{},{config_args.si.os[1]+1}]:eq(1))  -- make sure size multiplier is 1
+        local distance_to_context_edge = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- unnormalized!
+        local distance_thresholds = torch.Tensor(mp.batch_size, num_context):fill(distance_to_context_edge) -- this is the base. then we will add in the obstacle sizes
+
+        -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_constant)
+        local context_sizes = nil -- TODO  NOTE THAT IF THE obstacle size is slightly above the actual distance, does that affect our thresholding? NOTE!
+        distance_thresholds:add(context_sizes)
+
+        -- note that your distance threshold varies based on the type of context.
+        -- past_euc_dist within threshold: 1 if within threshold
+        local past_euc_dist_within_threshold = (euc_dist_past-distance_thresholds):le(0)
+        -- future_euc_dist within threshold: 1 if within threshold
+        local future_euc_dist_within_threshold = (euc_dist_future-distance_thresholds):le(0)
+
+        -- check for each row, and record the indices of that 1. There should only be 1 of thoe indices. Should I use nonzero() or gather()?
+        -- returns a table of size (bsize). Each element of this table is another table with the indices in that row.
+        -- if a row doesn't have any indices, then it is an empty table
+        local past_within_threshold_indices = torch.find(past_euc_dist_within_threshold,1,2)  -- search over dimension 2
+        local future_within_threshold_indices = torch.find(future_euc_dist_within_threshold,1,2)  -- search over dimension 2
+
+        local valid_contexts = {}
+        for ex=1,mp.batch_size do
+            local past_context_indices = past_within_threshold_indices[ex]
+            local future_context_indices = future_within_threshold_indices[ex]
+            -- basically we are checking if there exists only one obstacle that is within
+            -- the threshold for BOTH PAST AND FUTURE! Is this what we want. TODO
+            if (#past_context_indices == #future_context_indices) and 
+                    (#past_context_indices == 1) and
+                    (past_context_indices[1] == future_context_indices[1]) then
+                -- only a valid context if it meets the above criteria
+                table.insert(valid_contexts,past_context_indices[1])
+            else 
+                table.insert(valid_contexts,0)
+            end
+        end
+
+        -- now turn valid_contexts into a tensor (bsize, 1).
+        valid_contexts = torch.Tensor(valid_contexts):reshape(mp.batch_size,1)  -- this will be your mask
+
+        return valid_contexts
+        -- if statement here. You can check if there is > 1 context object here
+        -- although that may be too tight of a restriction. We can admit more examples with the next if statement.
+        -- so you may not want to cut things off just yet. The next if statement just provides an additional guarantee.
+        -- so we can still include it.
+        -- 2. For the nearby contexts, find the contexts for which the focus object was heading towards that context
+        -- at time t. We know that the focus object reverses direction, so that implies that at t + 1, the focus object
+        -- is heading away from the context object. So basically we want to first find the vector. But the above position
+        -- condition alone should be sufficient to guarantee.
+    else 
+        -- this is not a byte tensor! because it is not supposed to be a binary mask.
+        -- this is only for getting the indices of the colliding context object for each example. 
+        return collision_mask:float()   -- they are all 0 so we are good
+    end
 end
