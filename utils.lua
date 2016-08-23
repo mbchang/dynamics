@@ -301,14 +301,3 @@ function alleq_tensortable(tableoftensors)
     end
 end
 
--- b and a must be same size
-function compute_euc_dist(a,b)
-    -- print('hey')
-    assert(a:dim()==3 and b:dim()==3)
-    assert(alleq({torch.totable(a:size()), torch.totable(b:size())}))
-    assert(a:size(3)==2)
-    local diff = torch.squeeze(b - a, 3) -- (bsize, num_context, 2)
-    local diffsq = torch.pow(diff,2)
-    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
-    return euc_dists
-end

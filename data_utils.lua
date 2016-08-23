@@ -272,6 +272,63 @@ function mj_interface(batch)
     return {focus_past, context_past, focus_future, context_future, mask}
 end
 
+-- b and a must be same size
+function compute_euc_dist(a,b)
+    -- print('hey')
+    assert(a:dim()==3 and b:dim()==3)
+    assert(alleq({torch.totable(a:size()), torch.totable(b:size())}))
+    assert(a:size(3)==2)
+    local diff = torch.squeeze(b - a, 3) -- (bsize, num_context, 2)
+    local diffsq = torch.pow(diff,2)
+    local euc_dists = torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}])  -- (bsize, num_context, 1)
+    return euc_dists
+end
+
+function num2onehot(value, categories)
+    local index = torch.find(torch.Tensor(categories), value)[1]
+    assert(not(index == nil))
+    local onehot = torch.zeros(#categories)
+    onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
+    return onehot
+end
+
+function onehot2num(onehot, categories)
+    assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
+    return categories[torch.find(onehot, 1)[1]]
+end
+
+function num2onehotall(selected, categories)
+    local num_ex = selected:size(1)
+    local num_obj = selected:size(2)
+    local num_steps = selected:size(3)
+
+    -- expand
+    selected = torch.repeatTensor(selected, 1, 1, 1, #categories)  -- I just want to tile on the last dimension
+    selected:resize(num_ex*num_obj*num_steps, #categories)
+
+    for row=1,selected:size(1) do
+        selected[{{row}}] = num2onehot(selected[{{row},{1}}]:sum(), categories)
+    end
+    selected:resize(num_ex, num_obj, num_steps, #categories)
+    return selected
+end
+
+
+function onehot2numall(onehot_selected, categories)
+    local num_ex = onehot_selected:size(1)
+    local num_obj = onehot_selected:size(2)
+    local num_steps = onehot_selected:size(3)
+
+    local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
+    onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
+
+    for row=1,onehot_selected:size(1) do
+        selected[{{row}}] = onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
+    end
+    selected:resize(num_ex, num_obj, num_steps, 1)
+    return selected
+end
+
 -- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
 -- p = preprocess_input(mask)
 --
