@@ -29,6 +29,7 @@ local args = {
         max_iters_per_json=100,  -- TODO
         subdivide=true,
         object_base_size={ball=60, obstacle=80, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
+        object_base_size_ids={60, 80, 60},
         -- object_sizes={2/3, 1, 3/2}, -- multiplies object_base_size
         object_sizes={1/2, 1, 2}, -- multiplies object_base_size
         drastic_object_sizes={1/2, 1, 2}, -- multiplies object_base_size
@@ -50,6 +51,10 @@ local args = {
 args.position_normalize_constant = math.max(args.cx,args.cy)*2
 args.ossi = args.si.m[1]  -- object_state_start_index: CHANGE THIS WHEN YOU ADD STUFF TO RAW STATE INDICES!
 
+-- args.object_base_size_ids = {}
+-- for _,i in pairs(oid_ids) do 
+
+-- end
 return args
 
 

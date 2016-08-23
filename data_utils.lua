@@ -284,10 +284,10 @@ function compute_euc_dist(a,b)
     return euc_dists
 end
 
-function num2onehot(value, categories)
+function num2onehot(value, categories, cuda)
     local index = torch.find(torch.Tensor(categories), value)[1]
     assert(not(index == nil))
-    local onehot = torch.zeros(#categories)
+    local onehot = convert_type(torch.zeros(#categories), cuda)
     onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
     return onehot
 end
@@ -297,7 +297,7 @@ function onehot2num(onehot, categories)
     return categories[torch.find(onehot, 1)[1]]
 end
 
-function num2onehotall(selected, categories)
+function num2onehotall(selected, categories, cuda)
     local num_ex = selected:size(1)
     local num_obj = selected:size(2)
     local num_steps = selected:size(3)
@@ -307,19 +307,19 @@ function num2onehotall(selected, categories)
     selected:resize(num_ex*num_obj*num_steps, #categories)
 
     for row=1,selected:size(1) do
-        selected[{{row}}] = num2onehot(selected[{{row},{1}}]:sum(), categories)
+        selected[{{row}}] = num2onehot(selected[{{row},{1}}]:sum(), categories, cuda)
     end
     selected:resize(num_ex, num_obj, num_steps, #categories)
     return selected
 end
 
 
-function onehot2numall(onehot_selected, categories)
+function onehot2numall(onehot_selected, categories, cuda)
     local num_ex = onehot_selected:size(1)
     local num_obj = onehot_selected:size(2)
     local num_steps = onehot_selected:size(3)
 
-    local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
+    local selected = convert_type(torch.zeros(num_ex*num_obj*num_steps, 1), cuda)  -- this is not cuda-ed!
     onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
 
     for row=1,onehot_selected:size(1) do

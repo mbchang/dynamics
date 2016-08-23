@@ -482,60 +482,46 @@ function context_object_sizes(context_past)
     local context = context_past:clone()
 
     -- the context object is the same across time steps
-    local context_oids = torch.squeeze(context[{{},{},{1},config_args.si.oid}])  -- (bsize, num_context, 1, 3)
-    local context_os = torch.squeeze(context[{{},{},{1},config_args.si.os}])  -- (bsize, num_context, 1, 3)
+    local context_oids = context[{{},{},{1},config_args.si.oid}]  -- (bsize, num_context, 1, 3)
+    local context_os = context[{{},{},{1},config_args.si.os}]  -- (bsize, num_context, 1, 3)
 
-    -- i can do num to one hot here
+    -- (bsize, num_context, 1, 1)
+    local context_oids_num = num2onehotall(context_oids, config_args.object_base_size_ids)  -- TODO: incorporate the actual object base size into here!
+    local context_os_num = num2onehotall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
 
-    -- at the end, check that everthing has been filled
-end
+    -- check that object_base_size_ids works!
 
-function num2onehot(value, categories)
-    local index = torch.find(torch.Tensor(categories), value)[1]
-    assert(not(index == nil))
-    local onehot = torch.zeros(#categories)
-    onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
-    return onehot
-end
+    -- now squeeze out third and fourth dimensions --> (bsize, num_context)
+    context_oids_num = torch.squeeze(torch.squeeze(context_oids_num,4),3)  -- note that order matters!
+    context_os_num = torch.squeeze(torch.squeeze(context_os_num,4),3)  -- note that order matters!
 
-function onehot2num(onehot, categories)
-    assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
-    return categories[torch.find(onehot, 1)[1]]
-end
+    assert(false, 'did you incorporate object base size? and did you take the diagonal into account?')
 
-
-
-function data_process:num2onehotall(selected, categories)
-    local num_ex = selected:size(1)
-    local num_obj = selected:size(2)
-    local num_steps = selected:size(3)
-
-    -- expand
-    selected = torch.repeatTensor(selected, 1, 1, 1, #categories)  -- I just want to tile on the last dimension
-    selected:resize(num_ex*num_obj*num_steps, #categories)
-
-    for row=1,selected:size(1) do
-        selected[{{row}}] = self:num2onehot(selected[{{row},{1}}]:sum(), categories)
-    end
-    selected:resize(num_ex, num_obj, num_steps, #categories)
-    return selected
+    local object_sizes = torch.cmul(context_oids_num, context_os_num)
+    return object_sizes
 end
 
 
-function data_process:onehot2numall(onehot_selected, categories)
-    local num_ex = onehot_selected:size(1)
-    local num_obj = onehot_selected:size(2)
-    local num_steps = onehot_selected:size(3)
 
-    local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
-    onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
+        -- oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
+        -- object_base_size={ball=60, obstacle=80, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
 
-    for row=1,onehot_selected:size(1) do
-        selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
-    end
-    selected:resize(num_ex, num_obj, num_steps, 1)
-    return selected
-end
+
+
+-- function data_process:onehot2numall(onehot_selected, categories, cuda)
+--     local num_ex = onehot_selected:size(1)
+--     local num_obj = onehot_selected:size(2)
+--     local num_steps = onehot_selected:size(3)
+
+--     local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
+--     onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
+
+--     for row=1,onehot_selected:size(1) do
+--         selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
+--     end
+--     selected:resize(num_ex, num_obj, num_steps, 1)
+--     return selected
+-- end
 
 
 
@@ -630,7 +616,7 @@ function context_collision_filter(batch)
 
         -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_context)
         -- this needs to tkae drastic size into account!
-        local context_sizes = nil -- TODO  NOTE THAT IF THE obstacle size is slightly above the actual distance, does that affect our thresholding? NOTE!
+        local context_sizes = context_object_sizes(context_past) -- TODO  NOTE THAT IF THE obstacle size is slightly above the actual distance, does that affect our thresholding? NOTE!
         assert(false, 'did you take drastic size into account?')
         distance_thresholds:add(context_sizes)
 

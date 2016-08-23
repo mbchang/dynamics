@@ -162,12 +162,12 @@ end
 
 
 function data_process:num2onehotall(selected, categories)
-    return num2onehotall(selected, categories)
+    return num2onehotall(selected, categories, false)
 end
 
 
 function data_process:onehot2numall(onehot_selected, categories)
-    return onehot2numall(onehot_selected, categories)
+    return onehot2numall(onehot_selected, categories, false)
 end
 
 
