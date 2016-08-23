@@ -153,52 +153,20 @@ end
 
 
 function data_process:num2onehot(value, categories)
-    -- local index = torch.find(torch.Tensor(categories), value)[1]
-    -- assert(not(index == nil))
-    -- local onehot = torch.zeros(#categories)
-    -- onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
-    -- return onehot
     return num2onehot(value, categories)
 end
 
 function data_process:onehot2num(onehot, categories)
-    -- assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
-    -- return categories[torch.find(onehot, 1)[1]]
     return onehot2num(onehot, categories)
 end
 
 
 function data_process:num2onehotall(selected, categories)
-    -- local num_ex = selected:size(1)
-    -- local num_obj = selected:size(2)
-    -- local num_steps = selected:size(3)
-
-    -- -- expand
-    -- selected = torch.repeatTensor(selected, 1, 1, 1, #categories)  -- I just want to tile on the last dimension
-    -- selected:resize(num_ex*num_obj*num_steps, #categories)
-
-    -- for row=1,selected:size(1) do
-    --     selected[{{row}}] = self:num2onehot(selected[{{row},{1}}]:sum(), categories)
-    -- end
-    -- selected:resize(num_ex, num_obj, num_steps, #categories)
-    -- return selected
     return num2onehotall(selected, categories)
 end
 
 
 function data_process:onehot2numall(onehot_selected, categories)
-    -- local num_ex = onehot_selected:size(1)
-    -- local num_obj = onehot_selected:size(2)
-    -- local num_steps = onehot_selected:size(3)
-
-    -- local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
-    -- onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
-
-    -- for row=1,onehot_selected:size(1) do
-    --     selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
-    -- end
-    -- selected:resize(num_ex, num_obj, num_steps, 1)
-    -- return selected
     return onehot2numall(onehot_selected, categories)
 end
 

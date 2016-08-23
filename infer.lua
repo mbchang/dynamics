@@ -1,4 +1,5 @@
 local data_process = require 'data_process'
+require 'data_utils'
 require 'utils'
 require 'torchx'
 
@@ -475,6 +476,72 @@ function wall_collision_filter(batch, distance_threshold)
     return object_collision_mask
 end
 
+-- unnormalized!
+-- return (bsize, num_contex)
+function context_object_sizes(context_past)
+    local context = context_past:clone()
+
+    -- the context object is the same across time steps
+    local context_oids = torch.squeeze(context[{{},{},{1},config_args.si.oid}])  -- (bsize, num_context, 1, 3)
+    local context_os = torch.squeeze(context[{{},{},{1},config_args.si.os}])  -- (bsize, num_context, 1, 3)
+
+    -- i can do num to one hot here
+
+    -- at the end, check that everthing has been filled
+end
+
+function num2onehot(value, categories)
+    local index = torch.find(torch.Tensor(categories), value)[1]
+    assert(not(index == nil))
+    local onehot = torch.zeros(#categories)
+    onehot[{{index}}]:fill(1)  -- will throw an error if index == nil
+    return onehot
+end
+
+function onehot2num(onehot, categories)
+    assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
+    return categories[torch.find(onehot, 1)[1]]
+end
+
+
+
+function data_process:num2onehotall(selected, categories)
+    local num_ex = selected:size(1)
+    local num_obj = selected:size(2)
+    local num_steps = selected:size(3)
+
+    -- expand
+    selected = torch.repeatTensor(selected, 1, 1, 1, #categories)  -- I just want to tile on the last dimension
+    selected:resize(num_ex*num_obj*num_steps, #categories)
+
+    for row=1,selected:size(1) do
+        selected[{{row}}] = self:num2onehot(selected[{{row},{1}}]:sum(), categories)
+    end
+    selected:resize(num_ex, num_obj, num_steps, #categories)
+    return selected
+end
+
+
+function data_process:onehot2numall(onehot_selected, categories)
+    local num_ex = onehot_selected:size(1)
+    local num_obj = onehot_selected:size(2)
+    local num_steps = onehot_selected:size(3)
+
+    local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
+    onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
+
+    for row=1,onehot_selected:size(1) do
+        selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
+    end
+    selected:resize(num_ex, num_obj, num_steps, 1)
+    return selected
+end
+
+
+
+
+
+
 -- returns the id of the context object if the example contains a valid context collision example
 -- a context collision example is valid if only 1 context object is within a certain distance threshold of the ball
 -- and they collided. This guarantees that that particular context object is the only object that could have possibly collided with 
@@ -556,13 +623,15 @@ function context_collision_filter(batch)
         -- do an assert for this. Need to take object_type and size_multiplier into account.
         -- not that here the distances are unnormalized.
         -- assert for all rows of focus? NOTE THIS! Well, in expand_for_each_object, we've ensured that the focus object will always be a ball
-        assert(past[{{},{},{config_args.si.oid[1]}]:eq(1)) -- make sure it is a ball
-        assert(past[{{},{},{config_args.si.os[1]+1}]:eq(1))  -- make sure size multiplier is 1
+        assert(past[{{},{},{config_args.si.oid[1]}}]:eq(1)) -- make sure it is a ball
+        assert(past[{{},{},{config_args.si.os[1]+1}}]:eq(1))  -- make sure size multiplier is 1
         local distance_to_context_edge = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- unnormalized!
         local distance_thresholds = torch.Tensor(mp.batch_size, num_context):fill(distance_to_context_edge) -- this is the base. then we will add in the obstacle sizes
 
-        -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_constant)
+        -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_context)
+        -- this needs to tkae drastic size into account!
         local context_sizes = nil -- TODO  NOTE THAT IF THE obstacle size is slightly above the actual distance, does that affect our thresholding? NOTE!
+        assert(false, 'did you take drastic size into account?')
         distance_thresholds:add(context_sizes)
 
         -- note that your distance threshold varies based on the type of context.
@@ -605,6 +674,8 @@ function context_collision_filter(batch)
         -- at time t. We know that the focus object reverses direction, so that implies that at t + 1, the focus object
         -- is heading away from the context object. So basically we want to first find the vector. But the above position
         -- condition alone should be sufficient to guarantee.
+        -- The thing is, this condition is hard to verify because your velocity vector could be going "toward" the 
+        -- context object, but you may not collide with it, depnding on the size of the context object.
     else 
         -- this is not a byte tensor! because it is not supposed to be a binary mask.
         -- this is only for getting the indices of the colliding context object for each example. 
