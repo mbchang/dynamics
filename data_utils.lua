@@ -293,6 +293,8 @@ function num2onehot(value, categories, cuda)
 end
 
 function onehot2num(onehot, categories)
+    print('onehot')
+    print(onehot)
     assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
     return categories[torch.find(onehot, 1)[1]]
 end
@@ -304,12 +306,12 @@ function num2onehotall(selected, categories, cuda)
 
     -- expand
     selected = torch.repeatTensor(selected, 1, 1, 1, #categories)  -- I just want to tile on the last dimension
-    selected:resize(num_ex*num_obj*num_steps, #categories)
+    selected = selected:reshape(num_ex*num_obj*num_steps, #categories)
 
     for row=1,selected:size(1) do
         selected[{{row}}] = num2onehot(selected[{{row},{1}}]:sum(), categories, cuda)
     end
-    selected:resize(num_ex, num_obj, num_steps, #categories)
+    selected = selected:reshape(num_ex, num_obj, num_steps, #categories)
     return selected
 end
 
@@ -320,12 +322,12 @@ function onehot2numall(onehot_selected, categories, cuda)
     local num_steps = onehot_selected:size(3)
 
     local selected = convert_type(torch.zeros(num_ex*num_obj*num_steps, 1), cuda)  -- this is not cuda-ed!
-    onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
+    onehot_selected = onehot_selected:reshape(num_ex*num_obj*num_steps, #categories)  -- I get weird numbers if I use resize and the num_steps = 1
 
     for row=1,onehot_selected:size(1) do
         selected[{{row}}] = onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
     end
-    selected:resize(num_ex, num_obj, num_steps, 1)
+    selected = selected:reshape(num_ex, num_obj, num_steps, 1)
     return selected
 end
 
