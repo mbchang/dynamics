@@ -293,8 +293,6 @@ function num2onehot(value, categories, cuda)
 end
 
 function onehot2num(onehot, categories)
-    print('onehot')
-    print(onehot)
     assert(onehot:sum() == 1 and #torch.find(onehot, 1) == 1)
     return categories[torch.find(onehot, 1)[1]]
 end
