@@ -495,8 +495,10 @@ local function context_object_sizes(context_past)
     local context_os = context[{{},{},{1},config_args.si.os}]  -- (bsize, num_context, 1, 3)
 
     -- (bsize, num_context, 1, 1)
-    local context_oids_num = num2onehotall(context_oids, config_args.object_base_size_ids_upper)  -- TODO: incorporate the actual object base size into here!
-    local context_os_num = num2onehotall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
+    print(config_args.object_base_size_ids_upper)
+    print(context_oids)
+    local context_oids_num = onehot2numall(context_oids, config_args.object_base_size_ids_upper)  -- TODO: incorporate the actual object base size into here!
+    local context_os_num = onehot2numall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
 
     -- check that object_base_size_ids works!
 
@@ -532,9 +534,7 @@ end
 -- one: (bsize, 2)
 -- many: (bsize, num_context, 2)
 local function compute_euc_dist_o2m(one, many)
-    assert(a:dim()==2 and b:dim()==3)
-    assert(alleq({torch.totable(one:size()), {mp.batch_size, 2}}))
-    assert(alleq({torch.totable(many:size()), {mp.batch_size, num_context, 2}}))
+    assert(one:dim()==2 and many:dim()==3)
     local diff = many - one:view(mp.batch_size, 1, 2):expandAs(many)  -- (bsize, num_context, 2)
     local diffsq = torch.pow(diff,2)
     local euc_dists = torch.squeeze(torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}]))  -- (bsize, num_context)
@@ -575,36 +575,36 @@ function context_collision_filter(batch)
     -- get the direction of the velocity at time t. The normal of the wall dotted with that velocity should be positive.
     local px = config_args.si.px
     local py = config_args.si.py
-    local future_pos = torch.squeeze(future[{{},{},{px, py}}],2)  -- see where the ball is at the tiem of collision  (bsize, 2)
-    local past_pos = torch.squeeze(past[{{},{-1},{px,py}}], 2)  -- before collision
+    local past_pos = torch.squeeze(past[{{},{-1},{px,py}}], 2)  -- before collision 
 
+    -- define "focus look ahead" fla = past_pos + past_vel
+    -- define "context look ahead" cla = context_past_pos + context_past_vel
     -- now that we know the position and velocity, we will look at the context objects.
-    -- for each context object, we first compute the distance. Any context object outside of the distance threshold is out.
-    -- this should correspond well with the nbrhd. Can we get access to the nbrhd mask?
+    -- for each context object, we first compute the distance between fla and cla. 
+    -- if euc_dist(fla, cla) > object_base_size_ids_upper[context]+object_base_size_ids_upper[focus] then that context object is out.
+    -- what is left are contexts for which the focus ball POTENTIALLY collides with. We only want one. 
+    -- Note that we are under the scenario that we are GIVEN a collision.
 
     -- only consider looking at the context if there is a collision at all
     if collision_mask:sum() > 0 then
         -- 1. They have to be within (obj_radius + obstacle_diagonal + vnc) of each other
 
         local cpast = context_past:clone()
-        local cfuture = context_future:clone()
         local num_context = context_past:size(2)
 
-        -- NOTE! Do we need to do relative for context future? -- Nope.
         -- context past positions (bsize, num_context, 2)
         local cpast_pos = torch.squeeze(cpast[{{},{},{-1},{px,py}}],3)
-        -- context future positions (bsize, num_context, 2)
-        local cfuture_pos = torch.squeeze(cpast[{{},{},{1},{px,py}}],3)  -- assuming that num_future is 1 at the moment.
-        -- assert context past positions = context future positions. --> Can't assume this because I could be doing shape inference!
-        -- so that means that when comparing distances I should be comparing the past or future?
-        -- this makes things complicated because the context object is moving too.
-        -- assert(cpast_pos:equal(cfuture_pos))
+        -- context past velocity (bsize, num_context, 2)
+        local cpast_vel = torch.squeeze(cpast[{{},{},{-1},{vx,vy}}],3)
 
-        -- unnormalize the distances
-        -- euc_dist(past_pos, context past position): (bsize, num_context)
-        local euc_dist_past = compute_euc_dist_o2m(past_pos, cpast_pos)*config_args.position_normalize_constant
-        -- euc_dist(future_pos, context future position): (bsize, num_context)
-        local euc_dist_future = compute_euc_dist_o2m(future_pos, cfuture_pos)*config_args.position_normalize_constant
+        -- Next, let's compute fla and cla: "focus look ahead" and "context look ahead" respectively.
+        local fla = past_pos + past_vel  -- (bsize, 2)
+        local cla = cpast_pos + cpast_vel -- (bsize, num_context, 2)
+
+        -- let's compute the euc dist between fla and cla (unnormalized)
+        assert(alleq({torch.totable(fla:size()), {mp.batch_size, 2}}))
+        assert(alleq({torch.totable(cla:size()), {mp.batch_size, num_context, 2}}))
+        local euc_dist_la = compute_euc_dist_o2m(fla, cla)*config_args.position_normalize_constant
 
         -- get the thresholds for each context (bsize, num_context)
         -- WE ARE ASSUMING THAT THE FOCUS OBJECT IS A BALL AND HAS SIZE MULTIPLIER ONE! 
@@ -613,32 +613,28 @@ function context_collision_filter(batch)
         -- assert for all rows of focus? NOTE THIS! Well, in expand_for_each_object, we've ensured that the focus object will always be a ball
         assert(past[{{},{},{config_args.si.oid[1]}}]:eq(1)) -- make sure it is a ball
         assert(past[{{},{},{config_args.si.os[1]+1}}]:eq(1))  -- make sure size multiplier is 1
-        local distance_to_context_edge = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- unnormalized! NOTE! THIS IS BY AXIS! The max distance is vnc*sqrt(2)/2
+        local distance_to_context_edge = config_args.object_base_size.ball  -- note that later we can do something like context_object_sizes for different sized focuses
         local distance_thresholds = torch.Tensor(mp.batch_size, num_context):fill(distance_to_context_edge) -- this is the base. then we will add in the obstacle sizes
 
         -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_context)
-        -- this needs to tkae drastic size into account!
-        local context_sizes = context_object_sizes(context_past) -- TODO  NOTE THAT IF THE obstacle size is slightly above the actual distance, does that affect our thresholding? NOTE!
-        -- assert(false, 'did you take drastic size into account?')
+        -- NOTE: this needs to tkae drastic size into account!
+        -- we don't need a padding because fla and cla will only exactly equal (size_upper(ball) + size_upper(context)) if the 
+        -- collision happens at exactly t+1
+        local context_sizes = context_object_sizes(context_past)
         distance_thresholds:add(context_sizes)
 
-        -- note that your distance threshold varies based on the type of context.
-        -- past_euc_dist within threshold: 1 if within threshold
-        local past_euc_dist_within_threshold = (euc_dist_past-distance_thresholds):le(0)
-        -- future_euc_dist within threshold: 1 if within threshold
-        local future_euc_dist_within_threshold = (euc_dist_future-distance_thresholds):le(0)
-        -- within threshold: 1 if within threshold for future and past
-        local within_threshold = torch.cmul(past_euc_dist_within_threshold,future_euc_dist_within_threshold)
+        -- if la is > threshold we take it out. if it is <= threshold, we keep it
+        -- 1 if within threshold aka POTENTIAL collision
+        local la_within_threshold = (euc_dist_la-distance_thresholds):le(0)
 
-        -- 2. here we will see if the ball is moving toward a context object. Only consider the context objects whose past AND future are within the threshold.
-        -- it would be impossible to collide with THiS context object if one of {past, future} are outside the threshold.
-        -- 1 in [i,j] if the focus object was moving toward context j of example i
+        -- 2. here we will see if the ball is moving toward a context object.
+        -- [i,j]=1 if the focus object was moving toward context j of example i
         local moving_toward_context = check_moving_toward_context(past_pos, cpast_pos, past_vel)  -- (bsize, num_context) 
 
-        -- now we apply the following filters. It must be moving towards context and that
-        -- context must be featured in both past_within_threshold_indices and future_within_threshold_indices
-        -- I just do a cmul of moving_toward_context, past_euc_dist_within_threshold, future_euc_dist_within_threshold
-        local within_threshold_moving_toward_context = torch.cmul(within_threshold, moving_toward_context)  -- (bsize, num_context)
+        -- now we apply the following filters. 
+        -- a) It must be moving towards context 
+        -- b) la must be within threshold
+        local within_threshold_moving_toward_context = torch.cmul(la_within_threshold, moving_toward_context)  -- (bsize, num_context)
 
         -- check for each row, and record the indices of that 1. There should only be 1 of thoe indices.
         -- returns a table of size (bsize). Each element of this table is another table with the indices in that row.
@@ -646,6 +642,7 @@ function context_collision_filter(batch)
         -- here we have all the contexts that meet our collision criteria. All we need to do now is to check if there is only one context in an example
         local within_threshold_moving_toward_context_indices = torch.find(within_threshold_moving_toward_context,1,2)  -- search over dimension 2
 
+        -- here we impose the constraint that only 1 context should be potentially colliding
         local valid_contexts = {}  -- size: batch size
         for ex=1,mp.batch_size do
 
@@ -662,16 +659,6 @@ function context_collision_filter(batch)
         valid_contexts = torch.Tensor(valid_contexts):reshape(mp.batch_size,1)  -- this will be your mask
 
         return valid_contexts
-        -- if statement here. You can check if there is > 1 context object here
-        -- although that may be too tight of a restriction. We can admit more examples with the next if statement.
-        -- so you may not want to cut things off just yet. The next if statement just provides an additional guarantee.
-        -- so we can still include it.
-        -- 2. For the nearby contexts, find the contexts for which the focus object was heading towards that context
-        -- at time t. We know that the focus object reverses direction, so that implies that at t + 1, the focus object
-        -- is heading away from the context object. So basically we want to first find the vector. But the above position
-        -- condition alone should be sufficient to guarantee.
-        -- The thing is, this condition is hard to verify because your velocity vector could be going "toward" the 
-        -- context object, but you may not collide with it, depnding on the size of the context object.
     else 
         print('no collision')
         -- this is not a byte tensor! because it is not supposed to be a binary mask.
