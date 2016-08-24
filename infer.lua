@@ -478,7 +478,7 @@ end
 
 -- unnormalized!
 -- return (bsize, num_contex)
-function context_object_sizes(context_past)
+local function context_object_sizes(context_past)
     local context = context_past:clone()
 
     -- the context object is the same across time steps
@@ -486,7 +486,7 @@ function context_object_sizes(context_past)
     local context_os = context[{{},{},{1},config_args.si.os}]  -- (bsize, num_context, 1, 3)
 
     -- (bsize, num_context, 1, 1)
-    local context_oids_num = num2onehotall(context_oids, config_args.object_base_size_ids)  -- TODO: incorporate the actual object base size into here!
+    local context_oids_num = num2onehotall(context_oids, config_args.object_base_size_ids_upper)  -- TODO: incorporate the actual object base size into here!
     local context_os_num = num2onehotall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
 
     -- check that object_base_size_ids works!
@@ -495,37 +495,42 @@ function context_object_sizes(context_past)
     context_oids_num = torch.squeeze(torch.squeeze(context_oids_num,4),3)  -- note that order matters!
     context_os_num = torch.squeeze(torch.squeeze(context_os_num,4),3)  -- note that order matters!
 
-    assert(false, 'did you incorporate object base size? and did you take the diagonal into account?')
+    -- assert(false, 'did you incorporate object base size? and did you take the diagonal into account?')
 
     local object_sizes = torch.cmul(context_oids_num, context_os_num)
     return object_sizes
 end
 
+local function check_moving_toward_context(past_pos, cpast_pos, past_vel)
+    -- past_pos: (bsize, 2)
+    -- cpast_pos: (bsize, num_context, 2)
+    -- past_vel: (bsize, 2)
+    local past_pos = past_pos:clone():view(mp.batch_size, 1, 2):expandAs(cpast_pos)
+    local past_vel = past_vel:clone():view(mp.batch_size, 1, 2):expandAs(cpast_pos)
 
+    -- first compute the vectors between past_pos and cpast_pos
+    local pointing_to_context = cpast_pos - past_pos
 
-        -- oids = {ball=1, obstacle=2, block=3},  -- {1=ball, 2=obstacle, 3=block},
-        -- object_base_size={ball=60, obstacle=80, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
+    -- next take dot product with past_vel (bsize, num_context)
+    local direction_wrt_context = torch.squeeze(torch.sum(torch.cmul(pointing_to_context, past_vel),3),3)
 
+    -- the dot product should be positive if we are moving towards context.
+    local is_moving_towards_context = direction_wrt_context:gt(0)  -- bsize, num_context)
+    return is_moving_towards_context
+end
 
-
--- function data_process:onehot2numall(onehot_selected, categories, cuda)
---     local num_ex = onehot_selected:size(1)
---     local num_obj = onehot_selected:size(2)
---     local num_steps = onehot_selected:size(3)
-
---     local selected = torch.zeros(num_ex*num_obj*num_steps, 1)  -- this is not cuda-ed!
---     onehot_selected:resize(num_ex*num_obj*num_steps, #categories)
-
---     for row=1,onehot_selected:size(1) do
---         selected[{{row}}] = self:onehot2num(torch.squeeze(onehot_selected[{{row}}]), categories)
---     end
---     selected:resize(num_ex, num_obj, num_steps, 1)
---     return selected
--- end
-
-
-
-
+-- euc dist between "one" and each row of "many"
+-- one: (bsize, 2)
+-- many: (bsize, num_context, 2)
+local function compute_euc_dist_o2m(one, many)
+    assert(a:dim()==2 and b:dim()==3)
+    assert(alleq({torch.totable(one:size()), {mp.batch_size, 2}}))
+    assert(alleq({torch.totable(many:size()), {mp.batch_size, num_context, 2}}))
+    local diff = many - one:view(mp.batch_size, 1, 2):expandAs(many)  -- (bsize, num_context, 2)
+    local diffsq = torch.pow(diff,2)
+    local euc_dists = torch.squeeze(torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}]))  -- (bsize, num_context)
+    return euc_dists
+end
 
 
 -- returns the id of the context object if the example contains a valid context collision example
@@ -584,20 +589,6 @@ function context_collision_filter(batch)
         -- assert context past positions = context future positions.
         assert(cpast_pos:equal(cfuture_pos))
 
-
-        -- euc dist between "one" and each row of "many"
-        -- one: (bsize, 2)
-        -- many: (bsize, num_context, 2)
-        local function compute_euc_dist_o2m(one, many)
-            assert(a:dim()==2 and b:dim()==3)
-            assert(alleq({torch.totable(one:size()), {mp.batch_size, 2}}))
-            assert(alleq({torch.totable(many:size()), {mp.batch_size, num_context, 2}}))
-            local diff = many - one:view(mp.batch_size, 1, 2):expandAs(many)  -- (bsize, num_context, 2)
-            local diffsq = torch.pow(diff,2)
-            local euc_dists = torch.squeeze(torch.sqrt(diffsq[{{},{},{1}}]+diffsq[{{},{},{2}}]))  -- (bsize, num_context)
-            return euc_dists
-        end
-
         -- unnormalize the distances
         -- euc_dist(past_pos, context past position): (bsize, num_context)
         local euc_dist_past = compute_euc_dist_o2m(past_pos, cpast_pos)*config_args.position_normalize_constant
@@ -617,7 +608,7 @@ function context_collision_filter(batch)
         -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_context)
         -- this needs to tkae drastic size into account!
         local context_sizes = context_object_sizes(context_past) -- TODO  NOTE THAT IF THE obstacle size is slightly above the actual distance, does that affect our thresholding? NOTE!
-        assert(false, 'did you take drastic size into account?')
+        -- assert(false, 'did you take drastic size into account?')
         distance_thresholds:add(context_sizes)
 
         -- note that your distance threshold varies based on the type of context.
@@ -625,24 +616,32 @@ function context_collision_filter(batch)
         local past_euc_dist_within_threshold = (euc_dist_past-distance_thresholds):le(0)
         -- future_euc_dist within threshold: 1 if within threshold
         local future_euc_dist_within_threshold = (euc_dist_future-distance_thresholds):le(0)
+        -- within threshold: 1 if within threshold for future and past
+        local within_threshold = torch.cmul(past_euc_dist_within_threshold,future_euc_dist_within_threshold)
 
-        -- check for each row, and record the indices of that 1. There should only be 1 of thoe indices. Should I use nonzero() or gather()?
+        -- 2. here we will see if the ball is moving toward a context object. Only consider the context objects whose past AND future are within the threshold.
+        -- it would be impossible to collide with THiS context object if one of {past, future} are outside the threshold.
+        -- 1 in [i,j] if the focus object was moving toward context j of example i
+        local moving_toward_context = check_moving_toward_context(past_pos, cpast_pos, past_vel)  -- (bsize, num_context) 
+
+        -- now we apply the following filters. It must be moving towards context and that
+        -- context must be featured in both past_within_threshold_indices and future_within_threshold_indices
+        -- I just do a cmul of moving_toward_context, past_euc_dist_within_threshold, future_euc_dist_within_threshold
+        local within_threshold_moving_toward_context = torch.cmul(within_threshold, moving_toward_context)  -- (bsize, num_context)
+
+        -- check for each row, and record the indices of that 1. There should only be 1 of thoe indices.
         -- returns a table of size (bsize). Each element of this table is another table with the indices in that row.
         -- if a row doesn't have any indices, then it is an empty table
-        local past_within_threshold_indices = torch.find(past_euc_dist_within_threshold,1,2)  -- search over dimension 2
-        local future_within_threshold_indices = torch.find(future_euc_dist_within_threshold,1,2)  -- search over dimension 2
+        -- here we have all the contexts that meet our collision criteria. All we need to do now is to check if there is only one context in an example
+        local within_threshold_moving_toward_context_indices = torch.find(within_threshold_moving_toward_context,1,2)  -- search over dimension 2
 
-        local valid_contexts = {}
+        local valid_contexts = {}  -- size: batch size
         for ex=1,mp.batch_size do
-            local past_context_indices = past_within_threshold_indices[ex]
-            local future_context_indices = future_within_threshold_indices[ex]
-            -- basically we are checking if there exists only one obstacle that is within
-            -- the threshold for BOTH PAST AND FUTURE! Is this what we want. TODO
-            if (#past_context_indices == #future_context_indices) and 
-                    (#past_context_indices == 1) and
-                    (past_context_indices[1] == future_context_indices[1]) then
+
+            local valid_context_ids = within_threshold_moving_toward_context_indices[ex]  -- note that the ordering may not be the same as in future_context_indices.
+            if (#valid_context_ids == 1) then
                 -- only a valid context if it meets the above criteria
-                table.insert(valid_contexts,past_context_indices[1])
+                table.insert(valid_contexts,valid_context_ids[1])
             else 
                 table.insert(valid_contexts,0)
             end
