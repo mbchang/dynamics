@@ -306,6 +306,15 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         local hypothesis_length = si_indices[2]-si_indices[1]+1
         local num_context = batch[2]:size(2)
 
+
+        -- I should do obstacle mask here, and make obstacle mask an argument into context collision filter.
+        -- because right now I am assuming that my context object is an obstacle. But actually I can't assume that
+        -- since I might be doing inference on object id.
+
+        local valid_contexts = context_collision_filter(batch)
+        print(valid_contexts)
+        -- assert(false)
+
         for context_id = 1, num_context do
             -- here get the obstacle mask
             local obstacle_index, obstacle_mask
@@ -586,8 +595,10 @@ function context_collision_filter(batch)
         local cpast_pos = torch.squeeze(cpast[{{},{},{-1},{px,py}}],3)
         -- context future positions (bsize, num_context, 2)
         local cfuture_pos = torch.squeeze(cpast[{{},{},{1},{px,py}}],3)  -- assuming that num_future is 1 at the moment.
-        -- assert context past positions = context future positions.
-        assert(cpast_pos:equal(cfuture_pos))
+        -- assert context past positions = context future positions. --> Can't assume this because I could be doing shape inference!
+        -- so that means that when comparing distances I should be comparing the past or future?
+        -- this makes things complicated because the context object is moving too.
+        -- assert(cpast_pos:equal(cfuture_pos))
 
         -- unnormalize the distances
         -- euc_dist(past_pos, context past position): (bsize, num_context)
@@ -602,7 +613,7 @@ function context_collision_filter(batch)
         -- assert for all rows of focus? NOTE THIS! Well, in expand_for_each_object, we've ensured that the focus object will always be a ball
         assert(past[{{},{},{config_args.si.oid[1]}}]:eq(1)) -- make sure it is a ball
         assert(past[{{},{},{config_args.si.os[1]+1}}]:eq(1))  -- make sure size multiplier is 1
-        local distance_to_context_edge = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- unnormalized!
+        local distance_to_context_edge = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- unnormalized! NOTE! THIS IS BY AXIS! The max distance is vnc*sqrt(2)/2
         local distance_thresholds = torch.Tensor(mp.batch_size, num_context):fill(distance_to_context_edge) -- this is the base. then we will add in the obstacle sizes
 
         -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_context)
@@ -662,6 +673,7 @@ function context_collision_filter(batch)
         -- The thing is, this condition is hard to verify because your velocity vector could be going "toward" the 
         -- context object, but you may not collide with it, depnding on the size of the context object.
     else 
+        print('no collision')
         -- this is not a byte tensor! because it is not supposed to be a binary mask.
         -- this is only for getting the indices of the colliding context object for each example. 
         return collision_mask:float()   -- they are all 0 so we are good

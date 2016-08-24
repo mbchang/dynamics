@@ -30,7 +30,7 @@ local args = {
         subdivide=true,
         object_base_size={ball=60, obstacle=80, block=60},  -- radius, length, block (note that this is block long length, whereas in js it is the short length!!)
         object_base_size_ids={60, 80, 60},
-        object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
+        object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))},
 
         -- object_sizes={2/3, 1, 3/2}, -- multiplies object_base_size
         object_sizes={1/2, 1, 2}, -- multiplies object_base_size
