@@ -314,8 +314,13 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         local valid_contexts = context_collision_filter(batch)
 
         -- note that here at most one element in valid_contexts per row would be lit up.
+        -- so each example in the batch has only one context.
 
-        -- print(valid_contexts)
+
+        
+
+
+        print(valid_contexts)
         -- assert(false)
 
         for context_id = 1, num_context do
@@ -339,6 +344,14 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
             collectgarbage()
         end 
+
+
+
+
+
+
+
+
     end
 
     local accuracy
