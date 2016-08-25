@@ -211,14 +211,14 @@ function binarize(tensor)
 end
 
 
-function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
+function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, context_mask)
     if cf then 
         -- this filter has a 1 if the focus object reverse direction
         local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
 
-        if obstacle_mask then
-            -- this obstacle mask has a 1 if the ground truth is from a particular context object
-            collision_filter_mask = collision_filter_mask:cmul(obstacle_mask)  -- filter for collisions AND obstacles
+        if context_mask then
+            -- this context mask has a 1 if the ground truth is from a particular context object
+            collision_filter_mask = collision_filter_mask:cmul(context_mask)  -- filter for collisions AND valid context!
         end
 
         -- after applying both filters, you have the examples in which the focus object
@@ -315,42 +315,41 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
 
         -- note that here at most one element in valid_contexts per row would be lit up.
         -- so each example in the batch has only one context.
+        -- for example: [0, 0, 2, 0, 1] means that examples 1,2,4 have no valid context
+        -- and context_id 2 is valid in example 3 and context_id 5 is valid in example 5
 
-
-        
-
-
-        print(valid_contexts)
-        -- assert(false)
+        -- good up to here
 
         for context_id = 1, num_context do
-            -- here get the obstacle mask
-            local obstacle_index, obstacle_mask
-            -- if size inference then obstacle mask
-            if alleq({si_indices, config_args.si.os}) then
-                obstacle_index = config_args.si.oid[1]+1
-                -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
-                -- that is the problem. I didn't make a copy. 
-                obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+            -- here let's get a onehot mask to see if the context id is in valid_contexts
+            local context_mask = valid_contexts:eq(context_id)
+            -- to speed up computation
+            if context_mask:sum() > 0 then
+
+                -- here get the obstacle mask
+                local obstacle_index, obstacle_mask
+                -- if size inference then obstacle mask
+                if alleq({si_indices, config_args.si.os}) then
+                    obstacle_index = config_args.si.oid[1]+1
+                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
+                    -- that is the problem. I didn't make a copy. 
+                    obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                    context_mask:cmul(obstacle_mask)
+                end
+
+                local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
+                -- now that you have best_hypothesis, compare best_hypotheses with truth
+                -- need to construct true hypotheses based on this_past, hypotheses as parameters
+                local context_past = batch[2]:clone()
+                local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
+
+                -- ground truth: (bsize, hypothesis_length)
+                num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, context_mask)
+                collectgarbage()
             end
-
-            local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
-            -- now that you have best_hypothesis, compare best_hypotheses with truth
-            -- need to construct true hypotheses based on this_past, hypotheses as parameters
-            local context_past = batch[2]:clone()
-            local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
-
-            -- ground truth: (bsize, hypothesis_length)
-            num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, obstacle_mask)
-            collectgarbage()
         end 
 
-
-
-
-
-
-
+        -- good 
 
     end
 
@@ -360,7 +359,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
     else 
         accuracy =num_correct/count
     end
-    print(count..' collisions with obstacles out of '..dataloader.num_batches*mp.batch_size..' examples')
+    print(count..' collisions with context out of '..dataloader.num_batches*mp.batch_size..' examples')
     return accuracy
 end
 
@@ -741,7 +740,7 @@ function context_collision_filter(batch)
 
         return valid_contexts
     else 
-        print('no collision')
+        -- print('no collision')
         -- this is not a byte tensor! because it is not supposed to be a binary mask.
         -- this is only for getting the indices of the colliding context object for each example. 
         return collision_mask:float()   -- they are all 0 so we are good
