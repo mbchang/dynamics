@@ -2178,7 +2178,7 @@ if (!_isBrowser) {
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
                 options.numObj = 6
-                options.variableMass = false
+                options.variableMass = true
                 options.variableSize = true
                 options.variableObstacles = true
                 options.friction = false
@@ -2452,7 +2452,7 @@ if (!_isBrowser) {
             console.assert(self.params.variableObstacles)
 
             // or, a more sophisticated scheme:
-            console.assert(self.params.num_obj <= 4) // four is the max number that the window size can handle.
+            console.assert(self.params.num_obj <= 6) // four is the max number that the window size can handle.
             self.params.num_obstacles = Math.floor(Math.random()*self.params.num_obj)  // can have 0 to n-1 obstacles
             self.params.num_invis = Math.floor(Math.random()*(self.params.num_obj-self.params.num_obstacles))  // can have 0 to n-1 obstacles
             self.params.num_balls = self.params.num_obj - self.params.num_obstacles - self.params.num_invis // guarantee at least one ball.
@@ -2470,9 +2470,9 @@ if (!_isBrowser) {
                 let max_obj_size
                 if (self.params.drasticSize) {
                     // NOTE the big object may not be completely within the world!
-                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
+                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
                 } else {
-                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
+                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
                 }                
                 return rand_pos(
                     {hi: 2*demo.cx - max_obj_size - 1, lo: max_obj_size + 1},
@@ -2534,9 +2534,9 @@ if (!_isBrowser) {
             for (let i = self.params.num_balls; i < self.params.num_balls+self.params.num_invis; i ++){
                 let short_side = self.s[i-(self.params.num_balls)]*self.params.invis_side
                 let long_side = 3*self.s[i-(self.params.num_balls)]*self.params.invis_side
-                sampled_sizes.push(Math.sqrt(Math.pow(short_side,2) + Math.pow(long_side,2)))  // wrong because iti s a rectangle!
+                sampled_sizes.push(Math.sqrt(Math.pow(short_side,2) + Math.pow(long_side,2)))
             }
-            // console.log(sampled_sizes)
+            
             for (let i = self.params.num_balls+self.params.num_invis; i < self.params.num_obj; i ++) {
                 sampled_sizes.push(self.s[i-(self.params.num_balls+self.params.num_invis)]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
