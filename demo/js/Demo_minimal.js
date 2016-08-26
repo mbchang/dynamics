@@ -146,7 +146,7 @@
         // Ok, now let's manually update
         Runner.stop(demo.runner)
 
-        var trajectories = data[11]  // extra 0 for batch mode
+        var trajectories = data[0]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
         config.trajectories = trajectories
@@ -200,25 +200,28 @@
                 // console.log(trajectories[id][i].velocity)
 
                 Body.setAngle(body, trajectories[id][i].angle)
-                if (trajectories[id][i].mass == 1) {
-                    if (id==0) {
-                        console.log(id)
-                        console.log('traj vel', trajectories[id][i].velocity)
-                        console.log('bod vel', body.velocity)
-                        console.log('traj pos', trajectories[id][i].position)
-                        console.log('bod pos', body.position)
-                        console.log('traj ang', trajectories[id][i].angle)
-                        console.log('bod ang', body.angle)
-                        console.log('traj angvel', trajectories[id][i].angularVelocity)
-                        console.log('bod angvel', body.angularVelocity)
-                    }
-                }
+                // if (trajectories[id][i].mass == 1) {
+                //     if (id==0) {
+                //         console.log(id)
+                //         console.log('traj vel', trajectories[id][i].velocity)
+                //         console.log('bod vel', body.velocity)
+                //         console.log('traj pos', trajectories[id][i].position)
+                //         console.log('bod pos', body.position)
+                //         console.log('traj ang', trajectories[id][i].angle)
+                //         console.log('bod ang', body.angle)
+                //         console.log('traj angvel', trajectories[id][i].angularVelocity)
+                //         console.log('bod angvel', body.angularVelocity)
+                //     }
+                // }
+
+                console.log(id, trajectories[id][i].position, trajectories[id][i].velocity, trajectories[id][i].angle)
+
             }
 
             Runner.tick(demo.runner, demo.engine);
             i++;
             if( i < num_steps ){
-                setTimeout( f, 50 );
+                setTimeout( f, 500 );
             }
         }
         f();

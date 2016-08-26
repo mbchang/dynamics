@@ -40,13 +40,13 @@ def create_jobs(dry_run, ext):
     toch_root = '/om/user/mbchang/physics/lua'
 
     # world parameters
-    num_objs = [4]  # how far should we go? Let's say the max is 20. Should we include 1?
+    num_objs = [3,4,5,6]  # how far should we go? Let's say the max is 20. Should we include 1?
     friction = [False]
     gravity = [False]
-    masses = [False]  # TODO
+    masses = [True]  # TODO
     sizes = [True]
     num_obstacles = [True]
-    envs = ['invisible']
+    envs = ['mixed']
     drastic_size = [True]
 
     # mj data generation
