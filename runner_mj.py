@@ -85,9 +85,9 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n8_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rd'}"},
             # {'dataset_folders':"{'balls_n8_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rd'}"},
 
-            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
+            {'dataset_folders':"{'tower_n4_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd'}"},
             # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_stable'}"},
-            # {'dataset_folders':"{'tower_n4_t120_ex25000_rd_unstable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_unstable'}"},
+            {'dataset_folders':"{'tower_n4_t120_ex25000_rd_unstable'}", 'test_dataset_folders': "{'tower_n4_t120_ex25000_rd_unstable'}"},
             # {'dataset_folders':"{'tower_n2_t120_ex25000_rd_stable'}", 'test_dataset_folders': "{'tower_n2_t120_ex25000_rd_stable'}"},
 
 
@@ -100,14 +100,42 @@ def create_jobs(dry_run, mode, ext):
 
             # mixed
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},  # this does not use dras sizing
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_rd'}"},  # this does not use dras sizing
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_o_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},  # this does not use dras sizing
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_rd'}"},  # this does not use dras sizing
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_dras_rd'}"},
 
             # # invisible
             # {'dataset_folders':"{'invisible_n6_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'invisible_n6_t60_ex50000_z_o_dras_rd'}"},
             # {'dataset_folders':"{'invisible_n5_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'invisible_n5_t60_ex50000_z_o_dras_rd'}"},
+
+            # mixed dras
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n4_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n5_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras_rd','mixed_n4_t60_ex50000_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras_rd','mixed_n6_t60_ex50000_z_o_dras_rd'}"},
+
+
+            # # mixed dras3
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n4_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n5_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rd','mixed_n4_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rd','mixed_n6_t60_ex50000_z_o_dras3_rd'}"},
+
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_m_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n4_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_m_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n5_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rd','mixed_n4_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rd','mixed_n6_t60_ex50000_m_z_o_dras3_rd'}"},
+
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_m_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n4_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_m_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n5_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras_rd'}"},  
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras_rd','mixed_n4_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras_rd','mixed_n6_t60_ex50000_m_z_o_dras_rd'}"},
+
 
             ]
 
@@ -119,10 +147,10 @@ def create_jobs(dry_run, mode, ext):
             for nbrhd in [True]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
                     for layers in [3]:  # [2,3,4]
-                        for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
+                        for lr in [3e-3,3e-2]:  # [1e-4, 3e-4, 1e-3]
                             for im in [False]:
-                                # for veps in [0]:
-                                    # for lda in [100,1000]:
+                                for veps in [1e-9]:
+                                    # for lda in [10, 100,1000]:
                                     #     for vlda in [100,1000]:
                                             # for bnorm in [True, False]:
                                                 job['model'] = model
@@ -234,11 +262,11 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-# run_experiment(dry_run)
+run_experiment(dry_run)
 # run_experimentload(dry_run)
 # sim(dry_run)
 # minf(dry_run)
-sinf(dry_run)
+# sinf(dry_run)
 # oinf(dry_run)
 
 

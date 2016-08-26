@@ -228,7 +228,32 @@ experiments = [
                 'invisible_n5_t60_ex50000_z_o_dras_rd__invisible_n5_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 'invisible_n6_t60_ex50000_z_o_dras_rd__invisible_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
 
+                # mixed dras
+                'mixed_n3_t60_ex50000_m_z_o_dras_rd__mixed_n3_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n4_t60_ex50000_m_z_o_dras_rd__mixed_n4_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n5_t60_ex50000_m_z_o_dras_rd__mixed_n5_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n6_t60_ex50000_m_z_o_dras_rd__mixed_n6_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
 
+                'mixed_n3_t60_ex50000_z_o_dras_rd__mixed_n3_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n4_t60_ex50000_z_o_dras_rd__mixed_n4_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n5_t60_ex50000_z_o_dras_rd__mixed_n5_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n6_t60_ex50000_z_o_dras_rd__mixed_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
+                'mixed_n3_t60_ex50000_z_o_dras3_rd__mixed_n3_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n4_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n5_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
+                'mixed_n3_t60_ex50000_m_z_o_dras3_rd__mixed_n3_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n4_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n5_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
+                # tower unstable and normal with higher lr
+                'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+                'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+                'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+                'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
 
                 ]
 

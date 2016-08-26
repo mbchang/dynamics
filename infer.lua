@@ -37,8 +37,19 @@ function infer_properties(model, dataloader, params_, property, method, cf)
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        -- indices = {1,2,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
-        indices = {1,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
+
+        -- TODO! does dataloader have jsonfolder?
+        -- if not(string.find(self.jsonfolder, '_dras_') == nil) then
+        --     indices = {1,3}
+        -- else if not(string.find(self.jsonfolder, '_dras3_') == nil)
+        --     indices = {1,2,3}
+        -- end
+
+        -- assert(false)
+
+
+        indices = {1,2,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
+        -- indices = {1,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good, works for batch_size
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
@@ -503,7 +514,10 @@ local function context_object_sizes(context_past)
 
     -- (bsize, num_context, 1, 1)
     local context_basesizes_num = onehot2numall(context_oids, config_args.object_base_size_ids_upper)  -- TODO: incorporate the actual object base size into here!
-    local context_os_num = onehot2numall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
+    
+    -- TO SWITCH BETWEEN DRASTIC SIZE AND NORMAL, JUST CHANGE object_sizes in config!
+    local context_os_num = onehot2numall(context_os, config_args.drastic_object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
+    -- local context_os_num = onehot2numall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
 
     -- now squeeze out third and fourth dimensions --> (bsize, num_context)
     context_basesizes_num = torch.squeeze(torch.squeeze(context_basesizes_num,4),3)  -- note that order matters!

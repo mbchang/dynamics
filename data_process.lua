@@ -58,7 +58,8 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
         self.maxwinsize = args.maxwinsize
     end
 
-    if not(string.find(self.jsonfolder, '_dras_') == nil) then
+    if not(string.find(self.jsonfolder, '_dras_') == nil) or 
+        not(string.find(self.jsonfolder, '_dras3_') == nil) then
         self.obj_sizes = args.drastic_object_sizes
     else 
         self.obj_sizes = args.object_sizes

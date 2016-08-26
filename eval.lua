@@ -75,6 +75,17 @@ local M
 -- world constants
 local subsamp = 1
 
+
+-- if not(string.find(mp.test_dataset_folders, 'tower') == nil) then
+--     assert((string.find(mp.test_dataset_folders, 'ball') == nil) and 
+--            (string.find(mp.test_dataset_folders, 'mixed') == nil) and 
+--            (string.find(mp.test_dataset_folders, 'invisible') == nil))
+--     config_args.maxwinsize = config_args.maxwinsize_long
+-- else
+--     config_args.maxwinsize = config_args.maxwinsize
+-- end
+
+
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_dataset_folders,'\"',''))())
 mp.savedir = mp.logs_root .. '/' .. mp.name
@@ -548,6 +559,11 @@ function inference(logfile, property, method, cf)
         local saved_args = torch.load(mp.savedir..'/args.t7')
         mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
         config_args = saved_args.config_args
+
+
+        -- NOTE THIS IS ONLY FOR THE EXPERIMENTS THAT DON'T HAVE object_base_size_ids_upper!
+        config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
+
         model_deps(mp.model)
         inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
         require 'infer'

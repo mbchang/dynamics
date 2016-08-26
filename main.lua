@@ -324,8 +324,8 @@ function train(start_iter, epoch_num)
 
             -- save
             if (t-start_iter+1) % mp.save_every == 0 then
-                local model_file = string.format('%s/epoch%.2f_%.4f.t7',
-                                            mp.savedir, epoch_num, v_val_loss)
+                local model_file = string.format('%s/epoch%d_step%d_%.7f.t7',
+                                            mp.savedir, epoch_num, t, v_val_loss)
                 -- local model_file = string.format('%s/epoch%.2f_%.4f.t7',
                 --                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
@@ -410,7 +410,7 @@ function validate()
     local test_loss = test(test_loader, model.theta.params, false)
 
     -- local train_loss = 0
-    -- -- local val_loss = 0
+    -- local val_loss = 0
     -- local test_loss = 0
 
     local log_string = 'train loss\t'..train_loss..
@@ -548,7 +548,6 @@ function run_experiment_load()
     config_args = saved_args.config_args
 
     -- if mp.server == 'op' then mp.cuda = true end
-
 
     model_deps(mp.model)
     inittrain(true, mp.savedir ..'/'..snapshot, iters)  -- assuming the mp.savedir doesn't change

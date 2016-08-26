@@ -32,8 +32,8 @@ local args = {
         object_base_size_ids={60, 80, 60},
         object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))},
 
-        -- object_sizes={2/3, 1, 3/2}, -- multiplies object_base_size
-        object_sizes={1/2, 1, 2}, -- multiplies object_base_size
+        object_sizes={2/3, 1, 3/2}, -- multiplies object_base_size
+        -- object_sizes={1/2, 1, 2}, -- multiplies object_base_size
         drastic_object_sizes={1/2, 1, 2}, -- multiplies object_base_size
         -- drastic_object_sizes={1/3, 1, 3}, -- multiplies object_base_size
 
