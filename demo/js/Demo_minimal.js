@@ -24,12 +24,10 @@
         var CircularJSON = require('circular-json')
         var assert = require('assert')
         var utils = require('../../utils')
-        var sleep = require('sleep')
-        // var PImage = require('pureimage');
+        // var sleep = require('sleep')
+        var PImage = require('pureimage');
+        var fs = require('fs');
         require('./Examples')
-        var env = process.argv.slice(2)[0]
-        if (env == null)
-            throw('Please provide an enviornment, e.g. node Demo.js hockey')
         module.exports = Demo;
         window = {};
     }
@@ -60,12 +58,6 @@
         // let data = json_data
 
         var demo = {}
-        demo.engine = Engine.create()
-        demo.runner = Engine.run(demo.engine)
-        demo.container = document.getElementById('canvas-container');
-        // demo.render = Render.create({element: demo.container, engine: demo.engine})
-        // Render.run(demo.render)
-
         demo.offset = 5;  // world offset
         demo.config = {}
         demo.config.cx = 400;
@@ -73,6 +65,8 @@
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
         demo.config.sizes = [2/3, 1, 3/2]  // multiples
+        demo.config.drastic_sizes = [1/2, 1, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
+        // demo.config.drastic_sizes = [1/2, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
         demo.config.object_base_size = {'ball': 60, 'obstacle': 80, 'block': 20 }  // radius of ball, side of square obstacle, long side of block
         demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
         demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
@@ -85,34 +79,50 @@
         demo.width = 2*demo.cx
         demo.height = 2*demo.cy
 
+        demo.engine = Engine.create()
         demo.engine.world.bounds = { min: { x: 0, y: 0 },
-                            max: { x: demo.width, y: demo.height }}
+                    max: { x: demo.width, y: demo.height }}
 
-        var world_border = Composite.create({label:'Border'});
 
-        Composite.add(world_border, [
-            Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 }),
-            Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })
-        ]);
+        // here let's put a isBrowser condition
+        if (_isBrowser) {  // do everything normally.
+            demo.runner = Engine.run(demo.engine)
+            demo.container = document.getElementById('canvas-container');
+            demo.render = Render.create({element: demo.container, engine: demo.engine, 
+                                        hasBounds: true, options:{height:demo.height, width:demo.width}})
+            Render.run(demo.render)
+        } else {
+            // run the engine
+            demo.runner = Runner.create()
+            demo.runner.isFixed = true
+            var pcanvas = PImage.make(demo.width, demo.height);  // 693
+            pcanvas.style = {}  
+            console.log(pcanvas)
+            demo.render = Render.create({
+                element: 17, // dummy
+                canvas: pcanvas,
+                engine: demo.engine,
+            })
+            
 
-        World.add(demo.engine.world, world_border)  // its parent is a circular reference!
-
-        demo.render = Render.create({element: demo.container, engine: demo.engine, 
-                                    hasBounds: true, options:{height:demo.height, width:demo.width}})
-        Render.run(demo.render)
-
-        Events.on(demo.render, 'afterRender', function(e) {
-            var img = demo.render.canvas.toDataURL("image"+e.timestamp+".png")
-            var data = img.replace(/^data:image\/\w+;base64,/, "");
-            // var buf = new Buffer(data, 'base64');
-            // fs.writeFile('image.png', buf);
-            // document.write('<img src="'+img+'"/>');  // how do I save this?
-            // PImage.encodePNG(img, fs.createWriteStream('out.png'), function(err) {
-            // console.log("wrote out the png file to out.png");
+            // Events.on(demo.render, 'afterRender', function(e) {
+            //     var img = demo.render.canvas.toDataURL("image"+e.timestamp+".png")
+            //     var data = img.replace(/^data:image\/\w+;base64,/, "");
+            //     // var buf = new Buffer(data, 'base64');
+            //     // fs.writeFile('image.png', buf);
+            //     // document.write('<img src="'+img+'"/>');  // how do I save this?
+            //     // PImage.encodePNG(img, fs.createWriteStream('out.png'), function(err) {
+            //     // console.log("wrote out the png file to out.png");
+            //     // });
             // });
-        });
+
+            demo.render.hasBounds = true
+            demo.render.options.height = demo.height
+            demo.render.options.width = demo.width
+            demo.render.canvas.height = demo.height
+            demo.render.canvas.width = demo.width
+        }
+
 
         if (demo.render) {
             var renderOptions = demo.render.options;
@@ -133,18 +143,14 @@
             renderOptions.showInternalEdges = false;
             renderOptions.showSeparations = false;
             renderOptions.background = '#fff';
-
-            if (_isMobile) {
-                renderOptions.showDebug = true;
-            }
         }
 
         var mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}// TODO eventually call Example[config.env].mass_colors
 
-
-
         // Ok, now let's manually update
-        Runner.stop(demo.runner)
+        if (_isBrowser) {
+            Runner.stop(demo.runner) // seems like this is causing the problem!
+        }
 
         var trajectories = data[0]  // extra 0 for batch mode
         var num_obj = trajectories.length
@@ -175,7 +181,6 @@
             for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
-                // body.render.fillStyle = mass_colors[trajectories[id][i].mass]//'#4ECDC4'
                 if (i < config.num_past) {
                     body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
                 } else {
@@ -184,44 +189,37 @@
                 body.render.lineWidth = 5
 
                 console.log('set position')
-                // let eps = 0.0001  // to prevent bounce-back
-
 
                 Body.setPosition(body, trajectories[id][i].position)
-
-
-                // if (id == 0) {
-                //     Body.setPosition(body, trajectories[id][i].position)
-                // }
-
-                // Body.setVelocity(body, trajectories[id][i].velocity)
-
-                // console.log(trajectories[id][i].position)
-                // console.log(trajectories[id][i].velocity)
-
                 Body.setAngle(body, trajectories[id][i].angle)
-                // if (trajectories[id][i].mass == 1) {
-                //     if (id==0) {
-                //         console.log(id)
-                //         console.log('traj vel', trajectories[id][i].velocity)
-                //         console.log('bod vel', body.velocity)
-                //         console.log('traj pos', trajectories[id][i].position)
-                //         console.log('bod pos', body.position)
-                //         console.log('traj ang', trajectories[id][i].angle)
-                //         console.log('bod ang', body.angle)
-                //         console.log('traj angvel', trajectories[id][i].angularVelocity)
-                //         console.log('bod angvel', body.angularVelocity)
-                //     }
-                // }
-
                 console.log(id, trajectories[id][i].position, trajectories[id][i].velocity, trajectories[id][i].angle)
 
             }
 
             Runner.tick(demo.runner, demo.engine);
+
+
+            if (!_isBrowser) {
+                demo.render.context.fillStyle = 'white'
+                demo.render.context.fillRect(0,0,demo.width,demo.height)
+                Render.world(demo.render)
+                let filename = 'out'+i+'_'+i+'.png'  // TODO! rename
+                PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
+                    console.log("wrote out the png file to "+filename);
+                });
+
+                // TODO: don't have to set timeout.
+                // console.log('hi')
+            }
+
+
             i++;
             if( i < num_steps ){
-                setTimeout( f, 500 );
+                if (_isBrowser) {
+                    setTimeout( f, 5 );
+                } else {
+                    setTimeout( f, 0 );
+                }
             }
         }
         f();
@@ -231,6 +229,7 @@
 
     // call init when the page has loaded fully
     if (!_isAutomatedTest) {
+        console.log('a')
         window.loadFile = function loadFile(file){
             var fr = new FileReader();
             fr.onload = function(){
@@ -238,5 +237,11 @@
             }
             fr.readAsText(file)
         }
+    } else {
+        // here load the json file here
+        let loaded_json= jsonfile.readFileSync('gt_batch383.json')
+        // console.log('b')
+        // console.log(loaded_file)
+        Demo.run(loaded_json)
     }
 })();
