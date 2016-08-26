@@ -103,7 +103,7 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
 
 initialize_positions_variable_size = function(num_obj, sampled_sizes, rand_pos_fn){
     let counter = 0
-    let tolerance = 1000
+    let tolerance = 10000
     while (true) {
         console.log('proposing trajectory. counter:', counter)
         let result = initialize_positions_variable_size_limited(num_obj, sampled_sizes, rand_pos_fn)
