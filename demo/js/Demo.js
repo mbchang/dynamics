@@ -382,7 +382,8 @@
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
         demo.config.sizes = [2/3, 1, 3/2]  // multiples
-        demo.config.drastic_sizes = [1/2, 2]  // multiples
+        demo.config.drastic_sizes = [1/2, 1, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
+        // demo.config.drastic_sizes = [1/2, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
         demo.config.object_base_size = {'ball': 60, 'obstacle': 80, 'block': 20 }  // radius of ball, side of square obstacle, long side of block
         demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
         demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
@@ -472,6 +473,7 @@
         }
 
         let s = startstep;
+        console.log("Start step:", s)
         while (s < num_samples) {
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
@@ -500,6 +502,8 @@
             var should_break = false
             // run the engine
             for (let i = 0; i < sim_options.steps; i++) {
+
+
                 for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
                     trajectory[id][i] = {};
                     let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
@@ -507,13 +511,6 @@
                         trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
 
                         // check if undefined.
-                        // if (k=='mass' && body.objtype == 'obstacle') {
-                        //     console.log(body)
-                        //     console.log(trajectory[id][i][k])
-                        //     console.log(!(typeof trajectory[id][i][k] !== 'undefined'))  // hmm it doesn't catch this!
-                        //     console.log('hey')
-                        //     assert(false)
-                        // }
                         if (!(typeof trajectory[id][i][k] !== 'undefined')) {  // it could that 0 is false!
                             should_break = true;
                             console.log('trajectory[id][i][k] is undefined', trajectory[id][i][k])
@@ -629,7 +626,7 @@
             experiment_string += '_o' 
         }
         if (sim_options.drasticSize) {
-            experiment_string += '_dras' 
+            experiment_string += '_dras3'   // change this to _dras if you only have two sizes!
         }
         if (sim_options.gravity) {
             experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
@@ -657,31 +654,31 @@
     };
 
 
-    Demo.generate_chunk = function(chunks, chunk_number, sim_options, num_unstable, num_comunstable) {
-        let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
+    // Demo.generate_chunk = function(chunks, chunk_number, sim_options, num_unstable, num_comunstable) {
+    //     let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
 
-        if (sim_options.env == 'tower') {
-            let output = Demo.simulate(demo, chunks[j], sim_options);  // add sim_options.start_step here
-            let trajectories = output[0]
-            let num_unstable_chunk = output[1]
-            let com_num_unstable_chunk = output[2]
-            num_unstable += num_unstable_chunk
-            num_comunstable += com_num_unstable_chunk
+    //     if (sim_options.env == 'tower') {
+    //         let output = Demo.simulate(demo, chunks[j], sim_options);  // add sim_options.start_step here
+    //         let trajectories = output[0]
+    //         let num_unstable_chunk = output[1]
+    //         let com_num_unstable_chunk = output[2]
+    //         num_unstable += num_unstable_chunk
+    //         num_comunstable += com_num_unstable_chunk
 
-            jsonfile.writeFileSync(sim_file,
-                                {trajectories:trajectories, config:sim_options}
-                                );
-            console.log('Wrote to ' + sim_file)
-        } else {
-            let trajectories = Demo.simulate(demo, chunks[j], sim_options);
+    //         jsonfile.writeFileSync(sim_file,
+    //                             {trajectories:trajectories, config:sim_options}
+    //                             );
+    //         console.log('Wrote to ' + sim_file)
+    //     } else {
+    //         let trajectories = Demo.simulate(demo, chunks[j], sim_options);
 
-            jsonfile.writeFileSync(sim_file,
-                                {trajectories:trajectories, config:sim_options}
-                                );
-            console.log('Wrote to ' + sim_file)
-        }
-        return [num_unstable, num_comunstable]  // do I need to return chunks?
-    }
+    //         jsonfile.writeFileSync(sim_file,
+    //                             {trajectories:trajectories, config:sim_options}
+    //                             );
+    //         console.log('Wrote to ' + sim_file)
+    //     }
+    //     return [num_unstable, num_comunstable]  // do I need to return chunks?
+    // }
 
     Demo.generate_data = function(demo, sim_options) {
         const max_iters_per_json = 100; 
@@ -705,12 +702,12 @@
 
                 // this should be put into a separate method!
                 // TODODO
-                // chunk_number = 0  // comment this out if you are doing all of the data generation!
+                // chunk_number = 10  // comment this out if you are doing all of the data generation!
 
                 let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
 
                 if (sim_options.env == 'tower') {
-                    let output = Demo.simulate(demo, chunks[j], sim_options);  // add sim_options.start_step here
+                    let output = Demo.simulate(demo, chunks[j], sim_options, sim_options.startstep);
                     let trajectories = output[0]
                     let num_unstable_chunk = output[1]
                     let com_num_unstable_chunk = output[2]
