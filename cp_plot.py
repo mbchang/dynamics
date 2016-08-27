@@ -1,6 +1,25 @@
 import os
 import sys
 import plot_results
+import errno   
+
+import cv2
+import os
+import numpy as np
+from images2gif import writeGif
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+import os
+import pprint 
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 experiments = [
                 # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000',
@@ -258,37 +277,139 @@ experiments = [
                 ]
 
 # specify paths
-out_root = 'opmjlogs'
+out_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs'
 in_root = '/om/user/mbchang/physics/lua/logs'
 copy_prefix = 'rsync -avz --exclude \'*.t7\' mbchang@openmind7.mit.edu:'
 remote_prefix = '/om/user/mbchang/physics/lua/logs/'
+js_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/demo/js'
 
-# copy
-if len(experiments) > 1:
-    remote_paths = remote_prefix + '\{' + ','.join(['\\"' + e + '\\"' for e in experiments]) + '\} '
-    command = copy_prefix + remote_paths + out_root
-else:
-    remote_paths = remote_prefix + experiments[0] + ' '
-    command = copy_prefix + remote_paths + out_root + '/'
 
-response = raw_input('Running command:\n\n' + command + '\n\nProceed?[y/n]')
-if response == 'y':
-    os.system(command)
-elif response != 'n':
-    response = raw_input('Running command:\n\n' + command + '\nProceed?[y/n]')
-else:
-    print 'Not running command.'
-    sys.exit(0)
+def copy(experiments):
+    # copy
+    if len(experiments) > 1:
+        remote_paths = remote_prefix + '\{' + ','.join(['\\"' + e + '\\"' for e in experiments]) + '\} '
+        command = copy_prefix + remote_paths + out_root
+    else:
+        remote_paths = remote_prefix + experiments[0] + ' '
+        command = copy_prefix + remote_paths + out_root + '/'
 
-# plot
-for experiment_folder in experiments:
-    try:
-        experiment_folder = os.path.join(out_root, experiment_folder)
-        # command = 'th plot_results.lua -hid -infolder ' + experiment_folder
-        command = 'th plot_results.lua -infolder ' + experiment_folder
-        print command
+    response = raw_input('Running command:\n\n' + command + '\n\nProceed?[y/n]')
+    if response == 'y':
+        print('## COPY ##')
         os.system(command)
-        # print 'plot hidden state'
-        # plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
-    except KeyboardInterrupt:
+    elif response != 'n':
+        response = raw_input('Running command:\n\n' + command + '\nProceed?[y/n]')
+    else:
+        print 'Not running command.'
         sys.exit(0)
+
+def plot(experiments):
+    print('## PLOT ##')
+    # plot
+    for experiment_folder in experiments:
+        try:
+            experiment_folder = os.path.join(out_root, experiment_folder)
+            # command = 'th plot_results.lua -hid -infolder ' + experiment_folder
+            command = 'th plot_results.lua -infolder ' + experiment_folder
+            print '#'*80
+            print command
+            os.system(command)
+
+            visual_folder = os.path.join(experiment_folder, 'visual')
+            mkdir_p(visual_folder)
+
+            # if there exists a folder that ends with predictions, make subfolders in there.
+            for f in os.listdir(experiment_folder):
+                f = os.path.join(experiment_folder,f)
+                if os.path.isdir(f) and 'predictions' in os.path.basename(f):
+                    for j in os.listdir(f):
+                        batch_folder = os.path.join(visual_folder,j[:-len('.json')])
+                        print 'Made', batch_folder, '\n' + '-'*80
+                        mkdir_p(batch_folder)
+
+            # print 'plot hidden state'
+            # plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
+        except KeyboardInterrupt:
+            sys.exit(0)
+
+# Call Demo_minimal here
+def visualize(experiments):
+    print('## VISUALIZE ##')
+    for experiment_folder in experiments:
+        try:
+            experiment_folder = os.path.join(out_root, experiment_folder)
+            if any('predictions' in x for x in os.listdir(experiment_folder)):
+                prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
+                assert(len(prediction_folders)==1)
+                prediction_folder = prediction_folders[0]
+                command = 'node ' + js_root + '/Demo_minimal.js -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
+                print '#'*80
+                print(command)
+                os.system(command)
+
+                # we could make the gif now.
+        except KeyboardInterrupt:
+            sys.exit(0)
+
+def img_id_json(filename):
+    begin = filename.rfind('step')+len('step')
+    end = filename.rfind('.')
+    return int(filename[begin:end])
+
+def create_gif_json(images_root, gifname):
+    """
+        writeGif(filename, images, duration=0.1, loops=0, dither=1)
+            Write an animated gif from the specified images.
+            images should be a list of numpy arrays of PIL images.
+            Numpy images of type float should have pixels between 0 and 1.
+            Numpy images of other types are expected to have values between 0 and 255.
+    """
+    # TODO! I'm assuming my img_id is fixed!
+    file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png')], key=lambda x: img_id_json(x))
+    images = [Image.open(os.path.join(images_root,fn)) for fn in file_names]
+    filename = os.path.join(images_root, gifname)
+    writeGif(filename, images, duration=0.2)
+
+
+def animate(experiments, remove_png):
+    print('## ANIMATE ##')
+    # wait until all of Demo_minimal has finished
+    animated_experiments = []
+    for experiment_folder in experiments:
+        print '#'*80
+        print 'Trying to animate', experiment_folder
+        try:
+            visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
+            if not os.listdir(visual_folder): 
+                print 'Nothing in', visual_folder
+            else:
+                animated_experiments.append(experiment_folder)
+                for batch_folder in os.listdir(visual_folder):
+                    print '-'*80
+                    gifname = experiment_folder + '_' + batch_folder + '.gif'
+                    batch_folder = os.path.join(visual_folder, batch_folder)
+                    if any(f.endswith('.png') for f in os.listdir(batch_folder)):
+                        create_gif_json(batch_folder, gifname)
+
+                        if remove_png:
+                            print 'Removing images from', batch_folder
+                            for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png')]:
+                                imgfile = os.path.join(batch_folder, imgfile)
+                                command = 'rm ' + imgfile
+                                os.system(command)
+                    else:
+                        print 'No .pngs found. Not creating gif for', batch_folder
+
+        except KeyboardInterrupt:
+            sys.exit(0)
+    print 'Animated the following folders:'
+    pprint.pprint(animated_experiments)
+
+# copy(experiments)
+# plot(experiments)
+# visualize(experiments)
+# animate(experiments, True)
+
+
+
+

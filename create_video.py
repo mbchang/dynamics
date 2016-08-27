@@ -153,7 +153,8 @@ if __name__ == '__main__':
 
     # create_gif('/Users/MichaelChang/Dropbox (MIT Solar Car Team)/MacHD/Documents/Important/MIT/Research/SuperUROP/Code/dynamics/oplogs/18_layers_3_lrdecay_0.99_dataset_folder_14_34balls_lr_0.0003_sharpen_1_model_lstmobj/videos')
 
-    create_gif_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/demo/js')
+    # create_gif_json('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/demo/js')
+    pass
 
 
 
