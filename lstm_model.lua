@@ -182,11 +182,11 @@ function model:fp(params_, batch, sim)
     local loss = 0
     for i = 1,#prediction do   -- iterate through timesteps
         -- table of length num_obj of {bsize, max_obj*obj_dim}
-        -- print(mp.seq_length, mp.object_dim)
         local reshaped_prediction = prediction[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
         local reshaped_target = target[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
         -- now iterate through the objects
         for o = 1, num_obj do
+            -- split output works
             local prediction_object = reshaped_prediction[{{},{o},{}}]
             local target_object = reshaped_target[{{},{o},{}}]
             local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
@@ -201,16 +201,10 @@ function model:fp(params_, batch, sim)
             -- using a counter is equivalent; it's just when you scale
         end
     end
-    loss = loss/(#prediction*num_obj)
-    print(loss)
-    assert(false, "TODO: you should reconfigure split_output!")
-
-    -- now you have to make sure split_output works
-    
+    loss = loss/(#prediction*num_obj)    
     collectgarbage()
     return loss, prediction
 end
-
 
 
 -- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
@@ -218,110 +212,61 @@ end
 -- a lot of instantiations of split_output
 function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
-    local input, this_future = self:unpack_batch(batch, sim)
+    local input, target, num_obj = self:unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
-
-
 
     local d_pred = {}
     for i = 1, #prediction do
 
-        local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[i]))
-        local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-                            unpack(split_output(self.mp):forward(all_future[i]))
+        local reshaped_prediction = prediction[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
+        local reshaped_target = target[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
 
-        -- NOTE! is there a better loss function for angle?
-        self.identitycriterion:forward(p_pos, gt_pos)
-        local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
+        local d_pred_objs = {}
 
-        self.criterion:forward(p_vel, gt_vel)
-        local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
-        d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
+        for o=1, num_obj do
+            local prediction_object = reshaped_prediction[{{},{o},{}}]
+            local target_object = reshaped_target[{{},{o},{}}]
+            local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+                            unpack(splitter:forward(prediction_object))
+            local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                            unpack(split_output(self.mp):forward(target_object))
 
-        self.identitycriterion:forward(p_ang, gt_ang)
-        local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
+            self.identitycriterion:forward(p_pos, gt_pos)
+            local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
-        self.criterion:forward(p_ang_vel, gt_ang_vel)
-        local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
-        d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
+            self.criterion:forward(p_vel, gt_vel)
+            local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+            d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
-        self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
-        local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+            self.identitycriterion:forward(p_ang, gt_ang)
+            local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
 
-        local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
+            self.criterion:forward(p_ang_vel, gt_ang_vel)
+            local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+            d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
-        table.insert(d_pred, obj_d_pred)
+            self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
+            local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+
+            local obj_d_pred = splitter:backward({prediction_object}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
+
+            table.insert(d_pred_objs, obj_d_pred)
+        end
+        -- add in padding here
+        for p=1,mp.seq_length-num_obj do
+            table.insert(d_pred_objs, convert_type(torch.zeros(mp.batch_size, 1, mp.object_dim), mp.cuda))
+        end
+        -- for j=1,#d_pred_objs do
+        --     print(d_pred_objs[j]:norm())  -- why are all of them identical? Check this!
+        -- end
+        d_pred_objs = torch.cat(d_pred_objs, 2)
+
+        -- reshape back
+        d_pred_objs = d_pred_objs:reshape(mp.batch_size, mp.seq_length*mp.object_dim)
+        table.insert(d_pred, d_pred_objs)
     end
-
-    -- self.network:backward(all_past,d_pred)  -- updates grad_params
-    assert(false, "TODO: you should reconfigure split_output!")
-
-
-    local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
-    local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
-    local caddtable_in = self.network.modules[1].modules[1].modules[1].output
-    local d_caddtable = self.network.modules[1].modules[1].modules[2]:backward(caddtable_in, d_decoder[1])
-    d_caddtable = self:apply_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
-    local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
-    local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
-    local d_input = {d_pairwise, d_identity}
-    -- assert(false, 'TODO: replace this backward method with a series of backward')
-
-
-
-
-
-
-
-
-
-    -- local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction))
-    -- local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-    --                     unpack(split_output(self.mp):forward(this_future))
-
-    -- -- NOTE! is there a better loss function for angle?
-    -- self.identitycriterion:forward(p_pos, gt_pos)
-    -- local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
-
-    -- self.criterion:forward(p_vel, gt_vel)
-    -- local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
-    -- -- print('d_vel:norm()',d_vel:norm())
-    -- d_vel:mul(mp.vlambda)
-    -- d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
-
-    -- self.identitycriterion:forward(p_ang, gt_ang)
-    -- local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
-
-    -- self.criterion:forward(p_ang_vel, gt_ang_vel)
-    -- local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
-    -- -- print('d_ang_vel:norm()',d_ang_vel:norm())
-    -- d_ang_vel:mul(mp.lambda)
-    -- d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
-
-    -- self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
-    -- local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
-
-    -- local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
-    -- ------------------------------------------------------------------
-    -- -- if mp.cf then
-    -- --     local collision_mask = collision_filter(batch)
-    -- --     d_pred:cmul(collision_mask:expandAs(d_pred):float())
-    -- -- end
-    -- ------------------------------------------------------------------
-
-    -- -- neighborhood
-
-    -- local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
-    -- local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
-    -- local caddtable_in = self.network.modules[1].modules[1].modules[1].output
-    -- local d_caddtable = self.network.modules[1].modules[1].modules[2]:backward(caddtable_in, d_decoder[1])
-    -- d_caddtable = self:apply_mask(d_caddtable, self.neighbor_masks)  -- not particularly necessary if input is 0 and no bias
-    -- local d_pairwise = self.network.modules[1].modules[1].modules[1]:backward(input[1], d_caddtable)
-    -- local d_identity = self.network.modules[1].modules[2]:backward(input[2], d_decoder[2])
-    -- local d_input = {d_pairwise, d_identity}
-
-    ------------------------------------------------------------------
+    self.network:backward(input,d_pred)  -- updates grad_params
     collectgarbage()
     return self.theta.grad_params
 end
