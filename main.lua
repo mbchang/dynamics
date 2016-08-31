@@ -76,6 +76,8 @@ cmd:option('-save_every', 10000, 'save every number of batches')  -- this should
 cmd:option('-val_every',10000,'val every number of batches') -- this should be every 100000 
 cmd:option('-lrdecay_every',2500,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
+cmd:option('-cuda', false, 'gpu')
+
 
 cmd:text()
 
@@ -113,7 +115,7 @@ else
     mp.num_future = 1
 	mp.seq_length = 10   -- for the concatenate model
 	mp.num_threads = 4
-	mp.cuda = false
+	mp.cuda = true
 end
 
 local M
@@ -177,6 +179,10 @@ local train_losses, val_losses, test_losses = {},{},{}
 function inittrain(preload, model_path, iters)
     print("Network parameters:")
     print(mp)
+    if mp.cuda then
+        require 'cutorch'
+        require 'cunn'
+    end
     local data_loader_args = {data_root=mp.data_root..'/',
                               dataset_folders=mp.dataset_folders,
                               maxwinsize=config_args.maxwinsize,
@@ -225,7 +231,13 @@ function inittrain(preload, model_path, iters)
     end
 
     -- save args
-    torch.save(mp.savedir..'/args.t7', {mp=mp,config_args=config_args})
+    local args_file
+    if iters then
+        args_file = mp.savedir..'/args'..iters..'.t7'
+    else 
+        args_file = mp.savedir..'/args.t7'
+    end
+    torch.save(args_file, {mp=mp,config_args=config_args})
     print("Initialized Network")
 end
 
@@ -253,6 +265,7 @@ function initsavebatches()
 
         -------------------------
     end
+    if mp.server == 'op' then mp.cuda = true end
 end
 
 -- closure: returns loss, grad_params
@@ -524,6 +537,7 @@ function run_experiment_load()
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = checkpoint.mp  -- completely overwrite  good
     mp.mode = 'expload'
+    mp.cuda = true
     -- local iters = mp.val_every * #checkpoint.val_losses + 1  -- correct
     local iters = checkpoint.iters + 1
 

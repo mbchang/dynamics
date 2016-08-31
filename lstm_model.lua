@@ -139,6 +139,12 @@ function model:unpack_batch(batch, sim)
     input = self:pad(input, 2, max_obj-num_obj)  -- (bsize, num_past, max_obj, obj_dim)
     target = self:pad(target, 2, max_obj-num_obj)  -- (bsize, num_future, max_obj, obj_dim)
 
+    -- shuffle the objects
+    -- first randperm a binary vector of num_obj 1s and max_obj-num_obj zeros
+    -- second randperm the object_id
+    -- then put the object_id where the binary vector has 1
+    -- IN THAT CASE YOU HAVE TO CHANGE BP!
+
     local input_table = {}
     local target_table = {}
     for i = 1, input:size(3) do

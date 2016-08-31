@@ -127,10 +127,10 @@ function model:fp(params_, batch, sim)
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
 
-    print(prediction)
-    print(torch.squeeze(prediction[1]))
-    print(torch.squeeze(prediction[2]))
-    assert(false)
+    -- print(prediction)
+    -- print(torch.squeeze(prediction[1]))
+    -- print(torch.squeeze(prediction[2]))
+    -- assert(false)
 
     local loss = 0
     for i = 1,#prediction do

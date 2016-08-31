@@ -203,7 +203,7 @@ function model:select_neighbors(input)
         euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
 
         -- find the indices in the batch for neighbors and non-neighbors
-        local neighbor_mask = euc_dist_next:le(threshold):float()  -- 1 if neighbor 0 otherwise
+        local neighbor_mask = euc_dist_next:le(threshold):float()  -- 1 if neighbor 0 otherwise   -- potential cuda
         table.insert(neighbor_masks, neighbor_mask)
     end
 
@@ -218,7 +218,7 @@ function model:apply_mask(input, batch_mask)
             x[1] = torch.cmul(x[1],batch_mask[i]:view(mp.batch_size,1):expandAs(x[1]))
             x[2] = torch.cmul(x[2], batch_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
         else
-            x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())
+            x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())  -- potential cuda
             input[i] = x -- it doesn't actually automatically mutate
         end
     end
@@ -331,7 +331,7 @@ function model:bp(batch, prediction, sim)
     self.criterion:forward(p_vel, gt_vel)
     local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
     -- print('d_vel:norm()',d_vel:norm())
-    d_vel:mul(mp.vlambda)
+        d_vel:mul(mp.vlambda)
     d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
     self.identitycriterion:forward(p_ang, gt_ang)

@@ -4,12 +4,11 @@ import plot_results
 import errno   
 
 import cv2
-import os
 import numpy as np
 from images2gif import writeGif
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-import os
 import pprint 
+import subprocess
 
 
 def mkdir_p(path):
@@ -268,6 +267,12 @@ experiments = [
                 'mixed_n5_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
                 'mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
 
+                # mixed generaliztion
+                'mixed_n3_t60_ex50000_m_z_o_dras_rd,mixed_n4_t60_ex50000_m_z_o_dras_rd__mixed_n5_t60_ex50000_m_z_o_dras_rd,mixed_n6_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n3_t60_ex50000_z_o_dras_rd,mixed_n4_t60_ex50000_z_o_dras_rd__mixed_n5_t60_ex50000_z_o_dras_rd,mixed_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+                'mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
                 # tower unstable and normal with higher lr
                 'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
                 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
@@ -284,7 +289,28 @@ remote_prefix = '/om/user/mbchang/physics/lua/logs/'
 js_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/demo/js'
 
 
+def wccount(filename):
+    out = subprocess.Popen(['wc', '-l', filename],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT
+                         ).communicate()[0]
+    return int(out.strip().partition(b' ')[0])
+
+def parse_exp_log(experiments):
+    """
+    This returns a dictionary of the number of lines in the experiment.log for each experiment
+    """
+    exp_log_lengths = {}
+    for experiment in experiments:
+        experiment_folder = os.path.join(out_root, experiment)
+        exp_log = os.path.join(experiment_folder, 'experiment.log')
+        if os.path.exists(exp_log):
+            exp_log_lengths[experiment] = wccount(exp_log)
+    return exp_log_lengths
+
 def copy(experiments):
+    exp_log_lengths = parse_exp_log(experiments)
+    # pprint.pprint(exp_log_lengths)
     # copy
     if len(experiments) > 1:
         remote_paths = remote_prefix + '\{' + ','.join(['\\"' + e + '\\"' for e in experiments]) + '\} '
@@ -302,6 +328,18 @@ def copy(experiments):
     else:
         print 'Not running command.'
         sys.exit(0)
+
+    # here return the experiment folders where experiment.log had changed
+    new_exp_log_lengths = parse_exp_log(experiments)
+    experiments_to_plot = [e for e in experiments if e not in exp_log_lengths or exp_log_lengths[e] != new_exp_log_lengths[e]]
+    experiments_to_visualize = []  # TODO
+
+    print 'experiments to plot'
+    pprint.pprint(experiments_to_plot)
+    print 'experiments to visualize'
+    pprint.pprint(experiments_to_visualize)
+
+    return experiments_to_plot, []
 
 def plot(experiments):
     print('## PLOT ##')
@@ -324,8 +362,9 @@ def plot(experiments):
                 if os.path.isdir(f) and 'predictions' in os.path.basename(f):
                     for j in os.listdir(f):
                         batch_folder = os.path.join(visual_folder,j[:-len('.json')])
-                        print 'Made', batch_folder, '\n' + '-'*80
                         mkdir_p(batch_folder)
+                        print 'Made', batch_folder, 'if it did not already exist.\n' + '-'*80
+
 
             # print 'plot hidden state'
             # plot_results.plot_hid_state(experiment_folder)  # TODO! check if filepath is correct
@@ -365,10 +404,21 @@ def create_gif_json(images_root, gifname):
             Numpy images of other types are expected to have values between 0 and 255.
     """
     # TODO! I'm assuming my img_id is fixed!
-    file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png')], key=lambda x: img_id_json(x))
+    file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png') and 'overlay' not in fn], key=lambda x: img_id_json(x))
     images = [Image.open(os.path.join(images_root,fn)) for fn in file_names]
     filename = os.path.join(images_root, gifname)
     writeGif(filename, images, duration=0.2)
+
+def overlay_imgs(images_root, overlayedname):
+    file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png') and 'overlay' not in fn], key=lambda x: img_id_json(x))
+    images = [Image.open(os.path.join(images_root,fn)) for fn in file_names] 
+    filename = os.path.join(images_root, overlayedname)
+    result = images[0]
+    # unit = 1/(2*len(images))
+    for i in range(1,len(images)):
+        next_img = images[i]
+        result = Image.blend(result, next_img, 0.5)
+    result.save(filename,"PNG")
 
 
 def animate(experiments, remove_png):
@@ -387,13 +437,15 @@ def animate(experiments, remove_png):
                 for batch_folder in os.listdir(visual_folder):
                     print '-'*80
                     gifname = experiment_folder + '_' + batch_folder + '.gif'
+                    overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
                     batch_folder = os.path.join(visual_folder, batch_folder)
                     if any(f.endswith('.png') for f in os.listdir(batch_folder)):
                         create_gif_json(batch_folder, gifname)
+                        overlay_imgs(batch_folder, overlayed_name)
 
                         if remove_png:
                             print 'Removing images from', batch_folder
-                            for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png')]:
+                            for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png') and 'overlay' not in x]:
                                 imgfile = os.path.join(batch_folder, imgfile)
                                 command = 'rm ' + imgfile
                                 os.system(command)
@@ -405,10 +457,25 @@ def animate(experiments, remove_png):
     print 'Animated the following folders:'
     pprint.pprint(animated_experiments)
 
-# copy(experiments)
-# plot(experiments)
-# visualize(experiments)
-# animate(experiments, True)
+experiments_to_plot, experiments_to_visualize = copy(experiments)  # returns a list of experiments that changed
+# print 'experiments_to_plot'
+# pprint.pprint(experiments_to_plot)
+# print 'experiments_to_visualize'
+# pprint.pprint(experiments_to_visualize)
+plot(experiments_to_plot)
+
+# TODO: visualize only if epxerimtns_to_visualize says so.
+# visualize(experiments_to_visualize)
+# visualize(experiments[:1])
+# animate(experiments[:1], False)
+
+# import Image
+
+# background = Image.open("/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/pngscratch/gt_batch129_ex0_step0.png")
+# overlay = Image.open("/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/pngscratch/gt_batch129_ex0_step1.png")
+
+# new_img = Image.blend(background, overlay, 0.9)
+# new_img.save("new.png","PNG")
 
 
 
