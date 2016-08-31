@@ -135,7 +135,6 @@ function model:unpack_batch(batch, sim)
     local bsize, num_obj, num_past, obj_dim = past:size(1), past:size(2), past:size(3), past:size(4)
     local num_future = future:size(3)
 
-
     input = self:pad(input, 2, max_obj-num_obj)  -- (bsize, num_past, max_obj, obj_dim)
     target = self:pad(target, 2, max_obj-num_obj)  -- (bsize, num_future, max_obj, obj_dim)
 
@@ -144,6 +143,8 @@ function model:unpack_batch(batch, sim)
     -- second randperm the object_id
     -- then put the object_id where the binary vector has 1
     -- IN THAT CASE YOU HAVE TO CHANGE BP!
+    -- local shuffle_indices = torch.randperm(max_obj)
+
 
     local input_table = {}
     local target_table = {}
