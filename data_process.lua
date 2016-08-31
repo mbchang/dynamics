@@ -82,7 +82,7 @@ end
 
 -- (num_examples, num_objects, timestesp, a, av)
 -- theta = theta-2pi if pi < theta < 2*pi
--- transforms [0, 2pi]  --> [-pi, pi]
+-- transforms [0, 2pi)  --> (-pi, pi]
 function data_process:wrap_pi(angles)
     local angles = angles:clone()
     -- angles = torch.clamp(angle, 0, 2*math.pi)  -- just in case
