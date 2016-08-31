@@ -94,7 +94,7 @@ if mp.server == 'pc' then
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
     mp.layers = 1
-    mp.model = 'bffobj'
+    mp.model = 'lstm'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -128,7 +128,7 @@ elseif mp.model == 'ind' then
     M = require 'independent'
 elseif mp.model == 'crnn' then 
     M = require 'clique_rnn'
-elseif mp.model == 'lstmtime' then
+elseif mp.model == 'lstm' then
     M = require 'lstm_model'
 elseif mp.model == 'ff' then
     M = require 'feed_forward_model'
@@ -391,27 +391,29 @@ function train(start_iter, epoch_num)
     end
 end
 
-function test(dataloader, params_, saveoutput)
+function test(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
-    for i = 1,dataloader.num_batches do
-        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
+    local num_batches = num_batches or dataloader.num_batches
+    for i = 1,num_batches do
+        if mp.server == 'pc' then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local test_loss, prediction = model:fp(params_, batch)
         sum_loss = sum_loss + test_loss
     end
-    local avg_loss = sum_loss/dataloader.num_batches
+    local avg_loss = sum_loss/num_batches
     collectgarbage()
     return avg_loss
 end
 
 function validate()
-    local train_loss = test(train_test_loader, model.theta.params, false)
-    local val_loss = test(val_loader, model.theta.params, false)
-    local test_loss = test(test_loader, model.theta.params, false)
+    local train_loss = test(train_test_loader, model.theta.params, false, val_loader.num_batches)
+    local val_loss = test(val_loader, model.theta.params, false, val_loader.num_batches)
+    local test_loss = test(test_loader, model.theta.params, false, test_loader.num_batches)
 
     -- local train_loss = 0
     -- local val_loss = 0
     -- local test_loss = 0
+    -- assert(false, "DID YOU SHUFFLE THE LSTM INPUT")
 
     local log_string = 'train loss\t'..train_loss..
                       '\tval loss\t'..val_loss..
