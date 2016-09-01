@@ -283,8 +283,8 @@ function data_process:expand_for_each_object(unfactorized)
                 end
 
                 assert(this:size()[1] == others:size()[1])
-                table.insert(focus, this)
-                table.insert(context, others)
+                table.insert(focus, this) -- good
+                table.insert(context, others) -- good
             end
         end
     else
@@ -408,30 +408,46 @@ function data_process:split_datasets_sizes(num_examples)
 end
 
 
-function data_process:split2datasets(examples)
-    local num_train, num_val, num_test = self:split_datasets_sizes(#examples)
+-- function data_process:split2datasets(examples)
+--     local num_train, num_val, num_test = self:split_datasets_sizes(#examples)
 
-    local test = {}
-    local val = {}
-    local train = {}
+--     local test = {}
+--     local val = {}
+--     local train = {}
 
-    -- shuffle examples
-    local ridxs = torch.randperm(#examples)
-    print('Splitting datsets: '..string.format('%2d train %2d val %2d test',
-                                                num_train, num_val, num_test))
-    for i = 1, ridxs:size(1) do
-        xlua.progress(i, ridxs:size(1))
-        local batch = examples[ridxs[i]]
-        if i <= num_train then
-            table.insert(train, batch)
-        elseif i <= num_train + num_val then
-            table.insert(val, batch)
-        else
-            table.insert(test, batch)
-        end
-    end
-    return {trainset=train, valset=val, testset=test}
-end
+--     -- shuffle examples
+--     local ridxs = torch.randperm(#examples)
+--     print('Splitting datsets: '..string.format('%2d train %2d val %2d test',
+--                                                 num_train, num_val, num_test))
+--     for i = 1, ridxs:size(1) do
+--         xlua.progress(i, ridxs:size(1))
+--         local batch = examples[ridxs[i]]
+--         if i <= num_train then
+--             table.insert(train, batch)
+--         elseif i <= num_train + num_val then
+--             table.insert(val, batch)
+--         else
+--             table.insert(test, batch)
+--         end
+--     end
+
+--     -- for i=1,#train do
+--     --     print(train[i]:norm())
+--     -- end
+--     -- print('....')
+--     -- for i=1,#val do
+--     --     print(val[i]:norm())
+--     -- end
+--     -- print('.....')
+--     -- for i=1,#test do
+--     --     print(test[i]:norm())
+--     -- end
+--     -- assert(false)
+
+
+
+--     return {trainset=train, valset=val, testset=test}
+-- end
 
 function data_process:save_batches(datasets, savefolder)
     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
@@ -495,7 +511,7 @@ function data_process:iter_files_ordered(folder)
     -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_192.json
     local files = {}
     for f in paths.iterfiles(folder) do
-        table.insert(files, f)
+        table.insert(files, f) -- good
     end
     table.sort(files)  -- mutates files
     return files
@@ -599,7 +615,7 @@ function data_process:create_datasets_batches()
            assert(self:check_overflow(counters, limits) >= 0)
            -- check to see if this batch is of batch_size
            if batch[1]:size(1) < self.bsize then
-               table.insert(leftover_examples, batch)
+               table.insert(leftover_examples, batch)  -- good
                print('leftover examples')
                print(leftover_examples)
            else
@@ -612,6 +628,7 @@ function data_process:create_datasets_batches()
        -- end
        ----------------------------------------------------------
     end
+
     -- now concatenate all the leftover_batches. They had better be a multiple of self.bsize
     leftover_examples = join_table_of_tables(leftover_examples)
     -- leftover_examples = join_table_of_tables({unpack(leftover_examples), unpack(leftover_examples)})  -- for debugging
@@ -645,7 +662,7 @@ function data_process:split2batchesall(focus, context, truncate)
     local context_batches = self:split2batches(context, truncate)
     local all_batches = {}
     for b=1,#focus_batches do
-        table.insert(all_batches, {focus_batches[b], context_batches[b]})
+        table.insert(all_batches, {focus_batches[b], context_batches[b]}) -- good
     end
     return all_batches
 end
@@ -661,13 +678,13 @@ function data_process:json2batches(jsonfile)
 end
 
 -- save datasets
-function data_process:create_datasets()
-    -- each example is a (focus, context) pair
-    local json_file = self.jsonfolder --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
-    local all_batches = self:json2batches(jsonfile)
-    local datasets = self:split2datasets(all_batches)
-    self:save_batches(datasets, self.outfolder)
-end
+-- function data_process:create_datasets()
+--     -- each example is a (focus, context) pair
+--     local json_file = self.jsonfolder --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
+--     local all_batches = self:json2batches(jsonfile)
+--     local datasets = self:split2datasets(all_batches)
+--     self:save_batches(datasets, self.outfolder)
+-- end
 
 -- this method converts torch back to json file
 -- input: (bsize, num_obj, steps, dim) for focus and context, with onehotmass, and normalized

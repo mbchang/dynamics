@@ -126,40 +126,40 @@ function general_datasampler:sample_sequential_batch(modulo)
 end
 
 -- note that this is specific to your physics dataset because of the mask!
--- NOTE also that all batches here must be from the same dataset!
-function general_datasampler:sample_sequential_aggregated_batch(batch_group_size, modulo)
-    -- initially table of tables
-    local aggregated_batch = {
-                                {}, -- this_pasts
-                                {}, -- context_pasts
-                                {}, -- this_futures
-                                {}, -- context_futures
-                                {}, -- masks
-                            }
+-- -- NOTE also that all batches here must be from the same dataset!
+-- function general_datasampler:sample_sequential_aggregated_batch(batch_group_size, modulo)
+--     -- initially table of tables
+--     local aggregated_batch = {
+--                                 {}, -- this_pasts
+--                                 {}, -- context_pasts
+--                                 {}, -- this_futures
+--                                 {}, -- context_futures
+--                                 {}, -- masks
+--                             }
 
-    -- 1. populate aggregated_batch with tables
-    for i=1,batch_group_size do
-        local batch = self:sample_sequential_batch(modulo)
-        for j=1,#batch do
-            table.insert(aggregated_batch[j], batch[j])
-        end
-    end
+--     -- 1. populate aggregated_batch with tables
+--     for i=1,batch_group_size do
+--         local batch = self:sample_sequential_batch(modulo)
+--         for j=1,#batch do
+--             table.insert(aggregated_batch[j], batch[j])
+--         end
+--     end
 
-    -- 2. concatenate
-    for j=1,#aggregated_batch-1 do
-        aggregated_batch[j] = torch.cat(aggregated_batch[j],1)  -- concat along batch dim
-        assert(aggregated_batch[j]:size(1) == mp.batch_size*batch_group_size)
-    end
+--     -- 2. concatenate
+--     for j=1,#aggregated_batch-1 do
+--         aggregated_batch[j] = torch.cat(aggregated_batch[j],1)  -- concat along batch dim
+--         assert(aggregated_batch[j]:size(1) == mp.batch_size*batch_group_size)
+--     end
 
-    print(aggregated_batch)
-    assert(false)
+--     print(aggregated_batch)
+--     assert(false)
 
-    -- 3. take only the first "batch" in mask
-    local mask_dim = aggregated_batch[5]:size(1)/batch_group_size
-    aggregated_batch[5] = aggregated_batch[5][{{1, mask_dim}}]
+--     -- 3. take only the first "batch" in mask
+--     local mask_dim = aggregated_batch[5]:size(1)/batch_group_size
+--     aggregated_batch[5] = aggregated_batch[5][{{1, mask_dim}}]
 
-    return aggregated_batch
-end
+--     return aggregated_batch
+-- end
 
 
 return general_datasampler
