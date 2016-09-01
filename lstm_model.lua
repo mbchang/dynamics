@@ -25,40 +25,37 @@ function init_network(params)
     local in_dim = max_obj*obj_dim
     local hid_dim = max_obj*rnn_dim  -- TODO rename rnn_dim to hid_dim
     local out_dim = max_obj*obj_dim  -- note that we will be ignoring the padded areas during backpropagation
-    local num_layers = 2*params.layers + 1
+    local num_layers = params.layers
 
     local rnn_core = nn.Sequential()
-    for i = 1, num_layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
-        if i == 1 then 
-            -- local layertype = nn.LSTM(in_dim, hid_dim)
-            local layertype = nn.LSTM(in_dim, in_dim)
-            local activation = nn.ReLU()
-            rnn_core:add(masker(layertype, activation))
-        elseif i == num_layers then 
-            -- local layertype = nn.LSTM(hid_dim, out_dim)
-            local layertype = nn.LSTM(in_dim, in_dim)
-            local activation = nn.Identity()
-            rnn_core:add(masker(layertype, activation))
-        else
-            local layertype = nn.LSTM(in_dim, in_dim)
-            local activation = nn.ReLU()
-            rnn_core:add(masker(layertype, activation))
+    if num_layers == 1 then
+        rnn_core:add(nn.LSTM(in_dim, out_dim))
+    else
+        for i = 1, num_layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
+            if i == 1 then 
+                rnn_core:add(nn.LSTM(in_dim, hid_dim))
+                rnn_core:add(nn.ReLU())
+            elseif i == num_layers then 
+                rnn_core:add(nn.LSTM(hid_dim, out_dim))
+            else
+                rnn_core:add(nn.LSTM(hid_dim, hid_dim))
+                rnn_core:add(nn.ReLU())
+            end
         end
     end
-    rnn_core:add(nn.CMulTable())
     local net = nn.Sequencer(rnn_core)
     return net
 end
 
-function masker(layertype, activation)
-    local layer_in = nn.Identity()()
-    local mask = nn.Identity()()
-    local lin_out = layertype(layer_in)
-    local lin_out_act = activation(lin_out)
-    local mask_out = nn.CMulTable(){lin_out_act, mask}
-    local layer = nn.gModule({layer_in, mask}, {mask_out, mask})
-    return layer
-end
+-- function masker(layertype, activation)
+--     local layer_in = nn.Identity()()
+--     local mask = nn.Identity()()
+--     local lin_out = layertype(layer_in)
+--     local lin_out_act = activation(lin_out)
+--     local mask_out = nn.CMulTable(){lin_out_act, mask}
+--     local layer = nn.gModule({layer_in, mask}, {mask_out, mask})
+--     return layer
+-- end
 
 --------------------------------------------------------------------------------
 --############################################################################--
@@ -105,15 +102,19 @@ function model.create(mp_, preload, model_path)
 end
 
 function model:pad(tensor, dim, num_to_pad)
-    local tensor_size = torch.totable(tensor:size())
-    assert(dim>=1 and dim<=#tensor_size)
+    if num_to_pad == 0 then
+        return tensor
+    else
+        local tensor_size = torch.totable(tensor:size())
+        assert(dim>=1 and dim<=#tensor_size)
 
-    tensor_size[dim] = num_to_pad
-    local padding = torch.zeros(unpack(tensor_size))
-    if self.mp.cuda then padding = padding:cuda() end
+        tensor_size[dim] = num_to_pad
+        local padding = torch.zeros(unpack(tensor_size))
+        if self.mp.cuda then padding = padding:cuda() end
 
-    local padded = torch.cat({tensor, padding}, dim)
-    return padded
+        local padded = torch.cat({tensor, padding}, dim)
+        return padded
+    end
 end
 
 function model:unpack_batch(batch, sim)
@@ -135,39 +136,45 @@ function model:unpack_batch(batch, sim)
     local bsize, num_obj, num_past, obj_dim = past:size(1), past:size(2), past:size(3), past:size(4)
     local num_future = future:size(3)
 
-    input = self:pad(input, 2, max_obj-num_obj)  -- (bsize, num_past, max_obj, obj_dim)
-    target = self:pad(target, 2, max_obj-num_obj)  -- (bsize, num_future, max_obj, obj_dim)
+    input = self:pad(input, 2, max_obj-num_obj)  -- (bsize, max_obj, num_past, obj_dim)
+    target = self:pad(target, 2, max_obj-num_obj)  -- (bsize, max_obj, num_future, obj_dim)
 
     -- shuffle the objects
     -- first randperm a binary vector of num_obj 1s and max_obj-num_obj zeros
     -- second randperm the object_id
     -- then put the object_id where the binary vector has 1
     -- IN THAT CASE YOU HAVE TO CHANGE BP!
-    -- local shuffle_indices = torch.randperm(max_obj)
-
+    local shuffind = torch.randperm(max_obj)
+    local zero_ind = {}
 
     local input_table = {}
     local target_table = {}
+    for i = 1, input:size(2) do
+        local input_obj = input[{{},{shuffind[i]},{},{}}]
+        local target_obj = target[{{},{shuffind[i]},{},{}}]
+        if input_obj:norm() == 0 then
+            assert(target_obj:norm() == 0)
+            table.insert(zero_ind, i)
+        end
+        table.insert(input_table, input_obj)
+        table.insert(target_table, target_obj)
+    end
+    assert(#zero_ind == max_obj-num_obj)
+    input = torch.cat(input_table,2)  -- (bsize, max_obj, (num_past+num_future-1), obj_dim)
+    target = torch.cat(target_table,2)
+
+    -- now to break into timestep
+    local input_table = {}
+    local target_table = {}
     for i = 1, input:size(3) do
-        local input_tstep = torch.squeeze(input[{{},{},{i},{}}])
-        local input_tstep_mask = convert_type(torch.zeros(mp.batch_size, max_obj, obj_dim), mp.cuda)
-        input_tstep_mask[{{},{1,num_obj},{}}]:fill(1)
-        local target_tstep = torch.squeeze(target[{{},{},{i},{}}])
-        local target_tstep_mask = convert_type(torch.zeros(mp.batch_size, max_obj, obj_dim), mp.cuda)
-        target_tstep_mask[{{},{1,num_obj},{}}]:fill(1)
-
-        assert(input_tstep_mask:equal(target_tstep_mask))
-
-        -- reshape
-        input_tstep = input_tstep:reshape(mp.batch_size, max_obj*obj_dim)
-        input_tstep_mask = input_tstep_mask:reshape(mp.batch_size, max_obj*obj_dim)
-        target_tstep = target_tstep:reshape(mp.batch_size, max_obj*obj_dim)
-
-        table.insert(input_table, {input_tstep, input_tstep_mask})
-        table.insert(target_table, target_tstep)
+        local input_tstep = torch.squeeze(input[{{},{},{i},{}}]):reshape(mp.batch_size, max_obj*obj_dim)
+        local target_tstep = torch.squeeze(target[{{},{},{i},{}}]):reshape(mp.batch_size, max_obj*obj_dim)
+        table.insert(input_table,input_tstep) -- this works
+        table.insert(target_table,target_tstep) -- this works
     end
 
-    return input_table, target_table, num_obj
+    -- table of length: (num_past+num_future-1) of (bsize, max_obj*obj_dim)
+    return input_table, target_table, num_obj, zero_ind
 end
 
 
@@ -179,36 +186,42 @@ end
 --   4 : DoubleTensor - size: 4x2x48x9
 --   5 : DoubleTensor - size: 10
 -- }
+-- good
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
 
-    local input, target, num_obj = self:unpack_batch(batch, sim)
+    local input, target, num_obj, zero_ind = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(input)
 
     local loss = 0
+    local counter = 0
     for i = 1,#prediction do   -- iterate through timesteps
         -- table of length num_obj of {bsize, max_obj*obj_dim}
         local reshaped_prediction = prediction[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
         local reshaped_target = target[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
         -- now iterate through the objects
-        for o = 1, num_obj do
-            -- split output works
-            local prediction_object = reshaped_prediction[{{},{o},{}}]
-            local target_object = reshaped_target[{{},{o},{}}]
-            local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
-                            unpack(split_output(self.mp):forward(prediction_object))
-            local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-                            unpack(split_output(self.mp):forward(target_object))
-            local loss_vel = self.criterion:forward(p_vel, gt_vel)
-            local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
-            local obj_loss = loss_vel + loss_ang_vel
-            obj_loss = obj_loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average 
-            loss = loss + obj_loss
-            -- using a counter is equivalent; it's just when you scale
+        for o = 1, mp.seq_length do
+            if not(isin(o, zero_ind)) then
+                -- split output works
+                local prediction_object = reshaped_prediction[{{},{o},{}}]
+                local target_object = reshaped_target[{{},{o},{}}]
+                local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+                                unpack(split_output(self.mp):forward(prediction_object))
+                local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                                unpack(split_output(self.mp):forward(target_object))
+                local loss_vel = self.criterion:forward(p_vel, gt_vel)
+                local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
+                local obj_loss = loss_vel + loss_ang_vel
+                -- obj_loss = obj_loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average 
+                loss = loss + obj_loss
+                -- using a counter is equivalent; it's just when you scale
+                counter = counter + p_vel:nElement()+p_ang_vel:nElement()
+            end
         end
     end
-    loss = loss/(#prediction*num_obj)    
+    -- loss = loss/(#prediction*num_obj)  
+    loss = loss/counter
     collectgarbage()
     return loss, prediction
 end
@@ -219,61 +232,90 @@ end
 -- a lot of instantiations of split_output
 function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
-    local input, target, num_obj = self:unpack_batch(batch, sim)
+    local input, target, num_obj, zero_ind = self:unpack_batch(batch, sim)
 
     local splitter = split_output(self.mp)
 
     local d_pred = {}
     for i = 1, #prediction do
 
-        local reshaped_prediction = prediction[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
-        local reshaped_target = target[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
+        if i==#prediction then -- only backpropagate from the last timestep
 
-        local d_pred_objs = {}
+            local reshaped_prediction = prediction[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
+            local reshaped_target = target[i]:reshape(mp.batch_size, mp.seq_length, mp.object_dim)
 
-        for o=1, num_obj do
-            local prediction_object = reshaped_prediction[{{},{o},{}}]
-            local target_object = reshaped_target[{{},{o},{}}]
-            local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
-                            unpack(splitter:forward(prediction_object))
-            local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-                            unpack(split_output(self.mp):forward(target_object))
+            local d_pred_objs = {}
 
-            self.identitycriterion:forward(p_pos, gt_pos)
-            local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
+            for o=1, mp.seq_length do
+                if not(isin(o, zero_ind)) then
+                    local prediction_object = reshaped_prediction[{{},{o},{}}]
+                    local target_object = reshaped_target[{{},{o},{}}]
+                    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+                                    unpack(splitter:forward(prediction_object))
+                    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                                    unpack(split_output(self.mp):forward(target_object))
 
-            self.criterion:forward(p_vel, gt_vel)
-            local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
-            d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
+                    self.identitycriterion:forward(p_pos, gt_pos)
+                    local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
-            self.identitycriterion:forward(p_ang, gt_ang)
-            local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
+                    self.criterion:forward(p_vel, gt_vel)
+                    local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+                    d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
-            self.criterion:forward(p_ang_vel, gt_ang_vel)
-            local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
-            d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
+                    self.identitycriterion:forward(p_ang, gt_ang)
+                    local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
 
-            self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
-            local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+                    self.criterion:forward(p_ang_vel, gt_ang_vel)
+                    local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+                    d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
-            local obj_d_pred = splitter:backward({prediction_object}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
+                    self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
+                    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
-            table.insert(d_pred_objs, obj_d_pred)
+                    local obj_d_pred = splitter:backward({prediction_object}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
+
+                    table.insert(d_pred_objs, obj_d_pred)
+                else
+                    table.insert(d_pred_objs, convert_type(torch.zeros(mp.batch_size, 1, mp.object_dim), mp.cuda))
+                end
+            end
+
+            -- -- print('....')
+            -- for j=1,#d_pred_objs do
+            --     print(d_pred_objs[j]:norm())  -- why are all of them identical? Check this! They are not identical from above though PROBLEM!
+            -- end
+            -- print(zero_ind)
+            -- -- assert(false)
+            d_pred_objs = torch.cat(d_pred_objs, 2)
+
+            -- print(d_pred_objs:size())
+            -- assert(false)
+            -- reshape back
+            d_pred_objs = d_pred_objs:reshape(mp.batch_size, mp.seq_length*mp.object_dim)
+            table.insert(d_pred, d_pred_objs:clone()) -- don't nee
+        else
+            -- just give it 0s if we are not at the last timestep
+            table.insert(d_pred, convert_type(torch.zeros(mp.batch_size, mp.seq_length*mp.object_dim),mp.cuda))
         end
-        -- add in padding here
-        for p=1,mp.seq_length-num_obj do
-            table.insert(d_pred_objs, convert_type(torch.zeros(mp.batch_size, 1, mp.object_dim), mp.cuda))
-        end
-        -- for j=1,#d_pred_objs do
-        --     print(d_pred_objs[j]:norm())  -- why are all of them identical? Check this!
-        -- end
-        d_pred_objs = torch.cat(d_pred_objs, 2)
-
-        -- reshape back
-        d_pred_objs = d_pred_objs:reshape(mp.batch_size, mp.seq_length*mp.object_dim)
-        table.insert(d_pred, d_pred_objs)
     end
-    self.network:backward(input,d_pred)  -- updates grad_params
+
+
+    -- print(d_pred)
+    -- for i=1,#d_pred do
+    --     print(d_pred[i]:norm())
+    -- end
+    -- assert(false)
+
+    -- d_input is nonzero everywhere, meaning that gradients have been accumulated through time.
+    local d_input = self.network:backward(input,d_pred)  -- updates grad_params
+
+    -- for i=1,#d_input do
+    --     print(d_input[i]:norm())
+    -- end
+
+
+    -- print(input)
+    -- assert(false)
     collectgarbage()
     return self.theta.grad_params
 end
