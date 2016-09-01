@@ -39,7 +39,7 @@ cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- model params
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-nbrhd', false, 'restrict attention to neighborhood')
-cmd:option('-nbrhdsize', 4, 'number of radii out to look. nbhrdsize of 2 is when they exactly touching')
+cmd:option('-nbrhdsize', 3.5, 'number of radii out to look. nbhrdsize of 2 is when they exactly touching')
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
@@ -77,6 +77,8 @@ cmd:option('-val_every',10000,'val every number of batches') -- this should be e
 cmd:option('-lrdecay_every',2500,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 cmd:option('-cuda', false, 'gpu')
+cmd:option('-fast', false, 'fast mode')
+
 
 
 cmd:text()
@@ -95,13 +97,13 @@ if mp.server == 'pc' then
     mp.nbrhd = true
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
-    mp.layers = 1
-    mp.model = 'lstm'
+    mp.layers = 3
+    mp.model = 'lstmcat'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
     mp.val_eps = 2e-5
-	mp.seq_length = 10  -- for the concatenate model
+	mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
     mp.print_every = 1
@@ -113,9 +115,9 @@ else
 	-- mp.winsize = 3  -- total number of frames
     -- mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.seq_length = 10   -- for the concatenate model
+	mp.seq_length = 8   -- for the concatenate model
 	mp.num_threads = 4
-	mp.cuda = true
+	mp.cuda = false
 end
 
 local M
@@ -130,7 +132,7 @@ elseif mp.model == 'ind' then
     M = require 'independent'
 elseif mp.model == 'crnn' then 
     M = require 'clique_rnn'
-elseif mp.model == 'lstm' then
+elseif mp.model == 'lstmcat' then
     M = require 'lstm_model'
 elseif mp.model == 'ff' then
     M = require 'feed_forward_model'
@@ -154,6 +156,7 @@ if mp.seed then torch.manualSeed(123) end
 if mp.cuda then
     require 'cutorch'
     require 'cunn'
+    cutorch.manualSeed(123)
 end
 
 local optimizer, optim_state
@@ -242,6 +245,7 @@ function inittrain(preload, model_path, iters)
 end
 
 function initsavebatches()
+    local wascudabefore = mp.cuda
     mp.cuda = false
     config_args.batch_size = mp.batch_size
     for _, dataset_folder in pairs(mp.dataset_folders) do
@@ -265,7 +269,7 @@ function initsavebatches()
 
         -------------------------
     end
-    if mp.server == 'op' then mp.cuda = true end
+    if wascudabefore then mp.cuda = true end
 end
 
 -- closure: returns loss, grad_params
@@ -293,6 +297,7 @@ function feval_train(params_)  -- params_ should be first argument
     end
 
     train_loader:update_batch_weight(loss)
+    if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return loss, grad -- f(x), df/dx
 end
@@ -407,6 +412,9 @@ end
 function test(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
     local num_batches = num_batches or dataloader.num_batches
+
+    if mp.fast then num_batches = math.min(1000, num_batches) end
+    print('Testing '..num_batches..' batches')
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
@@ -414,12 +422,13 @@ function test(dataloader, params_, saveoutput, num_batches)
         sum_loss = sum_loss + test_loss
     end
     local avg_loss = sum_loss/num_batches
+    if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return avg_loss
 end
 
 function validate()
-    local train_loss = test(train_test_loader, model.theta.params, false, val_loader.num_batches)
+    local train_loss = test(train_test_loader, model.theta.params, false, math.min(1000, val_loader.num_batches))
     local val_loss = test(val_loader, model.theta.params, false, val_loader.num_batches)
     local test_loss = test(test_loader, model.theta.params, false, test_loader.num_batches)
 
@@ -537,7 +546,7 @@ function run_experiment_load()
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = checkpoint.mp  -- completely overwrite  good
     mp.mode = 'expload'
-    mp.cuda = true
+    -- mp.cuda = true
     -- local iters = mp.val_every * #checkpoint.val_losses + 1  -- correct
     local iters = checkpoint.iters + 1
 
