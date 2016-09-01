@@ -21,23 +21,29 @@ function init_network(params)
     local num_future = params.num_future
     local in_dim = num_past*obj_dim
     local out_dim = num_future*obj_dim  -- note that we will be ignoring the padded areas during backpropagation
-    local num_layers = params.layers+2
+    local num_layers = params.layers
 
+    assert(num_layers > 0)
 
     local step = nn.Sequential()
-    for i = 1,num_layers do
-        if i == 1 then 
-            step:add(nn.Linear(in_dim, hid_dim))
-            step:add(nn.ReLU())
-        elseif i == num_layers then 
-            step:add(nn.Linear(hid_dim, out_dim))
-            step:add(nn.Reshape(num_future, obj_dim))
-        else
-            step:add(nn.Linear(hid_dim, hid_dim))
-            step:add(nn.ReLU())
-        end
-        if mp.batch_norm then 
-            step:add(nn.BatchNormalization(params.rnn_dim))
+
+    if num_layers == 1 then
+        step:add(nn.Linear(in_dim, out_dim))
+    else
+        for i = 1,num_layers do
+            if i == 1 then 
+                step:add(nn.Linear(in_dim, hid_dim))
+                step:add(nn.ReLU())
+            elseif i == num_layers then 
+                step:add(nn.Linear(hid_dim, out_dim))
+                step:add(nn.Reshape(num_future, obj_dim))
+            else
+                step:add(nn.Linear(hid_dim, hid_dim))
+                step:add(nn.ReLU())
+            end
+            if mp.batch_norm then 
+                step:add(nn.BatchNormalization(params.rnn_dim))
+            end
         end
     end
 
@@ -70,9 +76,9 @@ function model.create(mp_, preload, model_path)
         self.criterion = checkpoint.model.criterion:clone()
         self.identitycriterion = checkpoint.model.identitycriterion:clone()
         if self.mp.cuda then
-            self.network:float()
-            self.criterion:float()
-            self.identitycriterion:float()
+            self.network:cuda()
+            self.criterion:cuda()
+            self.identitycriterion:cuda()
         end
     else
         self.criterion = nn.MSECriterion(false)  -- not size averaging!
@@ -126,11 +132,6 @@ function model:fp(params_, batch, sim)
 
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
-
-    -- print(prediction)
-    -- print(torch.squeeze(prediction[1]))
-    -- print(torch.squeeze(prediction[2]))
-    -- assert(false)
 
     local loss = 0
     for i = 1,#prediction do
@@ -187,7 +188,7 @@ function model:bp(batch, prediction, sim)
         self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
         local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
-        local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
+        local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
 
         table.insert(d_pred, obj_d_pred)
     end
