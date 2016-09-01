@@ -8,7 +8,7 @@ require 'data_utils'
 
 nngraph.setDebug(true)
 
-local mp = {cuda=false}
+-- local mp = {cuda=false}
 
 function init_object_encoder(input_dim, rnn_inp_dim, bias)
     assert(rnn_inp_dim % 2 == 0)
@@ -113,7 +113,7 @@ function split_output(params)
         ({world_state}):split(4) -- split world_state in half on last dim
 
     local net = nn.gModule({future},{pos, vel, ang, ang_vel, obj_prop})
-    if mp.cuda then net = net:cuda() end
+    if mp.cuda then net:cuda() end
     return net
 end
 
@@ -130,7 +130,7 @@ function split_tensor(dim, reshape, boundaries)
                                 (nn.NarrowTable(left,length)(splitted))
     end
     local net = nn.gModule({tensor},chunks)
-    if mp.cuda then net = net:cuda() end
+    if mp.cuda then net:cuda() end
     return net
 end
 

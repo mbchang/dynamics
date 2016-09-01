@@ -148,7 +148,7 @@ function model:unpack_batch(batch, sim)
     -- context: (bsize, mp.seq_length, dim)
     local input = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})
+        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})  -- good
     end
 
     ------------------------------------------------------------------
@@ -158,9 +158,10 @@ function model:unpack_batch(batch, sim)
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
-            table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))
+            table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))  -- good
         end
     end
+
     input = self:apply_mask(input, self.neighbor_masks)
 
     return {input, this_past}, this_future
@@ -186,7 +187,8 @@ function model:select_neighbors(input)
         template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
         template_block[{{},{},{config_args.oids.block}}]:fill(1)
 
-        if oid_onehot:equal(template_ball) then
+        -- if oid_onehot:equal(template_ball) then
+        if (oid_onehot-template_ball):norm()==0 then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
         elseif oid_onehot:equal(template_block) then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.block
@@ -203,8 +205,9 @@ function model:select_neighbors(input)
         euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
 
         -- find the indices in the batch for neighbors and non-neighbors
-        local neighbor_mask = euc_dist_next:le(threshold):float()  -- 1 if neighbor 0 otherwise   -- potential cuda
-        table.insert(neighbor_masks, neighbor_mask)
+        -- local neighbor_mask = euc_dist_next:le(threshold):float()  -- 1 if neighbor 0 otherwise   -- potential cuda
+        local neighbor_mask = convert_type(euc_dist_next:le(threshold), mp.cuda)  -- 1 if neighbor 0 otherwise   -- potential cuda
+        table.insert(neighbor_masks, neighbor_mask) -- good
     end
 
     return neighbor_masks
@@ -218,7 +221,8 @@ function model:apply_mask(input, batch_mask)
             x[1] = torch.cmul(x[1],batch_mask[i]:view(mp.batch_size,1):expandAs(x[1]))
             x[2] = torch.cmul(x[2], batch_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
         else
-            x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())  -- potential cuda
+            x = torch.cmul(x, convert_type(batch_mask[i]:view(mp.batch_size,1):expandAs(x), mp.cuda))
+            -- x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())  -- potential cuda
             input[i] = x -- it doesn't actually automatically mutate
         end
     end
@@ -269,7 +273,7 @@ function model:fp(params_, batch, sim)
     -- else
     --     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
     -- end
-    
+    if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return loss, prediction
 end
@@ -331,7 +335,7 @@ function model:bp(batch, prediction, sim)
     self.criterion:forward(p_vel, gt_vel)
     local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
     -- print('d_vel:norm()',d_vel:norm())
-        d_vel:mul(mp.vlambda)
+    d_vel:mul(mp.vlambda)
     d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
     self.identitycriterion:forward(p_ang, gt_ang)
@@ -366,6 +370,7 @@ function model:bp(batch, prediction, sim)
     local d_input = {d_pairwise, d_identity}
 
     ------------------------------------------------------------------
+    if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return self.theta.grad_params
 end
