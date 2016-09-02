@@ -43,7 +43,7 @@ def create_jobs(dry_run, ext):
     num_objs = [3,4,5,6]  # how far should we go? Let's say the max is 20. Should we include 1?
     friction = [False]
     gravity = [False]
-    masses = [True]  # TODO
+    masses = [False]  # TODO
     sizes = [True]
     num_obstacles = [True]
     envs = ['mixed']

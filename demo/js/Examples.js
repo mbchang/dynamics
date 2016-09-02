@@ -2124,7 +2124,7 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 // collisionFilter: {group:self.group} // remove collision constraints  comment out because otherwise they may overlap.
+                                 collisionFilter: {group:self.group} // remove collision constraints  comment out because otherwise they may overlap.
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2149,7 +2149,6 @@ if (!_isBrowser) {
         var balls = Balls.create(cmd_options);
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            // console.log('init')
             Balls.init(balls);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
             console.log('init_from_trajectories')

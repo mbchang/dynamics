@@ -629,7 +629,7 @@
 
         // let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
         //                 experiment_string + '/jsons/'
-        experiment_string += '_rd'
+        experiment_string += '_rda'
         var savefolder = '../data/' + experiment_string + '/jsons/'
 
         if (!fs.existsSync(savefolder)){

@@ -45,15 +45,15 @@
         Render = Matter.Render;
 
     // Create the engine
-    Demo.run = function(json_data) {
+    Demo.run = function(json_data, opt) {
 
         //TODO: note that here you should load the demo engine with the json file
 
         // load the config file here.
-        console.log(json_data)
+        // console.log(json_data)
         let data = json_data.trajectories
         let config = json_data.config
-        console.log(config)
+        // console.log(config)
 
         // let data = json_data
 
@@ -160,9 +160,9 @@
         Example[config.env](demo, config)  // here you have to assign balls initial positions according to the initial timestep of trajectories.
 
         // here you have to 
-        console.log(config)
+        // console.log(config)
 
-        console.log(num_steps)
+        // console.log(num_steps)
         if (config.env=='tower') {
             var i = 2  // if I set i to < 2 then I get very weird behavior
         } else {
@@ -170,7 +170,7 @@
         }
 
         function f() {
-            console.log( 'i', i );
+            console.log( 'i =', i );
             var entities = Composite.allBodies(demo.engine.world)
                 .filter(function(elem) {
                             return elem.label === 'Entity';
@@ -188,11 +188,11 @@
                 }
                 body.render.lineWidth = 5
 
-                console.log('set position')
+                // console.log('set position')
 
                 Body.setPosition(body, trajectories[id][i].position)
                 Body.setAngle(body, trajectories[id][i].angle)
-                console.log(id, trajectories[id][i].position, trajectories[id][i].velocity, trajectories[id][i].angle)
+                // console.log(id, trajectories[id][i].position, trajectories[id][i].velocity, trajectories[id][i].angle)
 
             }
 
@@ -200,10 +200,14 @@
 
 
             if (!_isBrowser) {
+                demo.render.context.globalAlpha = 0.5
                 demo.render.context.fillStyle = 'white'
+                // demo.render.context.fillStyle = "rgba(255, 255, 255, 1.0)";
                 demo.render.context.fillRect(0,0,demo.width,demo.height)
                 Render.world(demo.render)
-                let filename = 'out'+i+'_'+i+'.png'  // TODO! rename
+                let filename = opt.out_folder + '/' + opt.batch_name + '_ex' + opt.ex + '_step' + i +'.png'
+
+                // let filename = 'out'+i+'_'+i+'.png'  // TODO! rename
                 PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
                     console.log("wrote out the png file to "+filename);
                 });
@@ -225,11 +229,42 @@
         f();
 
 
-    }
+    };
+
+
+    Demo.process_cmd_options = function() {
+        const optionator = require('optionator')({
+            options: [{
+                    option: 'help',
+                    alias: 'h',
+                    type: 'Boolean',
+                    description: 'displays help',
+                }, {
+                    option: 'exp',
+                    alias: 'e',
+                    type: 'String',
+                    description: 'experiment folder',
+                    required: true
+                }]
+        });
+
+        // process invalid optiosn
+        try {
+            optionator.parseArgv(process.argv);
+        } catch(e) {
+            console.log(optionator.generateHelp());
+            console.log(e.message)
+            process.exit(1)
+        }
+
+        const cmd_options = optionator.parseArgv(process.argv);
+        if (cmd_options.help) console.log(optionator.generateHelp());
+        return cmd_options;
+    };
 
     // call init when the page has loaded fully
     if (!_isAutomatedTest) {
-        console.log('a')
+        // console.log('a')
         window.loadFile = function loadFile(file){
             var fr = new FileReader();
             fr.onload = function(){
@@ -239,9 +274,36 @@
         }
     } else {
         // here load the json file here
-        let loaded_json= jsonfile.readFileSync('gt_batch383.json')
-        // console.log('b')
-        // console.log(loaded_file)
-        Demo.run(loaded_json)
+        const cmd_options = Demo.process_cmd_options();
+        console.log('processed command options', cmd_options)
+        let experiment_folder = cmd_options.exp  // this is the folder that ends with predictions
+        // let experiment_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs/balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj/balls_n8_t60_ex50000_rdpredictions'
+        let jsons = fs.readdirSync(experiment_folder)
+
+        for (let j=0; j < jsons.length; j++) {
+            let jf = jsons[j]
+            let loaded_json = jsonfile.readFileSync(experiment_folder + '/' + jf)
+            let batch_name = jf.slice(0, -1*'.json'.length)
+            let out_folder = experiment_folder + '/../visual/' + batch_name
+            let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
+            console.log(batch_name)
+            Demo.run(loaded_json, options)
+            console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
+        }
+        // console.log(jsons)
+
+        // instead of a for loop I should use a call back.
+
+        // but if it is asynchronous may be it will be faster?   
+
+
+
+
     }
 })();
+
+
+// TODO pass in the example in the batch as well as the experiment folder. You can create a image folder if you want 
+
+
+

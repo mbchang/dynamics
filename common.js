@@ -126,8 +126,8 @@ initialize_velocities = function(num_obj, max_v0) {
     for (var i = 0; i < num_obj; i++) {
 
         // generate random initial velocities b/w -max_v0 and max_v0 inclusive
-        var vx = Math.floor(Math.random()*2*max_v0+1-max_v0)
-        var vy = Math.floor(Math.random()*2*max_v0+1-max_v0)
+        var vx = Math.floor((Math.random()*2*max_v0+1)-max_v0)  // this should be Math.floor((Math.random()*2*max_v0+1)-max_v0)
+        var vy = Math.floor((Math.random()*2*max_v0+1)-max_v0)
         v0.push({x: vx, y: vy})
     }
     return v0;
