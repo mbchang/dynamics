@@ -30,7 +30,7 @@ cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj | cat | ind')
 cmd:option('-name', "mj", 'experiment name')
-cmd:option('-seed', true, 'manual seed or not')
+cmd:option('-seed', 0, 'manual seed')
 
 -- dataset
 cmd:option('-dataset_folders', '', 'dataset folder')
@@ -51,8 +51,8 @@ cmd:option('-num_past', 2, 'number of past timesteps')
 -- training options
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
 cmd:option('-batch_size', 50, 'batch size')
-cmd:option('-shuffle', false, 'shuffle batches')
-cmd:option('-max_iter', 3000000, 'max number of iterations (some huge number)')
+cmd:option('-shuffle', true, 'shuffle batches')
+cmd:option('-max_iter', 1200000, 'max number of iterations (some huge number)')
 cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
@@ -65,15 +65,16 @@ cmd:option('-lambda', 1, 'angle penalization')
 
 -- priority sampling
 cmd:option('-ps', true, 'turn on priority sampling')
+cmd:option('-rs', false, 'turn on random sampling')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 
 -- experiment options
 cmd:option('-plot', false, 'turn on/off plot')
 
 -- every options
-cmd:option('-print_every', 100, 'print every number of batches')
-cmd:option('-save_every', 10000, 'save every number of batches')  -- this should be every 100000
-cmd:option('-val_every',10000,'val every number of batches') -- this should be every 100000 
+cmd:option('-print_every', 500, 'print every number of batches')
+cmd:option('-save_every', 100000, 'save every number of batches')  -- this should be every 100000
+cmd:option('-val_every', 100000,'val every number of batches') -- this should be every 100000 
 cmd:option('-lrdecay_every',2500,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 cmd:option('-cuda', false, 'gpu')
@@ -98,7 +99,7 @@ if mp.server == 'pc' then
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
     mp.layers = 3
-    mp.model = 'lstmcat'
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -111,6 +112,7 @@ if mp.server == 'pc' then
     mp.val_every = 20
     mp.plot = false--true
 	mp.cuda = false
+    mp.rs = false
 else
 	-- mp.winsize = 3  -- total number of frames
     -- mp.num_past = 2 -- total number of past frames
@@ -152,11 +154,11 @@ mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.savedir = mp.logs_root .. '/' .. mp.name
 print(mp.savedir)
 
-if mp.seed then torch.manualSeed(123) end
+torch.manualSeed(mp.seed)
 if mp.cuda then
     require 'cutorch'
     require 'cunn'
-    cutorch.manualSeed(123)
+    cutorch.manualSeed(mp.seed)
 end
 
 local optimizer, optim_state
@@ -264,18 +266,42 @@ function initsavebatches()
             -- print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
             -- local dp = data_process.create(jsonfolder, data_folder, config_args)
             -- dp:create_datasets_batches()
-
-
-
         -------------------------
     end
+
+    for _, dataset_folder in pairs(mp.test_dataset_folders) do
+        local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
+        -- TODODO
+        if not paths.dirp(data_folder) then
+            local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
+            print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
+            local dp = data_process.create(jsonfolder, data_folder, config_args)
+            dp:create_datasets_batches()
+        else
+            print('Batches for '..dataset_folder..' already made')
+        end
+        -------------------------
+            -- local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
+            -- print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
+            -- local dp = data_process.create(jsonfolder, data_folder, config_args)
+            -- dp:create_datasets_batches()
+        -------------------------
+    end
+
+
     if wascudabefore then mp.cuda = true end
 end
 
 -- closure: returns loss, grad_params
 function feval_train(params_)  -- params_ should be first argument
 
-    local batch = train_loader:sample_priority_batch(mp.sharpen)
+    -- local batch = train_loader:sample_priority_batch(mp.sharpen)
+    local batch
+    if mp.rs then
+        batch = train_loader:sample_random_batch(mp.sharpen)
+    else
+        batch = train_loader:sample_priority_batch(mp.sharpen)
+    end
     -- {
     --   1 : FloatTensor - size: 5x2x11
     --   2 : FloatTensor - size: 5x4x2x11
@@ -307,6 +333,15 @@ function train(start_iter, epoch_num)
     local start_iter = start_iter or 1
     print('Start iter:', start_iter)
     print('Start epoch num:', epoch_num)
+
+    -- THIS IS ACTUALLY AT ITERATION 0
+    if start_iter == 1 then
+        v_train_loss, v_val_loss, v_test_loss = validate()
+        train_losses[#train_losses+1] = v_train_loss
+        val_losses[#val_losses+1] = v_val_loss
+        test_losses[#test_losses+1] = v_test_loss
+    end
+
     for t = start_iter,mp.max_iter do
 
         local new_params, train_loss = optimizer(feval_train,
@@ -413,7 +448,7 @@ function test(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
     local num_batches = num_batches or dataloader.num_batches
 
-    if mp.fast then num_batches = math.min(1000, num_batches) end
+    if mp.fast then num_batches = math.min(5000, num_batches) end
     print('Testing '..num_batches..' batches')
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
@@ -428,7 +463,7 @@ function test(dataloader, params_, saveoutput, num_batches)
 end
 
 function validate()
-    local train_loss = test(train_test_loader, model.theta.params, false, math.min(1000, val_loader.num_batches))
+    local train_loss = test(train_test_loader, model.theta.params, false, math.min(5000, val_loader.num_batches))
     local val_loss = test(val_loader, model.theta.params, false, val_loader.num_batches)
     local test_loss = test(test_loader, model.theta.params, false, test_loader.num_batches)
 
