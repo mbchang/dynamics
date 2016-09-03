@@ -2124,7 +2124,7 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 collisionFilter: {group:self.group} // remove collision constraints  comment out because otherwise they may overlap.
+                                 // collisionFilter: {group:self.group} // remove collision constraints  comment out because otherwise they may overlap.
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2848,12 +2848,12 @@ if (!_isBrowser) {
                 Body.setAngle(block, trajectories[i][1].angle)
                 Body.setVelocity(block, { x: 0, y: 0 })
 
-                if (i==2) {
-                    block.render.fillStyle = 'black'
-                } else {
-                    block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
-                }
-                // block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                // if (i==2) {
+                //     block.render.fillStyle = 'black'
+                // } else {
+                //     block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                // }
+                block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
 
 
                 block.render.strokeStyle = '#FFA500'// orange
