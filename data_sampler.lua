@@ -119,6 +119,12 @@ function datasampler:relative_batch(batch, rta)
     return {this_past, context_past, this_future, context_future, mask}
 end
 
+function datasampler:sample_random_batch(pow)
+    self.current_batch = math.random(self.total_batches)
+    local batch = self:load_batch_id(self.batch_idxs[self.current_batch])
+    return batch
+end
+
 function datasampler:sample_priority_batch(pow)
     local batch
     if self.priority_sampler.table_is_full then

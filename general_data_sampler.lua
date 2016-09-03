@@ -97,6 +97,20 @@ function general_datasampler:sample_priority_batch(pow)
     return batch, self.current_dataset
 end
 
+function general_datasampler:sample_random_batch(pow)
+
+    self.current_dataset = math.random(#self.datasamplers)
+    local batch = self.datasamplers[self.current_dataset]:sample_random_batch(pow)
+    self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
+    if plseq.reduce('and', plseq.map(function(x) return x.has_reported end,
+            self.datasamplers)) and not(self.has_reported) then
+        self.has_seen_all_batches = true
+        self.has_reported = true
+        print('Seen all batches')
+    end
+    return batch, self.current_dataset
+end
+
 -- returns {loss, idx, current_dataset}
 function general_datasampler:get_hardest_batch()
     local hardest_batch = self.datasamplers[self.current_dataset]:get_hardest_batch()
