@@ -532,7 +532,13 @@ function predict_simulate_all()
     inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
     print('Network parameters')
     print(mp)
-    simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
+
+    for i,testdataset_loader in pairs(test_loader.datasamplers) do
+        print('Evaluating '..test_loader.dataset_folders[i])
+        simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
+        -- print(testdataset_loader)
+    end
+    -- simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
 
 function inference(logfile, property, method, cf)
@@ -612,7 +618,7 @@ function model_deps(modeltype)
         M = require 'variable_obj_model'
     elseif modeltype == 'bffobj' then
         M = require 'branched_variable_obj_model'
-    elseif modeltype == 'lstmtime' then
+    elseif modeltype == 'lstmcat' then
         M = require 'lstm_model'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'

@@ -1,9 +1,6 @@
 import os
 import pprint
-import numpy as np
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+
 import utils as u
 
 root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/oplogs'

@@ -9,6 +9,12 @@ from images2gif import writeGif
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import pprint 
 import subprocess
+import itertools
+
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import json
 
 
 def mkdir_p(path):
@@ -20,266 +26,438 @@ def mkdir_p(path):
         else:
             raise
 
-experiments = [
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_lrdecay_every10000',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_lrdecay_every5000',
-                # 'balls_n2_t60_ex50000__balls_n2_t60_ex50000_batchnorm',
-                # 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every5000',
+experiments_dict = {
+    'Balls Prediction All': [
+         # RD dataset with 2.5 buffer
+        ('balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '3 balls'),
+        ('balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '5 balls'),
+        ('balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '6 balls'),
+        ('balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '7 balls'),
+        ('balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '8 balls'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '4 balls'),
+    ],
 
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_lrdecay_every2500',
-                # 'balls_n5_t60_ex50000__balls_n5_t60_ex50000_lrdecay_every2500',
-                # 'balls_n6_t60_ex50000__balls_n6_t60_ex50000_lrdecay_every2500',
-                # 'balls_n7_t60_ex50000__balls_n7_t60_ex50000_lrdecay_every2500',
-                # 'balls_n8_t60_ex50000__balls_n8_t60_ex50000_lrdecay_every2500',
-                # 'balls_n9_t60_ex50000__balls_n9_t60_ex50000_lrdecay_every2500',
-                # 'balls_n10_t60_ex50000__balls_n10_t60_ex50000_lrdecay_every2500',
+    'Balls Prediction Mass All': [
+        # RD dataset with 2.5 buffer
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj', '4 balls'),
+        ('balls_n3_t60_ex50000_m_rd__balls_n3_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj', '3 balls'),
+        ('balls_n5_t60_ex50000_m_rd__balls_n5_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj', '5 balls'),
+        ('balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj', '6 balls'),
+        ('balls_n7_t60_ex50000_m_rd__balls_n7_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj', '7 balls'),
+        ('balls_n8_t60_ex50000_m_rd__balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj', '8 balls'),
+    ],
 
+    'Balls Generalization': [
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', 'No Mass'),
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', 'Mass'),
+    ],
 
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3e-5',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3-e5_lineardecoder',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_modelind_lineardecoder',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000',
-                # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000',
-                # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr3e-3',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr7e-4',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lr5e-4',
+    'Mixed Prediction Dras vs Dras3': [
+        ('mixed_n3_t60_ex50000_z_o_dras_rd__mixed_n3_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '3 objects 2 sizes'),
+        ('mixed_n4_t60_ex50000_z_o_dras_rd__mixed_n4_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '4 objects 2 sizes'),
+        ('mixed_n5_t60_ex50000_z_o_dras_rd__mixed_n5_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '5 objects 2 sizes'),
+        ('mixed_n6_t60_ex50000_z_o_dras_rd__mixed_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '6 objects 2 sizes'),
 
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_modelcat_lr3e-05',
-                # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_modelcat_lr3e-05',
-                # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_modelcat_lr3e-05',
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd__mixed_n3_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '3 objects 3 sizes'),
+        ('mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n4_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '4 objects 3 sizes'),
+        ('mixed_n5_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '5 objects 3 sizes'),
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '6 objects 3 sizes'),
+    ],
 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecayevery5000',
+    'Mixed Prediction Mass Dras vs Dras3': [
+        ('mixed_n3_t60_ex50000_m_z_o_dras_rd__mixed_n3_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '3 objects 2 sizes'),
+        ('mixed_n4_t60_ex50000_m_z_o_dras_rd__mixed_n4_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '4 objects 2 sizes'),
+        ('mixed_n5_t60_ex50000_m_z_o_dras_rd__mixed_n5_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '5 objects 2 sizes'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras_rd__mixed_n6_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '6 objects 2 sizes'),
+        
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd__mixed_n3_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '3 objects 3 sizes'),
+        ('mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n4_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '4 objects 3 sizes'),
+        ('mixed_n5_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '5 objects 3 sizes'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', '6 objects 3 sizes'),
+    ],
 
+    'Mixed Generalization': [
+        ('mixed_n3_t60_ex50000_m_z_o_dras_rd,mixed_n4_t60_ex50000_m_z_o_dras_rd__mixed_n5_t60_ex50000_m_z_o_dras_rd,mixed_n6_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', 'Mass 2 sizes'),
+        ('mixed_n3_t60_ex50000_z_o_dras_rd,mixed_n4_t60_ex50000_z_o_dras_rd__mixed_n5_t60_ex50000_z_o_dras_rd,mixed_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', 'No Mass 2 sizes'),
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', 'No Mass 3 sizes'),
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj', 'Mass 3 sizes'),
+    ],
 
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every2500',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every2500',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.0001_lrdecay_every5000',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.0001_lrdecay_every5000',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.001_lrdecay_every2500',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.001_lrdecay_every2500',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.001_lrdecay_every5000',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.001_lrdecay_every5000',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every2500',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every2500',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers3_lr0.005_lrdecay_every5000',
-                # 'balls_n3_t60_ex50000_m__balls_n3_t60_ex50000_m_lrdecay_every2500_layers4_lr0.005_lrdecay_every5000',
+    'Tower': [
+        ('tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm', 'Lambda 100'),
+        ('tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm', 'Unstable Lambda 100'),
+        ('tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm', 'Lambda 10'),
+        ('tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm', 'Unstable Lambda 10'),
+    ],
 
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past10',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past9',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past8',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past7',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past6',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past5',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past4',
-                # 'balls_n3_t60_ex50000__balls_n3_t60_ex50000_num_past3',
+    'Balls Prediction Fast': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE Neighborhood'),
+    ],
 
-                # all of the above have been plotted after the experiments finished or ran out of time. Possibly not simulated.
+    'Balls Prediction Mass Fast': [
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
-                # bffobj initial test
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelbffobj',  
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',  
+    'Balls Generalization Fast': [
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
+    'Balls Generalization Mass Fast': [
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
-                # ffobj with nbrhd initial test'
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers2_nbrhd_lr0.001_modelffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.001_modelffobj',
+    'Mixed Prediction Fast': [
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
-                # bffobj generalization test
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000__balls_n5_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n3_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n5_t60_ex50000,balls_n3_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-
-                # generalization test 2
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                # 'balls_n3_t60_ex50000,balls_n4_t60_ex50000,balls_n5_t60_ex50000__balls_n6_t60_ex50000,balls_n7_t60_ex50000,balls_n8_t60_ex50000_layers3_nbrhd_lr0.0003_modelbffobj',
-                
-
-                # bffobj experiments with ACTUAL nbhrd
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize4_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize1.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize3_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000__balls_n4_t60_ex50000_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-
-                # testing generaliazation, but not true rd
-                # 'balls_n4_t120_ex25000_m,balls_n5_t120_ex25000_m__balls_n4_t120_ex25000_m,balls_n5_t120_ex25000_m_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t120_ex25000_m,balls_n5_t120_ex25000_m__balls_n4_t120_ex25000_m,balls_n5_t120_ex25000_m_layers3_nbrhd_nbrhdsize4.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t120_ex25000_m,balls_n5_t120_ex25000_m__balls_n4_t120_ex25000_m,balls_n5_t120_ex25000_m_layers3_nbrhd_nbrhdsize4_lr0.0003_modelbffobj',
-
-                # RD dataset
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-
-                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                # 'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-
-                # test im, but this includes 1e30. so just testing nbrhd size here
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize4_lr0.0003_im_modelbffobj',
-                # 'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3_lr0.0003_im_modelbffobj',
-
-                # RD dataset with 2.5 buffer
-                'balls_n3_t60_ex50000_rd__balls_n3_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n5_t60_ex50000_rd__balls_n5_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n7_t60_ex50000_rd__balls_n7_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n3_t60_ex50000_m_rd__balls_n3_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n5_t60_ex50000_m_rd__balls_n5_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n7_t60_ex50000_m_rd__balls_n7_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-                'balls_n8_t60_ex50000_m_rd__balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_im_modelbffobj',
-
-                # try different models for mass (did not do mass inference here)
-                'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n6_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Mixed Prediction Mass Fast': [
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
 
-                # tower 6 blocks (variance for 10 blocks though)
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers2_nbrhd_nbrhdsize3_lr0.0003_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers4_nbrhd_nbrhdsize3_lr0.0003_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers2_nbrhd_nbrhdsize4_lr0.0003_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers4_nbrhd_nbrhdsize4_lr0.0003_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0001_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.001_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Mixed Generalization Fast': [
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr3e-05_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr3e-06_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr3e-07_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.003_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.03_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.3_val_eps0_modelbffobj',
+    'Mixed Generalization Mass Fast': [
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_fast_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_fast_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_fast_lr0.0003_modelind', 'Independent'),
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'NPE'),
+    ],
 
-                'tower_n8_t120_ex25000_rd__tower_n8_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Mixed Prediction Slow': [
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_lr0.0003_modelind', 'Independent'),
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+    ],
 
-                'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
-                'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
+    'Mixed Prediction Mass Slow': [
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_lr0.0003_modelind', 'Independent'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+    ],
 
-                # tower debugging
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_vlambda1000_modelbffobj_lambda1000_batch_norm',
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_vlambda1000_modelbffobj_lambda1000',
+    'Balls Prediction Slow': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_lr0.0003_modelind', 'Independent'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+    ],
+    
+    'Balls Prediction Mass Slow': [
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_lr0.0003_modelind', 'Independent'),
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n4_t60_ex50000_m_rd__balls_n4_t60_ex50000_m_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+    ],
 
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_vlambda0_modelbffobj_lambda1',
+    'Balls Generalization Slow': [
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelind', 'Independent'),
+    ],
 
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_vlambda1000_modelbffobj',
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_vlambda100_modelbffobj',
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_vlambda10_modelbffobj',
+    'Balls Generalization Mass Slow': [
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelind', 'Independent'),    
+    ],
 
+    'Mixed Generalization Slow': [
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelind', 'Independent'),
+    ],
 
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj_lambda1000',
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj_lambda100',
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj_lambda10',
+    'Mixed Generalization Mass Slow': [
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_lr0.0003_modelbffobj', 'NPE No Neighborhood'),
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_lr0.0003_modellstmcat', 'LSTM'),
+        ('mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelind', 'Independent'),
+    ],
 
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj_batch_norm',
+    'LSTM Search': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modellstmcat', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modellstmcat', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modellstmcat', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modellstmcat', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modellstmcat', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modellstmcat', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modellstmcat', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modellstmcat', '7 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modellstmcat', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modellstmcat', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modellstmcat', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modellstmcat', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.001_modellstmcat', '3 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0001_modellstmcat', '3 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modellstmcat', '3 Layers, Learning Rate 0.0003'),
 
-                'tower_n4_t120_ex25000_rd_stable__tower_n4_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
-                'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
-                'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
-                'tower_n6_t120_ex25000_rd__tower_n6_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
+    ],
 
-                'tower_n2_t120_ex25000_rd_stable__tower_n2_t120_ex25000_rd_stable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps0_modelbffobj',
+    'Independent Search': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modelind', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modelind', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modelind', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modelind', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modelind', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modelind', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modelind', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modelind', '7 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modelind', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modelind', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modelind', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modelind', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0001_modelind', '3 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.001_modelind', '3 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modelind', '3 Layers, learning Rate 0.0003'),
+    ],
 
+    'LSTM Search Learning Rate 0.0003': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modellstmcat', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modellstmcat', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modellstmcat', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modellstmcat', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modellstmcat', '3 Layers, Learning Rate 0.0003'),
+    ],
 
+    'LSTM Search Learning Rate 0.0001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modellstmcat', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modellstmcat', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modellstmcat', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modellstmcat', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0001_modellstmcat', '3 Layers, Learning Rate 0.0001'),
+    ],
 
+    'LSTM Search Learning Rate 0.001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modellstmcat', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modellstmcat', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modellstmcat', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modellstmcat', '7 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.001_modellstmcat', '3 Layers, Learning Rate 0.001'),
+    ],
 
+    'Independent Search Learning Rate 0.0003': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modelind', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modelind', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modelind', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modelind', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modelind', '3 Layers, learning Rate 0.0003'),
+    ],
 
+    'Independent Search Learnign Rate 0.0001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modelind', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modelind', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modelind', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modelind', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0001_modelind', '3 Layers, Learning Rate 0.0001'),
+    ],
 
-                # for towers: try batch norm
+    'Independent Search 0.001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modelind', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modelind', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modelind', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modelind', '7 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.001_modelind', '3 Layers, Learning Rate 0.001'),
+    ],
 
-                # for balls: try doing inference on only the examples where there is a collision. But how to decide? Perhaps you can say if the reversal is > 90 degree then it is a collision? You can also test by angle
-                
-                # balls generalization
-                'balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers2_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'balls_n3_t60_ex50000_rd,balls_n4_t60_ex50000_rd,balls_n5_t60_ex50000_rd__balls_n6_t60_ex50000_rd,balls_n7_t60_ex50000_rd,balls_n8_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                
-                'balls_n3_t60_ex50000_m_rd,balls_n4_t60_ex50000_m_rd,balls_n5_t60_ex50000_m_rd__balls_n6_t60_ex50000_m_rd,balls_n7_t60_ex50000_m_rd,balls_n8_t60_ex50000_m_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'LSTM Search Layers 3': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.001_modellstmcat', '3 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0001_modellstmcat', '3 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modellstmcat', '3 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_rs_fast_lr3e-05_modellstmcat', '3 Layers, Learning Rate 0.00003'),
+    ],
 
-                # mixed
-                'mixed_n6_t60_ex50000_rd__mixed_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_z_rd__mixed_n6_t60_ex50000_z_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_o_rd__mixed_n6_t60_ex50000_o_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_z_o_rd__mixed_n6_t60_ex50000_z_o_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'LSTM Search Layers 4': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modellstmcat', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modellstmcat', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modellstmcat', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_rs_fast_lr3e-05_modellstmcat', '4 Layers, Learning Rate 0.00003'),
+    ],
 
-                # debug mixed
-                'mixed_n6_t60_ex50000_z_dras_rd__mixed_n6_t60_ex50000_z_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'LSTM Search Layers 5': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modellstmcat', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modellstmcat', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modellstmcat', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_rs_fast_lr3e-05_modellstmcat', '5 Layers, Learning Rate 0.00003'),
+    ],
 
-                # invisible
-                'invisible_n5_t60_ex50000_z_o_dras_rd__invisible_n5_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'invisible_n6_t60_ex50000_z_o_dras_rd__invisible_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'LSTM Search Layers 6': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modellstmcat', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modellstmcat', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modellstmcat', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_rs_fast_lr3e-05_modellstmcat', '6 Layers, Learning Rate 0.00003'),
+    ],
 
-                # mixed dras
-                'mixed_n3_t60_ex50000_m_z_o_dras_rd__mixed_n3_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n4_t60_ex50000_m_z_o_dras_rd__mixed_n4_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n5_t60_ex50000_m_z_o_dras_rd__mixed_n5_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_m_z_o_dras_rd__mixed_n6_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'LSTM Search Layers 7': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modellstmcat', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modellstmcat', '7 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modellstmcat', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_rs_fast_lr3e-05_modellstmcat', '7 Layers, Learning Rate 0.00003'),
+    ],
 
-                'mixed_n3_t60_ex50000_z_o_dras_rd__mixed_n3_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n4_t60_ex50000_z_o_dras_rd__mixed_n4_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n5_t60_ex50000_z_o_dras_rd__mixed_n5_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_z_o_dras_rd__mixed_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Independent Search Layers 3': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0001_modelind', '3 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.001_modelind', '3 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modelind', '3 Layers, learning Rate 0.0003'),
+    ],
 
-                'mixed_n3_t60_ex50000_z_o_dras3_rd__mixed_n3_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n4_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n5_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_z_o_dras3_rd__mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Independent Search Layers 4': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modelind', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modelind', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modelind', '4 Layers, Learning Rate 0.0003'),
+    ],
 
-                'mixed_n3_t60_ex50000_m_z_o_dras3_rd__mixed_n3_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n4_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n5_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n6_t60_ex50000_m_z_o_dras3_rd__mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Independent Search Layers 5': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modelind', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modelind', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modelind', '5 Layers, Learning Rate 0.0003'),
+    ],
 
-                # mixed generaliztion
-                'mixed_n3_t60_ex50000_m_z_o_dras_rd,mixed_n4_t60_ex50000_m_z_o_dras_rd__mixed_n5_t60_ex50000_m_z_o_dras_rd,mixed_n6_t60_ex50000_m_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n3_t60_ex50000_z_o_dras_rd,mixed_n4_t60_ex50000_z_o_dras_rd__mixed_n5_t60_ex50000_z_o_dras_rd,mixed_n6_t60_ex50000_z_o_dras_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n3_t60_ex50000_z_o_dras3_rd,mixed_n4_t60_ex50000_z_o_dras3_rd__mixed_n5_t60_ex50000_z_o_dras3_rd,mixed_n6_t60_ex50000_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-                'mixed_n3_t60_ex50000_m_z_o_dras3_rd,mixed_n4_t60_ex50000_m_z_o_dras3_rd__mixed_n5_t60_ex50000_m_z_o_dras3_rd,mixed_n6_t60_ex50000_m_z_o_dras3_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+    'Independent Search Layers 6': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modelind', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modelind', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modelind', '6 Layers, Learning Rate 0.0003'),
+    ],
 
-                # tower unstable and normal with higher lr
-                'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
-                'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
-                'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
-                'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+    'Independent Search Layers 7': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modelind', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modelind', '7 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modelind', '7 Layers, Learning Rate 0.0003'),
+    ],
 
-                ]
+    'NPE No Neighborhood Layers 4': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modelbffobj', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modelbffobj', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modelbffobj', '4 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE No Neighborhood Layers 5': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modelbffobj', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modelbffobj', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modelbffobj', '5 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE No Neighborhood Layers 6': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modelbffobj', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modelbffobj', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modelbffobj', '6 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE No Neighborhood Layers 7': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modelbffobj', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modelbffobj', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modelbffobj', '7 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE No Neighborhood Learning Rate 0.0003': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_fast_lr0.0003_modelbffobj', '3 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0003_modelbffobj', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0003_modelbffobj', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0003_modelbffobj', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0003_modelbffobj', '7 Layers, Learning Rate 0.0003'),
+    ],
+
+    'NPE No Neighborhood Learning Rate 0.0001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.0001_modelbffobj', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.0001_modelbffobj', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.0001_modelbffobj', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.0001_modelbffobj', '7 Layers, Learning Rate 0.0001'),
+    ],
+
+    'NPE No Neighborhood Learning Rate 0.001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_fast_lr0.001_modelbffobj', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_fast_lr0.001_modelbffobj', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_fast_lr0.001_modelbffobj', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_fast_lr0.001_modelbffobj', '7 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE Layers 4': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '4 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE Layers 5': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '5 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE Layers 6': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '6 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE Layers 7': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '7 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '7 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '7 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE Learning Rate 0.0001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '4 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '5 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '6 Layers, Learning Rate 0.0001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj', '7 Layers, Learning Rate 0.0001'),
+    ],
+
+    'NPE Learning Rate 0.001': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '4 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '5 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '6 Layers, Learning Rate 0.001'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj', '7 Layers, Learning Rate 0.001'),
+    ],
+
+    'NPE Learning Rate 0.0003': [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '3 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '4 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '5 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '6 Layers, Learning Rate 0.0003'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', '7 Layers, Learning Rate 0.0003'),
+
+    ],
+
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj_search', '4 Layers, Learning Rate 0.0001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj_search', '4 Layers, Learning Rate 0.0003'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers4_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj_search', '4 Layers, Learning Rate 0.001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj_search', '5 Layers, Learning Rate 0.0001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj_search', '5 Layers, Learning Rate 0.0003'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers5_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj_search', '5 Layers, Learning Rate 0.001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj_search', '6 Layers, Learning Rate 0.0001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj_search', '6 Layers, Learning Rate 0.0003'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers6_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj_search', '6 Layers, Learning Rate 0.001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.0001_modelbffobj_search', '7 Layers, Learning Rate 0.0001'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj_search', '7 Layers, Learning Rate 0.0003'),
+# ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers7_nbrhd_nbrhdsize3.5_fast_lr0.001_modelbffobj_search', '7 Layers, Learning Rate 0.001'),
+
+    'NPE Random vs Priority' : [
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_rs_fast_lr0.0003_modelbffobj', 'RS'),
+        ('balls_n4_t60_ex50000_rd__balls_n4_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_fast_lr0.0003_modelbffobj', 'PS'),
+    ]
+}
+
+experiments = list(set(itertools.chain.from_iterable([[x[0] for x in y] for y in experiments_dict.values()])))
 
 # specify paths
 out_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs'
@@ -287,7 +465,11 @@ in_root = '/om/user/mbchang/physics/lua/logs'
 copy_prefix = 'rsync -avz --exclude \'*.t7\' mbchang@openmind7.mit.edu:'
 remote_prefix = '/om/user/mbchang/physics/lua/logs/'
 js_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/demo/js'
-
+    
+# pprint.pprint([[x[0] for x in y] for y in experiments_dict.values()])
+# pprint.pprint(experiments)
+# print(experiments)
+# assert False
 
 def wccount(filename):
     out = subprocess.Popen(['wc', '-l', filename],
@@ -371,6 +553,51 @@ def plot(experiments):
         except KeyboardInterrupt:
             sys.exit(0)
 
+# return np array from log file
+def read_log_file(log_file):
+    data = {'train':[],'val':[],'test':[]}
+    with open(log_file, 'r') as f:
+        raw = f.readlines()
+    for t in xrange(1,len(raw)):
+        [train, val, test] = raw[t].split('\t')[:3]
+        data['train'].append(train)
+        data['val'].append(val)
+        data['test'].append(test)
+    return data
+
+def plot_experiment(exp_list, dataset, outfolder, outfile):
+    ys = []
+    xs = []
+
+    fig, ax = plt.subplots()
+    ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+
+    # first group all the same labels together. You will use these for error bars
+    exp_groups = {}
+
+    # read in the experminet.logs from exp_list
+    for exp, label in exp_list:
+        # read exp.log
+        y = read_log_file(os.path.join(*[out_root,exp,'experiment.log']))[dataset]
+        x = range(len(y)) # TODO!
+
+        ax.plot(x,y, label=label)
+
+        # ax.fill_between(t, lower_bound, upper_bound, facecolor='yellow', alpha=0.5,
+        #         label='1 sigma range')
+        # plt.setp(ax.get_xticklabels(), fontsize=10, rotation=60)
+    plt.legend(fontsize=8)
+    plt.xlabel('Iterations (x 10000)')
+    plt.ylabel('Log MSE Loss')  # TODO!
+    plt.savefig(os.path.join(outfolder, outfile))
+    plt.close()
+    # NEXT TO DO ERROR BARS
+
+def plot_experiments(experiments_dict):
+    for e in experiments_dict:
+        print 'Plotting', e
+        plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
+
 # Call Demo_minimal here
 def visualize(experiments):
     print('## VISUALIZE ##')
@@ -395,7 +622,13 @@ def img_id_json(filename):
     end = filename.rfind('.')
     return int(filename[begin:end])
 
-def create_gif_json(images_root, gifname):
+def ex_json(fn):
+    begin = fn.find('_ex')+len('_ex')
+    end = begin + fn[begin:].find('_')
+    ex = int(fn[begin:end])
+    return ex
+
+def create_gif_json(images_root, gifname, stability_stats=None):
     """
         writeGif(filename, images, duration=0.1, loops=0, dither=1)
             Write an animated gif from the specified images.
@@ -404,12 +637,39 @@ def create_gif_json(images_root, gifname):
             Numpy images of other types are expected to have values between 0 and 255.
     """
     # TODO! I'm assuming my img_id is fixed!
-    file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png') and 'overlay' not in fn], key=lambda x: img_id_json(x))
+    # first group by ex
+    exs = {}
+    for fn in [fn for fn in os.listdir(images_root) if fn.endswith('.png') and 'overlay' not in fn]:
+        ex =ex_json(fn)
+        if ex not in exs: exs[ex] = []
+        exs[ex].append(fn)
+
+    if stability_stats:
+        # sort stability_stats
+        sorted_stability_stats = sorted(stability_stats.items(), key=lambda x:x[1])
+
+    for ex in exs:
+        exs[ex] = sorted(exs[ex], key=lambda x: img_id_json(x))
+
+
+
+        if stability_stats:
+            print(sorted_stability_stats)
+            key = [i for i in range(len(sorted_stability_stats)) if 'ex'+str(ex) in sorted_stability_stats[i][0]][0]
+            # print(key)
+            # key = [k for k in sorted_stability_stats if 'ex'+str(ex) in k][0]
+            gifname_ex = gifname[:gifname.rfind('.gif')]+ '_rank' + str(key)+'_ex'+str(ex) +'_top-block-displacement_' + str(sorted_stability_stats[key][1])  + '.gif'
+        else:
+            gifname_ex = gifname[:gifname.rfind('.gif')]+'_ex'+str(ex)+'.gif'
+        create_gif_json_ex(images_root, exs[ex], gifname_ex)
+
+def create_gif_json_ex(images_root, file_names, gifname):
     images = [Image.open(os.path.join(images_root,fn)) for fn in file_names]
     filename = os.path.join(images_root, gifname)
-    writeGif(filename, images, duration=0.2)
+    writeGif(filename, images, duration=0.001)
 
 def overlay_imgs(images_root, overlayedname):
+    assert False, "Did you incorporate the ex numbers?"
     file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png') and 'overlay' not in fn], key=lambda x: img_id_json(x))
     images = [Image.open(os.path.join(images_root,fn)) for fn in file_names] 
     filename = os.path.join(images_root, overlayedname)
@@ -428,46 +688,110 @@ def animate(experiments, remove_png):
     for experiment_folder in experiments:
         print '#'*80
         print 'Trying to animate', experiment_folder
-        try:
-            visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
-            if not os.listdir(visual_folder): 
-                print 'Nothing in', visual_folder
-            else:
-                animated_experiments.append(experiment_folder)
-                for batch_folder in os.listdir(visual_folder):
-                    print '-'*80
-                    gifname = experiment_folder + '_' + batch_folder + '.gif'
-                    overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
-                    batch_folder = os.path.join(visual_folder, batch_folder)
-                    if any(f.endswith('.png') for f in os.listdir(batch_folder)):
-                        create_gif_json(batch_folder, gifname)
-                        overlay_imgs(batch_folder, overlayed_name)
+        visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
+        if not os.listdir(visual_folder): 
+            print 'Nothing in', visual_folder
+        else:
+            animated_experiments.append(experiment_folder)
+            for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
+                print '-'*80
+                gifname = experiment_folder + '_' + batch_folder + '.gif'
+                overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
+                batch_folder = os.path.join(visual_folder, batch_folder)
+                if any(f.endswith('.png') for f in os.listdir(batch_folder)):
+                    create_gif_json(batch_folder, gifname)
+                    # overlay_imgs(batch_folder, overlayed_name)
 
-                        if remove_png:
-                            print 'Removing images from', batch_folder
-                            for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png') and 'overlay' not in x]:
-                                imgfile = os.path.join(batch_folder, imgfile)
-                                command = 'rm ' + imgfile
-                                os.system(command)
-                    else:
-                        print 'No .pngs found. Not creating gif for', batch_folder
+                    if remove_png:
+                        print 'Removing images from', batch_folder
+                        for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png') and 'overlay' not in x]:
+                            imgfile = os.path.join(batch_folder, imgfile)
+                            command = 'rm ' + imgfile
+                            os.system(command)
+                else:
+                    print 'No .pngs found. Not creating gif for', batch_folder
 
-        except KeyboardInterrupt:
-            sys.exit(0)
     print 'Animated the following folders:'
     pprint.pprint(animated_experiments)
+
+
+def animate_tower(experiments, remove_png):
+    print('## ANIMATE TOWER##')
+    # wait until all of Demo_minimal has finished
+    animated_experiments = []
+    for experiment_folder in experiments:
+        print '#'*80
+        print 'Trying to animate', experiment_folder
+        visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
+        if not os.listdir(visual_folder): 
+            print 'Nothing in', visual_folder
+        else:
+            animated_experiments.append(experiment_folder)
+            for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
+
+                print '-'*80
+                gifname = experiment_folder + '_' + batch_folder + '.gif'
+                overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
+                batch_folder = os.path.join(visual_folder, batch_folder)
+
+                # get the stats
+                stability_stats = json.loads(open(os.path.join(batch_folder,'stability_stats.json'),'r').read().strip())
+                print stability_stats
+
+
+                if any(f.endswith('.png') for f in os.listdir(batch_folder)):
+                    create_gif_json(batch_folder, gifname, stability_stats)
+                    # overlay_imgs(batch_folder, overlayed_name)
+
+                    if remove_png:
+                        print 'Removing images from', batch_folder
+                        for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png') and 'overlay' not in x]:
+                            imgfile = os.path.join(batch_folder, imgfile)
+                            command = 'rm ' + imgfile
+                            os.system(command)
+                else:
+                    print 'No .pngs found. Not creating gif for', batch_folder
+
+    print 'Animated the following folders:'
+    pprint.pprint(animated_experiments)
+
+# experiments = [
+#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+#     'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+# ]
 
 experiments_to_plot, experiments_to_visualize = copy(experiments)  # returns a list of experiments that changed
 # print 'experiments_to_plot'
 # pprint.pprint(experiments_to_plot)
+
+# experiments_to_plot = [
+#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+#     'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+# ]
+
+experiments_to_visualize = [
+    'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+    # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+    # 'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+    # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+    # 'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+]
+
 # print 'experiments_to_visualize'
 # pprint.pprint(experiments_to_visualize)
 plot(experiments_to_plot)
+plot_experiments(experiments_dict)
 
 # TODO: visualize only if epxerimtns_to_visualize says so.
+
 # visualize(experiments_to_visualize)
-# visualize(experiments[:1])
-# animate(experiments[:1], False)
+# animate(experiments_to_visualize, False)
+# animate_tower(experiments_to_visualize, True)
+
 
 # import Image
 

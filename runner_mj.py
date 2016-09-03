@@ -70,8 +70,8 @@ def create_jobs(dry_run, mode, ext):
             
             # test prediction and mass
             # these are for the rd without 2.5 buffer
-            {'dataset_folders':"{'balls_n4_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rd'}"},
-            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rd'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rd'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rd'}"},
 
             # actual experiments
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rd'}"},
@@ -95,8 +95,8 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'tower_n8_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n8_t120_ex25000_rd'}"},
             # {'dataset_folders':"{'tower_n10_t120_ex25000_rd'}", 'test_dataset_folders': "{'tower_n10_t120_ex25000_rd'}"},
 
-            {'dataset_folders':"{'balls_n3_t60_ex50000_rd','balls_n4_t60_ex50000_rd','balls_n5_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rd','balls_n7_t60_ex50000_rd','balls_n8_t60_ex50000_rd'}"},
-            {'dataset_folders':"{'balls_n3_t60_ex50000_m_rd','balls_n4_t60_ex50000_m_rd','balls_n5_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rd','balls_n7_t60_ex50000_m_rd','balls_n8_t60_ex50000_m_rd'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_rd','balls_n4_t60_ex50000_rd','balls_n5_t60_ex50000_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rd','balls_n7_t60_ex50000_rd','balls_n8_t60_ex50000_rd'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_m_rd','balls_n4_t60_ex50000_m_rd','balls_n5_t60_ex50000_m_rd'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rd','balls_n7_t60_ex50000_m_rd','balls_n8_t60_ex50000_m_rd'}"},
 
             # mixed
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_rd'}"},
@@ -121,14 +121,14 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_z_o_dras3_rd'}"},
             # {'dataset_folders':"{'mixed_n4_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_z_o_dras3_rd'}"},
             # {'dataset_folders':"{'mixed_n5_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rd'}"},
-            {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rd','mixed_n4_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rd','mixed_n6_t60_ex50000_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rd','mixed_n4_t60_ex50000_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rd','mixed_n6_t60_ex50000_z_o_dras3_rd'}"},
 
             # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_m_z_o_dras3_rd'}"},
             # {'dataset_folders':"{'mixed_n4_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_m_z_o_dras3_rd'}"},
             # {'dataset_folders':"{'mixed_n5_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rd'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rd'}"},
-            {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rd','mixed_n4_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rd','mixed_n6_t60_ex50000_m_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rd'}"},
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rd','mixed_n4_t60_ex50000_m_z_o_dras3_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rd','mixed_n6_t60_ex50000_m_z_o_dras3_rd'}"},
 
             # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n3_t60_ex50000_m_z_o_dras_rd'}"},
             # {'dataset_folders':"{'mixed_n4_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_m_z_o_dras_rd'}"},
@@ -137,37 +137,71 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras_rd','mixed_n4_t60_ex50000_m_z_o_dras_rd'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras_rd','mixed_n6_t60_ex50000_m_z_o_dras_rd'}"},
 
 
+            # rda experiments
+            {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rda','mixed_n4_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rda','mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
+            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
+
+            {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
+
+            {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
+            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},
+
+
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rda'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
+            # {'dataset_folders':"{'balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000_rda'}"},
+            # {'dataset_folders':"{'balls_n6_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda'}"},
+            # {'dataset_folders':"{'balls_n7_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_rda'}"},
+            # {'dataset_folders':"{'balls_n8_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_rda'}"},
+
+
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_m_rda'}"},
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},
+            # {'dataset_folders':"{'balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n5_t60_ex50000_m_rda'}"},
+            # {'dataset_folders':"{'balls_n6_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda'}"},
+            # {'dataset_folders':"{'balls_n7_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n7_t60_ex50000_m_rda'}"},
+            # {'dataset_folders':"{'balls_n8_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n8_t60_ex50000_m_rda'}"},
+
+            # {'dataset_folders':"{'mixed_n4_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n4_t60_ex50000_z_o_dras3_rda'}"},
+            # {'dataset_folders':"{'mixed_n5_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rda'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
+
             ]
 
     actual_jobs = []
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['lstmcat', 'bffobj', 'ind']:
+        for model in ['bffobj', 'ind']:
             for nbrhd in [False]:  
                 # for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [3]:  # [2,3,4]
+                    for layers in [5]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             # for cuda in [True]:
                                 for im in [False]:
                                     # for veps in [1e-9]:
-                                        # for lda in [10, 100,1000]:
-                                        #     for vlda in [100,1000]:
-                                                # for bnorm in [True, False]:
+                                    #     for lda in [100]:
+                                    #         for vlda in [100]:
+                                    #             for bnorm in [False]:
                                                     for f in [True]:
-                                                        job['model'] = model
-                                                        job['nbrhd'] = nbrhd
-                                                        job['layers'] = layers
-                                                        job['lr'] = lr
-                                                        # job['nbrhdsize'] = nbhrdsize
-                                                        job['im'] = im
-                                                        job['fast'] = f
-                                                        # job['cuda'] = cuda
-                                                        # job['val_eps'] = veps
-                                                        # job['lambda'] = lda
-                                                        # job['vlambda'] = vlda
-                                                        # job['batch_norm'] = bnorm
-                                                        actual_jobs.append(copy.deepcopy(job))
+                                                        for rs in [True]:
+                                                            for seed in [0,1]:
+                                                                job['model'] = model
+                                                                job['nbrhd'] = nbrhd
+                                                                job['layers'] = layers
+                                                                job['lr'] = lr
+                                                                # job['nbrhdsize'] = nbhrdsize
+                                                                job['im'] = im
+                                                                job['fast'] = f
+                                                                job['rs'] = rs
+                                                                job['seed'] = seed
+                                                                # job['cuda'] = cuda
+                                                                # job['val_eps'] = veps
+                                                                # job['lambda'] = lda
+                                                                # job['vlambda'] = vlda
+                                                                # job['batch_norm'] = bnorm
+                                                                actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 
@@ -202,7 +236,7 @@ def create_jobs(dry_run, mode, ext):
 
         flagstring = flagstring + " -name " + jobname + " -mode " + mode 
 
-        if mode == 'exp' or mode == 'expload':
+        if mode == 'exp' or mode == 'expload' or mode == 'save':
             prefix = 'th main.lua'
         elif mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf':
             prefix = 'th eval.lua'
@@ -223,6 +257,9 @@ def create_jobs(dry_run, mode, ext):
 
 def run_experiment(dry_run):
     create_jobs(dry_run=dry_run, mode='exp', ext='')
+
+def save(dry_run):
+    create_jobs(dry_run=dry_run, mode='save', ext='_save')
 
 def run_experimentload(dry_run):
     create_jobs(dry_run=dry_run, mode='expload', ext='_expload3')
@@ -272,5 +309,6 @@ run_experiment(dry_run)
 # minf(dry_run)
 # sinf(dry_run)
 # oinf(dry_run)
+# save(dry_run)
 
 
