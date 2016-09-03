@@ -152,22 +152,25 @@
             Runner.stop(demo.runner) // seems like this is causing the problem!
         }
 
-        var trajectories = data[0]  // extra 0 for batch mode
+        var trajectories = data[opt.ex]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
         config.trajectories = trajectories
 
         Example[config.env](demo, config)  // here you have to assign balls initial positions according to the initial timestep of trajectories.
 
-        // here you have to 
-        // console.log(config)
 
-        // console.log(num_steps)
+        if (config.env == 'tower') {
+            var stability_threshold = 5
+        }
+
+
         if (config.env=='tower') {
             var i = 2  // if I set i to < 2 then I get very weird behavior
         } else {
             var i = 0
         }
+        // var i = 0
 
         function f() {
             console.log( 'i =', i );
@@ -188,15 +191,22 @@
                 }
                 body.render.lineWidth = 5
 
-                // console.log('set position')
-
                 Body.setPosition(body, trajectories[id][i].position)
                 Body.setAngle(body, trajectories[id][i].angle)
-                // console.log(id, trajectories[id][i].position, trajectories[id][i].velocity, trajectories[id][i].angle)
 
             }
 
             Runner.tick(demo.runner, demo.engine);
+
+            // if (config.env == 'tower') {
+            //     if (i == 59) {
+            //         console.log('euc dist', i, is_stable_trajectory(trajectories))
+            //         console.log('stable?', i, is_stable_trajectory(trajectories) < stability_threshold)
+            //     } else if (i == 119) {
+            //         console.log('euc dist', i, is_stable_trajectory(trajectories))
+            //         console.log('stable?', i, is_stable_trajectory(trajectories) < stability_threshold)
+            //     } 
+            // }
 
 
             if (!_isBrowser) {
@@ -212,8 +222,6 @@
                     console.log("wrote out the png file to "+filename);
                 });
 
-                // TODO: don't have to set timeout.
-                // console.log('hi')
             }
 
 
@@ -228,7 +236,9 @@
         }
         f();
 
-
+        if (config.env == 'tower') {
+            return [is_stable_trajectory(trajectories) < stability_threshold, is_stable_trajectory(trajectories)]  // true if unstable
+        }
     };
 
 
@@ -285,10 +295,39 @@
             let loaded_json = jsonfile.readFileSync(experiment_folder + '/' + jf)
             let batch_name = jf.slice(0, -1*'.json'.length)
             let out_folder = experiment_folder + '/../visual/' + batch_name
-            let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
-            console.log(batch_name)
-            Demo.run(loaded_json, options)
-            console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
+
+            let stability_dists = {}
+
+            if (loaded_json.config.env=='tower') {
+                let num_stable = 0
+                let num_unstable = 0
+                for (let b=0; b < 50; b ++) {
+                    let options = {out_folder: out_folder, ex: b, batch_name: batch_name}
+                    console.log(batch_name)
+                    let is_stable_data = Demo.run(loaded_json, options)
+                    let is_stable = is_stable_data[0]
+                    let euc_dist_stable = is_stable_data[1]
+                    console.log('euc dist: ' + euc_dist_stable)
+                    stability_dists[batch_name+'_ex'+b] = euc_dist_stable;
+                    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
+                    if (is_stable) {
+                        num_stable ++;
+                    } else {
+                        num_unstable ++;
+                    }
+                }
+                console.log('############################')
+                console.log(num_stable + ' stable ' + num_unstable + ' unstable for ' + out_folder)
+                console.log('############################')
+                console.log(stability_dists)
+                jsonfile.writeFileSync(out_folder+'/stability_stats.json', top_block_deviation=stability_dists)
+                console.log('Wrote to ' + out_folder+'/stability_stats.json')
+            } else {
+                let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
+                console.log(batch_name)
+                Demo.run(loaded_json, options)
+                console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
+            }
         }
         // console.log(jsons)
 

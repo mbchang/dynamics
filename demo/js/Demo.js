@@ -548,11 +548,6 @@
                         console.log('euc dist', i, is_stable_trajectory(trajectory))
                         console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
                     } 
-                    // else if (i == 239) {
-                    //     console.log(i)
-                    //     console.log('euc dist', is_stable_trajectory(trajectory))
-                    //     console.log('stable?', is_stable_trajectory(trajectory) < 5)
-                    // }
                 }
             }
 
