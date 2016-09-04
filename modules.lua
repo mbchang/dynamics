@@ -29,6 +29,36 @@ function init_object_encoder(input_dim, rnn_inp_dim, bias)
 end
 
 
+-- in: table of length num_obj of (bsize, obj_dim)
+-- out: tensor (bsize, hid_dim)
+function create_nop_core(in_dim, hid_dim, num_layers)
+    local object_core = nn.Sequential()
+    if num_layers == 1 then
+        object_core:add(nn.Linear(in_dim, hid_dim, bias))
+    else
+        for i = 1, num_layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
+            if i == 1 then 
+                object_core:add(nn.Linear(in_dim, hid_dim, bias))
+                object_core:add(nn.ReLU())
+            -- elseif i == num_layers then
+            --     object_core:add(nn.Linear(hid_dim, hid_dim, bias))  -- don't have any zero output
+            else
+                object_core:add(nn.Linear(hid_dim, hid_dim, bias))
+                object_core:add(nn.ReLU())
+            end
+        end
+    end
+    -- object_core:add(nn.Reshape(bsize, 1, hid_dim))
+    local object_cores = nn.Sequencer(object_core) -- produces a table of num_obj of {(bsize, hid_dim)}
+    -- local object_core_net = nn.Sequential()
+    -- object_core_net:add(object_cores)
+    -- object_core_net:add(nn.JoinTable(2))  -- tensor (bsize, num_obj, hid_dim)
+    -- object_core_net:add(nn.Sum(2)) -- tensor (bsize, hid_dim)
+    -- return object_core_net
+    return object_cores
+end
+
+
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
     local rnn_out = nn.Identity()()
@@ -47,7 +77,7 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     return nn.gModule({rnn_out}, {decoder_out})
 end
 
-function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, num_future, object_dim)
+function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, num_future, object_dim, identity_dim)
     -- rnn_out (batch_size, rnn_hid_dim)
     local rnn_out = nn.Identity()()
     local out_dim = num_future * object_dim
@@ -56,7 +86,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
     -- input branch to decoder
     -- orig_state (batch_size, mp.num_past*mp.object_dim)
     local orig_state = nn.Identity()()
-    local decoder_in_dim = num_past*object_dim + rnn_hid_dim
+    local decoder_in_dim = identity_dim + rnn_hid_dim
 
     -- should I combine them first, or should I do a encoding then combine?
     -- I think I should just combine

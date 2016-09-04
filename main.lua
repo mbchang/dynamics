@@ -99,7 +99,7 @@ if mp.server == 'pc' then
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
     mp.layers = 3
-    mp.model = 'bffobj'
+    mp.model = 'np'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -132,6 +132,8 @@ elseif mp.model == 'cat' then
     M = require 'concatenate'
 elseif mp.model == 'ind' then 
     M = require 'independent'
+elseif mp.model == 'np' then 
+    M = require 'nop'
 elseif mp.model == 'crnn' then 
     M = require 'clique_rnn'
 elseif mp.model == 'lstmcat' then
@@ -641,8 +643,12 @@ function model_deps(modeltype)
         M = require 'variable_obj_model'
     elseif modeltype == 'bffobj' then
         M = require 'branched_variable_obj_model'
-    elseif modeltype == 'lstmtime' then
+    elseif modeltype == 'lstmcat' then
         M = require 'lstm_model'
+    elseif modeltype == 'ind' then
+        M = require 'independent'
+    elseif modeltype == 'np' then
+        M = require 'nop'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else

@@ -18,58 +18,43 @@ function init_network(params)
     -- decoder expects (bsize, 2*rnn_hid_dim)
 
     local bias = not params.nbrhd
+    local dcoef = 1
 
-    local layer, sequencer_type, dcoef
-    if params.model == 'lstmobj' then
-        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)  -- NOTE
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'gruobj' then
-        layer = nn.GRU(params.rnn_dim,params.rnn_dim)
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'ffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
-        sequencer_type = nn.Sequencer
-        dcoef = 1
-    elseif params.model == 'bffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
-        sequencer_type = nn.Sequencer
-        dcoef = 1
+    -- need to apply the mask beforehand
+    -- the mask should mask out yourself, and it should als omask out any object not in your neighborhood'
+
+    -- outputs table of length num_obj of (bsize, hid_dim)
+    local object_core = nn.Sequential()
+    if num_layers == 1 then
+        object_core:add(nn.Linear(params.input_dim, params.rnn_dim, bias))
     else
-        error('unknown model')
+        for i = 1, params.layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
+            if i == 1 then 
+                object_core:add(nn.Linear(params.input_dim, params.rnn_dim, bias))
+                object_core:add(nn.ReLU())
+            else
+                object_core:add(nn.Linear(params.rnn_dim, params.rnn_dim, bias))
+                object_core:add(nn.ReLU())
+            end
+        end
     end
 
-    local encoder = init_object_encoder(params.input_dim, params.rnn_dim, bias)
-    local decoder = init_object_decoder_with_identity(dcoef*params.rnn_dim, 
+    local object_cores = nn.Sequencer(object_core) -- produces a table of num_obj of {(bsize, hid_dim)}
+
+    local decoder = init_object_decoder_with_identity(params.rnn_dim, 
                                                         params.layers,
                                                         params.num_past, 
                                                         params.num_future,
                                                         params.object_dim,
-                                                        params.num_past*params.object_dim)
-
-    local step = nn.Sequential()
-    step:add(encoder)
-    for i = 1,params.layers do
-        step:add(layer:clone())  -- same param initial, but weights not shared
-        step:add(nn.ReLU())
-        if mp.batch_norm then 
-            step:add(nn.BatchNormalization(params.rnn_dim))
-        end
-    end
-
-    local sequencer = sequencer_type(step)
-    sequencer:remember('neither')
+                                                        params.rnn_dim)  -- this last field should be the dim of the other branch
 
     local net = nn.Sequential()
     local branches = nn.ParallelTable()
     local pairwise = nn.Sequential()
-    pairwise:add(sequencer)
-    -- input table of (bsize, 2*d_hid) of length seq_length
-    -- output: tensor (bsize, 2*d_hid)
+    pairwise:add(object_cores)
     pairwise:add(nn.CAddTable())
     branches:add(pairwise)
-    branches:add(nn.Identity())  -- for focus object identity
+    branches:add(object_core)  -- for focus object identity
     net:add(branches)
     net:add(decoder)
     return net
@@ -147,15 +132,15 @@ function model:unpack_batch(batch, sim)
     -- here you have to create a table of tables
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
-    local input = {}
+    local contexts = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})  -- good
+        table.insert(contexts, torch.squeeze(context[{{},{t}}]))  -- good
     end
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
+        self.neighbor_masks = self:select_neighbors(contexts, this_past)  -- this gets updated every batch!
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
@@ -163,36 +148,21 @@ function model:unpack_batch(batch, sim)
         end
     end
 
-    print(input)
-    for i=1,1 do
-        for j=1,1 do
-            print(input[i][j])
-        end
-    end
+    contexts = self:apply_mask(contexts, self.neighbor_masks)
 
-    input = self:apply_mask(input, self.neighbor_masks)
-
-    print(input)
-    for i=1,1 do
-        for j=1,1 do
-            print(input[i][j])
-        end
-    end
-    assert(false)
-
-    return {input, this_past}, this_future
+    return {contexts, this_past}, this_future
 end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
 -- maybe I can output a mask? then I can rename this function to neighborhood_mask
-function model:select_neighbors(input)
+function model:select_neighbors(contexts, this)
     local threshold
     local neighbor_masks = {}
-    for i, pair in pairs(input) do
+    this = this:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+    for i, c in pairs(contexts) do
         -- reshape
-        local this = pair[1]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
-        local context = pair[2]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+        local context = c:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
 
         -- make threshold depend on object id!
         local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
@@ -239,7 +209,6 @@ function model:apply_mask(input, batch_mask)
             x[2] = torch.cmul(x[2], batch_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
         else
             x = torch.cmul(x, convert_type(batch_mask[i]:view(mp.batch_size,1):expandAs(x), mp.cuda))
-            -- x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())  -- potential cuda
             input[i] = x -- it doesn't actually automatically mutate
         end
     end
