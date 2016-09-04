@@ -24,9 +24,20 @@ function generate_onehot_hypotheses_orig(num_hypotheses, indices)
     return hypotheses
 end
 
+-- random between 0 and 1
+function generate_random_hypotheses(table_of_indices)
+    local hypotheses = {}
+    for i=1,#table_of_indices do
+        local field_length = #table_of_indices[i]
+        local field_hypothesis = torch.rand(field_length)  -- between 0 and 1
+        table.insert(hypotheses, field_hypothesis:clone())
+    end
+    return hypotheses
+end
+
 function infer_properties(model, dataloader, params_, property, method, cf)
     -- TODO for other properties
-    local hypotheses, si_indices, indices, num_hypotheses
+    local hypotheses, si_indices, indices, num_hypotheses, distance_threshold
     if property == 'mass' then
         si_indices = tablex.deepcopy(config_args.si.m)
         -- si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
@@ -59,11 +70,19 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
+    elseif property == 'existence' then  -- b2i on context
+        si_indices = {{config_args.px, config_args.py}, tablex.deepcopy(config_args.si.oid), tablex.deepcopy(config_args.si.os)} -- this is a table of tables
+        -- NOTE that we are doing dras3!
+        -- random between 0 and 1 because pos, oid, os are all in that range
+        hypotheses = generate_random_hypotheses(si_indices)  -- this actually just generates a table of initial values for your hypothesis
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant
     end
 
     local accuracy
     if method == 'backprop' then 
-        accuracy = backprop2input(model, dataloader, params_, hypotheses, si_indices, cf)
+        -- note that here hypotheses is not a bunch of candidate hypotheses but rather a single initial hypothesis 
+        -- for the fields pos, oid, os
+        accuracy = backprop2inputcontext(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     elseif method == 'max_likelihood' then
         accuracy = max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     elseif method == 'max_likelihood_context' then
@@ -117,9 +136,13 @@ function backprop2input(model, dataloader, params_, si_indices)
         local batch = dataloader:sample_sequential_batch(false)
 
         -- return best_hypotheses by backpropagating to the input
-        --  initial hypothesis should be 0.5 in all the indices
-        local hypothesis_length = si_indices[2]-si_indices[1]+1
-        local initial_hypothesis = torch.Tensor(hypothesis_length):fill(0.5)
+        --  TODO
+            -- initialize random between 0 and 1
+            -- initialize random position and si_indices
+            -- for now you can just do one set of si_indices, but later you can infer position, size, shape jointly
+            -- where do we do masking?
+        local hypothesis_length = si_indices[2]-si_indices[1]+1  -- check this
+        local initial_hypothesis = torch.Tensor(hypothesis_length):fill(0.5)  -- how to initialize? you can just initialize random between 0 and 1
         local hypothesis_batch = apply_hypothesis(batch, initial_hypothesis, si_indices)  -- good
 
         local this_past_orig, context_past_orig, this_future_orig, context_future_orig, mask_orig = unpack(hypothesis_batch)
@@ -127,6 +150,7 @@ function backprop2input(model, dataloader, params_, si_indices)
         -- TODO: keep track of whether it is okay to let this_past, context_past, this_future, context_future, mask get mutated!
         -- closure: returns loss, grad_Input
         -- out of scope: batch, si_indices
+        -- this has to be for context!
         function feval_b2i(this_past_hypothesis)
             -- build modified batch
             local updated_hypothesis_batch = {this_past_hypothesis, context_past_orig:clone(), this_future_orig:clone(), context_future_orig:clone(), mask_orig:clone()}
@@ -212,6 +236,111 @@ function backprop2input(model, dataloader, params_, si_indices)
     return num_correct/count
 end
 
+-- find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
+
+function find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
+    local hypothesis_batch = apply_hypothesis(batch, initial_hypothesis, si_indices, context_id)  -- good this doesn't do position though! TODO
+    -- basically at this point the hypothesis should be assigned, including position and property for the appropriate context
+
+    local this_past_orig, context_past_orig, this_future_orig, context_future_orig, mask_orig = unpack(hypothesis_batch)
+
+    -- TODO: keep track of whether it is okay to let this_past, context_past, this_future, context_future, mask get mutated!
+    -- closure: returns loss, grad_Input
+    -- out of scope: batch, si_indices
+    -- this has to be for context!
+    local function feval_b2i(context_past_hypothesis)
+        -- build modified batch
+        local updated_hypothesis_batch = {this_past_orig:clone(), context_past_hypothesis, this_future_orig:clone(), context_future_orig:clone(), mask_orig:clone()}
+        -- okay basically at this point the hypothesis batch has been updated
+
+        model.network:clearState() -- zeros out gradInput
+
+        local loss, prediction = model:fp(params_, updated_hypothesis_batch)
+        local d_input = model:bp_input(updated_hypothesis_batch,prediction)
+
+        -- 0. Get names
+        local d_pairwise = d_input[1]
+        local d_identity = d_input[2]
+
+        -- 1. assert that all the d_inputs in pairwise are equal
+        local d_focus_in_pairwise = {}
+        for i=1,#d_pairwise do
+            table.insert(d_focus_in_pairwise, d_pairwise[i][1])
+        end
+        assert(alleq_tensortable(d_focus_in_pairwise))
+
+        -- 2. Get the gradient for the particular context
+        local d_context = d_pairwise[context_id][2]:clone()
+
+        -- 3. Zero out everything except the features that you are performing inference on
+        -- perhaps you need to have a more general form of si_indices here.
+        -- perhaps si_indices can be a table of tables
+        d_focus:resize(mp.batch_size, mp.num_past, mp.object_dim)
+        if si_indices[1] > 1 then
+            d_focus[{{},{},{1,si_indices[1]-1}}]:zero()
+        end
+        if si_indices[2] < mp.object_dim then
+            d_focus[{{},{},{1,si_indices[2]+1}}]:zero()
+        end
+        d_focus:resize(mp.batch_size, mp.num_past*mp.object_dim)
+
+        -- 6. Check that weights have not been changed
+            -- check that all the gradParams are 0 in the network
+        assert(model.theta.grad_params:norm() == 0)
+
+        collectgarbage()
+        return loss, d_focus -- f(x), df/dx
+    end
+
+    local num_iters = 10 -- TODO: change this (perhaps you can check for convergence. you just need rough convergence)
+    local b2i_optstate = {learningRate = 0.01}  -- TODO tune this 
+    local context_past_hypothesis = context_past_orig:clone()
+
+    -- get old model parameters
+    -- TODO: see if this is good training code
+
+    for t=1,num_iters do
+
+        local new_this_past_hypothesis, train_loss = optimizer(feval_b2i,
+                            context_past_hypothesis, b2i_optstate)  -- next batch
+
+        -- 1. Check that the model parameters have not changed
+        assert(model.theta.parameters:equal(old_model_parameters))
+
+        -- 2. Check that the input focus object has changed 
+            -- do this outside of feval
+            -- very unlikely they are equal, unless gradient was 0
+        assert(not(this_past_hypothesis:equal(new_this_past_hypothesis)))
+
+        -- 3. update context_past
+        -- actually should we just update the context we care about here?
+        -- because in the feval we only look at d_context, so we might only want to look
+        -- at d_context because of how optimizer works. In that case you can either
+        --  a) get the ENTIRE d_context in feval (not just your particular context)
+                -- advtg: you can predict all the context everywhere at once, not just for a single context. Hmmm, I like this too.
+                --actually I'm leaning towards this now
+        --  b) take in only a slice of context into feval as input (I'm leaning towards this). In this case you don't have to do anything here.
+        this_past_hypothesis = new_this_past_hypothesis  -- TODO: can just update it above
+
+        collectgarbage()
+    end
+
+    -- TODO! watch out for oid! There is no block here
+
+    -- now you have a this_past as your hypothesis. Select and binarize.
+    -- TODO check that this properly gets mutated
+    this_past_hypothesis[{{},{},si_indices}] = binarize(this_past_hypothesis[{{},{},si_indices}]) -- NOTE you are assuming the num_future is 1
+
+    -- now that you have best_hypothesis, compare best_hypotheses with truth
+    -- need to construct true hypotheses based on this_past, hypotheses as parameters
+    local ground_truth = torch.squeeze(this_past_orig[{{},{-1},si_indices}])  -- object properties always the same across time
+    local num_equal = ground_truth:eq(this_past_hypothesis[{{},{},si_indices}]):sum(2):eq(hypothesis_length):sum()
+    num_correct = num_correct + num_equal
+    count = count + mp.batch_size
+    collectgarbage()
+    return mse_pos, num_correct, count
+end
+
 -- selects max over each row in last axis
 -- makes the max one and everything else 0
 function binarize(tensor)
@@ -222,7 +351,9 @@ function binarize(tensor)
 end
 
 
-function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, context_mask)
+function count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold, context_mask)
+    local hypothesis_length = best_hypotheses:size(2)
+
     if cf then 
         -- this filter has a 1 if the focus object reverse direction
         local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
@@ -255,10 +386,10 @@ function count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, 
 end
 
 
-function find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
+function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, context_id)
     local best_losses = torch.Tensor(mp.batch_size):fill(math.huge)
-    local best_hypotheses = torch.zeros(mp.batch_size,hypothesis_length)
     local hypothesis_length = si_indices[2]-si_indices[1]+1
+    local best_hypotheses = torch.zeros(mp.batch_size,hypothesis_length)
 
     for j,h in pairs(hypotheses) do
         local hypothesis_batch = apply_hypothesis(batch, h, si_indices, context_id)  -- good
@@ -288,13 +419,12 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, 
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
 
-        local hypothesis_length = si_indices[2]-si_indices[1]+1
-        local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, 0)
+        local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
         -- now that you have best_hypothesis, compare best_hypotheses with truth
         -- need to construct true hypotheses based on this_past, hypotheses as parameters
         local this_past = batch[1]:clone()
         local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
-        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold)
+        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold)
 
         collectgarbage()
     end
@@ -308,13 +438,12 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, 
     return accuracy
 end
 
-function max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf)
+function max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-        local hypothesis_length = si_indices[2]-si_indices[1]+1
         local num_context = batch[2]:size(2)
 
 
@@ -335,7 +464,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
             -- here let's get a onehot mask to see if the context id is in valid_contexts
             local context_mask = valid_contexts:eq(context_id)
             -- to speed up computation
-            if context_mask:sum() > 0 then
+            if context_mask:sum() > 0 then  -- it's okay to use sum because it is a ByteTensor
 
                 -- here get the obstacle mask
                 local obstacle_index, obstacle_mask
@@ -348,14 +477,14 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
                     context_mask:cmul(obstacle_mask)
                 end
 
-                local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, hypothesis_length, si_indices, context_id)
+                local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, context_id)
                 -- now that you have best_hypothesis, compare best_hypotheses with truth
                 -- need to construct true hypotheses based on this_past, hypotheses as parameters
                 local context_past = batch[2]:clone()
                 local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
 
                 -- ground truth: (bsize, hypothesis_length)
-                num_correct, count = count_correct(batch, ground_truth, best_hypotheses, hypothesis_length, num_correct, count, cf, distance_threshold, context_mask)
+                num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold, context_mask)
                 collectgarbage()
             end
         end 
@@ -369,6 +498,74 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         accuracy = 0
     else 
         accuracy =num_correct/count
+    end
+    print(count..' collisions with context out of '..dataloader.num_batches*mp.batch_size..' examples')
+    return accuracy
+end
+
+function backprop2inputcontext(model, dataloader, params_, initial_hypothesis, si_indices, cf)
+    local num_correct = 0
+    local count = 0
+    for i = 1, dataloader.num_batches do
+        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
+        local batch = dataloader:sample_sequential_batch(false)
+        -- local hypothesis_length = si_indices[2]-si_indices[1]+1
+        local num_context = batch[2]:size(2)
+
+
+        -- I should do obstacle mask here, and make obstacle mask an argument into context collision filter.
+        -- because right now I am assuming that my context object is an obstacle. But actually I can't assume that
+        -- since I might be doing inference on object id.
+
+        local valid_contexts = context_collision_filter(batch)
+
+        -- note that here at most one element in valid_contexts per row would be lit up.
+        -- so each example in the batch has only one context.
+        -- for example: [0, 0, 2, 0, 1] means that examples 1,2,4 have no valid context
+        -- and context_id 2 is valid in example 3 and context_id 5 is valid in example 5
+
+        -- good up to here
+
+        for context_id = 1, num_context do
+            -- here let's get a onehot mask to see if the context id is in valid_contexts
+            local context_mask = valid_contexts:eq(context_id)
+            -- to speed up computation
+            if context_mask:sum() > 0 then  -- it's okay to use sum because it is a ByteTensor
+
+                -- here get the obstacle mask
+                local obstacle_index, obstacle_mask
+                -- if size inference then obstacle mask
+                if alleq({si_indices, config_args.si.os}) then
+                    obstacle_index = config_args.si.oid[1]+1
+                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
+                    -- that is the problem. I didn't make a copy. 
+                    obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                    context_mask:cmul(obstacle_mask)
+                end
+
+                local best_hypothesis = find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
+                -- now that you have best_hypothesis, compare best_hypotheses with truth
+                -- need to construct true hypotheses based on this_past, hypotheses as parameters
+                local context_past = batch[2]:clone()
+                local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
+
+                -- ground truth: (bsize, hypothesis_length)
+                mse_pos, num_correct, count = count_correct_b2i(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold, context_mask)
+                collectgarbage()
+            end
+        end 
+
+        -- good 
+
+    end
+
+    local accuracy, fit
+    if count == 0 then 
+        accuracy = 0
+        fit = 0
+    else 
+        accuracy =num_correct/count
+        fit = mse_pos/count
     end
     print(count..' collisions with context out of '..dataloader.num_batches*mp.batch_size..' examples')
     return accuracy
