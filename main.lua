@@ -65,7 +65,7 @@ cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
 
 -- priority sampling
-cmd:option('-ps', true, 'turn on priority sampling')
+cmd:option('-ps', false, 'turn on priority sampling')
 cmd:option('-rs', false, 'turn on random sampling')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 

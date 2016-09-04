@@ -1,6 +1,7 @@
 results*
 demo_results*
-scratch
+scratch*
+opmjlogs*
 logs
 oplogs
 hey*
@@ -10,3 +11,5 @@ hey*
 *.pyc
 *.svg
 *.dot
+*.png
+*.txt
