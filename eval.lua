@@ -599,6 +599,10 @@ function objtype_inference()
     inference('objtype_infer_cf.log', 'objtype', 'max_likelihood_context', true)
 end
 
+function pmofm_b2i_inference()
+    inference('pmofm_b2i_infer_cf.log', 'pos_mass_oid_fixedmass', 'backprop', true)
+end
+
 
 function predict_b2i()
     local snapshot = getLastSnapshot(mp.name)
@@ -620,6 +624,8 @@ function model_deps(modeltype)
         M = require 'branched_variable_obj_model'
     elseif modeltype == 'lstmcat' then
         M = require 'lstm_model'
+    elseif modeltype == 'np' then
+        M = require 'nop'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else
@@ -640,6 +646,8 @@ elseif mp.mode == 'sinf' then
     size_inference()
 elseif mp.mode == 'oinf' then
     objtype_inference()
+elseif mp.mode == 'pmofminf' then
+    pmofm_b2i_inference()
 elseif mp.mode == 'b2i' then
     predict_b2i()
 elseif mp.mode == 'pred' then

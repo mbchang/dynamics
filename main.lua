@@ -81,8 +81,6 @@ cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 cmd:option('-cuda', false, 'gpu')
 cmd:option('-fast', false, 'fast mode')
 
-
-
 cmd:text()
 
 -- parse input params
@@ -100,7 +98,7 @@ if mp.server == 'pc' then
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
     mp.layers = 3
-    mp.model = 'np'
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5

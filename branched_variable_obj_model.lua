@@ -419,7 +419,7 @@ function model:bp_input(batch, prediction, sim)
     -- self.network:backward(input,d_pred)  -- updates grad_params
     ------------------------------------------------------------------
     -- neighborhood
-
+    -- when we go through the network, we use updateGradInput because it does not modify the grad weights
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
     local d_decoder = self.network.modules[2]:updateGradInput(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].modules[1].modules[1].output

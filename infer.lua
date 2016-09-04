@@ -25,12 +25,70 @@ function generate_onehot_hypotheses_orig(num_hypotheses, indices)
 end
 
 -- random between 0 and 1
-function generate_random_hypotheses(table_of_indices)
+-- instead of table_of_indices, it should be the string name of the field
+-- special cases: mass is either 1 or 1e30
+-- indices_names: {px, py, mass: {1,2,3,4}, oid: {1,2}} something like that
+-- return: {px: rand, py: rand, mass: tensor(4), oid: tensor(3)} something like that
+-- good
+function generate_random_hypotheses(indices_names, num_ex, num_past)
     local hypotheses = {}
-    for i=1,#table_of_indices do
-        local field_length = #table_of_indices[i]
-        local field_hypothesis = torch.rand(field_length)  -- between 0 and 1
-        table.insert(hypotheses, field_hypothesis:clone())
+    for name,indices in pairs(indices_names) do
+        if type(indices) == 'table' then
+            assert(#indices > 0)
+            local si_indices = config_args.si[name]
+            local min_index = si_indices[1]
+            local max_index = si_indices[2]
+            local field_length = max_index-min_index+1
+            local blank_hypothesis = torch.zeros(num_ex, field_length)
+            for i=1,#indices do
+                blank_hypothesis[{{},{indices[i]}}] = torch.rand(num_ex) -- convert to number
+            end
+            -- same across num_past
+            blank_hypothesis = blank_hypothesis:reshape(num_ex, 1, field_length)
+            -- zeros in the indices not specified, random in indices specified
+            hypotheses[name] = torch.repeatTensor(blank_hypothesis, 1, num_past, 1)
+        else
+            -- from matter-js
+            -- self.rand_pos = function() {
+            --     let max_obj_size
+            --     if (self.params.drasticSize) {
+            --         // NOTE the big object may not be completely within the world!
+            --         max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
+            --     } else {
+            --         max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
+            --     }
+            --     return rand_pos(
+            --         {hi: 2*demo.cx - max_obj_size - 1, lo: max_obj_size + 1},
+            --         {hi: 2*demo.cy - max_obj_size - 1, lo: max_obj_size + 1});
+            --     };
+
+
+            -- rand_pos = function(x_bounds, y_bounds) {
+
+            --     var xrange = x_bounds.hi - x_bounds.lo,
+            --         yrange = y_bounds.hi - y_bounds.lo;
+            --     var px = Math.floor((Math.random()*(xrange))) + x_bounds.lo,
+            --         py = Math.floor((Math.random()*(yrange))) + y_bounds.lo;
+            --     return {x: px, y: py};
+            -- }
+
+            -- rand int between bounds.lo and bounds.hi (exclusive of bounds.hi)
+            local function rand_pos(bounds)
+                local range = bounds.hi - bounds.lo
+                local p = torch.floor(torch.rand(num_ex, num_past)*range) + bounds.lo  -- not same across num_past
+                return p
+            end
+
+            -- first initialize unnormalized
+            local max_obj_size = config_args.drastic_object_sizes[#config_args.drastic_object_sizes]*math.max(config_args.object_base_size.ball, config_args.object_base_size.obstacle/2)
+            if name == 'px' then
+                hypotheses[name] = rand_pos({hi=2*config_args.cx-max_obj_size-1, lo=max_obj_size+1})/config_args.position_normalize_constant
+            elseif name == 'py' then
+                hypotheses[name] = rand_pos({hi=2*config_args.cy-max_obj_size-1, lo=max_obj_size+1})/config_args.position_normalize_constant
+            else
+                assert(false, 'Unknown field')
+            end
+        end
     end
     return hypotheses
 end
@@ -43,7 +101,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         -- si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
         indices = {1,2,3}
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        hypotheses = generate_onehot_hypotheses(num_hypotheses,indices) -- good, works for mass
+        hypotheses = generate_onehot_hypotheses(num_hypotheses,indices) -- good, works for mass 
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
@@ -70,11 +128,17 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
-    elseif property == 'existence' then  -- b2i on context
-        si_indices = {{config_args.px, config_args.py}, tablex.deepcopy(config_args.si.oid), tablex.deepcopy(config_args.si.os)} -- this is a table of tables
-        -- NOTE that we are doing dras3!
+    elseif property == 'pos_mass_oid_fixedmass' then  -- b2i on context
+        -- infer pos, mass in {1, 1e30}, oid in {1,2}
+        -- we are doing dras3!
+        si_indices = {px=1,py=1,m={1,4},oid={1,2}}
         -- random between 0 and 1 because pos, oid, os are all in that range
-        hypotheses = generate_random_hypotheses(si_indices)  -- this actually just generates a table of initial values for your hypothesis
+        -- {px: rand, py: rand, mass: tensor(4), oid: tensor(3)}
+        -- hypotheses = generate_random_hypotheses(si_indices, 5,2)  -- good
+        -- for n,t in pairs(hypotheses) do
+        --     print(hypotheses[n])
+        -- end
+        -- assert(false)
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant
     end
 
@@ -82,7 +146,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
     if method == 'backprop' then 
         -- note that here hypotheses is not a bunch of candidate hypotheses but rather a single initial hypothesis 
         -- for the fields pos, oid, os
-        accuracy = backprop2inputcontext(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
+        accuracy = backprop2inputcontext(model, dataloader, params_, si_indices, cf, distance_threshold)
     elseif method == 'max_likelihood' then
         accuracy = max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     elseif method == 'max_likelihood_context' then
@@ -92,7 +156,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
 end
 
 -- copies batch
-function apply_hypothesis(batch, hyp, si_indices, obj_id)
+function apply_hypothesis_onehot(batch, hyp, si_indices, obj_id)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
     this_past = this_past:clone()
     context_past = context_past:clone()
@@ -125,6 +189,54 @@ function apply_hypothesis(batch, hyp, si_indices, obj_id)
     return {this_past, context_past, this_future, context_future, mask}
 end
 
+-- initial_hypothesis: {px: (bsize), py: (bsize), mass: (bsize, 4), oid: (bsize, 3)}
+-- si_indices: {px=1,py=1,m={1,4},oid={1,2}} or something like that
+-- known: object size, velocity
+-- unknown: position, mass, type
+-- you can get both mass and type from velocity
+-- you can get position from velocity, position, mass, size
+-- everything except position and velocity are constant through time
+function apply_hypothesis_rand(batch, indices_names, obj_id)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+    this_past = this_past:clone()
+    context_past = context_past:clone()
+    this_future = this_future:clone()
+    context_future = context_future:clone()
+
+    local num_ex = context_past:size(1)
+    local num_context = context_past:size(2)
+    local num_past = context_past:size(3)
+
+    local hypotheses = generate_random_hypotheses(si_indices, num_ex, num_past)
+
+    if obj_id == 0 then  -- protocol for this
+        for name,_ in indices_names do
+            assert(not(hypotheses[name] == nil))
+            local name_index
+            if type(config_args.si[name]) == 'table' then
+                name_index = tablex.deepcopy(config_args.si[name])
+            else
+                name_index = {config_args.si[name]}
+            end
+            this_past[{{},{},name_index}] = hypotheses[name]
+        end
+    else
+        for name,_ in pairs(indices_names) do
+            local name_index
+            if type(config_args.si[name]) == 'table' then
+                name_index = tablex.deepcopy(config_args.si[name])
+            else
+                name_index = {config_args.si[name]}
+            end
+            assert(not(hypotheses[name] == nil))
+            context_past[{{},{obj_id},{},name_index}] = hypotheses[name]
+            -- you can assert that originally zero indices should be zero indices afterwards
+        end
+        --good
+    end
+    return {this_past, context_past, this_future, context_future, mask}
+end
+
 
 function backprop2input(model, dataloader, params_, si_indices)
     local num_correct = 0
@@ -143,7 +255,7 @@ function backprop2input(model, dataloader, params_, si_indices)
             -- where do we do masking?
         local hypothesis_length = si_indices[2]-si_indices[1]+1  -- check this
         local initial_hypothesis = torch.Tensor(hypothesis_length):fill(0.5)  -- how to initialize? you can just initialize random between 0 and 1
-        local hypothesis_batch = apply_hypothesis(batch, initial_hypothesis, si_indices)  -- good
+        local hypothesis_batch = apply_hypothesis_rand(batch, initial_hypothesis, si_indices)  -- good
 
         local this_past_orig, context_past_orig, this_future_orig, context_future_orig, mask_orig = unpack(hypothesis_batch)
 
@@ -237,17 +349,18 @@ function backprop2input(model, dataloader, params_, si_indices)
 end
 
 -- find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
-
-function find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
-    local hypothesis_batch = apply_hypothesis(batch, initial_hypothesis, si_indices, context_id)  -- good this doesn't do position though! TODO
-    -- basically at this point the hypothesis should be assigned, including position and property for the appropriate context
-
+-- initial_hypothesis: {px: rand, py: rand, mass: tensor(4), oid: tensor(3)}
+-- indices_names: {px=1,py=1,m={1,4},oid={1,2}} or something like that
+function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_id)
+    local hypothesis_batch = apply_hypothesis_rand(batch, si_indices, context_id)  -- good
+    -- basically at this point the hypothesis should be assigned, including position and property for the appropriate object, whether it be this or context
     local this_past_orig, context_past_orig, this_future_orig, context_future_orig, mask_orig = unpack(hypothesis_batch)
 
     -- TODO: keep track of whether it is okay to let this_past, context_past, this_future, context_future, mask get mutated!
     -- closure: returns loss, grad_Input
     -- out of scope: batch, si_indices
     -- this has to be for context!
+    -- context_past_hypothesis: (bsize, num_obj, num_past, obj_dim)
     local function feval_b2i(context_past_hypothesis)
         -- build modified batch
         local updated_hypothesis_batch = {this_past_orig:clone(), context_past_hypothesis, this_future_orig:clone(), context_future_orig:clone(), mask_orig:clone()}
@@ -271,25 +384,42 @@ function find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_
 
         -- 2. Get the gradient for the particular context
         local d_context = d_pairwise[context_id][2]:clone()
+        d_context = d_context:reshape(mp.batch_size, mp.num_past, mp.object_dim)
 
-        -- 3. Zero out everything except the features that you are performing inference on
-        -- perhaps you need to have a more general form of si_indices here.
-        -- perhaps si_indices can be a table of tables
-        d_focus:resize(mp.batch_size, mp.num_past, mp.object_dim)
-        if si_indices[1] > 1 then
-            d_focus[{{},{},{1,si_indices[1]-1}}]:zero()
+        -- 3. Zero out the fields in d_context
+        local zeroed_d_context = convert_type(torch.zeros(mp.batch_size, mp.num_past, mp.object_dim), mp.cuda)
+
+        for name,indices in pairs(indices_names) do
+            if type(indices) == 'table' then
+                assert(#indices > 0)
+                local si_indices = config_args.si[name]
+                local min_index = si_indices[1]
+                local max_index = si_indices[2]
+                local field_length = max_index-min_index+1
+
+                for i=1,#indices do
+                    zeroed_d_context[{{},{},{min_index+indices[i]-1}] = d_context[{{},{},{min_index+indices[i]-1}]
+                end
+            else
+                if not(name=='px' or name=='py') then assert(false, 'Unknown field') end
+                local si_index = config_args.si[name]
+                zeroed_d_context[{{},{},{si_index}] = d_context[{{},{},{si_index}]
+            end
         end
-        if si_indices[2] < mp.object_dim then
-            d_focus[{{},{},{1,si_indices[2]+1}}]:zero()
-        end
-        d_focus:resize(mp.batch_size, mp.num_past*mp.object_dim)
+
+        -- resize zeroed_d_context
+        zeroed_d_context = zeroed_d_context:reshape(mp.batch_size, mp.num_past, mp.object_dim)
+
+        -- 4. Construct d_all_context_past
+        local d_all_context_past = convert_type(torch.zeros(mp.batch_size, #d_pairwise, mp.num_past, mp.object_dim), mp.cuda)
+        d_all_context_past[{{},{context_id},{},{}}] = zeroed_d_context
 
         -- 6. Check that weights have not been changed
             -- check that all the gradParams are 0 in the network
         assert(model.theta.grad_params:norm() == 0)
 
         collectgarbage()
-        return loss, d_focus -- f(x), df/dx
+        return loss, d_all_context_past -- f(x), df/dx
     end
 
     local num_iters = 10 -- TODO: change this (perhaps you can check for convergence. you just need rough convergence)
@@ -392,7 +522,7 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
     local best_hypotheses = torch.zeros(mp.batch_size,hypothesis_length)
 
     for j,h in pairs(hypotheses) do
-        local hypothesis_batch = apply_hypothesis(batch, h, si_indices, context_id)  -- good
+        local hypothesis_batch = apply_hypothesis_onehot(batch, h, si_indices, context_id)  -- good
         local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
 
         -- test_loss is a tensor of size bsize
@@ -503,13 +633,14 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
     return accuracy
 end
 
-function backprop2inputcontext(model, dataloader, params_, initial_hypothesis, si_indices, cf)
+-- initial_hypothesis: {{rand_pos}, {rand_oid}, {rand_os}} all in [0,1)
+function backprop2inputcontext(model, dataloader, params_, si_indices, cf, distance_threshold)
     local num_correct = 0
+    local mse_pos = 0
     local count = 0
     for i = 1, dataloader.num_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-        -- local hypothesis_length = si_indices[2]-si_indices[1]+1
         local num_context = batch[2]:size(2)
 
 
@@ -543,14 +674,14 @@ function backprop2inputcontext(model, dataloader, params_, initial_hypothesis, s
                     context_mask:cmul(obstacle_mask)
                 end
 
-                local best_hypothesis = find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
+                local best_hypothesis = find_best_hypothesis_b2i(model, params_, batch, si_indices, context_id)
                 -- now that you have best_hypothesis, compare best_hypotheses with truth
                 -- need to construct true hypotheses based on this_past, hypotheses as parameters
                 local context_past = batch[2]:clone()
                 local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
 
                 -- ground truth: (bsize, hypothesis_length)
-                mse_pos, num_correct, count = count_correct_b2i(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold, context_mask)
+                mse_pos, num_correct, count = count_correct_b2i(batch, ground_truth, best_hypotheses, num_correct, mse_pos, count, cf, distance_threshold, context_mask)
                 collectgarbage()
             end
         end 
