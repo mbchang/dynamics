@@ -183,17 +183,22 @@ function model:select_neighbors(contexts, this)
         end
 
         -- compute where they will be in the next timestep
-        local this_pos_next = self:update_position_one(this)
-        local context_pos_next = self:update_position_one(context)
+        local this_pos_next, this_pos_now = self:update_position_one(this)
+        local context_pos_next, context_pos_now = self:update_position_one(context)
+
+        -- hacky
+        if mp.nlan then
+            this_pos_next = this_pos_now:clone()
+            context_pos_next = context_pos_now:clone()
+        end
 
         -- compute euclidean distance between this_pos_next and context_pos_next
         local euc_dist_next = torch.squeeze(self:euc_dist(this_pos_next, context_pos_next)) -- (bsize)
         euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
 
         -- find the indices in the batch for neighbors and non-neighbors
-        -- local neighbor_mask = euc_dist_next:le(threshold):float()  -- 1 if neighbor 0 otherwise   -- potential cuda
         local neighbor_mask = convert_type(euc_dist_next:le(threshold), mp.cuda)  -- 1 if neighbor 0 otherwise   -- potential cuda
-        table.insert(neighbor_masks, neighbor_mask) -- good
+        table.insert(neighbor_masks, neighbor_mask:clone()) -- good
     end
 
     return neighbor_masks

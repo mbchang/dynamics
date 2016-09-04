@@ -173,9 +173,9 @@ def create_jobs(dry_run, mode, ext):
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['bffobj', 'ind']:
-            for nbrhd in [False]:  
-                # for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
+        for model in ['bffobj', 'np']:
+            for nbrhd in [True]:  
+                for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
                     for layers in [5]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             # for cuda in [True]:
@@ -186,22 +186,24 @@ def create_jobs(dry_run, mode, ext):
                                     #             for bnorm in [False]:
                                                     for f in [True]:
                                                         for rs in [True]:
-                                                            for seed in [0,1]:
-                                                                job['model'] = model
-                                                                job['nbrhd'] = nbrhd
-                                                                job['layers'] = layers
-                                                                job['lr'] = lr
-                                                                # job['nbrhdsize'] = nbhrdsize
-                                                                job['im'] = im
-                                                                job['fast'] = f
-                                                                job['rs'] = rs
-                                                                job['seed'] = seed
-                                                                # job['cuda'] = cuda
-                                                                # job['val_eps'] = veps
-                                                                # job['lambda'] = lda
-                                                                # job['vlambda'] = vlda
-                                                                # job['batch_norm'] = bnorm
-                                                                actual_jobs.append(copy.deepcopy(job))
+                                                            for seed in [0,1,2]:
+                                                                for nlan in [True]:
+                                                                    job['model'] = model
+                                                                    job['nbrhd'] = nbrhd
+                                                                    job['layers'] = layers
+                                                                    job['lr'] = lr
+                                                                    # job['nbrhdsize'] = nbhrdsize
+                                                                    job['im'] = im
+                                                                    job['fast'] = f
+                                                                    job['rs'] = rs
+                                                                    job['seed'] = seed
+                                                                    job['nlan'] = nlan
+                                                                    # job['cuda'] = cuda
+                                                                    # job['val_eps'] = veps
+                                                                    # job['lambda'] = lda
+                                                                    # job['vlambda'] = vlda
+                                                                    # job['batch_norm'] = bnorm
+                                                                    actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
 
 

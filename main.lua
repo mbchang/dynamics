@@ -46,6 +46,7 @@ cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-batch_norm', false, 'batch norm')
 cmd:option('-num_past', 2, 'number of past timesteps')
+cmd:option('-nlan', false, 'no look ahead for neighbors')
 
 
 -- training options
@@ -113,6 +114,7 @@ if mp.server == 'pc' then
     mp.plot = false--true
 	mp.cuda = false
     mp.rs = false
+    mp.nlan = true
 else
 	-- mp.winsize = 3  -- total number of frames
     -- mp.num_past = 2 -- total number of past frames

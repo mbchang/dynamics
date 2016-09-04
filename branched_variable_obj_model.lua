@@ -163,22 +163,7 @@ function model:unpack_batch(batch, sim)
         end
     end
 
-    print(input)
-    for i=1,1 do
-        for j=1,1 do
-            print(input[i][j])
-        end
-    end
-
     input = self:apply_mask(input, self.neighbor_masks)
-
-    print(input)
-    for i=1,1 do
-        for j=1,1 do
-            print(input[i][j])
-        end
-    end
-    assert(false)
 
     return {input, this_past}, this_future
 end
@@ -213,8 +198,14 @@ function model:select_neighbors(input)
         end
 
         -- compute where they will be in the next timestep
-        local this_pos_next = self:update_position_one(this)
-        local context_pos_next = self:update_position_one(context)
+        local this_pos_next, this_pos_now = self:update_position_one(this)
+        local context_pos_next, context_pos_now = self:update_position_one(context)
+
+        -- hacky
+        if mp.nlan then
+            this_pos_next = this_pos_now:clone()
+            context_pos_next = context_pos_now:clone()
+        end
 
         -- compute euclidean distance between this_pos_next and context_pos_next
         local euc_dist_next = torch.squeeze(self:euc_dist(this_pos_next, context_pos_next)) -- (bsize)

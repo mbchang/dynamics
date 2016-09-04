@@ -90,7 +90,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
 
     -- should I combine them first, or should I do a encoding then combine?
     -- I think I should just combine
-    local decoder_in = nn.JoinTable(2)({orig_state, rnn_out})  -- TODO: figure out what dimension this is
+    local decoder_in = nn.JoinTable(2)({rnn_out, orig_state})  -- TODO: figure out what dimension this is
 
     local decoder_preout, decoder_net
     if num_layers == 0 or num_layers == 1 then
@@ -124,7 +124,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
     local world_state = world_state_pre -- linear
     local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
     local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
-    return nn.gModule({orig_state, rnn_out}, {decoder_out})
+    return nn.gModule({rnn_out, orig_state}, {decoder_out})
 end
 
 
