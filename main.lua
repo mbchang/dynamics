@@ -290,7 +290,6 @@ function initsavebatches()
         -------------------------
     end
 
-
     if wascudabefore then mp.cuda = true end
 end
 

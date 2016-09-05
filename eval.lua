@@ -122,6 +122,7 @@ function inittest(preload, model_path, opt)
 
     modelfile = model_path
     print("Initialized Network")
+    print(mp)
 end
 
 -- function backprop2input()

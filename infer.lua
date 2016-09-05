@@ -2,6 +2,7 @@ local data_process = require 'data_process'
 require 'data_utils'
 require 'utils'
 require 'torchx'
+require 'optim'
 
 -- a table of onehot tensors of size num_hypotheses
 function generate_onehot_hypotheses(num_hypotheses, indices)
@@ -207,7 +208,7 @@ function apply_hypothesis_rand(batch, indices_names, obj_id)
     local num_context = context_past:size(2)
     local num_past = context_past:size(3)
 
-    local hypotheses = generate_random_hypotheses(si_indices, num_ex, num_past)
+    local hypotheses = generate_random_hypotheses(indices_names, num_ex, num_past)
 
     if obj_id == 0 then  -- protocol for this
         for name,_ in indices_names do
@@ -241,7 +242,8 @@ end
 function backprop2input(model, dataloader, params_, si_indices)
     local num_correct = 0
     local count = 0
-    local batch_group_size = 1000
+    -- local batch_group_size = 1000
+
     for i = 1, dataloader.num_batches, batch_group_size do
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
         
@@ -332,6 +334,7 @@ function backprop2input(model, dataloader, params_, si_indices)
             this_past_hypothesis = new_this_past_hypothesis  -- TODO: can just update it above
             collectgarbage()
         end
+        assert(false)
 
         -- now you have a this_past as your hypothesis. Select and binarize.
         -- TODO check that this properly gets mutated
@@ -352,9 +355,11 @@ end
 -- initial_hypothesis: {px: rand, py: rand, mass: tensor(4), oid: tensor(3)}
 -- indices_names: {px=1,py=1,m={1,4},oid={1,2}} or something like that
 function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_id)
-    local hypothesis_batch = apply_hypothesis_rand(batch, si_indices, context_id)  -- good
+    local hypothesis_batch = apply_hypothesis_rand(batch, indices_names, context_id)  -- good
     -- basically at this point the hypothesis should be assigned, including position and property for the appropriate object, whether it be this or context
     local this_past_orig, context_past_orig, this_future_orig, context_future_orig, mask_orig = unpack(hypothesis_batch)
+
+    local old_model_parameters = model.theta.params:clone() -- this is fine
 
     -- TODO: keep track of whether it is okay to let this_past, context_past, this_future, context_future, mask get mutated!
     -- closure: returns loss, grad_Input
@@ -363,6 +368,7 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
     -- context_past_hypothesis: (bsize, num_obj, num_past, obj_dim)
     local function feval_b2i(context_past_hypothesis)
         -- build modified batch
+        -- DO NOT clone context_past_hypothesis, because it is supposed to get mutated
         local updated_hypothesis_batch = {this_past_orig:clone(), context_past_hypothesis, this_future_orig:clone(), context_future_orig:clone(), mask_orig:clone()}
         -- okay basically at this point the hypothesis batch has been updated
 
@@ -376,11 +382,11 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
         local d_identity = d_input[2]
 
         -- 1. assert that all the d_inputs in pairwise are equal
-        local d_focus_in_pairwise = {}
-        for i=1,#d_pairwise do
-            table.insert(d_focus_in_pairwise, d_pairwise[i][1])
-        end
-        assert(alleq_tensortable(d_focus_in_pairwise))
+        -- Why would these not be equal? Could it be because of the nbrhd mask?
+        -- That could be true. But shouldn't I have accumulated the gradients
+        -- because they are shared? Or perhaps the gradients are computed separately
+        -- and then accmulated? Or perhaps only the weights are shared so the
+        -- gradInput need not be the same. Okay this is fine.
 
         -- 2. Get the gradient for the particular context
         local d_context = d_pairwise[context_id][2]:clone()
@@ -398,12 +404,12 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
                 local field_length = max_index-min_index+1
 
                 for i=1,#indices do
-                    zeroed_d_context[{{},{},{min_index+indices[i]-1}] = d_context[{{},{},{min_index+indices[i]-1}]
+                    zeroed_d_context[{{},{},{min_index+indices[i]-1}}] = d_context[{{},{},{min_index+indices[i]-1}}]
                 end
             else
                 if not(name=='px' or name=='py') then assert(false, 'Unknown field') end
                 local si_index = config_args.si[name]
-                zeroed_d_context[{{},{},{si_index}] = d_context[{{},{},{si_index}]
+                zeroed_d_context[{{},{},{si_index}}] = d_context[{{},{},{si_index}}]
             end
         end
 
@@ -412,18 +418,27 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
 
         -- 4. Construct d_all_context_past
         local d_all_context_past = convert_type(torch.zeros(mp.batch_size, #d_pairwise, mp.num_past, mp.object_dim), mp.cuda)
+
+
+        -- print(d_all_context_past:norm())
+
         d_all_context_past[{{},{context_id},{},{}}] = zeroed_d_context
+        -- TODO! Verify this!
+
+        print(d_all_context_past:norm())
+        -- assert(false)
+
+
 
         -- 6. Check that weights have not been changed
             -- check that all the gradParams are 0 in the network
         assert(model.theta.grad_params:norm() == 0)
-
         collectgarbage()
         return loss, d_all_context_past -- f(x), df/dx
     end
 
-    local num_iters = 10 -- TODO: change this (perhaps you can check for convergence. you just need rough convergence)
-    local b2i_optstate = {learningRate = 0.01}  -- TODO tune this 
+    local num_iters = 1000 -- TODO: change this (perhaps you can check for convergence. you just need rough convergence)
+    local b2i_optstate = {learningRate = 0.0003 }  -- TODO tune this 
     local context_past_hypothesis = context_past_orig:clone()
 
     -- get old model parameters
@@ -431,16 +446,22 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
 
     for t=1,num_iters do
 
-        local new_this_past_hypothesis, train_loss = optimizer(feval_b2i,
-                            context_past_hypothesis, b2i_optstate)  -- next batch
+        local old_context_past_hypothesis = context_past_hypothesis:clone()
 
+        -- mutates context_past_hypothesis
+        local new_context_past_hypothesis, loss = optim.adam(feval_b2i,
+                            context_past_hypothesis, b2i_optstate)  -- next batch
+        print(loss[1])
         -- 1. Check that the model parameters have not changed
-        assert(model.theta.parameters:equal(old_model_parameters))
+        -- print(old_model_parameters)
+        assert(model.theta.params:equal(old_model_parameters))
 
         -- 2. Check that the input focus object has changed 
             -- do this outside of feval
             -- very unlikely they are equal, unless gradient was 0
-        assert(not(this_past_hypothesis:equal(new_this_past_hypothesis)))
+        -- it turns out that new_context_past_hypothesis and context_past_hypothesis are the same?
+        -- yes, they refer to the same memory
+        assert(not(old_context_past_hypothesis:equal(new_context_past_hypothesis)))  -- if df/dx is not zero then it should work
 
         -- 3. update context_past
         -- actually should we just update the context we care about here?
@@ -450,10 +471,13 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
                 -- advtg: you can predict all the context everywhere at once, not just for a single context. Hmmm, I like this too.
                 --actually I'm leaning towards this now
         --  b) take in only a slice of context into feval as input (I'm leaning towards this). In this case you don't have to do anything here.
-        this_past_hypothesis = new_this_past_hypothesis  -- TODO: can just update it above
+        -- it should get mutated anyways but this is just in case
+        -- context_past_hypothesis = new_context_past_hypothesis  -- TODO: can just update it above
+        -- it actually gets mutated
 
         collectgarbage()
     end
+    assert(false)
 
     -- TODO! watch out for oid! There is no block here
 
