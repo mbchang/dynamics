@@ -629,6 +629,8 @@ function model_deps(modeltype)
         M = require 'nop'
     elseif modeltype == 'ed' then
         M = require 'edlstm'
+    elseif modeltype == 'bl' then
+        M = require 'blstm'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else

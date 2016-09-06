@@ -101,7 +101,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 3
     mp.rnn_dim = 128
-    mp.model = 'ed'
+    mp.model = 'bl'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -109,6 +109,7 @@ if mp.server == 'pc' then
 	mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
+    mp.batch_norm = true
     mp.print_every = 100
     mp.save_every = 1000
     mp.val_every = 1000
@@ -143,6 +144,8 @@ elseif mp.model == 'crnn' then
     M = require 'clique_rnn'
 elseif mp.model == 'lstmcat' then
     M = require 'lstm_model'
+elseif mp.model == 'bl' then
+    M = require 'blstm'
 elseif mp.model == 'ff' then
     M = require 'feed_forward_model'
 else
@@ -390,8 +393,8 @@ function train(start_iter, epoch_num)
                 print('saving checkpoint to ' .. model_file)
                 -- model.network:clearState()
                 -- model.network:float()
-                model:clearState()
                 model:float()
+                model:clearState()
 
                 local checkpoint = {}
                 checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
