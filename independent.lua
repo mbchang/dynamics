@@ -98,6 +98,22 @@ function model.create(mp_, preload, model_path)
     return self
 end
 
+function model:cuda()
+    self.network:cuda()
+    self.criterion:cuda()
+    self.identitycriterion:cuda()
+end
+
+function model:float()
+    self.network:float()
+    self.criterion:float()
+    self.identitycriterion:float()
+end
+
+function model:clearState()
+    self.network:clearState()
+end
+
 function model:unpack_batch(batch, sim)
     local this, context, this_future, context_future, mask = unpack(batch)
     local past = torch.cat({unsqueeze(this:clone(),2), context},2)

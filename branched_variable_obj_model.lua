@@ -98,18 +98,20 @@ function model.create(mp_, preload, model_path)
         self.criterion = checkpoint.model.criterion:clone()
         self.identitycriterion = checkpoint.model.identitycriterion:clone()
         if self.mp.cuda then
-            self.network:cuda()
-            self.criterion:cuda()
-            self.identitycriterion:cuda()
+            -- self.network:cuda()
+            -- self.criterion:cuda()
+            -- self.identitycriterion:cuda()
+            self:cuda()
         end
     else
         self.criterion = nn.MSECriterion(false)  -- not size averaging!
         self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
         if self.mp.cuda then
-            self.network:cuda()
-            self.criterion:cuda()
-            self.identitycriterion:cuda()
+            -- self.network:cuda()
+            -- self.criterion:cuda()
+            -- self.identitycriterion:cuda()
+            self:cuda()
         end
     end
 
@@ -118,6 +120,22 @@ function model.create(mp_, preload, model_path)
 
     collectgarbage()
     return self
+end
+
+function model:cuda()
+    self.network:cuda()
+    self.criterion:cuda()
+    self.identitycriterion:cuda()
+end
+
+function model:float()
+    self.network:float()
+    self.criterion:float()
+    self.identitycriterion:float()
+end
+
+function model:clearState()
+    self.network:clearState()
 end
 
 function model:unpack_batch(batch, sim)
@@ -162,6 +180,8 @@ function model:unpack_batch(batch, sim)
             table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))  -- good
         end
     end
+    -- print('self.neighbor_masks at context id 5')
+    -- print(self.neighbor_masks[5])
 
     input = self:apply_mask(input, self.neighbor_masks)
 

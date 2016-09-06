@@ -101,6 +101,22 @@ function model.create(mp_, preload, model_path)
     return self
 end
 
+function model:cuda()
+    self.network:cuda()
+    self.criterion:cuda()
+    self.identitycriterion:cuda()
+end
+
+function model:float()
+    self.network:float()
+    self.criterion:float()
+    self.identitycriterion:float()
+end
+
+function model:clearState()
+    self.network:clearState()
+end
+
 function model:pad(tensor, dim, num_to_pad)
     if num_to_pad == 0 then
         return tensor

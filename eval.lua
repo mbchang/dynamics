@@ -372,70 +372,70 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 end
 
 -- eventually move this to variable_object_model
-function inspect_hidden_state(dataloader, params_)
-    local all_euc_dist = {}
-    local all_euc_dist_diff = {}
-    local all_effects_norm = {}
-    for i = 1, dataloader.num_batches do
-        local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- actually you'd do this for multiple batches
-        local euc_dist = model:get_euc_dist(batch[1], batch[2]) -- table of length num_context of {bsize}
-        local euc_dist_diff = model:get_velocity_direction(batch[1], batch[2])
+-- function inspect_hidden_state(dataloader, params_)
+--     local all_euc_dist = {}
+--     local all_euc_dist_diff = {}
+--     local all_effects_norm = {}
+--     for i = 1, dataloader.num_batches do
+--         local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- actually you'd do this for multiple batches
+--         local euc_dist = model:get_euc_dist(batch[1], batch[2]) -- table of length num_context of {bsize}
+--         local euc_dist_diff = model:get_velocity_direction(batch[1], batch[2])
 
-        local loss, pred = model:fp(params_,batch,true)
-        local effects = model.network:listModules()[2].output  -- effects[1] corresponds to context[{{},{1}}]  (bsize, rnn_dim)
-        local effects_norm = {}  -- table of length num_context of {bsize}
-        for j=1,#effects do
-            table.insert(effects_norm, torch.squeeze(effects[j]:norm(2,2)))  -- you want to normalize in batch mode!
-        end
+--         local loss, pred = model:fp(params_,batch,true)
+--         local effects = model.network:listModules()[2].output  -- effects[1] corresponds to context[{{},{1}}]  (bsize, rnn_dim)
+--         local effects_norm = {}  -- table of length num_context of {bsize}
+--         for j=1,#effects do
+--             table.insert(effects_norm, torch.squeeze(effects[j]:norm(2,2)))  -- you want to normalize in batch mode!
+--         end
 
-        -- joining the two tables (but if you want to do individaul analysis you wouldn't do this)
-        tablex.insertvalues(all_euc_dist,euc_dist)
-        tablex.insertvalues(all_euc_dist_diff, euc_dist_diff)
-        tablex.insertvalues(all_effects_norm,effects_norm)
-    end
-    all_euc_dist = torch.cat(all_euc_dist)
-    all_euc_dist_diff = torch.cat(all_euc_dist_diff)
-    all_effects_norm = torch.cat(all_effects_norm)
+--         -- joining the two tables (but if you want to do individaul analysis you wouldn't do this)
+--         tablex.insertvalues(all_euc_dist,euc_dist)
+--         tablex.insertvalues(all_euc_dist_diff, euc_dist_diff)
+--         tablex.insertvalues(all_effects_norm,effects_norm)
+--     end
+--     all_euc_dist = torch.cat(all_euc_dist)
+--     all_euc_dist_diff = torch.cat(all_euc_dist_diff)
+--     all_effects_norm = torch.cat(all_effects_norm)
 
 
-    -- here let's split into positive and negative velocity
-    -- positive velocity is going away and negative velocity is going towards
-    local neg_vel_idx = torch.squeeze(all_euc_dist_diff:lt(0):nonzero())  -- indices of all_euc_dist_diff that are negative
-    local pos_vel_idx = torch.squeeze(all_euc_dist_diff:ge(0):nonzero())  -- >=0; moving away
+--     -- here let's split into positive and negative velocity
+--     -- positive velocity is going away and negative velocity is going towards
+--     local neg_vel_idx = torch.squeeze(all_euc_dist_diff:lt(0):nonzero())  -- indices of all_euc_dist_diff that are negative
+--     local pos_vel_idx = torch.squeeze(all_euc_dist_diff:ge(0):nonzero())  -- >=0; moving away
 
-    local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
-    local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
+--     local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
+--     local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
 
-    local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
-    local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
+--     local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
+--     local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
 
-    local norm_neg_vel = all_effects_norm:index(1,neg_vel_idx)
-    local norm_pos_vel = all_effects_norm:index(1,pos_vel_idx)
+--     local norm_neg_vel = all_effects_norm:index(1,neg_vel_idx)
+--     local norm_pos_vel = all_effects_norm:index(1,pos_vel_idx)
 
-    -- now, plot euc_dist_neg_vel vs norm_neg_vel and euc_dist_pos_vel vs norm_pos_vel
+--     -- now, plot euc_dist_neg_vel vs norm_neg_vel and euc_dist_pos_vel vs norm_pos_vel
 
-    print('all_euc_dist:norm()', all_euc_dist:norm())
-    print('all_euc_dist_diff:norm()', all_euc_dist_diff:norm())
-    print('all_effects_norm:norm()', all_effects_norm:norm())
+--     print('all_euc_dist:norm()', all_euc_dist:norm())
+--     print('all_euc_dist_diff:norm()', all_euc_dist_diff:norm())
+--     print('all_effects_norm:norm()', all_effects_norm:norm())
 
-    local fname = 'hidden_state_all_testfolders'
-    torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
-                                euc_dist_diff=all_euc_dist_diff, 
-                                effects_norm=all_effects_norm})
+--     local fname = 'hidden_state_all_testfolders'
+--     torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
+--                                 euc_dist_diff=all_euc_dist_diff, 
+--                                 effects_norm=all_effects_norm})
 
-    local plot_tensor_file = hdf5.open(mp.savedir..'/'..fname..'.h5', 'w')
-    plot_tensor_file:write('euc_dist', all_euc_dist)
-    plot_tensor_file:write('euc_dist_diff', all_euc_dist_diff)
-    plot_tensor_file:write('effects_norm', all_effects_norm)
-    plot_tensor_file:close()
-    print('saved to '..mp.savedir..'/'..fname..'.h5')
-    if mp.server == 'pc' then
-        -- plot_hid_state(fname, all_euc_dist, all_effects_norm, '+')
-        plot_hid_state(fname..'_toward', euc_dist_neg_vel, norm_neg_vel)
-        plot_hid_state(fname..'_away', euc_dist_pos_vel, norm_pos_vel)
+--     local plot_tensor_file = hdf5.open(mp.savedir..'/'..fname..'.h5', 'w')
+--     plot_tensor_file:write('euc_dist', all_euc_dist)
+--     plot_tensor_file:write('euc_dist_diff', all_euc_dist_diff)
+--     plot_tensor_file:write('effects_norm', all_effects_norm)
+--     plot_tensor_file:close()
+--     print('saved to '..mp.savedir..'/'..fname..'.h5')
+--     if mp.server == 'pc' then
+--         -- plot_hid_state(fname, all_euc_dist, all_effects_norm, '+')
+--         plot_hid_state(fname..'_toward', euc_dist_neg_vel, norm_neg_vel)
+--         plot_hid_state(fname..'_away', euc_dist_pos_vel, norm_pos_vel)
 
-    end
-end
+--     end
+-- end
 
 
 -- TODO_lowpriority: move this to plot_results
@@ -627,6 +627,8 @@ function model_deps(modeltype)
         M = require 'lstm_model'
     elseif modeltype == 'np' then
         M = require 'nop'
+    elseif modeltype == 'ed' then
+        M = require 'edlstm'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else

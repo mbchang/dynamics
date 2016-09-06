@@ -68,6 +68,7 @@ cmd:option('-lambda', 1, 'angle penalization')
 cmd:option('-ps', false, 'turn on priority sampling')
 cmd:option('-rs', false, 'turn on random sampling')
 cmd:option('-sharpen', 1, 'sharpen exponent')
+cmd:option('-dropout', 0.0, 'dropout for lstm')
 
 -- experiment options
 cmd:option('-plot', false, 'turn on/off plot')
@@ -93,12 +94,14 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 40
+    mp.max_iter = 10000
     mp.nbrhd = true
+    mp.lr = 3e-4
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
     mp.layers = 3
-    mp.model = 'bffobj'
+    mp.rnn_dim = 128
+    mp.model = 'ed'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -106,9 +109,9 @@ if mp.server == 'pc' then
 	mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
-    mp.print_every = 1
-    mp.save_every = 20
-    mp.val_every = 20
+    mp.print_every = 100
+    mp.save_every = 1000
+    mp.val_every = 1000
     mp.plot = false--true
 	mp.cuda = false
     mp.rs = false
@@ -119,7 +122,7 @@ else
     mp.num_future = 1
 	mp.seq_length = 8   -- for the concatenate model
 	mp.num_threads = 4
-	mp.cuda = false
+	-- mp.cuda = false
 end
 
 local M
@@ -134,6 +137,8 @@ elseif mp.model == 'ind' then
     M = require 'independent'
 elseif mp.model == 'np' then 
     M = require 'nop'
+elseif mp.model == 'ed' then 
+    M = require 'edlstm'
 elseif mp.model == 'crnn' then 
     M = require 'clique_rnn'
 elseif mp.model == 'lstmcat' then
@@ -383,7 +388,10 @@ function train(start_iter, epoch_num)
                 -- local model_file = string.format('%s/epoch%.2f_%.4f.t7',
                 --                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
-                model.network:clearState()
+                -- model.network:clearState()
+                -- model.network:float()
+                model:clearState()
+                model:float()
 
                 local checkpoint = {}
                 checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
@@ -394,6 +402,10 @@ function train(start_iter, epoch_num)
                 checkpoint.iters = t
                 torch.save(model_file, checkpoint)
                 print('Saved model')
+                if mp.cuda then 
+                    -- model.network:cuda() 
+                    model:cuda()
+                end
             end
 
             -- here test for val_loss convergence
@@ -648,6 +660,8 @@ function model_deps(modeltype)
         M = require 'independent'
     elseif modeltype == 'np' then
         M = require 'nop'
+    elseif modeltype == 'ed' then
+        M = require 'edlstm'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else
