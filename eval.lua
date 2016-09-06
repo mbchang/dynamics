@@ -76,16 +76,6 @@ local M
 local subsamp = 1
 
 
--- if not(string.find(mp.test_dataset_folders, 'tower') == nil) then
---     assert((string.find(mp.test_dataset_folders, 'ball') == nil) and 
---            (string.find(mp.test_dataset_folders, 'mixed') == nil) and 
---            (string.find(mp.test_dataset_folders, 'invisible') == nil))
---     config_args.maxwinsize = config_args.maxwinsize_long
--- else
---     config_args.maxwinsize = config_args.maxwinsize
--- end
-
-
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_dataset_folders,'\"',''))())
 mp.savedir = mp.logs_root .. '/' .. mp.name
@@ -106,6 +96,20 @@ function inittest(preload, model_path, opt)
     dp = data_process.create(model_path, model_path, config_args)  -- jsonfile and outfile are unpopopulated!  Let's just fill them with the model_path?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
+
+
+
+    if not(string.find(mp.savedir, 'tower') == nil) then
+        assert((string.find(mp.savedir, 'ball') == nil) and 
+               (string.find(mp.savedir, 'mixed') == nil) and 
+               (string.find(mp.savedir, 'invisible') == nil))
+        config_args.maxwinsize = config_args.maxwinsize_long
+    else
+        config_args.maxwinsize = config_args.maxwinsize
+    end
+
+
+
     local data_loader_args = {data_root=mp.data_root..'/',
                               dataset_folders=mp.test_dataset_folders,
                               maxwinsize=config_args.maxwinsize,
@@ -237,6 +241,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local avg_loss = 0
     local count = 0
 
+    -- print(numsteps)
+    -- assert(false)
+
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
@@ -269,6 +276,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         -- loop through time
         for t = 1, numsteps do
+            if mp.server == 'pc' then xlua.progress(t, numsteps) end
 
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
