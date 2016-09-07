@@ -23,7 +23,7 @@ function init_network(params)
     local out_dim = num_future*obj_dim  -- note that we will be ignoring the padded areas during backpropagation
     local num_layers = params.layers
 
-    assert(num_layers > 1)
+    assert(num_layers > 0)
 
     local net = nn.Sequential()
 
@@ -36,6 +36,7 @@ function init_network(params)
             if mp.dropout > 0 then enclstm:add(nn.Sequencer(nn.Dropout(mp.dropout))) end
         end
         net:add(nn.BiSequencer(anLSTM))
+        net:add(nn.Sequencer(nn.ReLU()))
     end
     net:add(nn.Sequencer(nn.Linear(2*hid_dim, out_dim)))
 
@@ -184,6 +185,7 @@ function model:bp(batch, prediction, sim)
 
         self.criterion:forward(p_vel, gt_vel)
         local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+        d_vel:mul(mp.vlambda)
         d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
         self.identitycriterion:forward(p_ang, gt_ang)
@@ -191,6 +193,7 @@ function model:bp(batch, prediction, sim)
 
         self.criterion:forward(p_ang_vel, gt_ang_vel)
         local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+        d_ang_vel:mul(mp.lambda)
         d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
         self.identitycriterion:forward(p_obj_prop, gt_obj_prop)

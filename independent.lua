@@ -169,6 +169,34 @@ function model:fp(params_, batch, sim)
     return loss, prediction
 end
 
+-- function model:fp_batch(params_, batch, sim)
+--     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+--     self.theta.grad_params:zero()  -- reset gradient
+
+--     local input, this_future = self:unpack_batch(batch, sim)
+
+--     local prediction = self.network:forward(input)
+
+--     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+--                         unpack(split_output(self.mp):forward(prediction))
+--     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+--                         unpack(split_output(self.mp):forward(this_future))
+--     -- p_vel: (bsize, 1, p_veldim)
+--     -- p_ang_vel: (bsize, 1, p_ang_veldim)
+
+--     local loss_all = {}
+--     for i=1,mp.batch_size do
+--         local loss_vel = self.criterion:forward(p_vel[{{i}}], gt_vel[{{i}}])
+--         local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
+--         local loss = loss_vel + loss_ang_vel
+--         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
+--         table.insert(loss_all, loss)
+--     end
+
+--     collectgarbage()
+--     return torch.Tensor(loss_all), prediction
+-- end
+
 
 -- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
 -- local gt_pos, gt_vel, gt_obj_prop=split_output(params):forward(this_future)
@@ -192,6 +220,7 @@ function model:bp(batch, prediction, sim)
 
         self.criterion:forward(p_vel, gt_vel)
         local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+        d_vel:mul(mp.vlambda)
         d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
         self.identitycriterion:forward(p_ang, gt_ang)
@@ -199,6 +228,7 @@ function model:bp(batch, prediction, sim)
 
         self.criterion:forward(p_ang_vel, gt_ang_vel)
         local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+        d_ang_vel:mul(mp.lambda)
         d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
         self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
@@ -215,8 +245,5 @@ function model:bp(batch, prediction, sim)
     return self.theta.grad_params
 end
 
-function model:sim(batch, numsteps)
-
-end
 
 return model
