@@ -94,14 +94,14 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 10000
+    mp.max_iter = 40
     mp.nbrhd = true
     mp.lr = 3e-4
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
-    mp.layers = 3
-    mp.rnn_dim = 128
-    mp.model = 'bl'
+    mp.layers = 5
+    mp.rnn_dim = 64
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -109,10 +109,10 @@ if mp.server == 'pc' then
 	mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
-    mp.batch_norm = true
-    mp.print_every = 100
-    mp.save_every = 1000
-    mp.val_every = 1000
+    mp.batch_norm = false
+    mp.print_every = 1
+    mp.save_every = 20
+    mp.val_every = 20
     mp.plot = false--true
 	mp.cuda = false
     mp.rs = false
@@ -393,8 +393,8 @@ function train(start_iter, epoch_num)
                 print('saving checkpoint to ' .. model_file)
                 -- model.network:clearState()
                 -- model.network:float()
-                model:float()
-                model:clearState()
+                -- model:float()
+                -- model:clearState()
 
                 local checkpoint = {}
                 checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
@@ -405,10 +405,10 @@ function train(start_iter, epoch_num)
                 checkpoint.iters = t
                 torch.save(model_file, checkpoint)
                 print('Saved model')
-                if mp.cuda then 
-                    -- model.network:cuda() 
-                    model:cuda()
-                end
+                -- if mp.cuda then 
+                --     -- model.network:cuda() 
+                --     model:cuda()
+                -- end
             end
 
             -- here test for val_loss convergence
