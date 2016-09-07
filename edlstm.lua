@@ -12,11 +12,6 @@ nngraph.setDebug(true)
 -- adapted from https://github.com/rahul-iisc/seq2seq-mapping/blob/master/seq2seq.lua
 
 
-
-
-
-
-
 -- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
 function init_network(params)
@@ -41,19 +36,23 @@ function init_network(params)
 
     assert(num_layers > 1)
 
+    -- if mp.batch_norm then nn.FastLSTM.bn = true end  -- doesn't seem to do anything
+    nn.FastLSTM.usenngraph = true
+
     -- Encoder
     -- input: table of length num_obj of (bsize, obj_dim)
     enclstm = nn.Sequential()
 
     local encoder_LSTM
     for i = 1, num_layers do
-        if i == 1 then encoder_LSTM = nn.LSTM(in_dim, hid_dim)
+        nn.FastLSTM.usenngraph = true
+        if i == 1 then encoder_LSTM = nn.FastLSTM(in_dim, hid_dim)
         else
-            encoder_LSTM = nn.LSTM(hid_dim, hid_dim)
+            encoder_LSTM = nn.FastLSTM(hid_dim, hid_dim)
             if mp.dropout > 0 then enclstm:add(nn.Sequencer(nn.Dropout(mp.dropout))) end
         end
         enclstm:add(nn.Sequencer(encoder_LSTM))
-        enclstm:add(nn.Sequencer(nn.ReLU()))  -- this should be fine
+        -- enclstm:add(nn.Sequencer(nn.ReLU()))  -- this should be fine
         allModContainer:add(encoder_LSTM)
         table.insert(encLSTMs, encoder_LSTM)
     end
@@ -69,13 +68,14 @@ function init_network(params)
 
     local decoder_LSTM
     for i = 1, num_layers do
-        if i == 1 then decoder_LSTM = nn.LSTM(out_dim, hid_dim);  -- the first LSTM in decoder LSTM stack. 
+        nn.FastLSTM.usenngraph = true
+        if i == 1 then decoder_LSTM = nn.FastLSTM(out_dim, hid_dim);  -- the first LSTM in decoder LSTM stack. 
         else
-            decoder_LSTM = nn.LSTM(hid_dim, hid_dim)
+            decoder_LSTM = nn.FastLSTM(hid_dim, hid_dim)
             if mp.dropout > 0 then declstm:add(nn.Sequencer(nn.Dropout(mp.dropout))) end
         end
         declstm:add(nn.Sequencer(decoder_LSTM))
-        declstm:add(nn.Sequencer(nn.ReLU()))  -- this should be fine
+        -- declstm:add(nn.Sequencer(nn.ReLU()))  -- this should be fine
         allModContainer:add(decoder_LSTM)
         table.insert(decLSTMs, decoder_LSTM)
     end
@@ -136,17 +136,24 @@ function model.create(mp_, preload, model_path)
 end
 
 function model:cuda()
-    self.enclstm:cuda()
-    self.declstm:cuda()
+    -- self.enclstm:cuda()
+    -- self.declstm:cuda()
+    self.network = self.network:cuda()
     self.criterion:cuda()
     self.identitycriterion:cuda()
 end
 
 function model:float()
-    self.enclstm:float()
-    self.declstm:float()
+    -- self.enclstm:float()
+    -- self.declstm:float()
+    self.network = self.network:float()
     self.criterion:float()
     self.identitycriterion:float()
+end
+
+function model:clearState()
+    self.enclstm:clearState()
+    self.declstm:clearState()
 end
 
 -- helper functions to for encoder-decoder coupling.
@@ -183,18 +190,57 @@ function model:unpack_batch(batch, sim)
     local obj_dim = past:size(4)
 
     -- now break into different trajectories
-    local encIn = {}
-    local decIn = {}
-    local decTarget = {}
+    local encIn = {}  -- seq_length: the first element has a symbol [10], the last has a symbol [01]
+    local decIn = {}  -- seq_length: the first element has a symbol [10]
+    local decTarget = {}  -- seq_length: the last element has a symbol [01]
 
-    decIn[1] = convert_type(torch.ones(bsize, num_future*obj_dim):mul(-1), mp.cuda) -- start symbol
-    decTarget[num_obj+1] = convert_type(torch.ones(bsize, num_future*obj_dim), mp.cuda) -- stop symbol
-    for i =1,num_obj do
-        table.insert(encIn,past[{{},{i}}]:reshape(bsize,num_past*obj_dim))
-        decIn[i+1] = future[{{},{i}}]:reshape(bsize,num_future*obj_dim)
-        decTarget[i] = future[{{},{i}}]:reshape(bsize,num_future*obj_dim)
+    -- shuffle
+    local shuffind = torch.randperm(num_obj)
+
+    local start_symbol = torch.zeros(bsize,2)
+    start_symbol[{{},{1}}]:fill(1)  -- [10]
+    start_symbol = convert_type(start_symbol, mp.cuda)
+
+    local stop_symbol = torch.zeros(bsize,2)
+    stop_symbol[{{},{2}}]:fill()  -- [01]
+    stop_symbol = convert_type(start_symbol, mp.cuda)  
+
+    local continue_symbol = torch.zeros[(bsize,2)
+    continue_symbol = convert_type(start_symbol, mp.cuda)
+
+    -- encoder
+    for i = 1,num_obj do
+        if i == 1 then
+            encIn[i] = torch.cat({past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim),start_symbol},2)
+        elseif i == num_obj then
+            encIn[i] = torch.cat({past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim),stop_symbol},2)
+        else
+            encIn[i] = torch.cat({past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim),continue_symbol},2)
+        end
     end
 
+    -- decoder
+    -- but how would you represent the start symbol in the decoder? I could give it a matrix of zeros?
+    for i =1,num_obj do
+        if i == 1 then
+            decIn[i] = torch.cat({future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim),start_symbol},2)
+            decTarget[i] = future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim)
+        elseif i == num_obj then
+
+            encIn[i] = torch.cat({past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim),stop_symbol},2)
+            decIn[i] = torch.cat({future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim),stop_symbol},2)   
+        else
+
+            encIn[i] = torch.cat({past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim),continue_symbol},2)
+            decIn[i] = torch.cat({future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim),continue_symbol},2) 
+
+
+        table.insert(encIn,past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim))
+        decIn[i+1] = future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim)
+        decTarget[i] = future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim)
+    end
+
+    -- works
     return encIn, decIn, decTarget
 end
 
@@ -209,6 +255,8 @@ end
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
+
+    -- print(self.theta.params:norm())
 
     local encIn, decIn, decTarget = self:unpack_batch(batch, sim)
 
@@ -295,10 +343,7 @@ function model:bp(batch, prediction, sim)
     self.declstm:backward(decIn, d_pred)
     self:backwardConnect(self.encLSTMs, self.decLSTMs)
     -- zero gradient into encoder because we already did backward Connect
-    self.enclstm:backward(encIn, convert_type(torch.zeros(mp.batch_size, mp.rnn_dim)), mp.cuda)
-
-
-    -- self.network:backward(all_past,d_pred)  -- updates grad_params
+    self.enclstm:backward(encIn, convert_type(torch.zeros(mp.batch_size, mp.rnn_dim), mp.cuda))
 
     collectgarbage()
     return self.theta.grad_params
