@@ -119,6 +119,8 @@ function model:unpack_batch(batch, sim)
     local past = torch.cat({unsqueeze(this:clone(),2), context},2)
     local future = torch.cat({unsqueeze(this_future:clone(),2), context_future},2)
 
+    -- print(this_future:norm())
+
     local bsize, num_obj = past:size(1), past:size(2)
     local num_past, num_future = past:size(3), future:size(3)
     local obj_dim = past:size(4)
@@ -169,33 +171,34 @@ function model:fp(params_, batch, sim)
     return loss, prediction
 end
 
--- function model:fp_batch(params_, batch, sim)
---     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
---     self.theta.grad_params:zero()  -- reset gradient
+function model:fp_batch(params_, batch, sim)
+    if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+    self.theta.grad_params:zero()  -- reset gradient
 
---     local input, this_future = self:unpack_batch(batch, sim)
+    local all_past, all_future = self:unpack_batch(batch, sim)
 
---     local prediction = self.network:forward(input)
+    local prediction = self.network:forward(all_past)
 
---     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
---                         unpack(split_output(self.mp):forward(prediction))
---     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
---                         unpack(split_output(self.mp):forward(this_future))
---     -- p_vel: (bsize, 1, p_veldim)
---     -- p_ang_vel: (bsize, 1, p_ang_veldim)
+    -- predict for only the first object (which is this)
+    local j = 1  -- this is the index of this
+    -- table of length num_obj of {bsize, num_future, obj_dim}
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+                        unpack(split_output(self.mp):forward(prediction[j]))
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(all_future[j]))
 
---     local loss_all = {}
---     for i=1,mp.batch_size do
---         local loss_vel = self.criterion:forward(p_vel[{{i}}], gt_vel[{{i}}])
---         local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
---         local loss = loss_vel + loss_ang_vel
---         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
---         table.insert(loss_all, loss)
---     end
+    local loss_all = {}
+    for i=1,mp.batch_size do
+        local loss_vel = self.criterion:forward(p_vel[{{i}}], gt_vel[{{i}}])
+        local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
+        local loss = loss_vel + loss_ang_vel
+        loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
+        table.insert(loss_all, loss)
+    end
 
---     collectgarbage()
---     return torch.Tensor(loss_all), prediction
--- end
+    collectgarbage()
+    return torch.Tensor(loss_all), prediction
+end
 
 
 -- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)

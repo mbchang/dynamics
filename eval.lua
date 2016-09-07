@@ -631,12 +631,14 @@ function model_deps(modeltype)
         M = require 'variable_obj_model'
     elseif modeltype == 'bffobj' then
         M = require 'branched_variable_obj_model'
-    elseif modeltype == 'lstmcat' then
-        M = require 'lstm_model'
+    -- elseif modeltype == 'lstmcat' then
+    --     M = require 'lstm_model'
     elseif modeltype == 'np' then
         M = require 'nop'
-    elseif modeltype == 'ed' then
-        M = require 'edlstm'
+    -- elseif modeltype == 'ed' then
+    --     M = require 'edlstm'
+    elseif modeltype == 'ind' then
+        M = require 'independent'
     elseif modeltype == 'bl' then
         M = require 'blstm'
     elseif modeltype == 'ff' then

@@ -101,7 +101,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 5
     mp.rnn_dim = 64
-    mp.model = 'bffobj'
+    mp.model = 'ind'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
