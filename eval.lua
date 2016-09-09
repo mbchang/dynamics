@@ -240,9 +240,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     --------------------------------------------------- -------------------------
     local avg_loss = 0
     local count = 0
+    local avg_loss_through_time = {} -- a table
 
-    -- print(numsteps)
-    -- assert(false)
+    -- TODO! You have to accomodate towers!
 
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
@@ -273,6 +273,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                             torch.zeros(mp.batch_size, num_particles,
                                         numsteps, mp.object_dim),
                             mp.cuda)
+
+        -- local losses_through_time
 
         -- loop through time
         for t = 1, numsteps do
@@ -345,7 +347,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
 
-            
+            -- here record the losses            
         end
         --- to be honest I don't think we need to break into past and context
         -- future, but actually that might be good for coloriing past and future, but
