@@ -392,6 +392,16 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
         local d_context = d_pairwise[context_id][2]:clone()
         d_context = d_context:reshape(mp.batch_size, mp.num_past, mp.object_dim)
 
+
+        print(d_context:norm())  -- this is actually 0
+        assert(false)
+
+        -- protocol: if loss < 0 then that means that d_context = 0. Break.
+        if d_context:norm() == 0 then
+            loss = -1
+        end
+
+
         -- 3. Zero out the fields in d_context
         local zeroed_d_context = convert_type(torch.zeros(mp.batch_size, mp.num_past, mp.object_dim), mp.cuda)
 
@@ -425,9 +435,11 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
         d_all_context_past[{{},{context_id},{},{}}] = zeroed_d_context
         -- TODO! Verify this!
 
-        print(d_all_context_past:norm())
-        -- assert(false)
 
+
+
+
+        -- d_all_context_past:mul(100)
 
 
         -- 6. Check that weights have not been changed
@@ -451,6 +463,16 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
         -- mutates context_past_hypothesis
         local new_context_past_hypothesis, loss = optim.adam(feval_b2i,
                             context_past_hypothesis, b2i_optstate)  -- next batch
+
+        -- protocol: if loss < 0 then that means that d_context = 0. Break.
+        if loss[1] < 0 then
+            print(loss)
+            print('Breaking')
+            return 0, 0, 0
+        end
+
+
+
         print(loss[1])
         -- 1. Check that the model parameters have not changed
         -- print(old_model_parameters)
@@ -461,7 +483,17 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
             -- very unlikely they are equal, unless gradient was 0
         -- it turns out that new_context_past_hypothesis and context_past_hypothesis are the same?
         -- yes, they refer to the same memory
-        assert(not(old_context_past_hypothesis:equal(new_context_past_hypothesis)))  -- if df/dx is not zero then it should work
+        -- assert(not(old_context_past_hypothesis:equal(new_context_past_hypothesis)))  -- if df/dx is not zero then it should work
+
+        -- verify that the other parts of context_past_hypothesis did NOT update though
+        -- extract the slice(s) of the tensor that shouldn't have updated
+        -- if context_id == 1 then
+
+        -- elseif context_id == 
+
+
+
+
 
         -- 3. update context_past
         -- actually should we just update the context we care about here?
@@ -475,11 +507,15 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
         -- context_past_hypothesis = new_context_past_hypothesis  -- TODO: can just update it above
         -- it actually gets mutated
 
+
+
         collectgarbage()
     end
     assert(false)
 
     -- TODO! watch out for oid! There is no block here
+
+    -- TODO: do the stuff below.
 
     -- now you have a this_past as your hypothesis. Select and binarize.
     -- TODO check that this properly gets mutated
@@ -697,6 +733,8 @@ function backprop2inputcontext(model, dataloader, params_, si_indices, cf, dista
                     obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
                     context_mask:cmul(obstacle_mask)
                 end
+                print(context_id)
+                print(context_mask)
 
                 local best_hypothesis = find_best_hypothesis_b2i(model, params_, batch, si_indices, context_id)
                 -- now that you have best_hypothesis, compare best_hypotheses with truth
