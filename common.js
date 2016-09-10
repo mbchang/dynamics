@@ -9,6 +9,7 @@ euc_dist = function(p1, p2) {
     return Math.sqrt(x2 + y2);
 },
 
+
 rand_pos = function(x_bounds, y_bounds) {
 
     var xrange = x_bounds.hi - x_bounds.lo,
@@ -200,7 +201,32 @@ is_stable_trajectory = function(trajectories) {
     let initial = {x: top[0].position.x, y: top[0].position.y}
     let final = {x: top[top.length-1].position.x, y: top[top.length-1].position.y}
     let dist = euc_dist(final, initial)
-    return dist
+    // return dist
+
+
+    let zdist = Math.abs(initial.y-final.y)
+    return zdist
+
+}
+
+fraction_stable = function(trajectories, stability_threshold) {
+    // not stable if top block's y position is different it's original y position by a factor of a block length
+    // but what if it is horizontal?
+    // how about x position?
+    // or you can just do Euclidean distance
+    let num_fell = 0
+    for (let i = 0; i < trajectories.length; i ++) {
+        let obj = trajectories[i]
+        let initial = {x: obj[0].position.x, y: obj[0].position.y}
+        let final = {x: obj[obj.length-1].position.x, y: obj[obj.length-1].position.y}
+        let dist = final.y - initial.y 
+        console.log(i, dist)
+        if (dist > stability_threshold) {
+            num_fell ++
+        }
+    }
+    console.log('Num fell', num_fell)
+    return num_fell
 }
 
 // objects: array of bodies
