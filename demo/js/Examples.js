@@ -2854,12 +2854,12 @@ if (!_isBrowser) {
                 Body.setVelocity(block, { x: 0, y: 0 })
                 Body.setAngularVelocity(block, 0)
 
-                if (i==1) {
-                    block.render.fillStyle = 'black'
-                } else {
-                    block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
-                }
-                // block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                // if (i==1) {
+                //     block.render.fillStyle = 'black'
+                // } else {
+                //     block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                // }
+                block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
 
                 block.render.strokeStyle = '#FFA500'// orange
                 block.render.lineWidth = 5

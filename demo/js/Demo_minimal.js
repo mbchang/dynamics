@@ -231,9 +231,9 @@
                 }
             }
         }
-        setInterval(function(){
-          console.log('test');
-        }, 1000);
+        // setInterval(function(){
+        //   console.log('test');
+        // }, 1000);
         f();
 
         if (config.env == 'tower') {
@@ -280,7 +280,7 @@
             var fr = new FileReader();
             fr.onload = function(){
                 // let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
-                Demo.run(window.CircularJSON.parse(fr.result), {ex:0})
+                Demo.run(window.CircularJSON.parse(fr.result), {ex:7})
             }
             fr.readAsText(file)
         }
@@ -303,7 +303,7 @@
             if (loaded_json.config.env=='tower') {
                 let num_stable = 0
                 let num_unstable = 0
-                for (let b=0; b < 50; b ++) {
+                for (let b=7; b < 8; b ++) {
                     let options = {out_folder: out_folder, ex: b, batch_name: batch_name}
                     console.log(batch_name)
                     let is_stable_data = Demo.run(loaded_json, options)
