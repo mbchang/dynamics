@@ -166,14 +166,7 @@
             var stability_threshold = 5
         }
 
-
-        // if (config.env=='tower') {
-        //     var s = 2  // if I set s to < 2 then I get very weird behavior
-        // } else {
-        //     var s = 0
-        // }
         let s = 0
-        // let gt_angles = [0, 0, 0.00013780457084067, 0.00019076203170698]
 
         function f() {
             console.log( 's =', s );
@@ -195,138 +188,11 @@
                 body.render.lineWidth = 5
 
                 // set velocity
-                // body.velocity = {x:0, y: 0}
                 Body.setVelocity(body, {x: 0, y: 0})
-
                 Body.setPosition(body, trajectories[id][s].position)
-
-                if (id == 1) {
-                    console.log('HOHOHO',s)
-                    // Body.setAngle(body, 0)  // this makes the bottom block move!  interesting. It seems that the angle is making it do this!
-                    // if (s < -1) {
-                    //     Body.setAngle(body, 0)  // this makes the bottom block move!
-                    // } else {
-                        // Body.setAngularVelocity(body, 0)  // seems like we need to do this?
-                        console.log('before angle', body.angle)
-                        // let delta = trajectories[id][s].angle - body.angle
-                        Body.setAngularVelocity(body, 0)  // seems like we need to do this?
-                        // body.angle = trajectories[id][s].angle
-                        Body.setAngle(body, trajectories[id][s].angle)  // this makes the bottom block move! it seems like setAngle doesn't work, but directly assining the angle does the trick?  
-                        // Body.setAngle(body, body.angle)  // this makes the bottom block move! it seems like setAngle doesn't work, but directly assining the angle does the trick?  
-                        // body.angle = trajectories[id][s].angle
-                        // Body.setAngularVelocity(body, trajectories[id][s].angularVelocity)  // seems like we need to do this?
-                        // Body.setAngularVelocity(body, 0)  // seems like we need to do this?
-                        // body.angularVelocity = 0
-                        // body.angle = 6.188708782196//trajectories[id][s].angle
-
-                        // for tower
-                        // for (let jk = 0; jk < body.parts.length; jk ++){
-                        //     Axes.rotate(body.parts[jk].axes, -delta)  // let's show axes though
-                        // }
-                    // }
-                    console.log('vel',body.velocity)
-                    console.log('pos',body.position)
-                    console.log('ang',body.angle)
-                    console.log('av',body.angularVelocity)
-                    console.log('tang',trajectories[id][s].angle)
-                    console.log('LLLLLLLL')
-                } else {
-                    // if (s==0 || s == 1) {
-                    //     Body.setAngle(body, 0)  // this makes the bottom block move!
-                    // } else if (s == 2) {
-                    //     Body.setAngle(body, 0.00013780457084067)  // this makes the bottom block move!
-                    // } else if (s == 3) {
-                    //     Body.setAngle(body, 0.00019076203170698)
-                    // } else {
-                        // body.angle = trajectories[id][s].angle
-                        Body.setAngularVelocity(body, 0)  // seems like we need to do this?
-                        Body.setAngle(body, trajectories[id][s].angle)  // this makes the bottom block move!
-                        // body.angle = trajectories[id][s].angle
-                        // body.angularVelocity = 0
-                        // Body.setAngularVelocity(body, trajectories[id][s].angularVelocity)  // seems like we need to do this?
-
-                    // }
+                Body.setAngularVelocity(body, 0)
+                Body.setAngle(body, trajectories[id][s].angle)
                 }
-
-
-                // Body.setVelocity(body, {x: 0, y: 0})
-
-                // Body.setPosition(body, trajectories[id][s].position)
-               // if (s==0 || s == 1) {
-               //      Body.setAngle(body, 0)  // this makes the bottom block move!
-               //  } else if (s == 2) {
-               //      // Body.setAngle(body, 0.00013780457084067)  // this makes the bottom block move!
-               //      Body.setAngle(body, 0)  // this makes the bottom block move!
-
-               //  } else if (s == 3) {
-               //      // Body.setAngle(body, 0.00019076203170698)
-               //      Body.setAngle(body, 0)  // this makes the bottom block move!
-
-               //  } else {
-               //      Body.setAngle(body, 0)  // this makes the bottom block move!
-               //      // Body.setAngle(body, trajectories[id][s].angle)  // this makes the bottom block move!
-               //  }
-
-
-
-
-
-
-            }
-
-            // stack upwards
-            // for (let id = 0; id < num_obj; id ++) {
-            //     // if (s==1) {
-            //     let body_opts = {label: "Entity", 
-            //                      restitution: 0, 
-            //                      mass: trajectories[id][1].mass, 
-            //                      objtype: trajectories[id][1].objtype,
-            //                      sizemul: trajectories[id][1].sizemul, 
-            //                      friction: 1,
-            //                      collisionFilter: {group:Body.nextGroup(true)} // remove collision constraints
-            //                  }
-            //     let pos = trajectories[id][1].position          
-            //     var block = Bodies.rectangle(pos.x, pos.y, 
-            //                                  demo.config.object_base_size.block*body_opts.sizemul, 
-            //                                  3*demo.config.object_base_size.block*body_opts.sizemul, 
-            //                                  body_opts)
-            //     Body.setAngle(block, trajectories[id][1].angle)
-            //     Body.setVelocity(block, { x: 0, y: 0 })
-            //     console.log(block.velocity)
-
-
-            //     // set the position here
-            //     if (id < config.num_past) {
-            //         block.render.strokeStyle = '#FFA500'// orange #551A8B is purple
-            //     } else {
-            //         block.render.strokeStyle = '#551A8B'// orange #551A8B is purple
-            //     }
-            //     block.render.lineWidth = 5
-
-            //     if (id==1) {
-            //         block.render.fillStyle = 'black'
-            //     } else {
-            //         block.render.fillStyle = 'black'//self.mass_colors[trajectories[id][1].mass]//'#4ECDC4'
-            //     }
-            //     // block.render.fillStyle = self.mass_colors[trajectories[s][1].mass]//'#4ECDC4'
-
-
-            //     block.render.strokeStyle = '#FFA500'// orange
-            //     block.render.lineWidth = 5
-
-            //     console.log('add to world', s)
-            //     World.add(demo.engine.world, block)
-            //     // }
-            // }
-
-
-
-
-
-
-            // can't clear the world border
-
-
 
             // Runner.tick(demo.runner, demo.engine);  // ok if I'm just rendering I DON'T NEED THIS! ACTUALY I DON'T NEED THIS AT ALL!
 
@@ -355,19 +221,6 @@
                 });
 
             }
-
-            // var entities = Composite.allBodies(demo.engine.world)
-            //     .filter(function(elem) {
-            //                 return elem.label === 'Entity';
-            //             })
-            // var entity_ids = entities.map(function(elem) {
-            //                     return elem.id});
-
-            // for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
-            //     var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
-            //     Composite.remove(demo.engine.world, body, true)
-            // }
-
 
             s++;
             if( s < num_steps ){

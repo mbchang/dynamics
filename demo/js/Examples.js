@@ -2140,10 +2140,8 @@ if (!_isBrowser) {
                 body.render.strokeStyle = '#FFA500'// orange
                 body.render.lineWidth = 5
 
-                // Body.setVelocity(body, trajectories[i][1].velocity)
                 Body.setVelocity(body, { x: 0, y: 0 })
                 Body.setAngularVelocity(body, 0)
-                // Body.setVelocity(body, {x: 0, y: 0})
 
                 // add body to world
                 World.add(self.engine.world, body);
@@ -2375,7 +2373,6 @@ if (!_isBrowser) {
                     body.render.lineWidth = 5
 
                     // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
-                    // Body.setVelocity(body, trajectories[i][1].velocity)
                     Body.setVelocity(body, { x: 0, y: 0 })
                     Body.setAngularVelocity(body, 0)
 
@@ -2853,12 +2850,9 @@ if (!_isBrowser) {
                                              self.params.size*body_opts.sizemul, 
                                              3*self.params.size*body_opts.sizemul, 
                                              body_opts)
-                // block.angle = trajectories[i][1].angle
                 Body.setAngle(block, trajectories[i][1].angle)
-                // block.angle = trajectories[i][1].angle
                 Body.setVelocity(block, { x: 0, y: 0 })
                 Body.setAngularVelocity(block, 0)
-                console.log(block.velocity)
 
                 if (i==1) {
                     block.render.fillStyle = 'black'
@@ -2866,7 +2860,6 @@ if (!_isBrowser) {
                     block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
                 }
                 // block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
-
 
                 block.render.strokeStyle = '#FFA500'// orange
                 block.render.lineWidth = 5
