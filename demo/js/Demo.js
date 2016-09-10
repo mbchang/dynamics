@@ -452,8 +452,9 @@
         if (sim_options.env == 'tower') {
             var num_unstable = 0
             var num_stable = 0
-            var com_num_unstable = 0
-            var com_num_stable = 0
+            var total_fell = 0
+            // var com_num_unstable = 0
+            // var com_num_stable = 0
             var stability_threshold = 5
         }
 
@@ -540,15 +541,15 @@
                 }
 
 
-                if (sim_options.env == 'tower') {
-                    if (i == 59) {
-                        console.log('euc dist', i, is_stable_trajectory(trajectory))
-                        console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
-                    } else if (i == 119) {
-                        console.log('euc dist', i, is_stable_trajectory(trajectory))
-                        console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
-                    } 
-                }
+                // if (sim_options.env == 'tower') {
+                //     if (i == 59) {
+                //         console.log('euc dist', i, is_stable_trajectory(trajectory))
+                //         console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
+                //     } else if (i == 119) {
+                //         console.log('euc dist', i, is_stable_trajectory(trajectory))
+                //         console.log('stable?', i, is_stable_trajectory(trajectory) < stability_threshold)
+                //     } 
+                // }
             }
 
             if (should_break) {
@@ -556,16 +557,20 @@
             } else {  // valid trajectory
                 // hereif it 
                 if (sim_options.env == 'tower') {
-                    if (is_stable_trajectory(trajectory) > stability_threshold) {
+                    // if (is_stable_trajectory(trajectory) > stability_threshold) {
+
+                    let num_fell = fraction_stable(trajectory, 1)
+                    if (num_fell > 0) {
                         num_unstable ++
                     } else {
                         num_stable ++
                     }
-                    if (scenario.stable) {
-                        com_num_stable ++
-                    } else {
-                        com_num_unstable ++
-                    }
+                    // if (scenario.stable) {
+                    //     com_num_stable ++
+                    // } else {
+                    //     com_num_unstable ++
+                    // }
+                    total_fell = total_fell + num_fell
 
                     if (num_stable > num_samples/2) {
                         console.log('num_stable > num_samples/2. Want more unstable')
@@ -583,9 +588,11 @@
             }
         }
 
+        // let frac_fell = total_fell / (num_samples * scenario.params.num_obj)
+
         if (sim_options.env == 'tower') {
             // console.log(num_unstable, 'unstable threshold', com_num_unstable, 'unstable com out of', num_samples, 'samples')
-            return [trajectories, num_unstable, com_num_unstable];  // NOTE TOWER
+            return [trajectories, num_unstable, total_fell];  // NOTE TOWER
         } else {
             return trajectories
         }
@@ -678,7 +685,9 @@
             // tower
             if (sim_options.env == 'tower') {
                 var num_unstable = 0
-                var num_comunstable = 0
+                // var num_comunstable = 0
+                var num_total_fell = 0
+                var num_total_samples = 0
             }
 
             for (let j=0; j < chunks.length; j++){
@@ -694,9 +703,12 @@
                     let output = Demo.simulate(demo, chunks[j], sim_options, sim_options.startstep);
                     let trajectories = output[0]
                     let num_unstable_chunk = output[1]
-                    let com_num_unstable_chunk = output[2]
+                    // let com_num_unstable_chunk = output[2]
+                    let num_total_fell_chunk = output[2]
                     num_unstable += num_unstable_chunk
-                    num_comunstable += com_num_unstable_chunk
+                    // num_comunstable += com_num_unstable_chunk
+                    num_total_fell += num_total_fell_chunk
+                    num_total_samples += chunks[j]
 
                     jsonfile.writeFileSync(sim_file,
                                         {trajectories:trajectories, config:sim_options}
@@ -722,7 +734,7 @@
 
             // tower
             if (sim_options.env == 'tower') {
-                console.log(num_unstable, 'unstable threshold', num_comunstable, 'unstable com out of', sim_options.samples, 'samples')
+                console.log(num_unstable, 'unstable threshold', num_total_fell/(num_total_samples*sim_options.numObj), 'fraction fell out of', sim_options.samples, 'samples')
             }
 
         }
