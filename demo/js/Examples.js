@@ -2124,7 +2124,8 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 // collisionFilter: {group:self.group} // remove collision constraints  comment out because otherwise they may overlap.
+                                 collisionFilter: {group:self.group}, // remove collision constraints  comment out because otherwise they may overlap.
+                                 angle: trajectories[i][1].angle // initial angle
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                     body_opts.friction = 0;
@@ -2139,7 +2140,10 @@ if (!_isBrowser) {
                 body.render.strokeStyle = '#FFA500'// orange
                 body.render.lineWidth = 5
 
-                Body.setVelocity(body, trajectories[i][1].velocity)
+                // Body.setVelocity(body, trajectories[i][1].velocity)
+                Body.setVelocity(body, { x: 0, y: 0 })
+                Body.setAngularVelocity(body, 0)
+                // Body.setVelocity(body, {x: 0, y: 0})
 
                 // add body to world
                 World.add(self.engine.world, body);
@@ -2354,7 +2358,8 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 // collisionFilter: {group:self.group} // remove collision constraints
+                                 collisionFilter: {group:self.group}, // remove collision constraints
+                                 angle: trajectories[i][1].angle // initial angle
                              }
                     if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                         body_opts.friction = 0;
@@ -2370,7 +2375,9 @@ if (!_isBrowser) {
                     body.render.lineWidth = 5
 
                     // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
-                    Body.setVelocity(body, trajectories[i][1].velocity)
+                    // Body.setVelocity(body, trajectories[i][1].velocity)
+                    Body.setVelocity(body, { x: 0, y: 0 })
+                    Body.setAngularVelocity(body, 0)
 
                     // add body to world
                     World.add(self.engine.world, body);
@@ -2784,7 +2791,7 @@ if (!_isBrowser) {
             self.hv = initialize_hv(self.params.num_obj)
 
             let eps = 0.0001  // to prevent bounce-back
-            let variance = 20
+            let variance = 30
             let x = demo.cx
             let y = 2*demo.cy
             let past_offset = 0
@@ -2838,22 +2845,27 @@ if (!_isBrowser) {
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul, 
                                  friction: 1,
-                                collisionFilter: {group:self.group} // remove collision constraints
+                                 collisionFilter: {group:self.group}, // remove collision constraints
+                                 angle: trajectories[i][1].angle // initial angle
                              }
                 let pos = trajectories[i][1].position          
                 var block = Bodies.rectangle(pos.x, pos.y, 
                                              self.params.size*body_opts.sizemul, 
                                              3*self.params.size*body_opts.sizemul, 
                                              body_opts)
+                // block.angle = trajectories[i][1].angle
                 Body.setAngle(block, trajectories[i][1].angle)
+                // block.angle = trajectories[i][1].angle
                 Body.setVelocity(block, { x: 0, y: 0 })
+                Body.setAngularVelocity(block, 0)
+                console.log(block.velocity)
 
-                // if (i==2) {
-                //     block.render.fillStyle = 'black'
-                // } else {
-                //     block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
-                // }
-                block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                if (i==1) {
+                    block.render.fillStyle = 'black'
+                } else {
+                    block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                }
+                // block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
 
 
                 block.render.strokeStyle = '#FFA500'// orange

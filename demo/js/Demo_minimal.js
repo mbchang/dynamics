@@ -43,6 +43,7 @@
         Events = Matter.Events,
         Runner = Matter.Runner,
         Render = Matter.Render;
+        Axes = Matter.Axes;
 
     // Create the engine
     Demo.run = function(json_data, opt) {
@@ -87,6 +88,7 @@
         // here let's put a isBrowser condition
         if (_isBrowser) {  // do everything normally.
             demo.runner = Engine.run(demo.engine)
+            demo.runner.isFixed = true
             demo.container = document.getElementById('canvas-container');
             demo.render = Render.create({element: demo.container, engine: demo.engine, 
                                         hasBounds: true, options:{height:demo.height, width:demo.width}})
@@ -133,7 +135,7 @@
             renderOptions.showBounds = false;
             renderOptions.showVelocity = false;
             renderOptions.showCollisions = false;
-            renderOptions.showAxes = false;
+            renderOptions.showAxes = true;
             renderOptions.showPositions = false;
             renderOptions.showAngleIndicator = false;
             renderOptions.showIds = false;
@@ -165,15 +167,16 @@
         }
 
 
-        if (config.env=='tower') {
-            var i = 2  // if I set i to < 2 then I get very weird behavior
-        } else {
-            var i = 0
-        }
-        // var i = 0
+        // if (config.env=='tower') {
+        //     var s = 2  // if I set s to < 2 then I get very weird behavior
+        // } else {
+        //     var s = 0
+        // }
+        let s = 0
+        // let gt_angles = [0, 0, 0.00013780457084067, 0.00019076203170698]
 
         function f() {
-            console.log( 'i =', i );
+            console.log( 's =', s );
             var entities = Composite.allBodies(demo.engine.world)
                 .filter(function(elem) {
                             return elem.label === 'Entity';
@@ -184,29 +187,158 @@
             for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
-                if (i < config.num_past) {
+                if (s < config.num_past) {
                     body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
                 } else {
                     body.render.strokeStyle = '#551A8B'// orange #551A8B is purple
                 }
                 body.render.lineWidth = 5
 
-                Body.setPosition(body, trajectories[id][i].position)
-                Body.setAngle(body, trajectories[id][i].angle)
+                // set velocity
+                // body.velocity = {x:0, y: 0}
+                Body.setVelocity(body, {x: 0, y: 0})
+
+                Body.setPosition(body, trajectories[id][s].position)
+
+                if (id == 1) {
+                    console.log('HOHOHO',s)
+                    // Body.setAngle(body, 0)  // this makes the bottom block move!  interesting. It seems that the angle is making it do this!
+                    // if (s < -1) {
+                    //     Body.setAngle(body, 0)  // this makes the bottom block move!
+                    // } else {
+                        // Body.setAngularVelocity(body, 0)  // seems like we need to do this?
+                        console.log('before angle', body.angle)
+                        // let delta = trajectories[id][s].angle - body.angle
+                        Body.setAngularVelocity(body, 0)  // seems like we need to do this?
+                        // body.angle = trajectories[id][s].angle
+                        Body.setAngle(body, trajectories[id][s].angle)  // this makes the bottom block move! it seems like setAngle doesn't work, but directly assining the angle does the trick?  
+                        // Body.setAngle(body, body.angle)  // this makes the bottom block move! it seems like setAngle doesn't work, but directly assining the angle does the trick?  
+                        // body.angle = trajectories[id][s].angle
+                        // Body.setAngularVelocity(body, trajectories[id][s].angularVelocity)  // seems like we need to do this?
+                        // Body.setAngularVelocity(body, 0)  // seems like we need to do this?
+                        // body.angularVelocity = 0
+                        // body.angle = 6.188708782196//trajectories[id][s].angle
+
+                        // for tower
+                        // for (let jk = 0; jk < body.parts.length; jk ++){
+                        //     Axes.rotate(body.parts[jk].axes, -delta)  // let's show axes though
+                        // }
+                    // }
+                    console.log('vel',body.velocity)
+                    console.log('pos',body.position)
+                    console.log('ang',body.angle)
+                    console.log('av',body.angularVelocity)
+                    console.log('tang',trajectories[id][s].angle)
+                    console.log('LLLLLLLL')
+                } else {
+                    // if (s==0 || s == 1) {
+                    //     Body.setAngle(body, 0)  // this makes the bottom block move!
+                    // } else if (s == 2) {
+                    //     Body.setAngle(body, 0.00013780457084067)  // this makes the bottom block move!
+                    // } else if (s == 3) {
+                    //     Body.setAngle(body, 0.00019076203170698)
+                    // } else {
+                        // body.angle = trajectories[id][s].angle
+                        Body.setAngularVelocity(body, 0)  // seems like we need to do this?
+                        Body.setAngle(body, trajectories[id][s].angle)  // this makes the bottom block move!
+                        // body.angle = trajectories[id][s].angle
+                        // body.angularVelocity = 0
+                        // Body.setAngularVelocity(body, trajectories[id][s].angularVelocity)  // seems like we need to do this?
+
+                    // }
+                }
+
+
+                // Body.setVelocity(body, {x: 0, y: 0})
+
+                // Body.setPosition(body, trajectories[id][s].position)
+               // if (s==0 || s == 1) {
+               //      Body.setAngle(body, 0)  // this makes the bottom block move!
+               //  } else if (s == 2) {
+               //      // Body.setAngle(body, 0.00013780457084067)  // this makes the bottom block move!
+               //      Body.setAngle(body, 0)  // this makes the bottom block move!
+
+               //  } else if (s == 3) {
+               //      // Body.setAngle(body, 0.00019076203170698)
+               //      Body.setAngle(body, 0)  // this makes the bottom block move!
+
+               //  } else {
+               //      Body.setAngle(body, 0)  // this makes the bottom block move!
+               //      // Body.setAngle(body, trajectories[id][s].angle)  // this makes the bottom block move!
+               //  }
+
+
+
+
+
 
             }
 
-            Runner.tick(demo.runner, demo.engine);
+            // stack upwards
+            // for (let id = 0; id < num_obj; id ++) {
+            //     // if (s==1) {
+            //     let body_opts = {label: "Entity", 
+            //                      restitution: 0, 
+            //                      mass: trajectories[id][1].mass, 
+            //                      objtype: trajectories[id][1].objtype,
+            //                      sizemul: trajectories[id][1].sizemul, 
+            //                      friction: 1,
+            //                      collisionFilter: {group:Body.nextGroup(true)} // remove collision constraints
+            //                  }
+            //     let pos = trajectories[id][1].position          
+            //     var block = Bodies.rectangle(pos.x, pos.y, 
+            //                                  demo.config.object_base_size.block*body_opts.sizemul, 
+            //                                  3*demo.config.object_base_size.block*body_opts.sizemul, 
+            //                                  body_opts)
+            //     Body.setAngle(block, trajectories[id][1].angle)
+            //     Body.setVelocity(block, { x: 0, y: 0 })
+            //     console.log(block.velocity)
 
-            // if (config.env == 'tower') {
-            //     if (i == 59) {
-            //         console.log('euc dist', i, is_stable_trajectory(trajectories))
-            //         console.log('stable?', i, is_stable_trajectory(trajectories) < stability_threshold)
-            //     } else if (i == 119) {
-            //         console.log('euc dist', i, is_stable_trajectory(trajectories))
-            //         console.log('stable?', i, is_stable_trajectory(trajectories) < stability_threshold)
-            //     } 
+
+            //     // set the position here
+            //     if (id < config.num_past) {
+            //         block.render.strokeStyle = '#FFA500'// orange #551A8B is purple
+            //     } else {
+            //         block.render.strokeStyle = '#551A8B'// orange #551A8B is purple
+            //     }
+            //     block.render.lineWidth = 5
+
+            //     if (id==1) {
+            //         block.render.fillStyle = 'black'
+            //     } else {
+            //         block.render.fillStyle = 'black'//self.mass_colors[trajectories[id][1].mass]//'#4ECDC4'
+            //     }
+            //     // block.render.fillStyle = self.mass_colors[trajectories[s][1].mass]//'#4ECDC4'
+
+
+            //     block.render.strokeStyle = '#FFA500'// orange
+            //     block.render.lineWidth = 5
+
+            //     console.log('add to world', s)
+            //     World.add(demo.engine.world, block)
+            //     // }
             // }
+
+
+
+
+
+
+            // can't clear the world border
+
+
+
+            // Runner.tick(demo.runner, demo.engine);  // ok if I'm just rendering I DON'T NEED THIS! ACTUALY I DON'T NEED THIS AT ALL!
+
+            if (config.env == 'tower') {
+                if (s == 59) {
+                    console.log('euc dist', s, is_stable_trajectory(trajectories))
+                    console.log('stable?', s, is_stable_trajectory(trajectories) < stability_threshold)
+                } else if (s == 119) {
+                    console.log('euc dist', s, is_stable_trajectory(trajectories))
+                    console.log('stable?', s, is_stable_trajectory(trajectories) < stability_threshold)
+                } 
+            }
 
 
             if (!_isBrowser) {
@@ -215,28 +347,44 @@
                 // demo.render.context.fillStyle = "rgba(255, 255, 255, 1.0)";
                 demo.render.context.fillRect(0,0,demo.width,demo.height)
                 Render.world(demo.render)
-                let filename = opt.out_folder + '/' + opt.batch_name + '_ex' + opt.ex + '_step' + i +'.png'
+                let filename = opt.out_folder + '/' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
 
-                // let filename = 'out'+i+'_'+i+'.png'  // TODO! rename
+                // let filename = 'out'+s+'_'+s+'.png'  // TODO! rename
                 PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
                     console.log("wrote out the png file to "+filename);
                 });
 
             }
 
+            // var entities = Composite.allBodies(demo.engine.world)
+            //     .filter(function(elem) {
+            //                 return elem.label === 'Entity';
+            //             })
+            // var entity_ids = entities.map(function(elem) {
+            //                     return elem.id});
 
-            i++;
-            if( i < num_steps ){
+            // for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
+            //     var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
+            //     Composite.remove(demo.engine.world, body, true)
+            // }
+
+
+            s++;
+            if( s < num_steps ){
                 if (_isBrowser) {
-                    setTimeout( f, 5 );
+                    setTimeout( f, 100 );
                 } else {
                     setTimeout( f, 0 );
                 }
             }
         }
+        setInterval(function(){
+          console.log('test');
+        }, 1000);
         f();
 
         if (config.env == 'tower') {
+            console.log('Fraction unstable',fraction_stable(trajectories,1))
             return [is_stable_trajectory(trajectories) < stability_threshold, is_stable_trajectory(trajectories)]  // true if unstable
         }
     };
@@ -278,7 +426,8 @@
         window.loadFile = function loadFile(file){
             var fr = new FileReader();
             fr.onload = function(){
-                Demo.run(window.CircularJSON.parse(fr.result))
+                // let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
+                Demo.run(window.CircularJSON.parse(fr.result), {ex:0})
             }
             fr.readAsText(file)
         }
