@@ -282,7 +282,7 @@ function model:fp(params_, batch, sim)
     -- end
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
-    return loss, prediction
+    return loss, prediction, loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
 end
 
 -- Input to fp

@@ -15,6 +15,9 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
+from matplotlib.ticker import FormatStrFormatter
+import itertools
+matplotlib.rcParams['axes.linewidth'] = 0.1
 
 
 def mkdir_p(path):
@@ -213,6 +216,21 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE No Lookahead'),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE No Lookahead'),
 
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim64_fast_lr3e-05_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 64 LR 3e-05'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim128_fast_lr3e-05_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 128 LR 3e-05'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim256_fast_lr3e-05_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 256 LR 3e-05'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim64_fast_lr3e-05_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 64 LR 3e-05'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim128_fast_lr3e-05_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 128 LR 3e-05'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim256_fast_lr3e-05_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 256 LR 3e-05'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim64_fast_lr0.0003_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 64 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim128_fast_lr0.0003_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim256_fast_lr0.0003_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim64_fast_lr0.0003_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 64 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim128_fast_lr0.0003_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_rs_rnn_dim256_fast_lr0.0003_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
+
+
+
     ],
 
     'Balls Generalization Mass': [
@@ -234,6 +252,19 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE No Lookahead'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE No Lookahead'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE No Lookahead'),
+
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim64_fast_lr3e-05_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 64 LR 3e-05'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim128_fast_lr3e-05_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 128 LR 3e-05'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim256_fast_lr3e-05_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 256 LR 3e-05'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim64_fast_lr3e-05_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 64 LR 3e-05'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim128_fast_lr3e-05_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 128 LR 3e-05'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim256_fast_lr3e-05_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 256 LR 3e-05'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim64_fast_lr0.0003_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 64 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim128_fast_lr0.0003_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim256_fast_lr0.0003_modelbl_seed0', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim64_fast_lr0.0003_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 64 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim128_fast_lr0.0003_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_rs_rnn_dim256_fast_lr0.0003_modelbl_seed1', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
 
     ],
 
@@ -528,6 +559,9 @@ def custom_plot(x, means, mins, maxs, **kwargs):
     base_line, = ax.plot(x, means, **kwargs)
     ax.fill_between(x, mins, maxs, facecolor=base_line.get_color(), alpha=0.5, linewidth=0.0)
 
+    # if logscale:
+    #     ax.set_yscale('symlog', basey=10)
+
 
 def plot_experiment_error(exp_list, dataset, outfolder, outfile):
     ys = []
@@ -535,6 +569,7 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile):
 
     fig, ax = plt.subplots()
     ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+    marker = itertools.cycle(('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd')) 
 
     # first group all the same labels together. You will use these for error bars
     exp_groups = {}
@@ -551,6 +586,12 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile):
         min_length = min(len(x) for x in indep_run_data)
         indep_run_data = np.array([x[:min_length] for x in indep_run_data])  # (num_seeds, min_length)
 
+        # convert it from ln scale
+        indep_run_data = np.exp(indep_run_data)
+
+        # convert it to log base 10 scale
+        indep_run_data = np.log10(indep_run_data)
+
         print label, indep_run_data, min_length
 
         # compute max min and average
@@ -560,11 +601,12 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile):
 
         x = range(min_length) # TODO
 
-        custom_plot(x, means, mins, maxs, label=label)
+        custom_plot(x, means, mins, maxs, label=label, marker=marker.next())
+        # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
-    plt.legend(fontsize=8)
+    leg = plt.legend(fontsize=8, frameon=False)
     plt.xlabel('Iterations (x 100000)')
-    plt.ylabel('Log MSE Loss')  # TODO!
+    plt.ylabel('Mean Squared Error Loss')  # TODO!
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
 
@@ -576,6 +618,7 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile):
 
     fig, ax = plt.subplots()
     ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+    marker = itertools.cycle(('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd')) 
 
     # first group all the same labels together. You will use these for error bars
     exp_groups_orig = {}
@@ -613,9 +656,10 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile):
 
         x = range(1,min_length+1) # TODO
 
-        custom_plot(x, means, mins, maxs, label=label)
+        custom_plot(x, means, mins, maxs, label=label, marker=marker.next())
+        ax.set_xlim(1, 12)
 
-    plt.legend(fontsize=8)
+    leg = plt.legend(fontsize=8, frameon=False, loc='upper left')
     plt.xlabel('Iterations (x 100000)')
     plt.ylabel('Accuracy')  # TODO!
     plt.savefig(os.path.join(outfolder, outfile))
@@ -684,7 +728,7 @@ def create_gif_json(images_root, gifname, stability_stats=None):
 
     for ex in exs:
         exs[ex] = sorted(exs[ex], key=lambda x: img_id_json(x))
-
+        # stability_stats = None
         if stability_stats:
             print(sorted_stability_stats)
             key = [i for i in range(len(sorted_stability_stats)) if 'ex'+str(ex) in sorted_stability_stats[i][0]][0]
@@ -791,9 +835,9 @@ def animate_tower(experiments, remove_png):
 experiments_to_plot, experiments_to_visualize = copy(experiments)  # returns a list of experiments that changed
 
 # experiments_to_visualize = [
-#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     # 'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
 #     # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
-#     # 'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
 #     # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
 #     # 'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
 # ]

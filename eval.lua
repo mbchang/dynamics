@@ -240,17 +240,28 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     --------------------------------------------------- -------------------------
     local avg_loss = 0
     local count = 0
-    local avg_loss_through_time = {} -- a table
+    local losses_through_time_all_batches = torch.zeros(dataloader.num_batches, numsteps)
 
-    -- TODO! You have to accomodate towers!
+    local experiment_name = paths.basename(dataloader.dataset_folder)
+    local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
+    if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
+
+    local logfile = 'gt_divergence.log'
+    local gtdivergenceLogger = optim.Logger(paths.concat(subfolder, logfile))  -- this should be dataloader specific!
+    gtdivergenceLogger.showPlot = false
+    -- I have to averge through all batches
 
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
     for i = 1, dataloader.num_batches do
+        local loss_within_batch = 0
+        local counter_within_batch = 0
+
         if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
 
-        local batch, current_dataset = dataloader:sample_sequential_batch(false)
+        -- local batch, current_dataset = dataloader:sample_sequential_batch(false)
+        local batch = dataloader:sample_sequential_batch()
 
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)
@@ -274,7 +285,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                         numsteps, mp.object_dim),
                             mp.cuda)
 
-        -- local losses_through_time
+        -- local losses_through_time = {}
 
         -- loop through time
         for t = 1, numsteps do
@@ -307,6 +318,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local loss, pred = model:fp(params_,batch,true)
                 avg_loss = avg_loss + loss
                 count = count + 1
+
+                loss_within_batch = loss_within_batch + loss
+                counter_within_batch = counter_within_batch + 1
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
@@ -347,7 +361,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
 
-            -- here record the losses            
+            -- here record the losses --> accumulate the losses per particle and then divide at the very end
+            -- gtdivergenceLogger:add{['Timesteps'] = t}
+            -- gtdivergenceLogger:add{['Log MSE Error'] = avg_loss/count}
+            -- gtdivergenceLogger:style{['Timesteps'] = '~'}
+            -- gtdivergenceLogger:style{['Log MSE Error'] = '~'}
+
+            losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles  -- do I need to divide by number of particles now or later
+
         end
         --- to be honest I don't think we need to break into past and context
         -- future, but actually that might be good for coloriing past and future, but
@@ -372,10 +393,24 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                'batch'..test_loader.datasamplers[current_dataset].current_sampled_id..'.json',
-                                current_dataset)
+                                -- 'batch'..test_loader.datasamplers[current_dataset].current_sampled_id..'.json',
+                                'batch'..dataloader.current_sampled_id..'.json',
+                                experiment_name,
+                                subfolder)
+                                -- current_dataset)
         end
     end
+
+    -- average over all the batches
+    local averaged_losses_through_time_all_batches = torch.totable(torch.squeeze(losses_through_time_all_batches:mean(1)))
+
+    print(averaged_losses_through_time_all_batches)
+    for tt=1,#averaged_losses_through_time_all_batches do
+        print(averaged_losses_through_time_all_batches[tt])
+        gtdivergenceLogger:add{['Timesteps'] = tt, ['Log MSE Error'] = averaged_losses_through_time_all_batches[tt]}
+        gtdivergenceLogger:style{['Timesteps'] = '~',['Log MSE Error'] = '~'}
+    end
+
     avg_loss = avg_loss/count
     print('Mean Squared Error', avg_loss)
     collectgarbage()
@@ -460,8 +495,10 @@ function plot_hid_state(fname, x,y)
 end
 
 
-function save_ex_pred_json(example, jsonfile, current_dataset)
-    local flags = pls.split(mp.test_dataset_folders[current_dataset], '_')
+function save_ex_pred_json(example, jsonfile, current_dataset, subfolder)
+    print(current_dataset)
+    -- local flags = pls.split(mp.test_dataset_folders[current_dataset], '_')
+    local flags = pls.split(current_dataset, '_')
 
     local world_config = {
         num_past = mp.num_past,
@@ -480,8 +517,9 @@ function save_ex_pred_json(example, jsonfile, current_dataset)
             this_pred, context_pred = unpack(example)
 
     -- local subfolder = mp.savedir .. '/' .. 'predictions/'
-    local subfolder = mp.savedir .. '/' .. mp.test_dataset_folders[current_dataset] .. 'predictions/'
-    if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
+    -- local subfolder = mp.savedir .. '/' .. mp.test_dataset_folders[current_dataset] .. 'predictions/'
+    -- local subfolder = mp.savedir .. '/' .. current_dataset .. '_predictions/'
+    -- if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
 
     -- construct gnd truth (could move to this to a util function)
     local this_pred_traj = torch.cat({this_past, this_pred}, 2)
@@ -528,31 +566,23 @@ end
 
 
 function predict_simulate_all()
-    -- print(mp.name)
-
-    local snapshot = getLastSnapshot(mp.name)
-    local snapshotfile = mp.savedir ..'/'..snapshot
-    print(snapshotfile)
-    local checkpoint = torch.load(snapshotfile)
-
-    local saved_args = torch.load(mp.savedir..'/args.t7')
-    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
-    config_args = saved_args.config_args
-
-    model_deps(mp.model)
+    local checkpoint, snapshotfile = load_most_recent_checkpoint()
     inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
     print('Network parameters')
     print(mp)
 
     for i,testdataset_loader in pairs(test_loader.datasamplers) do
         print('Evaluating '..test_loader.dataset_folders[i])
-        simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
-        -- print(testdataset_loader)
+        simulate_all(testdataset_loader, checkpoint.model.theta.params, true, mp.steps)
     end
-    -- simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
 end
 
-function inference(logfile, property, method, cf)
+function load_most_recent_checkpoint()
+    local snapshot = getLastSnapshot(mp.name)
+    return load_checkpoint(snapshot)
+end
+
+function get_all_checkpoints(logs_folder, experiment_name)
     -- iterate through snapshots
     local res_file = io.popen("ls -t "..mp.logs_root..'/'..mp.name..
                             " | grep -i epoch")
@@ -563,37 +593,119 @@ function inference(logfile, property, method, cf)
         print('Adding snapshot: '..result)
         table.insert(checkpoints, result)
     end
+    return checkpoints
+end
+
+function load_checkpoint(snapshot)
+    local snapshotfile = mp.savedir ..'/'..snapshot
+    local checkpoint = torch.load(snapshotfile)
+    local saved_args = torch.load(mp.savedir..'/args.t7')
+    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
+    config_args = saved_args.config_args
+
+
+    -- NOTE THIS IS ONLY FOR THE EXPERIMENTS THAT DON'T HAVE object_base_size_ids_upper!
+    config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
+
+    model_deps(mp.model)
+    return checkpoint, snapshotfile
+end
+
+function inference(logfile, property, method, cf)
+    local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
 
     local inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', logfile))
     inferenceLogger.showPlot = false
 
     -- iterate through checkpoints backwards (least recent to most recent)
     for i=#checkpoints,1,-1 do
-        local snapshot = checkpoints[i]
-        print(property..' inference on snapshot '..snapshot)
-        local snapshotfile = mp.savedir ..'/'..snapshot
-        local checkpoint = torch.load(snapshotfile)
-        local saved_args = torch.load(mp.savedir..'/args.t7')
-        mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
-        config_args = saved_args.config_args
+        print(property..' inference on snapshot '..checkpoints[i])
 
+        local checkpoint, snapshotfile = load_checkpoint(checkpoints[i])
 
-        -- NOTE THIS IS ONLY FOR THE EXPERIMENTS THAT DON'T HAVE object_base_size_ids_upper!
-        config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
-
-        model_deps(mp.model)
         inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
         require 'infer'
 
         -- save num_correct into a file
-        -- local cf = true
-        local accuracy = infer_properties(model, test_loader, checkpoint.model.theta.params, property, method, cf)
+        local accuracy, accuracy_by_speed, accuracy_by_mass = infer_properties(model, test_loader, checkpoint.model.theta.params, property, method, cf)
         print('Accuracy',accuracy)
         inferenceLogger:add{[property..' accuracy (test set)'] = accuracy}
         inferenceLogger:style{[property..' accuracy (test set)'] = '~'}
     end
     print('Finished '..property..' inference')
 end
+
+local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
+    local sum_loss = 0
+    local num_batches = num_batches or dataloader.num_batches
+
+    num_batches = math.min(5000, num_batches)
+    print('Testing '..num_batches..' batches')
+    local total_avg_vel = 0
+    local total_avg_ang_vel = 0
+
+    for i = 1,num_batches do
+        if mp.server == 'pc' then xlua.progress(i, num_batches) end
+        local batch = dataloader:sample_sequential_batch(false)
+        local __, __, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
+        total_avg_vel = total_avg_vel+ avg_batch_vel
+        total_avg_ang_vel = total_avg_ang_vel + avg_batch_ang_vel
+    end
+    total_avg_vel = total_avg_vel/num_batches
+    total_avg_ang_vel = total_avg_ang_vel/num_batches
+
+    if mp.cuda then cutorch.synchronize() end
+    collectgarbage()
+    return total_avg_vel, total_avg_ang_vel
+end
+
+
+function test_vel_angvel_all()
+    local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
+
+    local eval_data = {}
+
+    -- iterate through checkpoints backwards (least recent to most recent)
+    for i=#checkpoints,1,-1 do
+        local checkpoint, snapshotfile = load_checkpoint(checkpoints[i])
+        inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
+
+        local checkpoint_eval_data = torch.zeros(#test_loader.datasamplers, 2)  -- (num_samplers, [avg_vel_loss, avg_ang_vel_loss])
+
+        for i,testdataset_loader in pairs(test_loader.datasamplers) do
+            print('Evaluating '..test_loader.dataset_folders[i])
+            local avg_vel_loss, avg_ang_vel_loss = test_vel_angvel(testdataset_loader, checkpoint.model.theta.params, false)
+            print(avg_vel_loss, avg_ang_vel_loss)
+            checkpoint_eval_data[{{i},{}}] = torch.Tensor{avg_vel_loss, avg_ang_vel_loss}
+        end
+
+        table.insert(eval_data, checkpoint_eval_data:clone():reshape(1,#test_loader.datasamplers,2))
+    end
+
+    -- need to transpose
+    eval_data = torch.cat(eval_data,1)  -- (num_checkpoints, num_samplers, 2)
+    eval_data = eval_data:transpose(1,2) -- (num_samplers, num_checkpoints, 2)
+
+    print(eval_data)
+
+    -- iterate through samplers
+    for s,testdataset_loader in pairs(test_loader.datasamplers) do
+        local experiment_name = paths.basename(testdataset_loader.dataset_folder)
+        local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
+        if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
+
+        local logfile = 'tva.log'
+        local tvaLogger = optim.Logger(paths.concat(subfolder, logfile))  -- this should be dataloader specific!
+        tvaLogger.showPlot = false
+
+        for c=1,#checkpoints do
+            tvaLogger:add{['vel_loss'] = eval_data[{{s},{c},{1}}]:sum(), ['ang_vel_loss'] = eval_data[{{s},{c},{2}}]:sum()}
+            tvaLogger:style{['vel_loss'] = '~',['ang_vel_loss'] = '~'}
+        end
+    end
+end
+
+
 
 
 function mass_inference()
@@ -669,6 +781,8 @@ elseif mp.mode == 'b2i' then
     predict_b2i()
 elseif mp.mode == 'pred' then
     predict()
+elseif mp.mode == 'tva' then
+    test_vel_angvel_all()
 else
     error('unknown mode')
 end

@@ -602,6 +602,40 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
     return best_hypotheses
 end
 
+function eval_straightaway(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
+    local num_correct = 0
+    local count = 0
+    for i = 1, dataloader.num_batches do
+        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
+        local batch = dataloader:sample_sequential_batch(false)
+        local test_losses, prediction = model:fp_batch(params_, batch)
+
+        -- now do a context filter. I want the examples where the focus will NOT hit a context.
+        -- let's take a look at context_collision_filter
+
+        -- also filter out walls
+
+        -- 
+
+        local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
+        -- now that you have best_hypothesis, compare best_hypotheses with truth
+        -- need to construct true hypotheses based on this_past, hypotheses as parameters
+        local this_past = batch[1]:clone()
+        local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
+        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold)
+
+        collectgarbage()
+    end
+    local accuracy
+    if count == 0 then 
+        accuracy = 0
+    else 
+        accuracy =num_correct/count
+    end
+    print(count..' collisions out of '..dataloader.num_batches*mp.batch_size..' examples')
+    return accuracy
+end
+
 function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
     local count = 0

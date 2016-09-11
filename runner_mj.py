@@ -148,7 +148,7 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
 
             # {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
-            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
 
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rda'}"},
@@ -177,6 +177,10 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},
 
             # {'dataset_folders':"{'tower_n5_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n5_t120_ex25000_rda'}"},
+            # {'dataset_folders':"{'tower_n6_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rda'}"},
+            # {'dataset_folders':"{'tower_n7_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n7_t120_ex25000_rda'}"},
+            # {'dataset_folders':"{'tower_n8_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n8_t120_ex25000_rda'}"},
+            {'dataset_folders':"{'tower_n5_t120_ex25000_rda','tower_n6_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n7_t120_ex25000_rda','tower_n8_t120_ex25000_rda'}"},
 
 
             ]
@@ -185,17 +189,17 @@ def create_jobs(dry_run, mode, ext):
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['ind']:
+        for model in ['bl']:
             for nbrhd in [False]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [5]:  # [2,3,4]
-                        for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
-                            for cuda in [False]:
+                    for layers in [3]:  # [2,3,4]
+                        for lr in [3e-5,3e-4]:  # [1e-4, 3e-4, 1e-3]
+                            # for cuda in [False]:
                                 for im in [False]:
                                     # for veps in [1e-9]:
-                                        for lda in [100]:
-                                            for vlda in [100]:
-                                                for bnorm in [False]:
+                                        # for lda in [100]:
+                                        #     for vlda in [100]:
+                                                # for bnorm in [False]:
                                                     for f in [True]:
                                                         for rs in [True]:
                                                             for seed in [0,1,2]:
@@ -211,12 +215,12 @@ def create_jobs(dry_run, mode, ext):
                                                                         job['rs'] = rs
                                                                         job['seed'] = seed
                                                                         job['nlan'] = nlan
-                                                                        job['cuda'] = cuda
+                                                                        # job['cuda'] = cuda
                                                                         # job['dropout'] = dropout
                                                                         # job['val_eps'] = veps
                                                                         # job['lambda'] = lda
                                                                         # job['vlambda'] = vlda
-                                                                        job['batch_norm'] = bnorm
+                                                                        # job['batch_norm'] = bnorm
                                                                         # job['rnn_dim'] = rnn_dim
                                                                         actual_jobs.append(copy.deepcopy(job))
     jobs = actual_jobs
@@ -234,19 +238,19 @@ def create_jobs(dry_run, mode, ext):
             if isinstance(job[flag], bool):
                 if job[flag]:
                     jobname = jobname + "_" + flag
-                    if not (mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf'):
+                    if not (mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf' or mode == 'tva'):
                         flagstring = flagstring + " -" + flag
                 else:
                     print "WARNING: Excluding 'False' flag " + flag
             else:
                 if flag in ['dataset_folders', 'test_dataset_folders']:
                     # eval.lua does not have a 'dataset_folders' flag
-                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders'):
+                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders') nd not(mode == 'tva' and flag == 'dataset_folders'):
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')                        
                 else:
                     if flag not in ['name']:
                         jobname = jobname + "_" + flag  + str(job[flag])
-                        if (mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf') and flag not in ['test_dataset_folders', 'name']:
+                        if (mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf' or mode == 'tva') and flag not in ['test_dataset_folders', 'name']:
                             pass
                         else:
                             flagstring = flagstring + " -" + flag + " " + str(job[flag])
@@ -255,7 +259,7 @@ def create_jobs(dry_run, mode, ext):
 
         if mode == 'exp' or mode == 'expload' or mode == 'save':
             prefix = 'th main.lua'
-        elif mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf':
+        elif mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf' or mode == 'tva':
             prefix = 'th eval.lua'
         else:
             assert False, 'Unknown mode'
@@ -296,6 +300,9 @@ def sinf(dry_run):
 def oinf(dry_run):
     create_jobs(dry_run=dry_run, mode='oinf', ext='_oinf')
 
+def tva(dry_run):
+    create_jobs(dry_run=dry_run, mode='tva', ext='_tva')
+
 def to_slurm(jobname, jobcommand, dry_run):
     # jobname_formatted = jobname.replace('{','\{').replace('}','\}').replace("'","\\'")
     # jobname_formatted2 = jobname_formatted.replace('\\"','')
@@ -310,7 +317,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH --output=slurm_logs/" + jobname + ".out\n")
         slurmfile.write("#SBATCH -N 1\n")
         slurmfile.write("#SBATCH -c 1\n")
-        # slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
+        slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=30000\n")
         slurmfile.write("#SBATCH --time=6-23:00:00\n")
         slurmfile.write(jobcommand)
@@ -320,12 +327,13 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-# run_experiment(dry_run)
+run_experiment(dry_run)
 # run_experimentload(dry_run)
 # sim(dry_run)
-minf(dry_run)
+# minf(dry_run)
 # sinf(dry_run)
 # oinf(dry_run)
 # save(dry_run)
+# tva(dry_run)
 
 

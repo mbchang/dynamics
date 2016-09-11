@@ -101,7 +101,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 5
     mp.rnn_dim = 64
-    mp.model = 'ind'
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -491,14 +491,6 @@ function validate()
     local log_string = 'train loss\t'..train_loss..
                       '\tval loss\t'..val_loss..
                       '\ttest_loss\t'..test_loss
-
-    -- if mp.im then
-    --     require 'infer'
-    --     local mass_accuracy = infer_properties(model, val_loader, model.theta.params, 'mass', 'max_likelihood', mp.cf)
-    --     log_string = log_string..'\tmass accuracy\t'..mass_accuracy
-    --     inferenceLogger:add{['Mass accuracy (val set)'] = mass_accuracy}
-    --     inferenceLogger:style{['Mass accuracy (val set)'] = '~'}
-    -- end
 
     print(log_string)
 

@@ -151,6 +151,9 @@ function model:fp(params_, batch, sim)
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
 
+    local loss_vels = 0
+    local loss_ang_vels = 0
+
     local loss = 0
     for i = 1,#prediction do
         -- table of length num_obj of {bsize, num_future, obj_dim}
@@ -164,11 +167,15 @@ function model:fp(params_, batch, sim)
         local obj_loss = loss_vel + loss_ang_vel
         obj_loss = obj_loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
         loss = loss + obj_loss
+
+        loss_vels = loss_vels + loss_vel/p_vel:nElement()
+        loss_ang_vels = loss_ang_vels + loss_ang_vel/p_ang_vel:nElement()
+
     end
     loss = loss/#prediction
 
     collectgarbage()
-    return loss, prediction
+    return loss, prediction, loss_vels, loss_ang_vels
 end
 
 function model:fp_batch(params_, batch, sim)
