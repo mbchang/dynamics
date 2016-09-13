@@ -235,54 +235,20 @@ end
 -- we assume num_future = 1
 local function relative_error(x, x_hat)
     -- x cannot be 0
-    -- x:zero()
-    -- local x_orig = x:clone()
     local mask = x:ne(0)
     local mask_nElement = x:ne(0):nonzero():nElement()
 
-    -- mask[{{4}}]:zero()
-
-    -- print(torch.squeeze(x[{{22}}]))
-    -- print(x:ne(0))
-    -- print(x:ne(0):nonzero():nElement())
-    -- print(x:ne(0):nonzero())
-    -- print(x:ne(0):nonzero():nElement())
-    -- print(x:ne(0):nonzero():nElement()/x:dim())
-    -- print(x:nElement())
-
-    -- print('mask')
-    -- print(mask)
-    -- mask = mask:float()
-    -- print('mask')
-    -- print(mask)
-
-    -- print('mask_nElement')
-    -- print(mask_nElement)
-
     -- first fill x with 1 in 0 of mask
     x:maskedFill(1-mask,1)
-
-    -- print('x')
-    -- print(x)
 
     local ratio = torch.cdiv(x_hat, x)  -- x_hat/x
     local difference = 1 - ratio
     local re = torch.abs(difference)
 
-    -- print('re before')
-    -- print(re)
-
     -- apply mask
     re:maskedFill(1-mask,0)
 
-
-    -- print('re after')
-    -- print(re)
-
     assert(x:ne(0):nonzero():nElement()/x:dim() == x:nElement())
-    -- assert(false)
-
-
     return re, mask, mask_nElement
 end
 
@@ -295,8 +261,6 @@ local function angle_magnitude(pred, batch)
     -- first unrelative
     pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
     pred = data_process.relative_pair(this_past:clone(), pred:clone(), true)
-    -- print('this future before reltive')
-    -- print(torch.squeeze(this_future[{{22},{},{}}]))
 
     this_future = data_process.relative_pair(this_past:clone(), this_future:clone(), true)
 
@@ -305,15 +269,8 @@ local function angle_magnitude(pred, batch)
     local vy = config_args.si.vy
     local vnc = config_args.velocity_normalize_constant
 
-    -- print('this future after relative')
-    -- print(torch.squeeze(this_future[{{22},{},{}}]))
-
     local pred_vel = (pred[{{},{},{vx,vy}}]:clone()*vnc)  -- (bsize, num_future, 2)
     local gt_vel = (this_future[{{},{},{vx,vy}}]:clone()*vnc)  -- (bsize, num_future, 2)
-
-    -- print('gt_vel')
-    -- print(torch.squeeze(gt_vel[{{22}}]))
-
 
     -- get magnitudes
     local pred_vel_magnitude = pred_vel:norm(2,3) -- (bsize, num_future, 1)
@@ -331,25 +288,11 @@ local function angle_magnitude(pred, batch)
 
     -- local angle = torch.acos(cosine_diff)  -- (bsize, num_future, 1)
     local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)  -- if I do acos then I get nan
-    -- print('angle', angle[{{22}}])  -- let's see if this is inf as well
     angle:maskedFill(1-mask,0)  -- zero out the ones where velocity was zero
-    -- print('angle', angle[{{22}}]) 
-    -- print(mask_nElement)
-
-    -- assert(gt_vel_magnitude:ne(0):nonzero():nElement()/gt_vel_magnitude:dim() == gt_vel_magnitude:nElement())
-
-    -- angle:cmul(mask)  -- take out the zero velocity
-
-    -- apply mask
-    -- angle:cmul()
 
     -- take average
     local avg_angle_error = angle:sum()/mask_nElement
     local avg_relative_magnitude_error = relative_magnitude_error:sum()/mask_nElement
-
-    -- print(avg_angle_error)
-    -- print(avg_relative_magnitude_error)
-    -- assert(false)
 
     return avg_angle_error, avg_relative_magnitude_error
 end
@@ -424,6 +367,12 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
             -- total_particles = total_particles+num_particles
+
+            -- it makes no sense to accumulate
+            local loss_within_batch = 0
+            local mag_error_within_batch = 0
+            local ang_error_within_batch = 0
+            local counter_within_batch = 0
 
             for j = 1, num_particles do
                 -- construct batch
@@ -500,7 +449,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
 
-            print(mag_error_within_batch/num_particles)
+            -- print(ang_error_within_batch/num_particles)
+            -- print(mag_error_within_batch/num_particles)
 
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles  -- do I need to divide by number of particles now or later
             ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/num_particles  -- do I need to divide by number of particles now or later

@@ -255,5 +255,139 @@ function model:bp(batch, prediction, sim)
     return self.theta.grad_params
 end
 
+function model:update_position(this, pred)
+    -- this: (mp.batch_size, mp.num_past, mp.object_dim)
+    -- prediction: (mp.batch_size, mp.num_future, mp.object_dim)
+    -- pred is with respect to this[{{},{-1}}]
+    ----------------------------------------------------------------------------
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local pnc = config_args.position_normalize_constant
+    local vnc = config_args.velocity_normalize_constant
+
+    local this, pred = this:clone(), pred:clone()
+    local lastpos = (this[{{},{-1},{px,py}}]:clone()*pnc)
+    local lastvel = (this[{{},{-1},{vx,vy}}]:clone()*vnc)
+    local currpos = (pred[{{},{},{px,py}}]:clone()*pnc)
+    local currvel = (pred[{{},{},{vx,vy}}]:clone()*vnc)
+
+    -- this is length n+1
+    local pos = torch.cat({lastpos, currpos},2)
+    local vel = torch.cat({lastvel, currvel},2)
+
+    -- iteratively update pos through num_future 
+    for i = 1,pos:size(2)-1 do
+        pos[{{},{i+1},{}}] = pos[{{},{i},{}}] + vel[{{},{i},{}}]  -- last dim=2
+    end
+
+    -- normalize again
+    pos = pos/pnc
+    assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
+
+    pred[{{},{},{px,py}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
+    return pred
+end
+
+
+function model:update_angle(this, pred)
+    local a = config_args.si.a
+    local av = config_args.si.av
+    local anc = config_args.angle_normalize_constant
+
+    local this, pred = this:clone(), pred:clone()
+
+    local last_angle = this[{{},{-1},{a}}]:clone()*anc
+    local last_angular_velocity = this[{{},{-1},{av}}]:clone()*anc
+    local curr_angle = pred[{{},{},{a}}]:clone()*anc
+    local curr_angular_velocity = pred[{{},{},{av}}]:clone()*anc
+
+    -- this is length n+1
+    local ang = torch.cat({last_angle, curr_angle},2)
+    local ang_vel = torch.cat({last_angular_velocity, curr_angular_velocity},2)
+
+    -- iteratively update ang through time. 
+    for i = 1,ang:size(2)-1 do
+        ang[{{},{i+1},{}}] = ang[{{},{i},{}}] + ang_vel[{{},{i},{}}]  -- last dim=2
+    end
+
+    -- normalize again
+    ang = ang/anc
+    assert(ang[{{},{1},{}}]:size(1) == pred:size(1))
+
+    pred[{{},{},{a}}] = ang[{{},{2,-1},{}}]  -- reassign back to pred
+    return pred
+end
+
+-- return a table of euc dist between this and each of context
+-- size is the number of items in context
+-- is this for the last timestep of this?
+-- TODO_lowpriority: later we can plot for all timesteps
+function model:get_euc_dist(this, context, t)
+    local num_context = context:size(2)
+    local t = t or -1  -- default use last timestep
+    local px = config_args.si.px
+    local py = config_args.si.py
+
+    local this_pos = this[{{},{t},{px, py}}]
+    local context_pos = context[{{},{},{t},{px, py}}]
+    local euc_dists = self:euc_dist(this_pos:repeatTensor(1,num_context,1), context_pos)
+    euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
+    for i=1,#euc_dists do
+        euc_dists[i] = torch.squeeze(euc_dists[i])
+    end
+    return euc_dists
+end
+
+-- b and a must be same size
+function model:euc_dist(a,b)
+    return compute_euc_dist(a,b)
+end
+
+-- update position at time t to get position at t+1
+-- default t is the last t
+function model:update_position_one(state, t)
+    local t = t or -1
+    local px = config_args.si.px
+    local py = config_args.si.py
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local pnc = config_args.position_normalize_constant
+    local vnc = config_args.velocity_normalize_constant
+
+    local pos_now, vel_now
+    if state:dim() == 4 then
+        pos_now = state[{{},{},{t},{px, py}}]
+        vel_now = state[{{},{},{t},{vx, vy}}]
+    else
+        pos_now = state[{{},{t},{px, py}}]
+        vel_now = state[{{},{t},{vx, vy}}]
+    end
+
+    local pos_next = (pos_now:clone()*pnc + vel_now:clone()*vnc)/pnc
+    return pos_next, pos_now
+end
+
+-- similar to update_position
+function model:get_velocity_direction(this, context, t)
+    local num_context = context:size(2)
+
+    local this_pos_next, this_pos_now = self:update_position_one(this)
+    local context_pos_next, context_pos_now = self:update_position_one(context)
+
+    -- find difference in distances from this_pos_now to context_pos_now
+    -- and from his_pos_now to context_pos_next. This will be +/- number
+    local euc_dist_now = self:euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_now)
+    local euc_dist_next = self:euc_dist(this_pos_now:repeatTensor(1,num_context,1), context_pos_next)
+    local euc_dist_diff = euc_dist_next - euc_dist_now  -- (bsize, num_context, 1)  negative if context moving toward this
+    euc_dist_diffs = torch.split(euc_dist_diff, 1,2)  --convert to table of (bsize, 1, 1)
+    for i=1,#euc_dist_diffs do
+        euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
+    end
+    -- assert(false)
+    return euc_dist_diffs
+end
+
 
 return model
