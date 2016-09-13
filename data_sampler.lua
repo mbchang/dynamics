@@ -167,9 +167,7 @@ function datasampler:load_batch_id_first_offset(id)
     nextbatch = self:split_time(nextbatch)
     if self.relative and not self.sim then 
         nextbatch = self:relative_batch(nextbatch, false) 
-        -- print('hey')
     end
-    -- if self.relative then nextbatch = self:relative_batch(nextbatch, false) end
 
     local this, context, y, context_future, mask = unpack(nextbatch)
 
@@ -193,11 +191,10 @@ function datasampler:load_subbatch_id(id)
     local nextbatch = torch.load(batchname)   -- focus: (bsize, maxwinsize, obj_dim)
 
     nextbatch = self:split_time(nextbatch, offset)
+
     if self.relative and not self.sim then 
         nextbatch = self:relative_batch(nextbatch, false) 
-        -- print('yo')
     end
-    -- if self.relative then nextbatch = self:relative_batch(nextbatch, false) end
 
     local this, context, y, context_future, mask = unpack(nextbatch)
 

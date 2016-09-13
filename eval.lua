@@ -231,6 +231,129 @@ end
 --     print(this_past[{{1},{1,9}}])
 -- end
 
+-- element-wise relative error
+-- we assume num_future = 1
+local function relative_error(x, x_hat)
+    -- x cannot be 0
+    -- x:zero()
+    -- local x_orig = x:clone()
+    local mask = x:ne(0)
+    local mask_nElement = x:ne(0):nonzero():nElement()
+
+    -- mask[{{4}}]:zero()
+
+    -- print(torch.squeeze(x[{{22}}]))
+    -- print(x:ne(0))
+    -- print(x:ne(0):nonzero():nElement())
+    -- print(x:ne(0):nonzero())
+    -- print(x:ne(0):nonzero():nElement())
+    -- print(x:ne(0):nonzero():nElement()/x:dim())
+    -- print(x:nElement())
+
+    -- print('mask')
+    -- print(mask)
+    -- mask = mask:float()
+    -- print('mask')
+    -- print(mask)
+
+    -- print('mask_nElement')
+    -- print(mask_nElement)
+
+    -- first fill x with 1 in 0 of mask
+    x:maskedFill(1-mask,1)
+
+    -- print('x')
+    -- print(x)
+
+    local ratio = torch.cdiv(x_hat, x)  -- x_hat/x
+    local difference = 1 - ratio
+    local re = torch.abs(difference)
+
+    -- print('re before')
+    -- print(re)
+
+    -- apply mask
+    re:maskedFill(1-mask,0)
+
+
+    -- print('re after')
+    -- print(re)
+
+    assert(x:ne(0):nonzero():nElement()/x:dim() == x:nElement())
+    -- assert(false)
+
+
+    return re, mask, mask_nElement
+end
+
+-- pred: (bsize, num_future, obj_dim)
+-- this_future: (bsize, num_future, obj_dim)
+-- assume they are normalized
+local function angle_magnitude(pred, batch)
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+
+    -- first unrelative
+    pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
+    pred = data_process.relative_pair(this_past:clone(), pred:clone(), true)
+    -- print('this future before reltive')
+    -- print(torch.squeeze(this_future[{{22},{},{}}]))
+
+    this_future = data_process.relative_pair(this_past:clone(), this_future:clone(), true)
+
+    -- get velocities
+    local vx = config_args.si.vx
+    local vy = config_args.si.vy
+    local vnc = config_args.velocity_normalize_constant
+
+    -- print('this future after relative')
+    -- print(torch.squeeze(this_future[{{22},{},{}}]))
+
+    local pred_vel = (pred[{{},{},{vx,vy}}]:clone()*vnc)  -- (bsize, num_future, 2)
+    local gt_vel = (this_future[{{},{},{vx,vy}}]:clone()*vnc)  -- (bsize, num_future, 2)
+
+    -- print('gt_vel')
+    -- print(torch.squeeze(gt_vel[{{22}}]))
+
+
+    -- get magnitudes
+    local pred_vel_magnitude = pred_vel:norm(2,3) -- (bsize, num_future, 1)
+    local gt_vel_magnitude = gt_vel:norm(2,3) -- (bsize, num_future, 1)
+    assert(pred_vel_magnitude:size(2)==1)
+    assert(gt_vel_magnitude:size(2)==1)
+    local relative_magnitude_error, mask, mask_nElement = relative_error(torch.squeeze(torch.squeeze(gt_vel_magnitude:clone(),2),2), 
+                                                    torch.squeeze(torch.squeeze(pred_vel_magnitude:clone(),2),2))  -- (bsize)
+
+
+    -- get cosine difference
+    local numerator = torch.cmul(pred_vel, gt_vel):sum(3) -- (bsize, num_future, 1)
+    local denominator = torch.cmul(pred_vel_magnitude,gt_vel_magnitude)  -- (bsize, num_future, 1)
+    local cosine_diff = torch.cdiv(numerator,denominator)
+
+    -- local angle = torch.acos(cosine_diff)  -- (bsize, num_future, 1)
+    local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)  -- if I do acos then I get nan
+    -- print('angle', angle[{{22}}])  -- let's see if this is inf as well
+    angle:maskedFill(1-mask,0)  -- zero out the ones where velocity was zero
+    -- print('angle', angle[{{22}}]) 
+    -- print(mask_nElement)
+
+    -- assert(gt_vel_magnitude:ne(0):nonzero():nElement()/gt_vel_magnitude:dim() == gt_vel_magnitude:nElement())
+
+    -- angle:cmul(mask)  -- take out the zero velocity
+
+    -- apply mask
+    -- angle:cmul()
+
+    -- take average
+    local avg_angle_error = angle:sum()/mask_nElement
+    local avg_relative_magnitude_error = relative_magnitude_error:sum()/mask_nElement
+
+    -- print(avg_angle_error)
+    -- print(avg_relative_magnitude_error)
+    -- assert(false)
+
+    return avg_angle_error, avg_relative_magnitude_error
+end
+
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- simulate two balls for now, but this should be made more general
@@ -239,8 +362,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- or you can make the ground truth go as far as there are timesteps available
     --------------------------------------------------- -------------------------
     local avg_loss = 0
+    local avg_ang_error = 0
+    local avg_mag_error = 0
     local count = 0
     local losses_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
+    local mag_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
+    local ang_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
+
 
     local experiment_name = paths.basename(dataloader.dataset_folder)
     local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
@@ -256,6 +384,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             dataloader.maxwinsize-mp.num_past+1)
     for i = 1, dataloader.total_batches do
         local loss_within_batch = 0
+        local mag_error_within_batch = 0
+        local ang_error_within_batch = 0
         local counter_within_batch = 0
 
         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
@@ -295,10 +425,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- the past configuration of everybody
             -- total_particles = total_particles+num_particles
 
-            local loss_per_step = 0
-
             for j = 1, num_particles do
-            -- for _,j in pairs{4,2,1,3} do--1, num_particles do
                 -- construct batch
                 local this = torch.squeeze(past[{{},{j}}])
 
@@ -312,8 +439,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                                         past[{{},{j+1,-1}}]},2)
                 end
 
-
-
                 local y = future[{{},{j},{t}}]
                 y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed
 
@@ -325,21 +450,24 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- predict
                 local loss, pred = model:fp(params_,batch,true)
+                local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)
                 avg_loss = avg_loss + loss
+                avg_ang_error = avg_ang_error + angle_error
+                avg_mag_error = avg_mag_error + relative_magnitude_error
                 count = count + 1
 
                 loss_within_batch = loss_within_batch + loss
-                counter_within_batch = counter_within_batch + 1
+                ang_error_within_batch = ang_error_within_batch + angle_error
+                mag_error_within_batch = mag_error_within_batch + relative_magnitude_error
 
-                -- loss_per_step = loss_per_step + loss
-                -- if t==1 then print('loss',loss) end
+                counter_within_batch = counter_within_batch + 1
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
 
                 -- -- relative coords for next timestep
                 if mp.relative then
-                    pred = data_process.relative_pair(this, pred, true)  -- absolute to relative
+                    pred = data_process.relative_pair(this, pred, true)  -- relative to absolute
                     y = data_process.relative_pair(this, y, true)
                 end
 
@@ -372,20 +500,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
 
-            -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
-
-            -- here record the losses --> accumulate the losses per particle and then divide at the very end
-            -- gtdivergenceLogger:add{['Timesteps'] = t}
-            -- gtdivergenceLogger:add{['Log MSE Error'] = avg_loss/count}
-            -- gtdivergenceLogger:style{['Timesteps'] = '~'}
-            -- gtdivergenceLogger:style{['Log MSE Error'] = '~'}
+            print(mag_error_within_batch/num_particles)
 
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles  -- do I need to divide by number of particles now or later
-
-            -- if t==1 then
-            --     print(losses_through_time_all_batches[{{i},{t}}]:sum())
-            -- end
-            -- assert(false)
+            ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/num_particles  -- do I need to divide by number of particles now or later
+            mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/num_particles  -- do I need to divide by number of particles now or later
 
         end
         --- to be honest I don't think we need to break into past and context
@@ -421,16 +540,30 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
     -- average over all the batches
     local averaged_losses_through_time_all_batches = torch.totable(torch.squeeze(losses_through_time_all_batches:mean(1)))
+    local averaged_ang_error_through_time_all_batches = torch.totable(torch.squeeze(ang_error_through_time_all_batches:mean(1)))
+    local averaged_mag_error_through_time_all_batches = torch.totable(torch.squeeze(mag_error_through_time_all_batches:mean(1)))
+
 
     print(averaged_losses_through_time_all_batches)
+    print(averaged_ang_error_through_time_all_batches)
+    print(averaged_mag_error_through_time_all_batches)
+
     for tt=1,#averaged_losses_through_time_all_batches do
         print(averaged_losses_through_time_all_batches[tt])
-        gtdivergenceLogger:add{['Timesteps'] = tt, ['Log MSE Error'] = averaged_losses_through_time_all_batches[tt]}
-        gtdivergenceLogger:style{['Timesteps'] = '~',['Log MSE Error'] = '~'}
+        gtdivergenceLogger:add{['Timesteps'] = tt, 
+                                ['MSE Error'] = averaged_losses_through_time_all_batches[tt],
+                                ['Cosine Difference'] = averaged_ang_error_through_time_all_batches[tt],
+                                ['Magnitude Difference'] = averaged_mag_error_through_time_all_batches[tt],}
+        gtdivergenceLogger:style{['Timesteps'] = '~',
+                                ['MSE Error'] = '~',
+                                ['Cosine Difference'] = '~',
+                                ['Magnitude Difference'] = '~',}
     end
 
     avg_loss = avg_loss/count
-    print('Mean Squared Error', avg_loss)
+    avg_mag_error = avg_mag_error/count
+    avg_ang_error = avg_ang_error/count
+    -- print('Mean Squared Error', avg_loss, 'Average Relative Magnitude Error', avg_mag_error, 'Average Cosine Differnce', avg_ang_error)
     collectgarbage()
 end
 
@@ -662,28 +795,34 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local total_avg_vel = 0
     local total_avg_ang_vel = 0
     local total_avg_loss = 0
+    local total_avg_ang_error = 0
+    local total_avg_rel_mag_error = 0
 
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local loss, pred, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
+
+        local avg_angle_error, avg_relative_magnitude_error = angle_magnitude(pred, batch)
+
         total_avg_vel = total_avg_vel+ avg_batch_vel
         total_avg_ang_vel = total_avg_ang_vel + avg_batch_ang_vel
         total_avg_loss = total_avg_loss + loss
-        print(loss)
+        total_avg_ang_error = total_avg_ang_error + avg_angle_error
+        total_avg_rel_mag_error = total_avg_rel_mag_error + avg_relative_magnitude_error
+
+        -- print(loss)
     end
     total_avg_vel = total_avg_vel/num_batches
     total_avg_ang_vel = total_avg_ang_vel/num_batches
     total_avg_loss = total_avg_loss/num_batches
+    total_avg_ang_error = total_avg_ang_error/num_batches
+    total_avg_rel_mag_error = total_avg_rel_mag_error/num_batches
 
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
-    return total_avg_loss, total_avg_vel, total_avg_ang_vel
+    return total_avg_loss, total_avg_vel, total_avg_ang_vel, total_avg_ang_error, total_avg_rel_mag_error
 end
-
--- local function relative_error(batch, pred)
-
--- end
 
 
 function test_vel_angvel_all()
@@ -696,23 +835,24 @@ function test_vel_angvel_all()
         local checkpoint, snapshotfile = load_checkpoint(checkpoints[i])
         inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
 
-        local checkpoint_eval_data = torch.zeros(#test_loader.datasamplers, 2)  -- (num_samplers, [avg_vel_loss, avg_ang_vel_loss])
+        local checkpoint_eval_data = torch.zeros(#test_loader.datasamplers, 5)  -- (num_samplers, [avg_vel_loss, avg_ang_vel_loss])
 
         for i,testdataset_loader in pairs(test_loader.datasamplers) do
             print('Evaluating '..test_loader.dataset_folders[i])
-            local avg_loss, avg_vel_loss, avg_ang_vel_loss = test_vel_angvel(testdataset_loader, checkpoint.model.theta.params, false)
-            print(avg_vel_loss, avg_ang_vel_loss)
-            checkpoint_eval_data[{{i},{}}] = torch.Tensor{avg_vel_loss, avg_ang_vel_loss}
+            local avg_loss, avg_vel_loss, avg_ang_vel_loss, avg_ang_error, avg_rel_mag_error = test_vel_angvel(testdataset_loader, checkpoint.model.theta.params, false)
+            print(avg_loss, avg_vel_loss, avg_ang_vel_loss, avg_ang_error, avg_rel_mag_error)
+            checkpoint_eval_data[{{i},{}}] = torch.Tensor{avg_loss, avg_vel_loss, avg_ang_vel_loss, avg_ang_error, avg_rel_mag_error}
         end
 
-        table.insert(eval_data, checkpoint_eval_data:clone():reshape(1,#test_loader.datasamplers,2))
+        table.insert(eval_data, checkpoint_eval_data:clone():reshape(1,#test_loader.datasamplers,5))
     end
 
     -- need to transpose
-    eval_data = torch.cat(eval_data,1)  -- (num_checkpoints, num_samplers, 2)
-    eval_data = eval_data:transpose(1,2) -- (num_samplers, num_checkpoints, 2)
+    eval_data = torch.cat(eval_data,1)  -- (num_checkpoints, num_samplers, 5)
+    eval_data = eval_data:transpose(1,2) -- (num_samplers, num_checkpoints, 5)
 
     print(eval_data)
+    print(eval_data:gt(0))
 
     -- iterate through samplers
     for s,testdataset_loader in pairs(test_loader.datasamplers) do
@@ -725,8 +865,16 @@ function test_vel_angvel_all()
         tvaLogger.showPlot = false
 
         for c=1,#checkpoints do
-            tvaLogger:add{['vel_loss'] = eval_data[{{s},{c},{1}}]:sum(), ['ang_vel_loss'] = eval_data[{{s},{c},{2}}]:sum()}
-            tvaLogger:style{['vel_loss'] = '~',['ang_vel_loss'] = '~'}
+            tvaLogger:add{['loss'] = eval_data[{{s},{c},{1}}]:sum(), 
+                          ['vel_loss'] = eval_data[{{s},{c},{2}}]:sum(),
+                          ['ang_vel_loss'] = eval_data[{{s},{c},{3}}]:sum(),
+                          ['avg_ang_error'] = eval_data[{{s},{c},{4}}]:sum(),
+                          ['avg_rel_mag_error'] = eval_data[{{s},{c},{5}}]:sum()}
+            tvaLogger:style{['loss'] = '~',
+                            ['vel_loss'] = '~',
+                            ['ang_vel_loss'] = '~',
+                            ['avg_ang_error'] = '~',
+                            ['avg_rel_mag_error'] = '~'}
         end
     end
 end
