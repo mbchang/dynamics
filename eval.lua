@@ -275,11 +275,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-        -- local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
-        -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)
-
-        local past = torch.cat({context_orig:clone(), unsqueeze(this_orig:clone(),2)},2)
-        local future = torch.cat({context_future_orig:clone(), unsqueeze(y_orig:clone(),2)},2)
+        local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
+        local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good
 
         assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
@@ -300,8 +297,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             local loss_per_step = 0
 
-            -- for j = 1, num_particles do
-            for _,j in pairs{4,2,1,3} do--1, num_particles do
+            for j = 1, num_particles do
+            -- for _,j in pairs{4,2,1,3} do--1, num_particles do
                 -- construct batch
                 local this = torch.squeeze(past[{{},{j}}])
 
@@ -315,8 +312,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                                         past[{{},{j+1,-1}}]},2)
                 end
 
+
+
                 local y = future[{{},{j},{t}}]
-                y:resize(mp.batch_size, mp.num_future, mp.object_dim)
+                y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed
+
+                if mp.relative then
+                    y = data_process.relative_pair(this, y, false)  -- absolute to relative
+                end
 
                 local batch = {this, context, y, _, mask}
 
@@ -336,7 +339,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- -- relative coords for next timestep
                 if mp.relative then
-                    pred = data_process.relative_pair(this, pred, true)
+                    pred = data_process.relative_pair(this, pred, true)  -- absolute to relative
+                    y = data_process.relative_pair(this, y, true)
                 end
 
                 -- restore object properties because we aren't learning them

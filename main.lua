@@ -465,6 +465,7 @@ function test(dataloader, params_, saveoutput, num_batches)
     local num_batches = num_batches or dataloader.num_batches
 
     if mp.fast then num_batches = math.min(5000, num_batches) end
+    -- num_batches = 10
     print('Testing '..num_batches..' batches')
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end

@@ -71,12 +71,15 @@ end
 function data_process.relative_pair(past, future, relative_to_absolute)
     -- rta: relative to absolute, otherwise we are doing absolute to relative
 
+    -- print('future before', torch.squeeze(future[{{},{1},{1,6}}]))
+
     -- TODO: use config args for this!
     if relative_to_absolute then
         future[{{},{},{1,6}}] = future[{{},{},{1,6}}] + past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     else
         future[{{},{},{1,6}}] = future[{{},{},{1,6}}] - past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     end
+    -- print('future after', torch.squeeze(future[{{},{1},{1,6}}]))
     return future
 end
 
