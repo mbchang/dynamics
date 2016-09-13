@@ -144,11 +144,11 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},  # blstm
 
 
-            # {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
-            # {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
+            {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
 
-            # {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
-            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
+            {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
+            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
 
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rda'}"},
@@ -180,7 +180,7 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'tower_n6_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n6_t120_ex25000_rda'}"},
             # {'dataset_folders':"{'tower_n7_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n7_t120_ex25000_rda'}"},
             # {'dataset_folders':"{'tower_n8_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n8_t120_ex25000_rda'}"},
-            {'dataset_folders':"{'tower_n5_t120_ex25000_rda','tower_n6_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n7_t120_ex25000_rda','tower_n8_t120_ex25000_rda'}"},
+            # {'dataset_folders':"{'tower_n5_t120_ex25000_rda','tower_n6_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n7_t120_ex25000_rda','tower_n8_t120_ex25000_rda'}"},
 
 
             ]
@@ -189,11 +189,11 @@ def create_jobs(dry_run, mode, ext):
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['bl']:
-            for nbrhd in [False]:  
+        for model in ['bffobj']:
+            for nbrhd in [True]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [3]:  # [2,3,4]
-                        for lr in [3e-5,3e-4]:  # [1e-4, 3e-4, 1e-3]
+                    for layers in [5]:  # [2,3,4]
+                        for lr in [3e-4]:  # [1e-4, 3e-4, 1e-3]
                             # for cuda in [False]:
                                 for im in [False]:
                                     # for veps in [1e-9]:
@@ -203,13 +203,13 @@ def create_jobs(dry_run, mode, ext):
                                                     for f in [True]:
                                                         for rs in [True]:
                                                             for seed in [0,1,2]:
-                                                                for nlan in [False]:
+                                                                for nlan in [True]:
                                                                     # for rnn_dim in [64, 128, 256]:
                                                                         job['model'] = model
                                                                         job['nbrhd'] = nbrhd
                                                                         job['layers'] = layers
                                                                         job['lr'] = lr
-                                                                        # job['nbrhdsize'] = nbhrdsize
+                                                                        job['nbrhdsize'] = nbhrdsize
                                                                         job['im'] = im
                                                                         job['fast'] = f
                                                                         job['rs'] = rs
@@ -245,7 +245,7 @@ def create_jobs(dry_run, mode, ext):
             else:
                 if flag in ['dataset_folders', 'test_dataset_folders']:
                     # eval.lua does not have a 'dataset_folders' flag
-                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders') nd not(mode == 'tva' and flag == 'dataset_folders'):
+                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders') and not(mode == 'tva' and flag == 'dataset_folders'):
                         flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')                        
                 else:
                     if flag not in ['name']:
@@ -317,7 +317,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH --output=slurm_logs/" + jobname + ".out\n")
         slurmfile.write("#SBATCH -N 1\n")
         slurmfile.write("#SBATCH -c 1\n")
-        slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
+        # slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=30000\n")
         slurmfile.write("#SBATCH --time=6-23:00:00\n")
         slurmfile.write(jobcommand)
@@ -327,9 +327,9 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-run_experiment(dry_run)
+# run_experiment(dry_run)
 # run_experimentload(dry_run)
-# sim(dry_run)
+sim(dry_run)
 # minf(dry_run)
 # sinf(dry_run)
 # oinf(dry_run)

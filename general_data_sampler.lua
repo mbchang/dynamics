@@ -56,6 +56,7 @@ function general_datasampler.create(dataset_name, args)
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.total_batches end,
                                 self.datasamplers))
+    self.total_batches = self.num_batches
     print(self.dataset_name..': num_batches: '..self.num_batches)
     self.current_sampled_id = nil
     self.current_dataset = 1
@@ -76,6 +77,7 @@ function general_datasampler:reset()
     self.num_batches = plseq.reduce(function(x,y) return x + y end,
                             plseq.map(function(x) return x.total_batches end,
                                 self.datasamplers))
+    self.total_batches = self.num_batches
     self.current_batch = 0
     self.current_sampled_id = nil
     self.current_dataset = 1

@@ -18,6 +18,7 @@ import json
 from matplotlib.ticker import FormatStrFormatter
 import itertools
 matplotlib.rcParams['axes.linewidth'] = 0.1
+import re
 
 
 def mkdir_p(path):
@@ -410,12 +411,68 @@ experiments_dict = {
         ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim128_fast_nlan_lr0.0003_modelbl_lambda100_seed1', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),
         ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim256_fast_nlan_lr0.0003_modelbl_lambda100_seed0', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
         ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim256_fast_nlan_lr0.0003_modelbl_lambda100_seed1', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
+    ],
+
+    'Tower Generalization': [
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_vlambda100_rs_fast_lr0.0003_modelind_seed0_lambda100', 'Independent'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_vlambda100_rs_fast_lr0.0003_modelind_seed1_lambda100', 'Independent'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_vlambda100_rs_fast_lr0.0003_modelind_seed2_lambda100', 'Independent'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim64_fast_nlan_lr3e-05_cuda_modelbl_seed0_lambda100', 'Bidirectional LSTM Layers 3 Dim 64 LR 3e-05'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim64_fast_nlan_lr3e-05_cuda_modelbl_seed1_lambda100', 'Bidirectional LSTM Layers 3 Dim 64 LR 3e-05'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim128_fast_nlan_lr3e-05_cuda_modelbl_seed0_lambda100', 'Bidirectional LSTM Layers 3 Dim 128 LR 3e-05'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim128_fast_nlan_lr3e-05_cuda_modelbl_seed1_lambda100', 'Bidirectional LSTM Layers 3 Dim 128 LR 3e-05'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim256_fast_nlan_lr3e-05_cuda_modelbl_seed0_lambda100', 'Bidirectional LSTM Layers 3 Dim 256 LR 3e-05'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim256_fast_nlan_lr3e-05_cuda_modelbl_seed1_lambda100', 'Bidirectional LSTM Layers 3 Dim 256 LR 3e-05'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim64_fast_nlan_lr0.0003_cuda_modelbl_seed0_lambda100', 'Bidirectional LSTM Layers 3 Dim 64 LR 0.0003'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim64_fast_nlan_lr0.0003_cuda_modelbl_seed1_lambda100', 'Bidirectional LSTM Layers 3 Dim 64 LR 0.0003'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim128_fast_nlan_lr0.0003_cuda_modelbl_seed0_lambda100', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim128_fast_nlan_lr0.0003_cuda_modelbl_seed1_lambda100', 'Bidirectional LSTM Layers 3 Dim 128 LR 0.0003'),  # re run
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim256_fast_nlan_lr0.0003_cuda_modelbl_seed1_lambda100', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers3_vlambda100_rs_rnn_dim256_fast_nlan_lr0.0003_cuda_modelbl_seed0_lambda100', 'Bidirectional LSTM Layers 3 Dim 256 LR 0.0003'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100', 'No Pairwise No Lookahead'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed1_lambda100', 'No Pairwise No Lookahead'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed2_lambda100', 'No Pairwise No Lookahead'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100', 'NPE No Lookahead'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed1_lambda100', 'NPE No Lookahead'),
+        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed2_lambda100', 'NPE No Lookahead'),
+
     ]
 
     
 }
 
 experiments = list(set(itertools.chain.from_iterable([[x[0] for x in y] for y in experiments_dict.values()])))
+
+
+experiments_to_visualize = [
+#     # 'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
+#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+#     # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
+    # 'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
+
+
+    # Balls Prediction
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_fast_seed0_lr0.0003_modelind',
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+
+    # # Balls Prediction Mass
+    # 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_rs_fast_seed0_lr0.0003_modelind',
+    # 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    # 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+
+    # # Balls Generalization 
+    # 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_fast_seed0_lr0.0003_modelind',
+    # 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    # 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+
+    # # Balls Generalization Mass
+    # 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_rs_fast_seed0_lr0.0003_modelind',
+    # 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    # 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+]
+
 
 # specify paths
 out_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs'
@@ -472,14 +529,11 @@ def copy(experiments):
     # here return the experiment folders where experiment.log had changed
     new_exp_log_lengths = parse_exp_log(experiments)
     experiments_to_plot = [e for e in experiments if e not in exp_log_lengths or exp_log_lengths[e] != new_exp_log_lengths[e]]
-    experiments_to_visualize = []  # TODO
 
     print 'experiments to plot'
     pprint.pprint(experiments_to_plot)
-    print 'experiments to visualize'
-    pprint.pprint(experiments_to_visualize)
 
-    return experiments_to_plot, []
+    return experiments_to_plot
 
 def plot(experiments):
     print('## PLOT ##')
@@ -563,7 +617,7 @@ def custom_plot(x, means, mins, maxs, **kwargs):
     #     ax.set_yscale('symlog', basey=10)
 
 
-def plot_experiment_error(exp_list, dataset, outfolder, outfile):
+def plot_experiment_error(exp_list, dataset, outfolder, outfile,two_seeds):
     ys = []
     xs = []
 
@@ -581,6 +635,16 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile):
         indep_runs = exp_groups[label]
 
         indep_run_data = [[float(x) for x in read_log_file(os.path.join(*[out_root,exp,'experiment.log']))[dataset]] for exp in indep_runs]
+
+        if two_seeds:
+            min_length = min(len(x) for x in indep_run_data)
+            min_length_index = -1
+            for i in range(len(indep_run_data)):
+                if len(indep_run_data[i]) == min_length:
+                    min_length_index = i
+                    break
+            if len(indep_run_data) > 2:
+                indep_run_data = [indep_run_data[i] for i in range(len(indep_run_data)) if i != min_length_index]
 
         # trim to the minimum length
         min_length = min(len(x) for x in indep_run_data)
@@ -603,14 +667,103 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile):
 
         custom_plot(x, means, mins, maxs, label=label, marker=marker.next())
         # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        if any('tower' in x for x in indep_runs):
+            ax.set_ylim(-8,-1)
+        else:
+            ax.set_ylim(-4, -1)
 
     leg = plt.legend(fontsize=8, frameon=False)
     plt.xlabel('Iterations (x 100000)')
-    plt.ylabel('Mean Squared Error Loss')  # TODO!
+    plt.ylabel('Mean Squared Error')  # TODO!
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
 
-def plot_inf_error(exp_list, dataset, outfolder, outfile):
+def extract_num_objs(exp_name):
+    train_half = exp_name[:exp_name.find('__')]
+    test_half = exp_name[exp_name.find('__'):exp_name.find('_layers')]
+
+    def find_num_obj_in_substring(substring):
+        num_objs = []
+        for m in re.finditer('_n', substring):
+            begin = m.end()
+            end = begin + substring[m.end():].find('_')
+            num_objs.append(substring[begin:end]) 
+        return ','.join(num_objs)
+
+    return {'train': find_num_obj_in_substring(train_half), 'val': find_num_obj_in_substring(train_half), 'test': find_num_obj_in_substring(test_half)}
+
+def plot_generalization_error(exp_list, outfolder, outfile,two_seeds):
+    ys = []
+    xs = []
+
+    # fig, ax = plt.subplots()
+    # ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+    # marker = itertools.cycle(('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd')) 
+
+    # first group all the same labels together. You will use these for error bars
+    if not exp_list: return
+    exp_groups = {}
+
+    for name, label in exp_list:
+        exp_groups.setdefault(label, []).append(name)
+
+    for label in exp_groups:
+
+        fig, ax = plt.subplots()
+        ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+        marker = itertools.cycle(('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd')) 
+
+        indep_runs = exp_groups[label]
+        num_obj_dict = extract_num_objs(indep_runs[0])
+
+        for dataset in ['train', 'val', 'test']:
+
+
+            indep_run_data = [[float(x) for x in read_log_file(os.path.join(*[out_root,exp,'experiment.log']))[dataset]] for exp in indep_runs]
+
+            if two_seeds:
+                min_length = min(len(x) for x in indep_run_data)
+                min_length_index = -1
+                for i in range(len(indep_run_data)):
+                    if len(indep_run_data[i]) == min_length:
+                        min_length_index = i
+                        break
+                indep_run_data = [indep_run_data[i] for i in range(len(indep_run_data)) if i != min_length_index]
+
+            # trim to the minimum length
+            min_length = min(len(x) for x in indep_run_data)
+            indep_run_data = np.array([x[:min_length] for x in indep_run_data])  # (num_seeds, min_length)
+
+            # convert it from ln scale
+            indep_run_data = np.exp(indep_run_data)
+
+            # convert it to log base 10 scale
+            indep_run_data = np.log10(indep_run_data)
+
+            print label, indep_run_data, min_length
+
+            # compute max min and average
+            maxs = np.max(indep_run_data,0)
+            mins = np.min(indep_run_data,0)
+            means = np.mean(indep_run_data,0)
+
+            x = range(min_length) # TODO
+
+            custom_plot(x, means, mins, maxs, label=dataset+': '+num_obj_dict[dataset]+' objects', marker=marker.next())
+            # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            if any('tower' in x for x in indep_runs):
+                ax.set_ylim(-8,-1)
+            else:
+                ax.set_ylim(-4, -1)
+
+
+        leg = plt.legend(fontsize=8, frameon=False)
+        plt.xlabel('Iterations (x 100000)')
+        plt.ylabel('Mean Squared Error')  # TODO!
+        plt.savefig(os.path.join(outfolder, label+'_'+outfile))
+        plt.close()
+
+def plot_inf_error(exp_list, dataset, outfolder, outfile,two_seeds):
     # print exp_list
 
     ys = []
@@ -643,6 +796,15 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile):
 
         indep_run_data = [[float(x) for x in read_inf_log_file(os.path.join(*[out_root,exp,dataset+'_infer_cf.log']))[dataset]] for exp in indep_runs]
 
+        if two_seeds:
+            min_length = min(len(x) for x in indep_run_data)
+            min_length_index = -1
+            for i in range(len(indep_run_data)):
+                if len(indep_run_data[i]) == min_length:
+                    min_length_index = i
+                    break
+            indep_run_data = [indep_run_data[i] for i in range(len(indep_run_data)) if i != min_length_index]
+
         # trim to the minimum length
         min_length = min(len(x) for x in indep_run_data)
         indep_run_data = np.array([x[:min_length] for x in indep_run_data])  # (num_seeds, min_length)
@@ -657,6 +819,7 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile):
         x = range(1,min_length+1) # TODO
 
         custom_plot(x, means, mins, maxs, label=label, marker=marker.next())
+        ax.set_ylim(0.3, 1)
         ax.set_xlim(1, 12)
 
     leg = plt.legend(fontsize=8, frameon=False, loc='upper left')
@@ -668,12 +831,13 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile):
 
 
 
-def plot_experiments(experiments_dict):
+def plot_experiments(experiments_dict, two_seeds):
     for e in experiments_dict:
         print 'Plotting', e
         # plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
-        plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png')
-        plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda.png')
+        plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
+        plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda.png',two_seeds)
+        plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
 
 # Call Demo_minimal here
@@ -684,16 +848,89 @@ def visualize(experiments):
             experiment_folder = os.path.join(out_root, experiment_folder)
             if any('predictions' in x for x in os.listdir(experiment_folder)):
                 prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
-                assert(len(prediction_folders)==1)
-                prediction_folder = prediction_folders[0]
-                command = 'node ' + js_root + '/Demo_minimal.js -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
-                print '#'*80
-                print(command)
-                os.system(command)
+                # print prediction_folders
+                # assert(len(prediction_folders)==1)
+                # prediction_folder = prediction_folders[0]
+                for prediction_folder in prediction_folders:
+                    for batch in [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x]:
+                        mkdir_p(os.path.join(*[experiment_folder,'visual',os.path.splitext(batch)[0]]))
+                        # print os.path.splitext(batch)[0]
+
+
+                    command = 'node ' + js_root + '/Demo_minimal.js -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
+                    # print '#'*80
+                    print(command)
+                    os.system(command)
+                    print '#'*80
 
                 # we could make the gif now.
         except KeyboardInterrupt:
             sys.exit(0)
+
+# Call Demo_minimal here
+def tower_stability(experiments):
+
+    print('## TOWER STABILITY ##')
+    for experiment_folder in experiments:
+        experiment_folder = os.path.join(out_root, experiment_folder)
+        if any('predictions' in x for x in os.listdir(experiment_folder)):
+            prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
+            assert(len(prediction_folders)==1)
+            prediction_folder = prediction_folders[0]  # WILL NOT BE TRUE WHEN YOU DO GENERALIZAION!
+            command = 'node ' + js_root + '/Demo_minimal.js -i -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
+            print(command)
+            os.system(command)
+            print '#'*80
+
+            # you need to get the subfolders now
+            visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
+            batch_folders = []
+            for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
+                batch_folder = os.path.join(visual_folder, batch_folder)
+                batch_folders.append(batch_folder)
+
+            # let's group the gt together and the pred together
+            gt_batch_folders = sorted([f for f in batch_folders if 'gt' in f])
+            pred_batch_folders = sorted([f for f in batch_folders if 'pred' in f])
+
+            stability_stats_all = {}
+
+            # get a list of batch_exs by looking at any stability_stats
+            example_stability_stats_file = os.path.join(*[experiment_folder,'visual', gt_batch_folders[0], 'stability_stats.json'])
+
+            # actually get a dictionary: batch_ex: {gt: gt_frac_stable, pred: pred_frac_stable}
+            for i in range(len(gt_batch_folders)):
+                gt_batch_folder_stability_stats_file = os.path.join(*[experiment_folder,'visual', gt_batch_folders[i], 'stability_stats.json'])
+                pred_batch_folder_stability_stats_file = os.path.join(*[experiment_folder,'visual', pred_batch_folders[i], 'stability_stats.json'])
+
+
+                gt_batch_folder_stability_stats_data = json.load(open(gt_batch_folder_stability_stats_file,'r'))
+                pred_batch_folder_stability_stats_data = json.load(open(pred_batch_folder_stability_stats_file,'r'))
+
+                gt_batch_exs = sorted([x[len('gt_'):] for x in gt_batch_folder_stability_stats_data.keys()])
+                pred_batch_exs = sorted([x[len('pred_'):] for x in pred_batch_folder_stability_stats_data.keys()])
+
+                assert(gt_batch_exs == pred_batch_exs)
+
+                for be in gt_batch_exs:
+                    print(gt_batch_folder_stability_stats_data)
+                    print(be)
+                    stability_stats_all[be] = {'gt': gt_batch_folder_stability_stats_data['gt_'+be]['frac_unstable'], 'pred': pred_batch_folder_stability_stats_data['pred_'+be]['frac_unstable']}
+
+            pprint.pprint(stability_stats_all)
+
+            # now get a list of the keys and get a numpy matrix of the frac_stable
+            # is it frac_stable or frad_unstable?
+
+            batch_exs = stability_stats_all.keys()
+            gt_frac_unstables = [stability_stats_all[be]['gt'] for be in batch_exs]
+            pred_frac_unstables = [stability_stats_all[be]['pred'] for be in batch_exs]
+
+            # this is all you need to plot
+            print batch_exs
+            print gt_frac_unstables
+            print pred_frac_unstables
+
 
 def img_id_json(filename):
     begin = filename.rfind('step')+len('step')
@@ -744,17 +981,31 @@ def create_gif_json_ex(images_root, file_names, gifname):
     filename = os.path.join(images_root, gifname)
     writeGif(filename, images, duration=0.001)
 
-def overlay_imgs(images_root, overlayedname):
-    assert False, "Did you incorporate the ex numbers?"
+def overlay_imgs(images_root, batch_name, subsample):
+    # assert False, "Did you incorporate the ex numbers?"
     file_names = sorted([fn for fn in os.listdir(images_root) if fn.endswith('.png') and 'overlay' not in fn], key=lambda x: img_id_json(x))
-    images = [Image.open(os.path.join(images_root,fn)) for fn in file_names] 
-    filename = os.path.join(images_root, overlayedname)
-    result = images[0]
-    # unit = 1/(2*len(images))
-    for i in range(1,len(images)):
-        next_img = images[i]
-        result = Image.blend(result, next_img, 0.5)
-    result.save(filename,"PNG")
+    # here I group by example number, since we already in a batch folder
+    exs = {}
+
+    for file_name in file_names:
+        # extract example number here
+        exs.setdefault(ex_json(file_name), []).append(file_name)
+
+    for ex in exs:
+        sorted_filenames_for_this_ex = sorted(exs[ex], key=lambda x: img_id_json(x))
+
+        images = [Image.open(os.path.join(images_root,fn)) for fn in sorted_filenames_for_this_ex] 
+        filename = os.path.join(images_root, batch_name+'_ex' + str(ex) + '_overlay.png')
+        result = images[0]
+        samples = range(subsample,len(images)/2, subsample)
+        for i in range(len(samples)):
+            next_img = images[samples[i]]  # for some reason next_img is not skipping every 5?
+            result = Image.blend(result, next_img, 0.35)
+            result = Image.blend(result, next_img, 0.1)
+        result = Image.blend(result, next_img, 0.1)
+
+        result.save(filename,"PNG")
+        print 'Saved overlay to',filename
 
 
 def animate(experiments, remove_png):
@@ -771,12 +1022,13 @@ def animate(experiments, remove_png):
             animated_experiments.append(experiment_folder)
             for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
                 print '-'*80
-                gifname = experiment_folder + '_' + batch_folder + '.gif'
-                overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
+                batch_name = experiment_folder + '_' + batch_folder
+                gifname = batch_name + '.gif'
+                # overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
                 batch_folder = os.path.join(visual_folder, batch_folder)
                 if any(f.endswith('.png') for f in os.listdir(batch_folder)):
                     create_gif_json(batch_folder, gifname)
-                    # overlay_imgs(batch_folder, overlayed_name)
+                    overlay_imgs(batch_folder, batch_name, 5)
 
                     if remove_png:
                         print 'Removing images from', batch_folder
@@ -806,8 +1058,9 @@ def animate_tower(experiments, remove_png):
             for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
 
                 print '-'*80
-                gifname = experiment_folder + '_' + batch_folder + '.gif'
-                overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
+                batch_name = experiment_folder + '_' + batch_folder
+                gifname = batch_name + '.gif'
+                # overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
                 batch_folder = os.path.join(visual_folder, batch_folder)
 
                 # get the stats
@@ -817,7 +1070,7 @@ def animate_tower(experiments, remove_png):
 
                 if any(f.endswith('.png') for f in os.listdir(batch_folder)):
                     create_gif_json(batch_folder, gifname, stability_stats)
-                    # overlay_imgs(batch_folder, overlayed_name)
+                    overlay_imgs(batch_folder, batch_name, 5)
 
                     if remove_png:
                         print 'Removing images from', batch_folder
@@ -832,22 +1085,14 @@ def animate_tower(experiments, remove_png):
     pprint.pprint(animated_experiments)
 
 
-experiments_to_plot, experiments_to_visualize = copy(experiments)  # returns a list of experiments that changed
+experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 
-# experiments_to_visualize = [
-#     # 'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
-#     # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda100_modelbffobj_lambda100_batch_norm',
-#     'tower_n4_t120_ex25000_rd__tower_n4_t120_ex25000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
-#     # 'tower_n4_t120_ex25000_rd_unstable__tower_n4_t120_ex25000_rd_unstable_layers3_nbrhd_nbrhdsize3.5_lr0.0003_val_eps1e-09_vlambda10_modelbffobj_lambda10_batch_norm',
-#     # 'balls_n6_t60_ex50000_rd__balls_n6_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj',
-# ]
-
+# experiments_to_plot = experiments
 plot(experiments_to_plot)
-plot_experiments(experiments_dict)
-
-# TODO: visualize only if epxerimtns_to_visualize says so.
+plot_experiments(experiments_dict, True)
 
 # visualize(experiments_to_visualize)
+# tower_stability(experiments_to_visualize)
 # animate(experiments_to_visualize, False)
 # animate_tower(experiments_to_visualize, True)
 

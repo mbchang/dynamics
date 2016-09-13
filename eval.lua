@@ -240,7 +240,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     --------------------------------------------------- -------------------------
     local avg_loss = 0
     local count = 0
-    local losses_through_time_all_batches = torch.zeros(dataloader.num_batches, numsteps)
+    local losses_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
 
     local experiment_name = paths.basename(dataloader.dataset_folder)
     local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
@@ -254,11 +254,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
-    for i = 1, dataloader.num_batches do
+    for i = 1, dataloader.total_batches do
         local loss_within_batch = 0
         local counter_within_batch = 0
 
-        if mp.server == 'pc' then xlua.progress(i, dataloader.num_batches) end
+        if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
 
         -- local batch, current_dataset = dataloader:sample_sequential_batch(false)
         local batch = dataloader:sample_sequential_batch()
@@ -274,9 +274,12 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
-        -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-        local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
-        local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)
+        -- -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
+        -- local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
+        -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)
+
+        local past = torch.cat({context_orig:clone(), unsqueeze(this_orig:clone(),2)},2)
+        local future = torch.cat({context_future_orig:clone(), unsqueeze(y_orig:clone(),2)},2)
 
         assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
@@ -295,7 +298,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- the past configuration of everybody
             -- total_particles = total_particles+num_particles
 
-            for j = 1, num_particles do
+            local loss_per_step = 0
+
+            -- for j = 1, num_particles do
+            for _,j in pairs{4,2,1,3} do--1, num_particles do
                 -- construct batch
                 local this = torch.squeeze(past[{{},{j}}])
 
@@ -321,6 +327,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 loss_within_batch = loss_within_batch + loss
                 counter_within_batch = counter_within_batch + 1
+
+                -- loss_per_step = loss_per_step + loss
+                -- if t==1 then print('loss',loss) end
 
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
@@ -368,6 +377,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- gtdivergenceLogger:style{['Log MSE Error'] = '~'}
 
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles  -- do I need to divide by number of particles now or later
+
+            -- if t==1 then
+            --     print(losses_through_time_all_batches[{{i},{t}}]:sum())
+            -- end
+            -- assert(false)
 
         end
         --- to be honest I don't think we need to break into past and context
@@ -637,27 +651,35 @@ end
 
 local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
-    local num_batches = num_batches or dataloader.num_batches
+    local num_batches = num_batches or dataloader.total_batches
 
     num_batches = math.min(5000, num_batches)
     print('Testing '..num_batches..' batches')
     local total_avg_vel = 0
     local total_avg_ang_vel = 0
+    local total_avg_loss = 0
 
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-        local __, __, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
+        local loss, pred, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
         total_avg_vel = total_avg_vel+ avg_batch_vel
         total_avg_ang_vel = total_avg_ang_vel + avg_batch_ang_vel
+        total_avg_loss = total_avg_loss + loss
+        print(loss)
     end
     total_avg_vel = total_avg_vel/num_batches
     total_avg_ang_vel = total_avg_ang_vel/num_batches
+    total_avg_loss = total_avg_loss/num_batches
 
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
-    return total_avg_vel, total_avg_ang_vel
+    return total_avg_loss, total_avg_vel, total_avg_ang_vel
 end
+
+-- local function relative_error(batch, pred)
+
+-- end
 
 
 function test_vel_angvel_all()
@@ -674,7 +696,7 @@ function test_vel_angvel_all()
 
         for i,testdataset_loader in pairs(test_loader.datasamplers) do
             print('Evaluating '..test_loader.dataset_folders[i])
-            local avg_vel_loss, avg_ang_vel_loss = test_vel_angvel(testdataset_loader, checkpoint.model.theta.params, false)
+            local avg_loss, avg_vel_loss, avg_ang_vel_loss = test_vel_angvel(testdataset_loader, checkpoint.model.theta.params, false)
             print(avg_vel_loss, avg_ang_vel_loss)
             checkpoint_eval_data[{{i},{}}] = torch.Tensor{avg_vel_loss, avg_ang_vel_loss}
         end
@@ -706,6 +728,18 @@ function test_vel_angvel_all()
 end
 
 
+function predict_test_first_timestep_all()
+    local checkpoint, snapshotfile = load_most_recent_checkpoint()
+    inittest(true, snapshotfile, {sim=false, subdivide=false})  -- assuming the mp.savedir doesn't change
+    print('Network parameters')
+    print(mp)
+
+    for i,testdataset_loader in pairs(test_loader.datasamplers) do
+        print('Evaluating '..test_loader.dataset_folders[i])
+        local avg_loss, avg_vel_loss, avg_ang_vel_loss = test_vel_angvel(testdataset_loader, checkpoint.model.theta.params, true)
+        print('avg_loss', avg_loss, 'avg_vel_loss', avg_vel_loss, 'avg_ang_vel_loss', avg_ang_vel_loss)
+    end
+end
 
 
 function mass_inference()
@@ -783,6 +817,8 @@ elseif mp.mode == 'pred' then
     predict()
 elseif mp.mode == 'tva' then
     test_vel_angvel_all()
+elseif mp.mode == 'tf' then
+    predict_test_first_timestep_all()
 else
     error('unknown mode')
 end

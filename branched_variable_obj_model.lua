@@ -301,6 +301,7 @@ function model:fp(params_, batch, sim)
     -- else
     --     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
     -- end
+    -- print(loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement())
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return loss, prediction, loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
