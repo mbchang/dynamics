@@ -304,14 +304,15 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- there is no concept of ground truth here?
     -- or you can make the ground truth go as far as there are timesteps available
     --------------------------------------------------- -------------------------
-    local avg_loss = 0
-    local avg_ang_error = 0
-    local avg_mag_error = 0
+    -- local avg_loss = 0
+    -- local avg_ang_error = 0
+    -- local avg_mag_error = 0
     local count = 0
     local losses_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
     local mag_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
     local ang_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
-
+    local vel_loss_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
+    local ang_vel_loss_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
 
     local experiment_name = paths.basename(dataloader.dataset_folder)
     local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
@@ -326,10 +327,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
     for i = 1, dataloader.total_batches do
-        local loss_within_batch = 0
-        local mag_error_within_batch = 0
-        local ang_error_within_batch = 0
-        local counter_within_batch = 0
+    -- for i = 1, 3 do
+        -- local loss_within_batch = 0
+        -- local mag_error_within_batch = 0
+        -- local ang_error_within_batch = 0
+        -- local counter_within_batch = 0
 
         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
 
@@ -372,21 +374,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             local loss_within_batch = 0
             local mag_error_within_batch = 0
             local ang_error_within_batch = 0
+            local vel_loss_within_batch = 0
+            local ang_vel_loss_within_batch = 0
             local counter_within_batch = 0
 
             for j = 1, num_particles do
                 -- construct batch
                 local this = torch.squeeze(past[{{},{j}}])
-
-                local context
-                if j == 1 then
-                    context = past[{{},{j+1,-1}}]
-                elseif j == num_particles then
-                    context = past[{{},{1,-2}}]
-                else
-                    context = torch.cat({past[{{},{1,j-1}}],
-                                                        past[{{},{j+1,-1}}]},2)
-                end
 
                 local y = future[{{},{j},{t}}]
                 y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed
@@ -395,19 +389,41 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     y = data_process.relative_pair(this, y, false)  -- absolute to relative
                 end
 
-                local batch = {this, context, y, _, mask}
+                local context, context_future
+                if j == 1 then
+                    context = past[{{},{j+1,-1}}]
+                    context_future = future[{{},{j+1,-1},{t}}]
+                elseif j == num_particles then
+                    context = past[{{},{1,-2}}]
+                    context_future = future[{{},{1,-2},{t}}]
+                else
+                    context = torch.cat({past[{{},{1,j-1}}], past[{{},{j+1,-1}}]},2)
+                    context_future = torch.cat({future[{{},{1,j-1},{t}}], future[{{},{j+1,-1},{t}}]},2)
+                end
+
+                -- local y = future[{{},{j},{t}}]
+                -- y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed
+
+                -- if mp.relative then
+                --     y = data_process.relative_pair(this, y, false)  -- absolute to relative
+                -- end
+
+                local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
                 -- predict
-                local loss, pred = model:fp(params_,batch,true)
+                local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
+                -- local loss, pred = model:fp(params_,batch,true)
                 local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)
-                avg_loss = avg_loss + loss
-                avg_ang_error = avg_ang_error + angle_error
-                avg_mag_error = avg_mag_error + relative_magnitude_error
+                -- avg_loss = avg_loss + loss
+                -- avg_ang_error = avg_ang_error + angle_error
+                -- avg_mag_error = avg_mag_error + relative_magnitude_error
                 count = count + 1
 
                 loss_within_batch = loss_within_batch + loss
                 ang_error_within_batch = ang_error_within_batch + angle_error
                 mag_error_within_batch = mag_error_within_batch + relative_magnitude_error
+                vel_loss_within_batch = vel_loss_within_batch + vel_loss
+                ang_vel_loss_within_batch = ang_vel_loss_within_batch + ang_vel_loss
 
                 counter_within_batch = counter_within_batch + 1
 
@@ -452,10 +468,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- print(ang_error_within_batch/num_particles)
             -- print(mag_error_within_batch/num_particles)
 
-            losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles  -- do I need to divide by number of particles now or later
-            ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/num_particles  -- do I need to divide by number of particles now or later
-            mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/num_particles  -- do I need to divide by number of particles now or later
-
+            losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles
+            ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/num_particles
+            mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/num_particles
+            vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch/num_particles
+            ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch/num_particles
         end
         --- to be honest I don't think we need to break into past and context
         -- future, but actually that might be good for coloriing past and future, but
@@ -492,27 +509,36 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local averaged_losses_through_time_all_batches = torch.totable(torch.squeeze(losses_through_time_all_batches:mean(1)))
     local averaged_ang_error_through_time_all_batches = torch.totable(torch.squeeze(ang_error_through_time_all_batches:mean(1)))
     local averaged_mag_error_through_time_all_batches = torch.totable(torch.squeeze(mag_error_through_time_all_batches:mean(1)))
-
+    local averaged_vel_loss_through_time_all_batches = torch.totable(torch.squeeze(vel_loss_through_time_all_batches:mean(1)))
+    local averaged_ang_vel_loss_through_time_all_batches = torch.totable(torch.squeeze(ang_vel_loss_through_time_all_batches:mean(1)))
 
     print(averaged_losses_through_time_all_batches)
     print(averaged_ang_error_through_time_all_batches)
     print(averaged_mag_error_through_time_all_batches)
+    print(averaged_vel_loss_through_time_all_batches)
+    print(averaged_ang_vel_loss_through_time_all_batches)
 
     for tt=1,#averaged_losses_through_time_all_batches do
         print(averaged_losses_through_time_all_batches[tt])
         gtdivergenceLogger:add{['Timesteps'] = tt, 
                                 ['MSE Error'] = averaged_losses_through_time_all_batches[tt],
                                 ['Cosine Difference'] = averaged_ang_error_through_time_all_batches[tt],
-                                ['Magnitude Difference'] = averaged_mag_error_through_time_all_batches[tt],}
+                                ['Magnitude Difference'] = averaged_mag_error_through_time_all_batches[tt],
+                                ['Velocity Error'] = averaged_vel_loss_through_time_all_batches[tt],
+                                ['Angular Velocity Error'] = averaged_ang_vel_loss_through_time_all_batches[tt]
+                            }
         gtdivergenceLogger:style{['Timesteps'] = '~',
                                 ['MSE Error'] = '~',
                                 ['Cosine Difference'] = '~',
-                                ['Magnitude Difference'] = '~',}
+                                ['Magnitude Difference'] = '~',
+                                ['Velocity Error'] = '~',
+                                ['Angular Velocity Error'] = '~',
+                            }
     end
 
-    avg_loss = avg_loss/count
-    avg_mag_error = avg_mag_error/count
-    avg_ang_error = avg_ang_error/count
+    -- avg_loss = avg_loss/count
+    -- avg_mag_error = avg_mag_error/count
+    -- avg_ang_error = avg_ang_error/count
     -- print('Mean Squared Error', avg_loss, 'Average Relative Magnitude Error', avg_mag_error, 'Average Cosine Differnce', avg_ang_error)
     collectgarbage()
 end
@@ -668,6 +694,9 @@ end
 
 function predict_simulate_all()
     local checkpoint, snapshotfile = load_most_recent_checkpoint()
+
+    -- local checkpoint, snapshotfile = load_most_recent_checkpoint('step6')
+
     inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
     print('Network parameters')
     print(mp)
@@ -681,6 +710,17 @@ end
 function load_most_recent_checkpoint()
     local snapshot = getLastSnapshot(mp.name)
     return load_checkpoint(snapshot)
+end
+
+-- 'step9' for mixed
+function load_specified_checkpoint(tag)
+    local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
+    for _,c in pairs(checkpoints) do
+        if not(string.find(c, tag) == nil) then
+            return load_checkpoint(c)
+        end
+    end
+    assert(false, 'You should not reah this point')
 end
 
 function get_all_checkpoints(logs_folder, experiment_name)
@@ -777,6 +817,9 @@ end
 
 function test_vel_angvel_all()
     local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
+
+    -- print(checkpoints)
+    -- assert(false)
 
     local eval_data = {}
 
