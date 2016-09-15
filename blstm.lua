@@ -106,6 +106,12 @@ end
 
 function model:unpack_batch(batch, sim)
     local this, context, this_future, context_future, mask = unpack(batch)
+
+    -- print(torch.squeeze(this_future))
+    -- print(context_future)
+    -- need to do relative pair
+    context_future[{{},{},{},{1,6}}] = context_future[{{},{},{},{1,6}}] - context[{{},{},{-1},{1,6}}]:expandAs(context_future[{{},{},{},{1,6}}])
+
     local past = torch.cat({unsqueeze(this:clone(),2), context},2)
     local future = torch.cat({unsqueeze(this_future:clone(),2), context_future},2)
 
@@ -116,9 +122,9 @@ function model:unpack_batch(batch, sim)
     -- now break into different trajectories
     local shuffind
     if sim then
-        shuffind = torch.randperm(num_obj)
-    else
         shuffind = torch.range(1,num_obj)
+    else
+        shuffind = torch.randperm(num_obj)
     end
 
     local all_past = {}
@@ -145,6 +151,9 @@ function model:fp(params_, batch, sim)
 
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
+
+    -- print(all_future[1])
+    -- assert(false)
 
     local loss_vels = 0
     local loss_ang_vels = 0

@@ -116,6 +116,10 @@ end
 
 function model:unpack_batch(batch, sim)
     local this, context, this_future, context_future, mask = unpack(batch)
+
+    -- need to do relative pair
+    context_future[{{},{},{},{1,6}}] = context_future[{{},{},{},{1,6}}] - context[{{},{},{-1},{1,6}}]:expandAs(context_future[{{},{},{},{1,6}}])
+
     local past = torch.cat({unsqueeze(this:clone(),2), context},2)
     local future = torch.cat({unsqueeze(this_future:clone(),2), context_future},2)
 
