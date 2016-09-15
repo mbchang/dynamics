@@ -519,6 +519,16 @@ function model:update_angle(this, pred)
         ang[{{},{i+1},{}}] = ang[{{},{i},{}}] + ang_vel[{{},{i},{}}]  -- last dim=2
     end
 
+
+    -- if it is greater than pi, then just wrap it to [-pi, pi] again
+    -- if it is less than -pi, then just wrap it to [-pi, pi] again
+
+    local gtpi_mask = ang:gt(math.pi)
+    local ltnpi_mask = ang:le(-math.pi)
+
+    ang = torch.add(ang, -2*math.pi, gtpi_mask:float())
+    ang = torch.add(ang, 2*math.pi, ltnpi_mask:float())
+
     -- normalize again
     ang = ang/anc
     assert(ang[{{},{1},{}}]:size(1) == pred:size(1))
