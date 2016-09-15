@@ -45,7 +45,7 @@ cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
 cmd:option('-ns', 3, 'number of test batches')
-cmd:option('-steps', 58, 'steps to simulate')
+cmd:option('-steps', 118, 'steps to simulate')
 cmd:text()
 
 -- parse input params
@@ -107,6 +107,9 @@ function inittest(preload, model_path, opt)
     else
         config_args.maxwinsize = config_args.maxwinsize
     end
+    -- print(mp.savedir)
+    -- print(config_args.maxwinsize)
+    -- assert(false)
 
 
 

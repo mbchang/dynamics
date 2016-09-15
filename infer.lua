@@ -561,7 +561,7 @@ function count_correct(batch, ground_truth, best_hypotheses, num_correct, count,
         if collision_filter_indices:nElement() > 0 then
             collision_filter_indices = torch.squeeze(collision_filter_indices,2)
             local ground_truth_filtered = ground_truth:clone():index(1,collision_filter_indices)
-            local best_hypotheses_filtered = best_hypotheses:clone():index(1,collision_filter_indices)
+            local best_hypotheses_filtered = best_hypotheses:clone():index(1,collision_filter_indices)  
             local num_pass_through = collision_filter_indices:size(1)
             local num_equal = ground_truth_filtered:eq(best_hypotheses_filtered):sum(2):eq(hypothesis_length):sum()  -- (num_pass_through, hypothesis_length)
             num_correct = num_correct + num_equal
@@ -602,39 +602,39 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
     return best_hypotheses
 end
 
-function eval_straightaway(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
-    local num_correct = 0
-    local count = 0
-    for i = 1, dataloader.total_batches do
-        if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
-        local batch = dataloader:sample_sequential_batch(false)
-        local test_losses, prediction = model:fp_batch(params_, batch)
+-- function eval_straightaway(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
+--     local num_correct = 0
+--     local count = 0
+--     for i = 1, dataloader.total_batches do
+--         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
+--         local batch = dataloader:sample_sequential_batch(false)
+--         local test_losses, prediction = model:fp_batch(params_, batch)
 
-        -- now do a context filter. I want the examples where the focus will NOT hit a context.
-        -- let's take a look at context_collision_filter
+--         -- now do a context filter. I want the examples where the focus will NOT hit a context.
+--         -- let's take a look at context_collision_filter
 
-        -- also filter out walls
+--         -- also filter out walls
 
-        -- 
+--         -- 
 
-        local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
-        -- now that you have best_hypothesis, compare best_hypotheses with truth
-        -- need to construct true hypotheses based on this_past, hypotheses as parameters
-        local this_past = batch[1]:clone()
-        local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
-        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold)
+--         local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
+--         -- now that you have best_hypothesis, compare best_hypotheses with truth
+--         -- need to construct true hypotheses based on this_past, hypotheses as parameters
+--         local this_past = batch[1]:clone()
+--         local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
+--         num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold)
 
-        collectgarbage()
-    end
-    local accuracy
-    if count == 0 then 
-        accuracy = 0
-    else 
-        accuracy =num_correct/count
-    end
-    print(count..' collisions out of '..dataloader.total_batches*mp.batch_size..' examples')
-    return accuracy
-end
+--         collectgarbage()
+--     end
+--     local accuracy
+--     if count == 0 then 
+--         accuracy = 0
+--     else 
+--         accuracy =num_correct/count
+--     end
+--     print(count..' collisions out of '..dataloader.total_batches*mp.batch_size..' examples')
+--     return accuracy
+-- end
 
 function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
@@ -662,31 +662,137 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, 
     return accuracy, accuracy_by_speed, accuracy_by_mass
 end
 
-function max_likelihood_analysis(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
+function context_property_analysis(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
     local count = 0
+
+    -- here you will keep a bunch of datastructures for all the properties. 
+    -- you will add to these as you encounter context objects with those properties
+
+    local sizes = {}
+    sizes[0.5] = {}
+    sizes[1] = {}
+    sizes[2] = {}
+
+    local oids = {}
+    oids[1] = {}
+    oids[2] = {} -- note that we are not inferring block!
+
+
     for i = 1, dataloader.total_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
         local batch = dataloader:sample_sequential_batch(false)
+        local num_context = batch[2]:size(2)
 
-        local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
-        -- now that you have best_hypothesis, compare best_hypotheses with truth
-        -- need to construct true hypotheses based on this_past, hypotheses as parameters
-        local this_past = batch[1]:clone()
-        local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
-        num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold)
+        -- I should do obstacle mask here, and make obstacle mask an argument into context collision filter.
+        -- because right now I am assuming that my context object is an obstacle. But actually I can't assume that
+        -- since I might be doing inference on object id.
 
-        collectgarbage()
+        local valid_contexts = context_collision_filter(batch)
+
+        -- note that here at most one element in valid_contexts per row would be lit up.
+        -- so each example in the batch has only one context.
+        -- for example: [0, 0, 2, 0, 1] means that examples 1,2,4 have no valid context
+        -- and context_id 2 is valid in example 3 and context_id 5 is valid in example 5
+
+        -- good up to here
+
+        for context_id = 1, num_context do
+            -- here let's get a onehot mask to see if the context id is in valid_contexts
+            local context_mask = valid_contexts:eq(context_id)
+            -- to speed up computation
+            if context_mask:sum() > 0 then  -- it's okay to use sum because it is a ByteTensor
+
+                -- here get the obstacle mask
+                local obstacle_index, obstacle_mask
+                -- if size inference then obstacle mask
+                if alleq({si_indices, config_args.si.os}) then
+                    obstacle_index = config_args.si.oid[1]+1
+                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
+                    -- that is the problem. I didn't make a copy. 
+                    obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                    context_mask:cmul(obstacle_mask)
+                end
+
+                local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
+                local context_and_wall_mask = torch.cmul(context_mask, collision_filter_mask)
+
+                if context_and_wall_mask:sum() > 0 then
+
+                    -- TODO: 
+                    local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch)
+
+                    -- apply context_mask to losses. all are tensors of size (bsize)
+                    losses:maskedSelect(context_mask)
+                    vel_losses:maskedSelect(context_mask)
+                    ang_vel_losses:maskedSelect(context_mask)
+
+                    losses = torch.squeeze(losses)
+                    vel_losses = torch.squeeze(vel_losses)
+                    ang_vel_losses = torch.squeeze(ang_vel_losses)
+
+                    assert(losses:dim()==1 and losses:size(1)==mp.batch_size)
+                    assert(vel_losses:dim()==1 and vel_losses:size(1)==mp.batch_size)
+                    assert(ang_vel_losses:dim()==1 and ang_vel_losses:size(1)==mp.batch_size)
+
+                    -- we know that there is only context, and that particular context has context id
+                    -- maskedSelect does things in order
+                    local specific_context = extract_context_id_from_batch(batch, context_mask) -- (num_valid_contexts, num_past, obj_dim)
+
+                    local specific_sizes = extract_field(specific_context, config_args.si.os) -- num_valid_contexts
+
+                    local specific_oids = extract_field(specific_context, config_args.si.oid) -- num_valid_contexts
+
+                    assert(#specific_sizes == #specific_oids)
+                    -- populate tables
+                    for f=1,#specific_sizes do
+                        -- populate size
+                        sizes[specific_sizes[f]] = losses[f]
+
+                        -- populate oid
+                        oids[specific_sizes[f]] = losses[f]
+                    end
+
+
+
+                -- fp
+
+                -- apply mask
+
+                -- compute loss; do I want to do angle?
+
+                -- any other mask I want to do?
+
+                -- need to apply wall collision filter
+
+
+                    local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, context_id)
+                    -- now that you have best_hypothesis, compare best_hypotheses with truth
+                    -- need to construct true hypotheses based on this_past, hypotheses as parameters
+                    local context_past = batch[2]:clone()
+                    local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
+
+                    -- ground truth: (bsize, hypothesis_length)
+                    num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold, context_mask)
+                    collectgarbage()
+                end
+            end
+        end 
+
+        -- good 
+
     end
+
     local accuracy
     if count == 0 then 
         accuracy = 0
     else 
         accuracy =num_correct/count
     end
-    print(count..' collisions out of '..dataloader.total_batches*mp.batch_size..' examples')
-    return accuracy, accuracy_by_speed, accuracy_by_mass
+    print(count..' collisions with context out of '..dataloader.total_batches*mp.batch_size..' examples')
+    return accuracy
 end
+
 
 function max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
@@ -701,7 +807,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         -- because right now I am assuming that my context object is an obstacle. But actually I can't assume that
         -- since I might be doing inference on object id.
 
-        local valid_contexts = context_collision_filter(batch)
+        local valid_contexts = context_collision_filter(batch)  -- a (bsize, 1) where elements are the context id
 
         -- note that here at most one element in valid_contexts per row would be lit up.
         -- so each example in the batch has only one context.
