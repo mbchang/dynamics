@@ -20,9 +20,6 @@ local data_process = require 'data_process'
 local datasampler = {}
 datasampler.__index = datasampler
 
--- here we want a method for splitting into past and future
-
--- when you create the data sampler, you should already initialize the table ()
 
 -- function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
 function datasampler.create(dataset_name, args)
@@ -46,7 +43,6 @@ function datasampler.create(dataset_name, args)
         self.maxwinsize = config_args.maxwinsize
     end
 
-    -- self.maxwinsize=args.maxwinsize
     self.winsize=args.winsize
     self.num_past=args.num_past
     self.num_future=args.num_future
@@ -185,7 +181,6 @@ function datasampler:load_subbatch_id(id)
     self.current_sampled_id = id  -- note! I don't even need to change this! This now indexes the subbatches!
     local batch_id = math.floor((self.current_sampled_id-1) / self.num_subbatches_per_batch) + 1
     local offset = (self.current_sampled_id-1) - (self.num_subbatches_per_batch*(batch_id-1)) + 1
-    -- print('batch_id', batch_id, 'offset', offset, 'csi,', self.current_sampled_id, 'name', self.dataset_folder, 'set', self.dataset_name)
 
     local batchname = self.savefolder..'/'..'batch'..batch_id
     local nextbatch = torch.load(batchname)   -- focus: (bsize, maxwinsize, obj_dim)
@@ -230,7 +225,6 @@ function datasampler:get_hardest_batch()
 end
 
 function datasampler:update_batch_weight(weight)
-    -- print('self.current_sampled_id', self.current_sampled_id)
     self.priority_sampler:update_batch_weight(self.current_sampled_id, weight)
 end
 

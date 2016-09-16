@@ -43,11 +43,9 @@ cmd:option('-nbrhdsize', 3.5, 'number of radii out to look. nbhrdsize of 2 is wh
 cmd:option('-layers', 3, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
-cmd:option('-accel', false, 'use acceleration data')
 cmd:option('-batch_norm', false, 'batch norm')
 cmd:option('-num_past', 2, 'number of past timesteps')
 cmd:option('-nlan', false, 'no look ahead for neighbors')
-
 
 -- training options
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
@@ -101,7 +99,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 5
     mp.rnn_dim = 64
-    mp.model = 'ind'
+    mp.model = 'bl'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -123,7 +121,6 @@ else
     mp.num_future = 1
 	mp.seq_length = 8   -- for the concatenate model
 	mp.num_threads = 4
-	-- mp.cuda = false
 end
 
 local M
@@ -138,8 +135,6 @@ elseif mp.model == 'ind' then
     M = require 'independent'
 elseif mp.model == 'np' then 
     M = require 'nop'
-elseif mp.model == 'ed' then 
-    M = require 'edlstm'
 elseif mp.model == 'crnn' then 
     M = require 'clique_rnn'
 elseif mp.model == 'lstmcat' then
@@ -231,7 +226,6 @@ function inittrain(preload, model_path, iters)
         train_log_file = 'train.log'
     end
 
-
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', train_log_file))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
     if mp.im then
@@ -260,9 +254,10 @@ function initsavebatches()
     local wascudabefore = mp.cuda
     mp.cuda = false
     config_args.batch_size = mp.batch_size
+
+    -- save training set
     for _, dataset_folder in pairs(mp.dataset_folders) do
         local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
-        -- TODODO
         if not paths.dirp(data_folder) then
             local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
             print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
@@ -271,17 +266,11 @@ function initsavebatches()
         else
             print('Batches for '..dataset_folder..' already made')
         end
-        -------------------------
-            -- local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
-            -- print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
-            -- local dp = data_process.create(jsonfolder, data_folder, config_args)
-            -- dp:create_datasets_batches()
-        -------------------------
     end
 
+    -- save testing set
     for _, dataset_folder in pairs(mp.test_dataset_folders) do
         local data_folder = mp.data_root..'/'..dataset_folder..'/batches'
-        -- TODODO
         if not paths.dirp(data_folder) then
             local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
             print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
@@ -290,43 +279,26 @@ function initsavebatches()
         else
             print('Batches for '..dataset_folder..' already made')
         end
-        -------------------------
-            -- local jsonfolder = mp.data_root..'/'..dataset_folder..'/jsons'
-            -- print('Saving batches of size '..mp.batch_size..' from '..jsonfolder..'into '..data_folder)
-            -- local dp = data_process.create(jsonfolder, data_folder, config_args)
-            -- dp:create_datasets_batches()
-        -------------------------
     end
 
     if wascudabefore then mp.cuda = true end
 end
 
 -- closure: returns loss, grad_params
-function feval_train(params_)  -- params_ should be first argument
-
-    -- local batch = train_loader:sample_priority_batch(mp.sharpen)
+function feval_train(params_)
     local batch
     if mp.rs then
         batch = train_loader:sample_random_batch(mp.sharpen)
     else
         batch = train_loader:sample_priority_batch(mp.sharpen)
     end
-    -- {
-    --   1 : FloatTensor - size: 5x2x11
-    --   2 : FloatTensor - size: 5x4x2x11
-    --   3 : FloatTensor - size: 5x1x11
-    --   4 : FloatTensor - size: 5x4x1x11
-    --   5 : FloatTensor - size: 10
-    -- }
 
     local loss, prediction = model:fp(params_, batch)
     local grad = model:bp(batch,prediction)
 
-    -- L2 stuff
-
     if mp.L2 > 0 then
         -- Loss:
-        loss = loss + mp.L2 * model.theta.params:norm(2)^2/2
+        loss = loss + mp.L2 * model.theta.params:norm(2)^2/2 
         -- Gradients:
         model.theta.grad_params:add(model.theta.params:clone():mul(mp.L2) )
     end
@@ -343,7 +315,7 @@ function train(start_iter, epoch_num)
     print('Start iter:', start_iter)
     print('Start epoch num:', epoch_num)
 
-    -- THIS IS ACTUALLY AT ITERATION 0
+    -- Get the loss before training
     if start_iter == 1 then
         v_train_loss, v_val_loss, v_test_loss = validate()
         train_losses[#train_losses+1] = v_train_loss
@@ -388,13 +360,7 @@ function train(start_iter, epoch_num)
             if (t-start_iter+1) % mp.save_every == 0 then
                 local model_file = string.format('%s/epoch%d_step%d_%.7f.t7',
                                             mp.savedir, epoch_num, t, v_val_loss)
-                -- local model_file = string.format('%s/epoch%.2f_%.4f.t7',
-                --                             mp.savedir, epoch_num, v_val_loss)
                 print('saving checkpoint to ' .. model_file)
-                -- model.network:clearState()
-                -- model.network:float()
-                -- model:float()
-                -- model:clearState()
 
                 local checkpoint = {}
                 checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
@@ -405,10 +371,6 @@ function train(start_iter, epoch_num)
                 checkpoint.iters = t
                 torch.save(model_file, checkpoint)
                 print('Saved model')
-                -- if mp.cuda then 
-                --     -- model.network:cuda() 
-                --     model:cuda()
-                -- end
             end
 
             -- here test for val_loss convergence
@@ -438,7 +400,6 @@ function train(start_iter, epoch_num)
                     break
                 end
             end
-            -- assert(false)
         end
 
         -- lr decay
@@ -449,7 +410,6 @@ function train(start_iter, epoch_num)
             print('Learning rate is now '..optim_state.learningRate)
         end
 
-        -- if (t-start_iter+1) % train_loader.num_batches == 0 then
         if t % train_loader.num_batches == 0 then
             epoch_num = t / train_loader.num_batches + 1
         end
@@ -465,7 +425,6 @@ function test(dataloader, params_, saveoutput, num_batches)
     local num_batches = num_batches or dataloader.num_batches
 
     if mp.fast then num_batches = math.min(5000, num_batches) end
-    -- num_batches = 10
     print('Testing '..num_batches..' batches')
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
@@ -483,11 +442,6 @@ function validate()
     local train_loss = test(train_test_loader, model.theta.params, false, math.min(5000, val_loader.num_batches))
     local val_loss = test(val_loader, model.theta.params, false, val_loader.num_batches)
     local test_loss = test(test_loader, model.theta.params, false, test_loader.num_batches)
-
-    -- local train_loss = 0
-    -- local val_loss = 0
-    -- local test_loss = 0
-    -- assert(false, "DID YOU SHUFFLE THE LSTM INPUT")
 
     local log_string = 'train loss\t'..train_loss..
                       '\tval loss\t'..val_loss..
@@ -530,26 +484,6 @@ function run_experiment()
 end
 
 
-function predict_simulate_all()
-    -- print(mp.name)
-
-    local snapshot = getLastSnapshot(mp.name)
-    local snapshotfile = mp.savedir ..'/'..snapshot
-    print(snapshotfile)
-    local checkpoint = torch.load(snapshotfile)
-
-    local saved_args = torch.load(mp.savedir..'/args.t7')
-    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
-    config_args = saved_args.config_args
-
-    model_deps(mp.model)
-    inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
-
-    -- print(model)
-    -- assert(false)
-    simulate_all(test_loader, checkpoint.model.theta.params, true, mp.steps)
-end
-
 -- will have to change this soon
 function read_log_file_3vals(logfile)
     local data1 = {}
@@ -573,9 +507,6 @@ function read_log_file_3vals(logfile)
         local min_val_loss, min_val_loss_idx = torch.min(valwin,1)
         local val_avg_delta = (valwin[{{2,-1}}] - valwin[{{1,-2}}]):mean()
         local abs_delta = (max_val_loss-min_val_loss):sum()
-        -- print(w, 'max', max_val_loss:sum(), 'maxid', max_val_loss_idx:sum(),
-        --       'min', min_val_loss:sum(), 'minid', min_val_loss_idx:sum(),
-        --       'avg_delta', val_avg_delta, 'abs_delta', abs_delta)
     end
 
     return data
@@ -591,7 +522,6 @@ function run_experiment_load()
     mp = checkpoint.mp  -- completely overwrite  good
     mp.mode = 'expload'
     -- mp.cuda = true
-    -- local iters = mp.val_every * #checkpoint.val_losses + 1  -- correct
     local iters = checkpoint.iters + 1
 
     train_losses = checkpoint.train_losses
@@ -650,14 +580,10 @@ function model_deps(modeltype)
         M = require 'variable_obj_model'
     elseif modeltype == 'bffobj' then
         M = require 'branched_variable_obj_model'
-    elseif modeltype == 'lstmcat' then
-        M = require 'lstm_model'
     elseif modeltype == 'ind' then
         M = require 'independent'
     elseif modeltype == 'np' then
         M = require 'nop'
-    elseif modeltype == 'ed' then
-        M = require 'edlstm'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else
@@ -679,7 +605,6 @@ end
 if mp.mode == 'exp' then
     initsavebatches()
     print('Running experiment.')
-    -- if mp.server == 'op' then mp.cuda = true end
     run_experiment()
 elseif mp.mode == 'expload' then
     run_experiment_load()

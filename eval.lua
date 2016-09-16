@@ -24,13 +24,11 @@ require 'gnuplot'
 
 -- Local Imports
 local model_utils = require 'model_utils'
--- local D = require 'data_sampler'
 local D = require 'general_data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
 require 'json_interface'
 
--- hacky for now, just to see if it works
 local data_process = require 'data_process'
 
 ------------------------------------- Init -------------------------------------
@@ -92,12 +90,9 @@ local model, test_loader, modelfile, dp
 ------------------------------- Helper Functions -------------------------------
 
 function inittest(preload, model_path, opt)
-    -- print("Network parameters:")
     dp = data_process.create(model_path, model_path, config_args)  -- jsonfile and outfile are unpopopulated!  Let's just fill them with the model_path?
     model = M.create(mp, preload, model_path)
     mp.cuda = false -- NOTE HACKY
-
-
 
     if not(string.find(mp.savedir, 'tower') == nil) then
         assert((string.find(mp.savedir, 'ball') == nil) and 
@@ -107,11 +102,6 @@ function inittest(preload, model_path, opt)
     else
         config_args.maxwinsize = config_args.maxwinsize
     end
-    -- print(mp.savedir)
-    -- print(config_args.maxwinsize)
-    -- assert(false)
-
-
 
     local data_loader_args = {data_root=mp.data_root..'/',
                               dataset_folders=mp.test_dataset_folders,
@@ -121,14 +111,14 @@ function inittest(preload, model_path, opt)
                               num_future=mp.num_future,
                               relative=mp.relative,
                               subdivide=opt.subdivide,
-                              shuffle=config_args.shuffle, -- TODO test if this makes a difference
+                              shuffle=config_args.shuffle,
                               sim=opt.sim,
                               cuda=mp.cuda
                             }
     test_loader = D.create('testset', tablex.deepcopy(data_loader_args))
 
     modelfile = model_path
-    print("Initialized Network")
+    print("Network parameters:")
     print(mp)
 end
 
@@ -302,14 +292,6 @@ end
 
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
-    -- simulate two balls for now, but this should be made more general
-    -- actually you should make this more general.
-    -- there is no concept of ground truth here?
-    -- or you can make the ground truth go as far as there are timesteps available
-    --------------------------------------------------- -------------------------
-    -- local avg_loss = 0
-    -- local avg_ang_error = 0
-    -- local avg_mag_error = 0
     local count = 0
     local losses_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
     local mag_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
@@ -330,11 +312,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             'Number of predictive steps should be less than '..
             dataloader.maxwinsize-mp.num_past+1)
     for i = 1, dataloader.total_batches do
-    -- for i = 1, 3 do
-        -- local loss_within_batch = 0
-        -- local mag_error_within_batch = 0
-        -- local ang_error_within_batch = 0
-        -- local counter_within_batch = 0
 
         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
 
@@ -362,8 +339,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                             torch.zeros(mp.batch_size, num_particles,
                                         numsteps, mp.object_dim),
                             mp.cuda)
-
-        -- local losses_through_time = {}
 
         -- loop through time
         for t = 1, numsteps do
@@ -404,22 +379,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     context_future = torch.cat({future[{{},{1,j-1},{t}}], future[{{},{j+1,-1},{t}}]},2)
                 end
 
-                -- local y = future[{{},{j},{t}}]
-                -- y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed
-
-                -- if mp.relative then
-                --     y = data_process.relative_pair(this, y, false)  -- absolute to relative
-                -- end
-
                 local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
                 -- predict
                 local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
-                -- local loss, pred = model:fp(params_,batch,true)
                 local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)
-                -- avg_loss = avg_loss + loss
-                -- avg_ang_error = avg_ang_error + angle_error
-                -- avg_mag_error = avg_mag_error + relative_magnitude_error
                 count = count + 1
 
                 loss_within_batch = loss_within_batch + loss
@@ -433,7 +397,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
                 this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
 
-                -- -- relative coords for next timestep
+                -- relative coords for next timestep
                 if mp.relative then
                     pred = data_process.relative_pair(this, pred, true)  -- relative to absolute
                     y = data_process.relative_pair(this, y, true)
@@ -468,9 +432,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
 
-            -- print(ang_error_within_batch/num_particles)
-            -- print(mag_error_within_batch/num_particles)
-
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles
             ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/num_particles
             mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/num_particles
@@ -494,8 +455,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             y_orig = data_process.relative_pair(this_orig, y_orig, true)
         end
 
-        -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
-
         if saveoutput and i <= mp.ns then
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
@@ -506,6 +465,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                 subfolder)
                                 -- current_dataset)
         end
+        collectgarbage()
     end
 
     -- average over all the batches
@@ -538,11 +498,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                                 ['Angular Velocity Error'] = '~',
                             }
     end
-
-    -- avg_loss = avg_loss/count
-    -- avg_mag_error = avg_mag_error/count
-    -- avg_ang_error = avg_ang_error/count
-    -- print('Mean Squared Error', avg_loss, 'Average Relative Magnitude Error', avg_mag_error, 'Average Cosine Differnce', avg_ang_error)
     collectgarbage()
 end
 
@@ -646,11 +601,6 @@ function save_ex_pred_json(example, jsonfile, current_dataset, subfolder)
             this_future, context_future,
             this_pred, context_pred = unpack(example)
 
-    -- local subfolder = mp.savedir .. '/' .. 'predictions/'
-    -- local subfolder = mp.savedir .. '/' .. mp.test_dataset_folders[current_dataset] .. 'predictions/'
-    -- local subfolder = mp.savedir .. '/' .. current_dataset .. '_predictions/'
-    -- if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
-
     -- construct gnd truth (could move to this to a util function)
     local this_pred_traj = torch.cat({this_past, this_pred}, 2)
     local context_pred_traj = torch.cat({context_past,context_pred}, 3)
@@ -698,8 +648,6 @@ end
 function predict_simulate_all()
     local checkpoint, snapshotfile = load_most_recent_checkpoint()
 
-    -- local checkpoint, snapshotfile = load_most_recent_checkpoint('step6')
-
     inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
     print('Network parameters')
     print(mp)
@@ -746,7 +694,6 @@ function load_checkpoint(snapshot)
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
     config_args = saved_args.config_args
-
 
     -- NOTE THIS IS ONLY FOR THE EXPERIMENTS THAT DON'T HAVE object_base_size_ids_upper!
     config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
@@ -803,8 +750,6 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
         total_avg_loss = total_avg_loss + loss
         total_avg_ang_error = total_avg_ang_error + avg_angle_error
         total_avg_rel_mag_error = total_avg_rel_mag_error + avg_relative_magnitude_error
-
-        -- print(loss)
     end
     total_avg_vel = total_avg_vel/num_batches
     total_avg_ang_vel = total_avg_ang_vel/num_batches
@@ -820,9 +765,6 @@ end
 
 function test_vel_angvel_all()
     local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
-
-    -- print(checkpoints)
-    -- assert(false)
 
     local eval_data = {}
 
@@ -927,12 +869,8 @@ function model_deps(modeltype)
         M = require 'variable_obj_model'
     elseif modeltype == 'bffobj' then
         M = require 'branched_variable_obj_model'
-    -- elseif modeltype == 'lstmcat' then
-    --     M = require 'lstm_model'
     elseif modeltype == 'np' then
         M = require 'nop'
-    -- elseif modeltype == 'ed' then
-    --     M = require 'edlstm'
     elseif modeltype == 'ind' then
         M = require 'independent'
     elseif modeltype == 'bl' then

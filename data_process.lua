@@ -1,22 +1,3 @@
--- normalize: requires normalizing constants
-
--- unnormalize
-
--- permute (we could possibly use this)
-
--- one hot (masses)
-
--- subsample range (we could possibly use this)
-
--- split into train, validation, test
-
--- group into batches?
-
--- fields: relative, object_dim
-
--- also need to split past/future? Or should that be in the computation?
-
--- note that these functions do NOT mutate state. They just reference fields
 require 'torchx'
 require 'json_interface'
 require 'data_utils'
@@ -38,7 +19,6 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     self.anc = args.angle_normalize_constant
     self.relative = args.relative -- bool
     self.masses = args.masses -- {0.33, 1.0, 3.0, 1e30}
-    -- self.maxwinsize = args.maxwinsize
     self.rsi = args.rsi -- {px: 1, py: 2, vx: 3, vy: 4, m: 5, oid: 6}
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.oid_ids = args.oid_ids
@@ -71,15 +51,12 @@ end
 function data_process.relative_pair(past, future, relative_to_absolute)
     -- rta: relative to absolute, otherwise we are doing absolute to relative
 
-    -- print('future before', torch.squeeze(future[{{},{1},{1,6}}]))
-
     -- TODO: use config args for this!
     if relative_to_absolute then
         future[{{},{},{1,6}}] = future[{{},{},{1,6}}] + past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     else
         future[{{},{},{1,6}}] = future[{{},{},{1,6}}] - past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     end
-    -- print('future after', torch.squeeze(future[{{},{1},{1,6}}]))
     return future
 end
 
@@ -88,10 +65,7 @@ end
 -- transforms [0, 2pi)  --> (-pi, pi]
 function data_process:wrap_pi(angles)
     local angles = angles:clone()
-    -- angles = torch.clamp(angle, 0, 2*math.pi)  -- just in case
-
     local wrap_mask = angles:gt(math.pi)  -- add this to angles
-    -- print(wrap_mask)
     local wrapped = torch.add(angles, -2*math.pi, wrap_mask:float())
     return wrapped
 end
@@ -99,12 +73,8 @@ end
 -- (num_examples, num_objects, timestesp, a, av)
 -- theta = theta+2pi if -pi < theta < pi
 -- transforms [-pi, pi] --> [0, 2pi]
-
 function data_process:wrap_2pi(angles)
-    local angles = angles:clone()
-    -- angles = torch.clamp(angle, -math.pi, math.pi)  -- just in case
-
-    local wrap_mask = angles:lt(0)  -- add this to angles
+    local angles = angles:clone()    local wrap_mask = angles:lt(0)  -- add this to angles
     local wrapped = torch.add(angles, 2*math.pi, wrap_mask:float())
     return wrapped
 end
@@ -262,14 +232,9 @@ function data_process:expand_for_each_object(unfactorized)
             local focus_obj_indices = focus_obj_mask:nonzero()
 
             -- the examples of unfactorized where object i is a ball
-            -- print(focus_obj_indices:nElement())
             if focus_obj_indices:nElement() > 0 then  -- only construct examples if there are examples to construct.
                 focus_obj_indices = torch.squeeze(focus_obj_indices,2)
                 local selected_samples = unfactorized:clone():index(1,focus_obj_indices)  -- (num_selected, num_obj, num_steps, object_dim)  -- unnecessary to clone
-                -- sanity check
-                -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},self.si.oid}]))
-                -- print(torch.squeeze(unfactorized[{{89,94},{i},{1},{}}]))
-                -- print(torch.squeeze(selected_samples[{{},{i},{1}}]))
 
                 -- now find the focus object
                 local this = torch.squeeze(selected_samples[{{},{i},{},{}}],2)
@@ -301,70 +266,8 @@ function data_process:expand_for_each_object(unfactorized)
     focus = torch.cat(focus,1)  -- concatenate along batch dimension
     context = torch.cat(context,1)
 
-    -- print(focus)
-    -- print(focus:norm())
-    -- assert(false)
-
-    -- TODO! Do I have to crop?
     return focus, context
 end
-
-
-
--- --[[ Expands the number of examples per batch to have an example per particle
---     Input: unfactorized: (num_samples x num_obj x windowsize x 8)
---     Output:
---         {
---             focus: (num_samples*num_obj, num_steps, obj_dim)
---             context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
---         }
--- -- --]]
--- function data_process:expand_for_each_object(unfactorized)
---     local num_samples, num_obj, _, _ = unpack(torch.totable(unfactorized:size()))
---     local focus = {}
---     local context = {}
---     if num_obj > 1 then
---         for i=1,num_obj do  -- this is doing it in transpose order
---             local this = unfactorized[{{},{i},{},{}}]  --all of the particles here should be the same  -- NOT NECESSARILY TRUE!
---             local ball_index = self.si.oid[1]
---             local obstacle_index = self.si.oid[1]+1
---             local block_index = self.si.oid[2]
---             if this[{{},{},{},{obstacle_index}}]:sum() == 0 or (not(string.find(self.jsonfolder, 'invisible') == nil) and this[{{},{},{},{block_index}}]:sum() == 0) then -- only do it if the particle is not stationary obstacle
---                 this = this:reshape(this:size(1), this:size(3), this:size(4))  -- (num_samples x windowsize x obj_dim); NOTE that resize gives the wrong answer!
---                 local other
---                 if i == 1 then
---                     other = unfactorized[{{},{i+1,-1},{},{}}]
---                 elseif i == num_obj then
---                     other = unfactorized[{{},{1,i-1},{},{}}]
---                 else
---                     other = torch.cat(unfactorized[{{},{1,i-1},{},{}}],
---                                 unfactorized[{{},{i+1,-1},{},{}}], 2)  -- leave this particle out (num_samples x (num_obj-1) x windowsize x 8)
---                 end
-
---                 -- TODOlowpriority should permute here
---                 assert(this:size()[1] == other:size()[1])
---                 focus[#focus+1] = this
---                 context[#context+1] = other
---             end
---         end
---     else
---         local this = unfactorized[{{},{i},{},{}}]
---         focus[#focus+1] = torch.squeeze(this,2) -- (num_samples x windowsize x objdim)
---     end
-
---     focus = torch.cat(focus,1)  -- concatenate along batch dimension
-
---     -- make context into Torch tensor if more than one particle. Otherwise {}
---     if next(context) then
---         context = torch.cat(context,1)
---         assert(focus:size(1) == context:size(1))
---         assert(context:size(2) == num_obj-1)
---     end
---     -- print(focus)
---     -- print(focus:norm())
---     -- assert(false)
---     return focus, context
--- end
 
 
 -- we also should have a method that divides the focus and context into past and future
@@ -410,47 +313,6 @@ function data_process:split_datasets_sizes(num_examples)
     return num_train, num_val, num_test
 end
 
-
--- function data_process:split2datasets(examples)
---     local num_train, num_val, num_test = self:split_datasets_sizes(#examples)
-
---     local test = {}
---     local val = {}
---     local train = {}
-
---     -- shuffle examples
---     local ridxs = torch.randperm(#examples)
---     print('Splitting datsets: '..string.format('%2d train %2d val %2d test',
---                                                 num_train, num_val, num_test))
---     for i = 1, ridxs:size(1) do
---         xlua.progress(i, ridxs:size(1))
---         local batch = examples[ridxs[i]]
---         if i <= num_train then
---             table.insert(train, batch)
---         elseif i <= num_train + num_val then
---             table.insert(val, batch)
---         else
---             table.insert(test, batch)
---         end
---     end
-
---     -- for i=1,#train do
---     --     print(train[i]:norm())
---     -- end
---     -- print('....')
---     -- for i=1,#val do
---     --     print(val[i]:norm())
---     -- end
---     -- print('.....')
---     -- for i=1,#test do
---     --     print(test[i]:norm())
---     -- end
---     -- assert(false)
-
-
-
---     return {trainset=train, valset=val, testset=test}
--- end
 
 function data_process:save_batches(datasets, savefolder)
     if not paths.dirp(savefolder) then paths.mkdir(savefolder) end
@@ -507,11 +369,6 @@ function data_process:sample_save_single_batch(batch, dataset_ids, counters, lim
 end
 
 function data_process:iter_files_ordered(folder)
-    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_188.json
-    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_189.json
-    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_190.json
-    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_191.json
-    -- Wrote to ../data/mixed_n6_t60_ex50000_rd/jsons/mixed_n6_t60_ex50000_rd_chksize100_192.json
     local files = {}
     for f in paths.iterfiles(folder) do
         table.insert(files, f) -- good
@@ -610,8 +467,8 @@ function data_process:create_datasets_batches()
 
         ----------------------------------------------------------
 
-
-       local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))  -- note that this may not all be the same batch size! They will even out at the end though
+       -- note that this may not all be the same batch size! They will even out at the end though
+       local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))
        print('new batches')
        print(new_batches)
        for _, batch in pairs(new_batches) do
@@ -650,11 +507,7 @@ function data_process:create_datasets_batches()
             assert(self:check_overflow(counters, limits) >= 0)
             counters = self:sample_save_single_batch(batch, dataset_ids, counters, limits)
         end
-    else
-        -- verify that all batches have been saved TODOlowpriority
-        -- self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
     end
-    -- assert(false)
 end
 
 -- perfomrs split2batches on both focus and context and then merges result
@@ -672,22 +525,12 @@ end
 
 function data_process:json2batches(jsonfile)
     local data = load_data_json(jsonfile)
-    -- print(data)
     assert(data:size(3) == self.maxwinsize)
     data = self:normalize(data)  -- good
     data = self:properties2onehotall(data)  -- good
     local focus, context = self:expand_for_each_object(data)
     return self:split2batchesall(focus, context)
 end
-
--- save datasets
--- function data_process:create_datasets()
---     -- each example is a (focus, context) pair
---     local json_file = self.jsonfolder --'/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/tower.json'
---     local all_batches = self:json2batches(jsonfile)
---     local datasets = self:split2datasets(all_batches)
---     self:save_batches(datasets, self.outfolder)
--- end
 
 -- this method converts torch back to json file
 -- input: (bsize, num_obj, steps, dim) for focus and context, with onehotmass, and normalized
@@ -703,13 +546,3 @@ function data_process:record_trajectories(batch, config, jsonfile)
 end
 
 return data_process
-
-
--- local args = require 'config'
---
--- dp = data_process.create(args)
--- dp:create_datasets()
-
--- now test if it can record
--- batch1 = torch.load('debug/train/batch1')
--- dp:record_trajectories(batch1, 'batch1.json')

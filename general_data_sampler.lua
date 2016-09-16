@@ -179,25 +179,3 @@ end
 
 
 return general_datasampler
-
-
--- dataset_names = {'balls_n3_t60_ex20','balls_n6_t60_ex20','balls_n5_t60_ex20'}
--- -- -- dataset_names = "{'balls_n20_t60_ex100','balls_n1_t60_ex10'}"
--- -- -- dataset_names = "{'balls_n20_t60_ex100'}"
--- --
--- local data_loader_args = {
---                         dataset_names = dataset_names,
---                         dataset_folders={'mj_data/balls_n3_t60_ex20','mj_data/balls_n6_t60_ex20','mj_data/balls_n5_t60_ex20'},
---                         maxwinsize=60,
---                         winsize=10, -- not sure if this should be in mp
---                         num_past=2,
---                         num_future=1,
---                         relative=true, -- TODO: this should be in the saved args!
---                         sim=false,
---                         cuda=false
---                         }
--- --
--- gd = general_datasampler.create('trainset', data_loader_args)
--- for i = 1, 100, 10 do
---     gd:sample_sequential_aggregated_batch(10, false)
--- end
