@@ -107,8 +107,6 @@ end
 function model:unpack_batch(batch, sim)
     local this, context, this_future, context_future, mask = unpack(batch)
 
-    -- print(torch.squeeze(this_future))
-    -- print(context_future)
     -- need to do relative pair
     context_future[{{},{},{},{1,6}}] = context_future[{{},{},{},{1,6}}] - context[{{},{},{-1},{1,6}}]:expandAs(context_future[{{},{},{},{1,6}}])
 
@@ -137,23 +135,13 @@ function model:unpack_batch(batch, sim)
     return all_past, all_future
 end
 
--- Input to fp
--- {
---   1 : DoubleTensor - size: 4x2x9
---   2 : DoubleTensor - size: 4x2x2x9
---   3 : DoubleTensor - size: 4x48x9
---   4 : DoubleTensor - size: 4x2x48x9
---   5 : DoubleTensor - size: 10
--- }
+
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
 
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
-
-    -- print(all_future[1])
-    -- assert(false)
 
     local loss_vels = 0
     local loss_ang_vels = 0
@@ -360,7 +348,6 @@ function model:get_velocity_direction(this, context, t)
     for i=1,#euc_dist_diffs do
         euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
     end
-    -- assert(false)
     return euc_dist_diffs
 end
 

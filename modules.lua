@@ -29,36 +29,6 @@ function init_object_encoder(input_dim, rnn_inp_dim, bias)
 end
 
 
--- in: table of length num_obj of (bsize, obj_dim)
--- out: tensor (bsize, hid_dim)
-function create_nop_core(in_dim, hid_dim, num_layers)
-    local object_core = nn.Sequential()
-    if num_layers == 1 then
-        object_core:add(nn.Linear(in_dim, hid_dim, bias))
-    else
-        for i = 1, num_layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
-            if i == 1 then 
-                object_core:add(nn.Linear(in_dim, hid_dim, bias))
-                object_core:add(nn.ReLU())
-            -- elseif i == num_layers then
-            --     object_core:add(nn.Linear(hid_dim, hid_dim, bias))  -- don't have any zero output
-            else
-                object_core:add(nn.Linear(hid_dim, hid_dim, bias))
-                object_core:add(nn.ReLU())
-            end
-        end
-    end
-    -- object_core:add(nn.Reshape(bsize, 1, hid_dim))
-    local object_cores = nn.Sequencer(object_core) -- produces a table of num_obj of {(bsize, hid_dim)}
-    -- local object_core_net = nn.Sequential()
-    -- object_core_net:add(object_cores)
-    -- object_core_net:add(nn.JoinTable(2))  -- tensor (bsize, num_obj, hid_dim)
-    -- object_core_net:add(nn.Sum(2)) -- tensor (bsize, hid_dim)
-    -- return object_core_net
-    return object_cores
-end
-
-
 function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     -- rnn_out had better be of dim (batch_size, rnn_hid_dim)
     local rnn_out = nn.Identity()()
@@ -129,7 +99,6 @@ end
 
 
 function split_output(params)
-    -- local POSVELDIM = 4
     local POSVELDIM = 6
     local future = nn.Identity()()
 
@@ -164,9 +133,4 @@ function split_tensor(dim, reshape, boundaries)
     return net
 end
 
-
--- local rnn_out = torch.rand(5,50)
--- local orig_state = torch.rand(5,22)
--- local d = init_object_decoder_with_identity(50, 3, 2, 1, 11)
--- print(d:forward{orig_state, rnn_out})
 

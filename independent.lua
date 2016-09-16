@@ -123,8 +123,6 @@ function model:unpack_batch(batch, sim)
     local past = torch.cat({unsqueeze(this:clone(),2), context},2)
     local future = torch.cat({unsqueeze(this_future:clone(),2), context_future},2)
 
-    -- print(this_future:norm())
-
     local bsize, num_obj = past:size(1), past:size(2)
     local num_past, num_future = past:size(3), future:size(3)
     local obj_dim = past:size(4)
@@ -389,7 +387,6 @@ function model:get_velocity_direction(this, context, t)
     for i=1,#euc_dist_diffs do
         euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
     end
-    -- assert(false)
     return euc_dist_diffs
 end
 

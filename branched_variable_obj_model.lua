@@ -98,9 +98,6 @@ function model.create(mp_, preload, model_path)
         self.criterion = checkpoint.model.criterion:clone()
         self.identitycriterion = checkpoint.model.identitycriterion:clone()
         if self.mp.cuda then
-            -- self.network:cuda()
-            -- self.criterion:cuda()
-            -- self.identitycriterion:cuda()
             self:cuda()
         end
     else
@@ -108,9 +105,6 @@ function model.create(mp_, preload, model_path)
         self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
         if self.mp.cuda then
-            -- self.network:cuda()
-            -- self.criterion:cuda()
-            -- self.identitycriterion:cuda()
             self:cuda()
         end
     end
@@ -250,21 +244,13 @@ function model:apply_mask(input, batch_mask)
             x[2] = torch.cmul(x[2], batch_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
         else
             x = torch.cmul(x, convert_type(batch_mask[i]:view(mp.batch_size,1):expandAs(x), mp.cuda))
-            -- x = torch.cmul(x, batch_mask[i]:view(mp.batch_size,1):expandAs(x):float())  -- potential cuda
             input[i] = x -- it doesn't actually automatically mutate
         end
     end
     return input
 end
 
--- Input to fp
--- {
---   1 : DoubleTensor - size: 4x2x9
---   2 : DoubleTensor - size: 4x2x2x9
---   3 : DoubleTensor - size: 4x48x9
---   4 : DoubleTensor - size: 4x2x48x9
---   5 : DoubleTensor - size: 10
--- }
+
 function model:fp(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
@@ -284,37 +270,12 @@ function model:fp(params_, batch, sim)
 
     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
 
-    --------------------------------------------------------------
-    -- TODO YOU HAVE TO REDO AVERAGING IN test() and possibly sim()!
-    -- if mp.cf then 
-    --     local collision_mask = collision_filter(batch)
-    --     local num_pass_through = collision_mask:sum()
-    --     prediction:cmul(collision_mask:expandAs(prediction):float())
-
-    --     local pvel_nElement = num_pass_through*mp.num_future*2  -- num_collisions replaces bsize
-    --     local pangvel_nElement = num_pass_through*mp.num_future*1
-    --     if (pvel_nElement+pangvel_nElement) <= 0 then
-    --         loss = 0
-    --     else
-    --         loss = loss/(pvel_nElement+pangvel_nElement) -- manually do size average
-    --     end
-    -- else
-    --     loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
-    -- end
-    -- print(loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement())
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return loss, prediction, loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
 end
 
--- Input to fp
--- {
---   1 : DoubleTensor - size: 4x2x9
---   2 : DoubleTensor - size: 4x2x2x9
---   3 : DoubleTensor - size: 4x48x9
---   4 : DoubleTensor - size: 4x2x48x9
---   5 : DoubleTensor - size: 10
--- }
+
 function model:fp_batch(params_, batch, sim)
     if params_ ~= self.theta.params then self.theta.params:copy(params_) end
     self.theta.grad_params:zero()  -- reset gradient
@@ -363,7 +324,6 @@ function model:bp(batch, prediction, sim)
 
     self.criterion:forward(p_vel, gt_vel)
     local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
-    -- print('d_vel:norm()',d_vel:norm())
     d_vel:mul(mp.vlambda)
     d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
@@ -372,7 +332,6 @@ function model:bp(batch, prediction, sim)
 
     self.criterion:forward(p_ang_vel, gt_ang_vel)
     local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
-    -- print('d_ang_vel:norm()',d_ang_vel:norm())
     d_ang_vel:mul(mp.lambda)
     d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
@@ -388,7 +347,6 @@ function model:bp(batch, prediction, sim)
     ------------------------------------------------------------------
 
     -- neighborhood
-
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
     local d_decoder = self.network.modules[2]:backward(decoder_in, d_pred)
     local caddtable_in = self.network.modules[1].modules[1].modules[1].output
@@ -450,38 +408,6 @@ function model:bp_input(batch, prediction, sim)
     local d_identity = self.network.modules[1].modules[2]:updateGradInput(input[2], d_decoder[2])
     local d_input = {d_pairwise, d_input}
     return d_input
-
-    -- -- 1. assert that all the d_inputs in pairwise are equal
-    -- local d_focus_in_pairwise = {}
-    -- for i=1,#d_pairwise do
-    --     table.insert(d_focus_in_pairwise, d_pairwise[i][1])
-    -- end
-    -- assert(alleq_tensortable(d_focus_in_pairwise))
-
-    -- -- 2. Get the gradients that you need to add
-    -- local d_pairwise_focus = d_pairwise[1][1]:clone()  -- pick first one
-    -- local d_identity_focus = d_identity:clone()
-    -- assert(d_pairwise_focus:isSameSizeAs(d_identity_focus))
-
-    -- -- 3. Add the gradients
-    -- local d_focus = d_pairwise_focus + d_identity_focus
-
-    -- -- 4. Construct a d_input with the desired gradients
-    --     -- zero the gradInput for context
-    --     -- assert that all the gradInput for context are 0 as well
-    -- local modified_d_pairwise = {}
-    -- for o=1,#d_pairwise do
-    --     local d_pair = {d_focus, convert_type(torch.zeros(mp.batch_size, mp.object_dim), mp.cuda)}  -- I don't want to clone d_focus here right?
-    --     table.insert(modified_d_pairwise, d_pair)
-    -- end
-
-    -- -- 5. Check that weights have not been changed
-    --     -- check that all the gradParams are 0 in the network
-    -- assert(self.theta.grad_params:norm() == 0)
-
-    -- local modified_d_input = {modified_d_pairwise, d_focus}
-
-    -- return modified_d_input
 end
 
 function model:update_position(this, pred)
@@ -544,8 +470,6 @@ function model:update_angle(this, pred)
 
     -- if it is greater than pi, then just wrap it to [-pi, pi] again
     -- if it is less than -pi, then just wrap it to [-pi, pi] again
-
-
     local gtpi_mask = ang:gt(math.pi)
     local ltnpi_mask = ang:le(-math.pi)
 
@@ -625,128 +549,7 @@ function model:get_velocity_direction(this, context, t)
     for i=1,#euc_dist_diffs do
         euc_dist_diffs[i] = torch.squeeze(euc_dist_diffs[i])
     end
-    -- assert(false)
     return euc_dist_diffs
 end
 
--- simulate batch forward one timestep
-function model:sim(batch)
-    
-    -- get data
-    local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- NOTE CHANGE BATCH HERE
-
-    -- crop to number of timestesp
-    y_orig = y_orig[{{},{1, numsteps}}]
-    context_future_orig = context_future_orig[{{},{},{1, numsteps}}]
-
-    local num_particles = torch.find(mask,1)[1] + 1
-
-    -- arbitrary notion of ordering here
-    -- past: (bsize, num_particles, mp.numpast*mp.objdim)
-    -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-    local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
-    local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)
-
-    assert(past:size(2) == num_particles and future:size(2) == num_particles)
-
-    local pred_sim = model_utils.transfer_data(
-                        torch.zeros(mp.batch_size, num_particles,
-                                    numsteps, mp.object_dim),
-                        mp.cuda)
-
-    -- loop through time
-    for t = 1, numsteps do
-
-        -- for each particle, update to the next timestep, given
-        -- the past configuration of everybody
-        -- total_particles = total_particles+num_particles
-
-        for j = 1, num_particles do
-            -- construct batch
-            local this = torch.squeeze(past[{{},{j}}])
-
-            local context
-            if j == 1 then
-                context = past[{{},{j+1,-1}}]
-            elseif j == num_particles then
-                context = past[{{},{1,-2}}]
-            else
-                context = torch.cat({past[{{},{1,j-1}}],
-                                                    past[{{},{j+1,-1}}]},2)
-            end
-
-            local y = future[{{},{j},{t}}]
-            y:resize(mp.batch_size, mp.num_future, mp.object_dim)
-
-            local batch = {this, context, y, _, mask}
-
-            -- predict
-            local loss, pred = model:fp(params_,batch,true)   -- NOTE CHANGE THIS!
-            avg_loss = avg_loss + loss
-            count = count + 1
-
-            pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-            this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
-
-            -- -- relative coords for next timestep
-            if mp.relative then
-                pred = data_process.relative_pair(this, pred, true)
-            end
-
-            -- restore object properties because we aren't learning them
-            pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]  -- NOTE! THIS DOESN'T TAKE ANGLE INTO ACCOUNT!
-            
-            -- update position
-            pred = update_position(this, pred)
-
-            -- update angle
-            pred = update_angle(this, pred)
-            -- pred = unsqueezer:forward(pred)
-            pred = unsqueeze(pred, 2)
-
-            -- write into pred_sim
-            pred_sim[{{},{j},{t},{}}] = pred
-        end
-
-        -- update past for next timestep
-        if mp.num_past > 1 then
-            past = torch.cat({past[{{},{},{2,-1},{}}],
-                                pred_sim[{{},{},{t},{}}]}, 3)
-        else
-            assert(mp.num_past == 1)
-            past = pred_sim[{{},{},{t},{}}]:clone()
-        end
-
-        -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
-
-        
-    end
-    --- to be honest I don't think we need to break into past and context
-    -- future, but actually that might be good for coloriing past and future, but
-    -- actually I don't think so. For now let's just adapt it
-
-    -- at this point, pred_sim should be all filled out
-    -- break pred_sim into this and context_future
-    -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
-    -- recall that you had defined this_pred as the first obj in the future tensor
-    local this_pred = torch.squeeze(pred_sim[{{},{1}}])
-    if numsteps == 1 then this_pred = unsqueeze(this_pred,2) end
-
-    local context_pred = pred_sim[{{},{2,-1}}]
-
-    if mp.relative then
-        y_orig = data_process.relative_pair(this_orig, y_orig, true)
-    end
-
-    -- local this_orig, context_orig, y_orig, context_future_orig, this_pred, context_future_pred, loss = model:sim(batch)
-
-    -- if saveoutput and i <= mp.ns then
-    --     save_ex_pred_json({this_orig, context_orig,
-    --                         y_orig, context_future_orig,
-    --                         this_pred, context_pred},
-    --                         'batch'..test_loader.datasamplers[current_dataset].current_sampled_id..'.json',
-    --                         current_dataset)
-    -- end
-end
--- print('LOADED ME')
 return model
