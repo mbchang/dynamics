@@ -49,30 +49,6 @@ function generate_random_hypotheses(indices_names, num_ex, num_past)
             -- zeros in the indices not specified, random in indices specified
             hypotheses[name] = torch.repeatTensor(blank_hypothesis, 1, num_past, 1)
         else
-            -- from matter-js
-            -- self.rand_pos = function() {
-            --     let max_obj_size
-            --     if (self.params.drasticSize) {
-            --         // NOTE the big object may not be completely within the world!
-            --         max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
-            --     } else {
-            --         max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
-            --     }
-            --     return rand_pos(
-            --         {hi: 2*demo.cx - max_obj_size - 1, lo: max_obj_size + 1},
-            --         {hi: 2*demo.cy - max_obj_size - 1, lo: max_obj_size + 1});
-            --     };
-
-
-            -- rand_pos = function(x_bounds, y_bounds) {
-
-            --     var xrange = x_bounds.hi - x_bounds.lo,
-            --         yrange = y_bounds.hi - y_bounds.lo;
-            --     var px = Math.floor((Math.random()*(xrange))) + x_bounds.lo,
-            --         py = Math.floor((Math.random()*(yrange))) + y_bounds.lo;
-            --     return {x: px, y: py};
-            -- }
-
             -- rand int between bounds.lo and bounds.hi (exclusive of bounds.hi)
             local function rand_pos(bounds)
                 local range = bounds.hi - bounds.lo
@@ -107,19 +83,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
-
-        -- TODO! does dataloader have jsonfolder?
-        -- if not(string.find(self.jsonfolder, '_dras_') == nil) then
-        --     indices = {1,3}
-        -- else if not(string.find(self.jsonfolder, '_dras3_') == nil)
-        --     indices = {1,2,3}
-        -- end
-
-        -- assert(false)
-
-
-        indices = {1,2,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
-        -- indices = {1,3}  -- DRASTIC SIZE INFERENCE ONLY USES TWO VALUES!
+        indices = {1,2,3}  -- only going to use drastic sizes
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good, works for batch_size
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
@@ -913,9 +877,7 @@ function backprop2inputcontext(model, dataloader, params_, si_indices, cf, dista
                 collectgarbage()
             end
         end 
-
         -- good 
-
     end
 
     local accuracy, fit
@@ -1089,23 +1051,6 @@ local function context_object_sizes(context_past)
     return object_sizes
 end
 
--- local function check_moving_toward_context(past_pos, cpast_pos, past_vel)
---     -- past_pos: (bsize, 2)
---     -- cpast_pos: (bsize, num_context, 2)
---     -- past_vel: (bsize, 2)
---     local past_pos = past_pos:clone():view(mp.batch_size, 1, 2):expandAs(cpast_pos)
---     local past_vel = past_vel:clone():view(mp.batch_size, 1, 2):expandAs(cpast_pos)
-
---     -- first compute the vectors between past_pos and cpast_pos
---     local pointing_to_context = cpast_pos - past_pos
-
---     -- next take dot product with past_vel (bsize, num_context)
---     local direction_wrt_context = torch.squeeze(torch.sum(torch.cmul(pointing_to_context, past_vel),3),3)
-
---     -- the dot product should be positive if we are moving towards context.
---     local is_moving_towards_context = direction_wrt_context:gt(0)  -- bsize, num_context)
---     return is_moving_towards_context
--- end
 
 -- euc dist between "one" and each row of "many"
 -- one: (bsize, 2)
