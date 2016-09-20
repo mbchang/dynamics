@@ -314,7 +314,7 @@ function backprop2input(model, dataloader, params_, si_indices)
     end
     return num_correct/count
 end
-
+    
 -- find_best_hypothesis_b2i(model, params_, batch, initial_hypothesis, si_indices, context_id)
 -- initial_hypothesis: {px: rand, py: rand, mass: tensor(4), oid: tensor(3)}
 -- indices_names: {px=1,py=1,m={1,4},oid={1,2}} or something like that

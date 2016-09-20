@@ -175,6 +175,8 @@ function model:fp(params_, batch, sim)
 
     end
     loss = loss/#prediction
+    loss_vels = loss_vels/#prediction
+    loss_ang_vels = loss_ang_vels/#prediction
 
     collectgarbage()
     return loss, prediction, loss_vels, loss_ang_vels
@@ -217,10 +219,10 @@ function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
     local all_past, all_future = self:unpack_batch(batch, sim)
 
-    local splitter = split_output(self.mp)
-
     local d_pred = {}
     for i = 1, #prediction do
+
+        local splitter = split_output(self.mp)
 
         local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[i]))
         local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =

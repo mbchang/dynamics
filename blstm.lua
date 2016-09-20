@@ -145,12 +145,11 @@ function model:fp(params_, batch, sim)
 
     local loss_vels = 0
     local loss_ang_vels = 0
-
     local loss = 0
     for i = 1,#prediction do
         -- table of length num_obj of {bsize, num_future, obj_dim}
         local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
-                            unpack(split_output(self.mp):forward(prediction[i]))
+                            unpack(split_output(self.mp):forward(prediction[i]))  -- correct
         local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                             unpack(split_output(self.mp):forward(all_future[i]))
 
@@ -161,10 +160,12 @@ function model:fp(params_, batch, sim)
         loss = loss + obj_loss
 
         loss_vels = loss_vels + loss_vel/p_vel:nElement()
-        loss_ang_vels = loss_ang_vels + loss_ang_vel/p_ang_vel:nElement()
-        
+        loss_ang_vels = loss_ang_vels + loss_ang_vel/p_ang_vel:nElement()        
     end
+
     loss = loss/#prediction
+    loss_vels = loss_vels/#prediction
+    loss_ang_vels = loss_ang_vels/#prediction
 
     collectgarbage()
     return loss, prediction, loss_vels, loss_ang_vels
@@ -178,10 +179,12 @@ function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
     local all_past, all_future = self:unpack_batch(batch, sim)
 
-    local splitter = split_output(self.mp)
+    -- local splitter = split_output(self.mp)
 
     local d_pred = {}
     for i = 1, #prediction do
+
+        local splitter = split_output(self.mp)
 
         local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[i]))
         local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
@@ -193,6 +196,7 @@ function model:bp(batch, prediction, sim)
 
         self.criterion:forward(p_vel, gt_vel)
         local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+
         d_vel:mul(mp.vlambda)
         d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
@@ -208,7 +212,6 @@ function model:bp(batch, prediction, sim)
         local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
         local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
-
         table.insert(d_pred, obj_d_pred)
     end
 

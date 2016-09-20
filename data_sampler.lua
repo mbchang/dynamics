@@ -111,6 +111,7 @@ end
 
 function datasampler:relative_batch(batch, rta)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
+    
     this_future = data_process.relative_pair(this_past, this_future, rta)
     return {this_past, context_past, this_future, context_future, mask}
 end

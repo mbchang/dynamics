@@ -92,12 +92,13 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 40
+    mp.max_iter = 6000 
     mp.nbrhd = true
-    mp.lr = 3e-4
+    mp.lr = 3e-3
+    mp.lrdecay = 0.5
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
-    mp.layers = 5
+    mp.layers = 3
     mp.rnn_dim = 64
     mp.model = 'bl'
     mp.im = false
@@ -111,10 +112,11 @@ if mp.server == 'pc' then
     mp.print_every = 1
     mp.save_every = 20
     mp.val_every = 20
-    mp.plot = false--true
+    mp.plot = true--true
 	mp.cuda = false
     mp.rs = false
     mp.nlan = true
+    mp.fast = true
 else
 	-- mp.winsize = 3  -- total number of frames
     -- mp.num_past = 2 -- total number of past frames
@@ -424,7 +426,7 @@ function test(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
     local num_batches = num_batches or dataloader.num_batches
 
-    if mp.fast then num_batches = math.min(5000, num_batches) end
+    if mp.fast then num_batches = math.min(40, num_batches) end
     print('Testing '..num_batches..' batches')
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
