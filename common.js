@@ -209,7 +209,7 @@ is_stable_trajectory = function(trajectories) {
 
 }
 
-fraction_stable = function(trajectories, stability_threshold) {
+fraction_unstable = function(trajectories, stability_threshold) {
     // not stable if top block's y position is different it's original y position by a factor of a block length
     // but what if it is horizontal?
     // how about x position?

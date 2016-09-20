@@ -559,7 +559,7 @@
                 if (sim_options.env == 'tower') {
                     // if (is_stable_trajectory(trajectory) > stability_threshold) {
 
-                    let num_fell = fraction_stable(trajectory, 1)
+                    let num_fell = fraction_unstable(trajectory, 1)
                     if (num_fell > 0) {
                         num_unstable ++
                     } else {

@@ -27,6 +27,7 @@
         // var sleep = require('sleep')
         var PImage = require('pureimage');
         var fs = require('fs');
+        var path = require('path')
         require('./Examples')
         module.exports = Demo;
         window = {};
@@ -185,7 +186,7 @@
                 } else {
                     body.render.strokeStyle = '#551A8B'// orange #551A8B is purple
                 }
-                body.render.lineWidth = 5
+                body.render.lineWidth = 20
 
                 // set velocity
                 Body.setVelocity(body, {x: 0, y: 0})
@@ -206,14 +207,22 @@
                 } 
             }
 
-
-            if (!_isBrowser) {
+            if (!_isBrowser && !(typeof opt.do_not_save_img !== 'undefined' &&  opt.do_not_save_img)) {
                 demo.render.context.globalAlpha = 0.5
-                demo.render.context.fillStyle = 'white'
+                // if (s == 24 || s == 25 || s == 26) {
+                //     demo.render.context.fillStyle = 'white'
+                //     console.log(s,'white')
+                // } else {
+                    demo.render.context.fillStyle = 'white'
+                    demo.render.context.fillRect(0,0,demo.width,demo.height)
+                    demo.render.context.fillStyle = 'transparent'
+                    demo.render.context.fillRect(0,0,demo.width,demo.height)
+                    console.log(s,'transparent')
+                // }
                 // demo.render.context.fillStyle = "rgba(255, 255, 255, 1.0)";
                 demo.render.context.fillRect(0,0,demo.width,demo.height)
                 Render.world(demo.render)
-                let filename = opt.out_folder + '/' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
+                let filename = opt.out_folder + '/' + opt.exp_name + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
 
                 // let filename = 'out'+s+'_'+s+'.png'  // TODO! rename
                 PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
@@ -237,8 +246,8 @@
         f();
 
         if (config.env == 'tower') {
-            console.log('Fraction unstable',fraction_stable(trajectories,1))
-            return [is_stable_trajectory(trajectories) < stability_threshold, is_stable_trajectory(trajectories)]  // true if unstable
+            console.log('Fraction unstable',fraction_unstable(trajectories,1))
+            return [is_stable_trajectory(trajectories) < stability_threshold, is_stable_trajectory(trajectories), fraction_unstable(trajectories,1)]  // true if unstable
         }
     };
 
@@ -256,6 +265,12 @@
                     type: 'String',
                     description: 'experiment folder',
                     required: true
+                }, {
+                    option: 'noimg',
+                    alias: 'i',
+                    type: 'Boolean',
+                    description: 'do not save image',
+                    required: false
                 }]
         });
 
@@ -290,46 +305,51 @@
         console.log('processed command options', cmd_options)
         let experiment_folder = cmd_options.exp  // this is the folder that ends with predictions
         // let experiment_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs/balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj/balls_n8_t60_ex50000_rdpredictions'
+        let exp_name = path.basename(path.dirname(experiment_folder))
         let jsons = fs.readdirSync(experiment_folder)
 
         for (let j=0; j < jsons.length; j++) {
             let jf = jsons[j]
-            let loaded_json = jsonfile.readFileSync(experiment_folder + '/' + jf)
-            let batch_name = jf.slice(0, -1*'.json'.length)
-            let out_folder = experiment_folder + '/../visual/' + batch_name
+            if (jf.indexOf('batch') !== -1) {
+                let loaded_json = jsonfile.readFileSync(experiment_folder + '/' + jf)
+                let batch_name = jf.slice(0, -1*'.json'.length)
+                let out_folder = experiment_folder + '/../visual/' + batch_name
 
-            let stability_dists = {}
+                let stability_dists = {}
 
-            if (loaded_json.config.env=='tower') {
-                let num_stable = 0
-                let num_unstable = 0
-                for (let b=7; b < 8; b ++) {
-                    let options = {out_folder: out_folder, ex: b, batch_name: batch_name}
-                    console.log(batch_name)
-                    let is_stable_data = Demo.run(loaded_json, options)
-                    let is_stable = is_stable_data[0]
-                    let euc_dist_stable = is_stable_data[1]
-                    console.log('euc dist: ' + euc_dist_stable)
-                    stability_dists[batch_name+'_ex'+b] = euc_dist_stable;
-                    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
-                    if (is_stable) {
-                        num_stable ++;
-                    } else {
-                        num_unstable ++;
+                if (loaded_json.config.env=='tower') {
+                    let num_stable = 0
+                    let num_unstable = 0
+                    for (let b=0; b < 1; b ++) {
+                        let options = {out_folder: out_folder, ex: b, exp_name: exp_name, batch_name: batch_name, do_not_save_img: cmd_options.noimg}
+                        console.log(batch_name)
+                        let is_stable_data = Demo.run(loaded_json, options)
+                        let is_stable = is_stable_data[0]
+                        let euc_dist_stable = is_stable_data[1]
+                        let frac_unstable = is_stable_data[2]
+                        console.log('euc dist: ' + euc_dist_stable)
+                        stability_dists[batch_name+'_ex'+b] = {is_stable: euc_dist_stable, frac_unstable: frac_unstable};
+                        console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
+                        if (is_stable) {
+                            num_stable ++;
+                        } else {
+                            num_unstable ++;
+                        }
                     }
+                    console.log('############################')
+                    console.log(num_stable + ' stable ' + num_unstable + ' unstable for ' + out_folder)
+                    console.log('############################')
+                    console.log(stability_dists)
+                    jsonfile.writeFileSync(out_folder+'/stability_stats.json', stability_dists=stability_dists)
+                    console.log('Wrote to ' + out_folder+'/stability_stats.json')
+                } else {
+                    let options = {out_folder: out_folder, ex: 0, exp_name: exp_name, batch_name: batch_name, do_not_save_img: cmd_options.noimg}
+                    console.log(batch_name)
+                    Demo.run(loaded_json, options)
+                    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
                 }
-                console.log('############################')
-                console.log(num_stable + ' stable ' + num_unstable + ' unstable for ' + out_folder)
-                console.log('############################')
-                console.log(stability_dists)
-                jsonfile.writeFileSync(out_folder+'/stability_stats.json', top_block_deviation=stability_dists)
-                console.log('Wrote to ' + out_folder+'/stability_stats.json')
-            } else {
-                let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
-                console.log(batch_name)
-                Demo.run(loaded_json, options)
-                console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
             }
+            
         }
         // console.log(jsons)
 
