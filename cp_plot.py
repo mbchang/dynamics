@@ -20,6 +20,8 @@ import itertools
 matplotlib.rcParams['axes.linewidth'] = 0.1
 import re
 
+from collections import defaultdict, Counter
+
 
 def mkdir_p(path):
     try:
@@ -378,13 +380,36 @@ experiments_to_visualize = [
     # 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
 
     # Towers Prediction
-    # 'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0',  # nothing here
+    'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0',
     'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0',
 
     'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100',
     'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100'
 
 ]
+
+# first get it to plot, then you can worry about the error bars later
+
+
+
+    # 'Tower': [
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed1', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed2', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed1', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed2', 'NPE'),
+    # ],
+
+    # 'Tower Generalization': [
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed1_lambda100', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed2_lambda100', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed1_lambda100', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed2_lambda100', 'NPE'),
+
+    # ],
 
 
 # specify paths
@@ -1050,7 +1075,7 @@ def tower_stability(experiments):
             prediction_folder = prediction_folders[0]  # WILL NOT BE TRUE WHEN YOU DO GENERALIZAION!
             command = 'node ' + js_root + '/Demo_minimal.js -i -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
             print(command)
-            os.system(command)
+            os.system(command)  # creates the stability stats file
             print '#'*80
 
             # you need to get the subfolders now
@@ -1061,16 +1086,8 @@ def tower_stability(experiments):
                 batch_folders.append(batch_folder)
 
             # let's group the gt together and the pred together
-            gt_batch_folders = sorted([f for f in batch_folders if 'gt' in f])
-            pred_batch_folders = sorted([f for f in batch_folders if 'pred' in f])
-
-            # make sure the batches correspond
-
-
-
-
-            # assert False
-
+            gt_batch_folders = sorted([f for f in batch_folders if 'gt' in f and 'batch' in f])
+            pred_batch_folders = sorted([f for f in batch_folders if 'pred' in f and 'batch' in f])
 
             stability_stats_all = {}
 
@@ -1104,6 +1121,7 @@ def tower_stability(experiments):
             # now get a list of the keys and get a numpy matrix of the frac_stable
             # is it frac_stable or frad_unstable?
 
+            # these should correspond by index
             batch_exs = stability_stats_all.keys()
             gt_frac_unstables = [stability_stats_all[be]['gt'] for be in batch_exs]
             pred_frac_unstables = [stability_stats_all[be]['pred'] for be in batch_exs]
@@ -1112,7 +1130,54 @@ def tower_stability(experiments):
             print batch_exs
             print gt_frac_unstables
             print pred_frac_unstables
+            print experiment_folder
 
+            # make a histogram
+            # given a key in gt, get a list of frac_unstable in pred for that key
+            g = defaultdict(list)
+            for k in range(len(gt_frac_unstables)):
+                g[gt_frac_unstables[k]].append(pred_frac_unstables[k])
+
+            # given a key in gt, get the frequency of frac_unstable in pred for that key
+            h = {k: Counter(g[k]) for k in g}
+
+            # find the frequency of (gt, pred) pairs
+            p = Counter(zip(gt_frac_unstables,pred_frac_unstables))
+
+            pprint.pprint(p)
+
+            # assign each index a frequency score
+            s = []
+            for k in range(len(gt_frac_unstables)):
+                s.append(p[(gt_frac_unstables[k],pred_frac_unstables[k])] * 10)
+            print s
+
+            # frequency score for ground truth
+            gp = Counter(gt_frac_unstables)
+            c = []
+            for k in range(len(gt_frac_unstables)):
+                c.append(gp[gt_frac_unstables[k]]/float(len(gt_frac_unstables)))
+
+            scatter(gt_frac_unstables, pred_frac_unstables, s, c, os.path.join(out_root, experiment_folder + '_stability.png'))
+
+
+def scatter(x, y, s, c, savename):
+    fig, ax = plt.subplots()
+    ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
+
+    colors = plt.cm.jet(np.squeeze(c))
+    m = plt.cm.ScalarMappable(cmap=plt.cm.jet)
+    m.set_array(colors)
+
+    ax.scatter(x,y, s=s, c=colors, edgecolor=colors)
+    plt.colorbar(m)
+
+    plt.legend(fontsize=14)
+    plt.xlabel('Ground Truth')
+    plt.ylabel('Prediction')  # TODO!
+    plt.savefig(savename)
+    print 'Saved scatter plot to ' + savename
+    plt.close()
 
 def img_id_json(filename):
     begin = filename.rfind('step')+len('step')
@@ -1267,14 +1332,14 @@ def animate_tower(experiments, remove_png):
     pprint.pprint(animated_experiments)
 
 
-experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
+# experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 
 # experiments_to_plot = experiments
 # plot(experiments_to_plot)
-plot_experiments(experiments_dict, False)
+# plot_experiments(experiments_dict, False)
 # 
 # visualize(experiments_to_visualize)
-# tower_stability(experiments_to_visualize)
+tower_stability(experiments_to_visualize)
 # animate(experiments_to_visualize, False)
 # animate_tower(experiments_to_visualize, False)
 
