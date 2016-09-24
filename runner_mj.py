@@ -138,17 +138,17 @@ def create_jobs(dry_run, mode, ext):
 
 
             # rda experiments
-            {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rda','mixed_n4_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rda','mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
-            {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rda','mixed_n4_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rda','mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
-            {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},  # blstm
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_z_o_dras3_rda','mixed_n4_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_z_o_dras3_rda','mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
+            # {'dataset_folders':"{'mixed_n3_t60_ex50000_m_z_o_dras3_rda','mixed_n4_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n5_t60_ex50000_m_z_o_dras3_rda','mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_z_o_dras3_rda'}"},
+            # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},  # blstm
 
 
-            {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
-            {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
+            # {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
 
             {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
-            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
+            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
 
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rda'}"},
@@ -192,8 +192,8 @@ def create_jobs(dry_run, mode, ext):
         for model in ['bl']:
             for nbrhd in [False]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [2,3,5]:  # [2,3,4]
-                        for lr in [3e-5,3e-4]:  # [1e-4, 3e-4, 1e-3]
+                    for layers in [2,5]:  # [2,3,4]
+                        for lr in [1e-5,3e-4,1e-2]:  # [1e-4, 3e-4, 1e-3]
                             for cuda in [False]:
                                 for im in [False]:
                                     # for veps in [1e-9]:
@@ -202,9 +202,9 @@ def create_jobs(dry_run, mode, ext):
                                                 # for bnorm in [False]:
                                                     for f in [True]:
                                                         for rs in [True]:
-                                                            for seed in [0]:
+                                                            for seed in [1,2]:
                                                                 for nlan in [False]:
-                                                                    for rnn_dim in [50,100,200]:
+                                                                    for rnn_dim in [50,100]:
                                                                         job['model'] = model
                                                                         job['nbrhd'] = nbrhd
                                                                         job['layers'] = layers
@@ -325,7 +325,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH -c 1\n")
         # slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=30000\n")
-        slurmfile.write("#SBATCH --time=6-23:00:00\n")
+        slurmfile.write("#SBATCH --time=5-23:00:00\n")
         slurmfile.write(jobcommand)
 
     if not dry_run:

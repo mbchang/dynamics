@@ -311,7 +311,6 @@ experiments_dict = {
     ],
 
 
-
     'BLSTM Large Capacity': [
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers3_rs_rnn_dim300_fast_seed0_lr3e-05_cuda_modelbl', 'Bidirectional LSTM Layers 3 Dim 300 LR 3e-05'),
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers3_rs_rnn_dim600_fast_seed0_lr3e-05_cuda_modelbl', 'Bidirectional LSTM Layers 3 Dim 600 LR 3e-05'),
@@ -345,7 +344,21 @@ experiments_dict = {
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim300_fast_seed0_lr0.003_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 300 LR 0.003'),
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim300_fast_seed0_lr0.001_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 300 LR 0.001'),
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim300_fast_seed0_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 300 LR 0.0003'),
-    ]
+    ],
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 experiments = list(set(itertools.chain.from_iterable([[x[0] for x in y] for y in experiments_dict.values()])))
@@ -381,7 +394,7 @@ experiments_to_visualize = [
 
     # Towers Prediction
     'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0',
-    'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0',
+    # 'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0',
 
     'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100',
     'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100'
@@ -1071,7 +1084,6 @@ def tower_stability(experiments):
         experiment_folder = os.path.join(out_root, experiment_folder)
         if any('predictions' in x for x in os.listdir(experiment_folder)):
             prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
-            # assert(len(prediction_folders)==1)
             prediction_folder = prediction_folders[0]  # WILL NOT BE TRUE WHEN YOU DO GENERALIZAION!
             command = 'node ' + js_root + '/Demo_minimal.js -i -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
             print(command)
@@ -1185,7 +1197,8 @@ def img_id_json(filename):
     return int(filename[begin:end])
 
 def ex_json(fn):
-    begin = fn.find('_ex')+len('_ex')
+    batch_idx = fn.find('batch')
+    begin = batch_idx + fn[batch_idx:].find('_ex')+len('_ex')
     end = begin + fn[begin:].find('_')
     ex = int(fn[begin:end])
     return ex
@@ -1212,11 +1225,9 @@ def create_gif_json(images_root, gifname, stability_stats=None):
 
     for ex in exs:
         exs[ex] = sorted(exs[ex], key=lambda x: img_id_json(x))
-        # stability_stats = None
         if stability_stats:
             print(sorted_stability_stats)
             key = [i for i in range(len(sorted_stability_stats)) if 'ex'+str(ex) in sorted_stability_stats[i][0]][0]
-            # print(key)
             # key = [k for k in sorted_stability_stats if 'ex'+str(ex) in k][0]
             gifname_ex = gifname[:gifname.rfind('.gif')]+ '_rank' + str(key)+'_ex'+str(ex) +'_top-block-displacement_' + str(sorted_stability_stats[key][1])  + '.gif'
         else:
@@ -1268,14 +1279,14 @@ def animate(experiments, remove_png):
         else:
             animated_experiments.append(experiment_folder)
             for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
+
                 print '-'*80
                 batch_name = experiment_folder + '_' + batch_folder
                 gifname = batch_name + '.gif'
-                # overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
                 batch_folder = os.path.join(visual_folder, batch_folder)
                 if any(f.endswith('.png') for f in os.listdir(batch_folder)):
                     create_gif_json(batch_folder, gifname)
-                    overlay_imgs(batch_folder, batch_name, 5)
+                    # overlay_imgs(batch_folder, batch_name, 5)
 
                     if remove_png:
                         print 'Removing images from', batch_folder
@@ -1290,46 +1301,46 @@ def animate(experiments, remove_png):
     pprint.pprint(animated_experiments)
 
 
-def animate_tower(experiments, remove_png):
-    print('## ANIMATE TOWER##')
-    # wait until all of Demo_minimal has finished
-    animated_experiments = []
-    for experiment_folder in experiments:
-        print '#'*80
-        print 'Trying to animate', experiment_folder
-        visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
-        if not os.listdir(visual_folder): 
-            print 'Nothing in', visual_folder
-        else:
-            animated_experiments.append(experiment_folder)
-            for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
+# def animate_tower(experiments, remove_png):
+#     print('## ANIMATE TOWER##')
+#     # wait until all of Demo_minimal has finished
+#     animated_experiments = []
+#     for experiment_folder in experiments:
+#         print '#'*80
+#         print 'Trying to animate', experiment_folder
+#         visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])
+#         if not os.listdir(visual_folder): 
+#             print 'Nothing in', visual_folder
+#         else:
+#             animated_experiments.append(experiment_folder)
+#             for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
 
-                print '-'*80
-                batch_name = experiment_folder + '_' + batch_folder
-                gifname = batch_name + '.gif'
-                # overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
-                batch_folder = os.path.join(visual_folder, batch_folder)
+#                 print '-'*80
+#                 batch_name = experiment_folder + '_' + batch_folder
+#                 gifname = batch_name + '.gif'
+#                 # overlayed_name = experiment_folder + '_' + batch_folder + '_overlay.png'
+#                 batch_folder = os.path.join(visual_folder, batch_folder)
 
-                # get the stats
-                stability_stats = json.loads(open(os.path.join(batch_folder,'stability_stats.json'),'r').read().strip())
-                print stability_stats
+#                 # get the stats
+#                 stability_stats = json.loads(open(os.path.join(batch_folder,'stability_stats.json'),'r').read().strip())
+#                 print stability_stats
 
 
-                if any(f.endswith('.png') for f in os.listdir(batch_folder)):
-                    create_gif_json(batch_folder, gifname, stability_stats)
-                    overlay_imgs(batch_folder, batch_name, 5)
+#                 if any(f.endswith('.png') for f in os.listdir(batch_folder)):
+#                     create_gif_json(batch_folder, gifname, stability_stats)
+#                     overlay_imgs(batch_folder, batch_name, 5)
 
-                    if remove_png:
-                        print 'Removing images from', batch_folder
-                        for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png') and 'overlay' not in x]:
-                            imgfile = os.path.join(batch_folder, imgfile)
-                            command = 'rm ' + imgfile
-                            os.system(command)
-                else:
-                    print 'No .pngs found. Not creating gif for', batch_folder
+#                     if remove_png:
+#                         print 'Removing images from', batch_folder
+#                         for imgfile in [x for x in os.listdir(batch_folder) if x.endswith('.png') and 'overlay' not in x]:
+#                             imgfile = os.path.join(batch_folder, imgfile)
+#                             command = 'rm ' + imgfile
+#                             os.system(command)
+#                 else:
+#                     print 'No .pngs found. Not creating gif for', batch_folder
 
-    print 'Animated the following folders:'
-    pprint.pprint(animated_experiments)
+#     print 'Animated the following folders:'
+#     pprint.pprint(animated_experiments)
 
 
 # experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
@@ -1339,9 +1350,8 @@ def animate_tower(experiments, remove_png):
 # plot_experiments(experiments_dict, False)
 # 
 # visualize(experiments_to_visualize)
-tower_stability(experiments_to_visualize)
-# animate(experiments_to_visualize, False)
-# animate_tower(experiments_to_visualize, False)
+# tower_stability(experiments_to_visualize)
+animate(experiments_to_visualize, False)
 
 
 # Balls Pred

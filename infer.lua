@@ -633,6 +633,7 @@ function context_property_analysis(model, dataloader, params_, hypotheses, si_in
     -- here you will keep a bunch of datastructures for all the properties. 
     -- you will add to these as you encounter context objects with those properties
 
+    -- afterwards you'd just average these
     local sizes = {}
     sizes[0.5] = {}
     sizes[1] = {}
@@ -678,9 +679,12 @@ function context_property_analysis(model, dataloader, params_, hypotheses, si_in
                     context_mask:cmul(obstacle_mask)
                 end
 
+                -- possible todo: if mass inference then don't use obstacles
+
                 local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
                 local context_and_wall_mask = torch.cmul(context_mask, collision_filter_mask)
 
+                -- at the point, we have 
                 if context_and_wall_mask:sum() > 0 then
 
                     -- TODO: 
@@ -690,6 +694,8 @@ function context_property_analysis(model, dataloader, params_, hypotheses, si_in
                     losses:maskedSelect(context_mask)
                     vel_losses:maskedSelect(context_mask)
                     ang_vel_losses:maskedSelect(context_mask)
+
+                    -- now all are tensors of size <= bsize
 
                     losses = torch.squeeze(losses)
                     vel_losses = torch.squeeze(vel_losses)
@@ -705,56 +711,57 @@ function context_property_analysis(model, dataloader, params_, hypotheses, si_in
 
                     local specific_sizes = extract_field(specific_context, config_args.si.os) -- num_valid_contexts
 
-                    local specific_oids = extract_field(specific_context, config_args.si.oid) -- num_valid_contexts
+                    local specific_oids = extract_field(specific_context, config_args.si.oid) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
 
                     assert(#specific_sizes == #specific_oids)
+
+                    -- first we figure out which oids and sizes were represented in specific_context
                     -- populate tables
                     for f=1,#specific_sizes do
                         -- populate size
-                        sizes[specific_sizes[f]] = losses[f]
-
-                        -- populate oid
-                        oids[specific_sizes[f]] = losses[f]
+                        sizes[specific_sizes[f]] = {losses[f], vel_losses[f], ang_vel_losses[f]}
                     end
 
+                    for f=1,#specific_oids do
+                        -- populate oid
+                        oids[specific_oids[f]] = {losses[f], vel_losses[f], ang_vel_losses[f]}
+                    end
 
-
-                -- fp
-
-                -- apply mask
-
-                -- compute loss; do I want to do angle?
-
-                -- any other mask I want to do?
-
-                -- need to apply wall collision filter
-
-
-                    local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, context_id)
-                    -- now that you have best_hypothesis, compare best_hypotheses with truth
-                    -- need to construct true hypotheses based on this_past, hypotheses as parameters
-                    local context_past = batch[2]:clone()
-                    local ground_truth = torch.squeeze(context_past[{{},{context_id},{-1},si_indices}])  -- object properties always the same across time
-
-                    -- ground truth: (bsize, hypothesis_length)
-                    num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold, context_mask)
                     collectgarbage()
                 end
             end
         end 
-
-        -- good 
-
     end
 
-    local accuracy
-    if count == 0 then 
-        accuracy = 0
-    else 
-        accuracy =num_correct/count
+    -- now let's do the averaging. we have sizes and oids
+    -- sizes[0.5] = table of length num_samples, with each element as {losses[f], vel_losses[f], ang_vel_losses[f]}
+
+    -- transform into tensor (num_samples, 3)
+    for t=1,#sizes do
+        sizes[t] = torch.Tensor(sizes[t])
     end
-    print(count..' collisions with context out of '..dataloader.total_batches*mp.batch_size..' examples')
-    return accuracy
+
+    for t=1,#oids do
+        oids[t] = torch.Tensor(oids[t])
+    end
+
+    -- now let's do averaging
+    local avg_sizes = {}
+    local avg_oids = {}
+
+    for t=1,#sizes do
+        avg_sizes[t] = sizes[t]:mean(1)
+    end
+
+    for t=1,#oids do
+        avg_oids = oids[t]:mean(1)
+    end
+
+    print('avg loss per size')
+    print(avg_sizes)
+    print('avg loss per oid')
+    print(avg_oids)
+    return avg_sizes, avg_oids
 end
 
 
