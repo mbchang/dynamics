@@ -678,21 +678,28 @@ function property_analysis_all(logfile, property)
         local avg_property, num_property = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
         print(avg_property, num_property)
 
-        local metrics = {'loss', 'vel_loss', 'ang_loss'} -- TODO! need to do cosine distance and magnitude!
+        local metrics = {'loss', 'vel_loss', 'ang_loss', 'avg_ang_error', 'avg_rel_mag_error'} -- TODO! need to do cosine distance and magnitude!
 
         print('avg_property')
+        local logger_table = {}
+        local logger_table_style = {}
         for k,v in pairs(avg_property) do
             print(k)
             print(v)
 
             for m,n in pairs(torch.totable(torch.squeeze(v))) do
-                print(k,m)
+                print(metrics[m]..'_'..k)
                 print(n)
+
+                logger_table[metrics[m]..'_'..k] = n
+                logger_table_style[metrics[m]..'_'..k] = '~'   
             end
         end
-        -- print('Accuracy',accuracy)
-        -- inferenceLogger:add{[property..' accuracy (test set)'] = accuracy}
-        -- inferenceLogger:style{[property..' accuracy (test set)'] = '~'}
+
+        print(logger_table)
+
+        analysisLogger:add(logger_table)
+        analysisLogger:style(logger_table_style)   
     end
     print('Finished property analysis')
 end

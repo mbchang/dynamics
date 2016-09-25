@@ -28,12 +28,12 @@ end
 -- pred: (bsize, num_future, obj_dim)
 -- this_future: (bsize, num_future, obj_dim)
 -- assume they are normalized
-function angle_magnitude(pred, batch)
+function angle_magnitude(pred, batch, within_batch)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
     -- first unrelative
-    pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-    pred = data_process.relative_pair(this_past:clone(), pred:clone(), true)
+    pred = pred:clone():reshape(mp.batch_size, mp.num_future, mp.object_dim)
+    pred = data_process.relative_pair(this_past:clone(), pred, true)
 
     this_future = data_process.relative_pair(this_past:clone(), this_future:clone(), true)
 
@@ -63,11 +63,17 @@ function angle_magnitude(pred, batch)
     local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)  -- if I do acos then I get nan
     angle:maskedFill(1-mask,0)  -- zero out the ones where velocity was zero
 
-    -- take average
-    local avg_angle_error = angle:sum()/mask_nElement
-    local avg_relative_magnitude_error = relative_magnitude_error:sum()/mask_nElement
+    -- so angle is (bsize, etc, etc)
+    -- but you have to be careful
 
-    return avg_angle_error, avg_relative_magnitude_error
+    if within_batch then
+        return angle, relative_magnitude_error, mask, mask_nElement
+    else
+        -- take average
+        local avg_angle_error = angle:sum()/mask_nElement
+        local avg_relative_magnitude_error = relative_magnitude_error:sum()/mask_nElement
+        return avg_angle_error, avg_relative_magnitude_error
+    end
 end
 
 -- a table of onehot tensors of size num_hypotheses
@@ -774,10 +780,17 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
                     -- TODO: 
                     local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch)
 
+
+
+                    local cd_error, relative_magnitude_error, angle_mask, mask_nElement = angle_magnitude(prediction, batch, true)
+                    context_and_wall_mask:cmul(angle_mask)
+
                     -- apply context_mask to losses. all are tensors of size (bsize)
                     losses = losses:maskedSelect(context_and_wall_mask)
                     vel_losses = vel_losses:maskedSelect(context_and_wall_mask)
                     ang_vel_losses = ang_vel_losses:maskedSelect(context_and_wall_mask)
+                    cd_error = cd_error:maskedSelect(context_and_wall_mask)
+                    relative_magnitude_error = relative_magnitude_error:maskedSelect(context_and_wall_mask)
 
                     -- now all are tensors of size <= bsize
 
@@ -793,7 +806,12 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
 
                     for f=1,#specific_properties do
                         -- populate oid
-                        table.insert(property_table[specific_properties[f]],{losses[f], vel_losses[f], ang_vel_losses[f]})
+                        table.insert(property_table[specific_properties[f]],
+                                {losses[f], 
+                                vel_losses[f], 
+                                ang_vel_losses[f],
+                                cd_error[f],
+                                relative_magnitude_error[f]})
                     end
 
                     collectgarbage()
