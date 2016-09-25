@@ -741,24 +741,11 @@ function property_analysis_all(logfile, property)
         inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
         require 'infer'
 
-        -- save num_correct into a file
-        -- local avg_sizes, avg_oids, num_sizes, num_oids = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
-        -- print(avg_sizes, avg_oids, num_sizes, num_oids)
+        local avg_property, num_property = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
+        print(avg_property, num_property)
 
-        local avg_oids, num_oids = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
-        print(avg_oids, num_oids)
-
-        -- local avg_sizes, num_sizes = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
-        -- print(avg_sizes, num_sizes)
-
-        -- print('avg_sizes')
-        -- for k,v in pairs(avg_sizes) do
-        --     print(k)
-        --     print(v)
-        -- end
-
-        print('avg_oids')
-        for k,v in pairs(avg_oids) do
+        print('avg_property')
+        for k,v in pairs(avg_property) do
             print(k)
             print(v)
         end

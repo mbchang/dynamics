@@ -140,17 +140,10 @@ function property_analysis(model, dataloader, params_, property)
         property_table[2] = {} 
     end
 
-    -- print(property_table)
-    -- assert(false)
-
-    local distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant
-
     -- you should give the table to the function 
-    -- local avg_sizes, avg_oids, num_sizes, num_oids = context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
     local avg_properties, num_properties = context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
 
-    -- return avg_sizes, avg_oids, num_sizes, num_oids
-    return avg_properties, num_properties--avg_oids, num_sizes, num_oids
+    return avg_properties, num_properties
 end
 
 -- copies batch
@@ -661,25 +654,11 @@ end
 
 function context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
 
-    -- print(property_table)
-    -- assert()
-
     local num_correct = 0
     local count = 0
 
     -- here you will keep a bunch of datastructures for all the properties. 
     -- you will add to these as you encounter context objects with those properties
-
-    -- afterwards you'd just average these
-    local sizes = {}
-    sizes[0.5] = {}
-    sizes[1] = {}
-    sizes[2] = {}
-
-    local oids = {}
-    oids[1] = {}
-    oids[2] = {} -- note that we are not inferring block!
-
 
     for i = 1, dataloader.total_batches do
         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
@@ -710,13 +689,13 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
                 -- TODO! This is important. we need to break it up into si_indices actually
                 local obstacle_index, obstacle_mask
                 -- if size inference then obstacle mask
-                -- if alleq({si_indices, config_args.si.os}) then
-                --     obstacle_index = config_args.si.oid[1]+1
-                --     -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
-                --     -- that is the problem. I didn't make a copy. 
-                --     obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
-                --     context_mask:cmul(obstacle_mask)
-                -- end
+                if alleq({si_indices, config_args.si.os}) then
+                    obstacle_index = config_args.si.oid[1]+1
+                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
+                    -- that is the problem. I didn't make a copy. 
+                    obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                    context_mask:cmul(obstacle_mask)
+                end
 
                 -- possible todo: if mass inference then don't use obstacles
 
@@ -740,24 +719,11 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
                     -- maskedSelect does things in order
                     local specific_context = extract_context_id_from_batch(batch, context_and_wall_mask, context_id) -- (num_ex_for_context, 1, num_past, obj_dim)
 
-                    local specific_sizes = extract_field(specific_context[{{},{},{-1},{}}], config_args.si.os) -- num_valid_contexts
-
-                    local specific_oids = extract_field(specific_context[{{},{},{-1},{}}], config_args.si.oid) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
-
                     local specific_properties = extract_field(specific_context[{{},{},{-1},{}}], si_indices) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
                     -- good up to here
 
                     -- first we figure out which oids and sizes were represented in specific_context
                     -- populate tables
-                    for f=1,#specific_sizes do
-                        -- populate size
-                        table.insert(sizes[specific_sizes[f]],{losses[f], vel_losses[f], ang_vel_losses[f]})  -- is this indexing correct?
-                    end
-
-                    for f=1,#specific_oids do
-                        -- populate oid
-                        table.insert(oids[specific_oids[f]],{losses[f], vel_losses[f], ang_vel_losses[f]})
-                    end
 
                     for f=1,#specific_properties do
                         -- populate oid
@@ -771,54 +737,23 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
     end
 
     -- now let's do the averaging. we have sizes and oids
-    -- sizes[0.5] = table of length num_samples, with each element as {losses[f], vel_losses[f], ang_vel_losses[f]}
 
     -- transform into tensor (num_samples, 3)
-    for t,_ in pairs(sizes) do
-        sizes[t] = torch.Tensor(sizes[t])
-    end
-
-    for t,_ in pairs(oids) do
-        oids[t] = torch.Tensor(oids[t])
-    end
-
-    print('sizes')
-    print(sizes)
-
-    print('oids')
-    print(oids)
-
     for t,_ in pairs(property_table) do
         property_table[t] = torch.Tensor(property_table[t])
     end
 
-    -- print(property_table)
-    -- assert(false)
-
     -- now let's do averaging
-    local avg_sizes = {}
-    local avg_oids = {}
-    local num_sizes = {}
-    local num_oids = {}
     local avg_properties = {}
     local num_properties = {}
 
-    for t,_ in pairs(sizes) do
-        avg_sizes[t] = sizes[t]:mean(1)
-        num_sizes[t] = sizes[t]:size(1)
-    end
-
     for t,_ in pairs(property_table) do
-        avg_properties[t] = property_table[t]:mean(1)
-        num_properties[t] = property_table[t]:size(1)
+        if property_table[t]:nElement() > 0 then
+            avg_properties[t] = property_table[t]:mean(1)
+            num_properties[t] = property_table[t]:size(1)
+        end
     end
 
-    for t,_ in pairs(oids) do
-        avg_oids[t] = oids[t]:mean(1)
-        num_oids[t] = oids[t]:size(1)
-    end
-
-    -- return avg_sizes, avg_oids, num_sizes, num_oids
     return avg_properties, num_properties
 end
 
