@@ -1,4 +1,4 @@
-require 'hdf5'
+-- require 'hdf5'
 require 'nn'
 require 'nngraph'
 require 'torchx'
