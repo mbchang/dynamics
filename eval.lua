@@ -224,72 +224,6 @@ end
 --     print(this_past[{{1},{1,9}}])
 -- end
 
--- element-wise relative error
--- we assume num_future = 1
-local function relative_error(x, x_hat)
-    -- x cannot be 0
-    local mask = x:ne(0)
-    local mask_nElement = x:ne(0):nonzero():nElement()
-
-    -- first fill x with 1 in 0 of mask
-    x:maskedFill(1-mask,1)
-
-    local ratio = torch.cdiv(x_hat, x)  -- x_hat/x
-    local difference = 1 - ratio
-    local re = torch.abs(difference)
-
-    -- apply mask
-    re:maskedFill(1-mask,0)
-
-    assert(x:ne(0):nonzero():nElement()/x:dim() == x:nElement())
-    return re, mask, mask_nElement
-end
-
--- pred: (bsize, num_future, obj_dim)
--- this_future: (bsize, num_future, obj_dim)
--- assume they are normalized
-local function angle_magnitude(pred, batch)
-    local this_past, context_past, this_future, context_future, mask = unpack(batch)
-
-    -- first unrelative
-    pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-    pred = data_process.relative_pair(this_past:clone(), pred:clone(), true)
-
-    this_future = data_process.relative_pair(this_past:clone(), this_future:clone(), true)
-
-    -- get velocities
-    local vx = config_args.si.vx
-    local vy = config_args.si.vy
-    local vnc = config_args.velocity_normalize_constant
-
-    local pred_vel = (pred[{{},{},{vx,vy}}]:clone()*vnc)  -- (bsize, num_future, 2)
-    local gt_vel = (this_future[{{},{},{vx,vy}}]:clone()*vnc)  -- (bsize, num_future, 2)
-
-    -- get magnitudes
-    local pred_vel_magnitude = pred_vel:norm(2,3) -- (bsize, num_future, 1)
-    local gt_vel_magnitude = gt_vel:norm(2,3) -- (bsize, num_future, 1)
-    assert(pred_vel_magnitude:size(2)==1)
-    assert(gt_vel_magnitude:size(2)==1)
-    local relative_magnitude_error, mask, mask_nElement = relative_error(torch.squeeze(torch.squeeze(gt_vel_magnitude:clone(),2),2), 
-                                                    torch.squeeze(torch.squeeze(pred_vel_magnitude:clone(),2),2))  -- (bsize)
-
-
-    -- get cosine difference
-    local numerator = torch.cmul(pred_vel, gt_vel):sum(3) -- (bsize, num_future, 1)
-    local denominator = torch.cmul(pred_vel_magnitude,gt_vel_magnitude)  -- (bsize, num_future, 1)
-    local cosine_diff = torch.cdiv(numerator,denominator)
-
-    -- local angle = torch.acos(cosine_diff)  -- (bsize, num_future, 1)
-    local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)  -- if I do acos then I get nan
-    angle:maskedFill(1-mask,0)  -- zero out the ones where velocity was zero
-
-    -- take average
-    local avg_angle_error = angle:sum()/mask_nElement
-    local avg_relative_magnitude_error = relative_magnitude_error:sum()/mask_nElement
-
-    return avg_angle_error, avg_relative_magnitude_error
-end
-
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local count = 0
@@ -729,8 +663,8 @@ end
 function property_analysis_all(logfile, property)
     local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
 
-    -- local analysisLogger = optim.Logger(paths.concat(mp.savedir ..'/', logfile))
-    -- analysisLogger.showPlot = false
+    local analysisLogger = optim.Logger(paths.concat(mp.savedir ..'/', logfile))
+    analysisLogger.showPlot = false
 
     -- iterate through checkpoints backwards (least recent to most recent)
     for i=#checkpoints,1,-1 do
@@ -744,10 +678,17 @@ function property_analysis_all(logfile, property)
         local avg_property, num_property = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
         print(avg_property, num_property)
 
+        local metrics = {'loss', 'vel_loss', 'ang_loss'} -- TODO! need to do cosine distance and magnitude!
+
         print('avg_property')
         for k,v in pairs(avg_property) do
             print(k)
             print(v)
+
+            for m,n in pairs(torch.totable(torch.squeeze(v))) do
+                print(k,m)
+                print(n)
+            end
         end
         -- print('Accuracy',accuracy)
         -- inferenceLogger:add{[property..' accuracy (test set)'] = accuracy}
@@ -804,6 +745,7 @@ function test_vel_angvel_all()
     for i=#checkpoints,1,-1 do
         local checkpoint, snapshotfile = load_checkpoint(checkpoints[i])
         inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
+        require 'infer'
 
         local checkpoint_eval_data = torch.zeros(#test_loader.datasamplers, 5)  -- (num_samplers, [avg_vel_loss, avg_ang_vel_loss])
 
