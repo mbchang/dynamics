@@ -117,7 +117,40 @@ function infer_properties(model, dataloader, params_, property, method, cf)
     elseif method == 'max_likelihood_context' then
         accuracy, accuracy_by_speed, accuracy_by_mass = max_likelihood_context(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     end
+
     return accuracy, accuracy_by_speed, accuracy_by_mass
+end
+
+function property_analysis(model, dataloader, params_, property)
+    local si_indices, distance_threshold, property_table
+    if property == 'size' then
+        si_indices = tablex.deepcopy(config_args.si.os)
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant
+
+        property_table = {}
+        property_table[0.5] = {}
+        property_table[1] = {}
+        property_table[2] = {}
+    elseif property == 'objtype' then
+        si_indices = tablex.deepcopy(config_args.si.oid)
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant
+
+        property_table = {}
+        property_table[1] = {}
+        property_table[2] = {} 
+    end
+
+    -- print(property_table)
+    -- assert(false)
+
+    local distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant
+
+    -- you should give the table to the function 
+    -- local avg_sizes, avg_oids, num_sizes, num_oids = context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
+    local avg_properties, num_properties = context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
+
+    -- return avg_sizes, avg_oids, num_sizes, num_oids
+    return avg_properties, num_properties--avg_oids, num_sizes, num_oids
 end
 
 -- copies batch
@@ -626,7 +659,11 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, 
     return accuracy, accuracy_by_speed, accuracy_by_mass
 end
 
-function context_property_analysis(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
+function context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
+
+    -- print(property_table)
+    -- assert()
+
     local num_correct = 0
     local count = 0
 
@@ -665,66 +702,66 @@ function context_property_analysis(model, dataloader, params_, hypotheses, si_in
         for context_id = 1, num_context do
             -- here let's get a onehot mask to see if the context id is in valid_contexts
             local context_mask = valid_contexts:eq(context_id)
+
             -- to speed up computation
             if context_mask:sum() > 0 then  -- it's okay to use sum because it is a ByteTensor
 
                 -- here get the obstacle mask
+                -- TODO! This is important. we need to break it up into si_indices actually
                 local obstacle_index, obstacle_mask
                 -- if size inference then obstacle mask
-                if alleq({si_indices, config_args.si.os}) then
-                    obstacle_index = config_args.si.oid[1]+1
-                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
-                    -- that is the problem. I didn't make a copy. 
-                    obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
-                    context_mask:cmul(obstacle_mask)
-                end
+                -- if alleq({si_indices, config_args.si.os}) then
+                --     obstacle_index = config_args.si.oid[1]+1
+                --     -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
+                --     -- that is the problem. I didn't make a copy. 
+                --     obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
+                --     context_mask:cmul(obstacle_mask)
+                -- end
 
                 -- possible todo: if mass inference then don't use obstacles
 
                 local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
+
                 local context_and_wall_mask = torch.cmul(context_mask, collision_filter_mask)
 
                 -- at the point, we have 
                 if context_and_wall_mask:sum() > 0 then
-
                     -- TODO: 
                     local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch)
 
                     -- apply context_mask to losses. all are tensors of size (bsize)
-                    losses:maskedSelect(context_mask)
-                    vel_losses:maskedSelect(context_mask)
-                    ang_vel_losses:maskedSelect(context_mask)
+                    losses = losses:maskedSelect(context_and_wall_mask)
+                    vel_losses = vel_losses:maskedSelect(context_and_wall_mask)
+                    ang_vel_losses = ang_vel_losses:maskedSelect(context_and_wall_mask)
 
                     -- now all are tensors of size <= bsize
 
-                    losses = torch.squeeze(losses)
-                    vel_losses = torch.squeeze(vel_losses)
-                    ang_vel_losses = torch.squeeze(ang_vel_losses)
-
-                    assert(losses:dim()==1 and losses:size(1)==mp.batch_size)
-                    assert(vel_losses:dim()==1 and vel_losses:size(1)==mp.batch_size)
-                    assert(ang_vel_losses:dim()==1 and ang_vel_losses:size(1)==mp.batch_size)
-
                     -- we know that there is only context, and that particular context has context id
                     -- maskedSelect does things in order
-                    local specific_context = extract_context_id_from_batch(batch, context_mask) -- (num_valid_contexts, num_past, obj_dim)
+                    local specific_context = extract_context_id_from_batch(batch, context_and_wall_mask, context_id) -- (num_ex_for_context, 1, num_past, obj_dim)
 
-                    local specific_sizes = extract_field(specific_context, config_args.si.os) -- num_valid_contexts
+                    local specific_sizes = extract_field(specific_context[{{},{},{-1},{}}], config_args.si.os) -- num_valid_contexts
 
-                    local specific_oids = extract_field(specific_context, config_args.si.oid) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
+                    local specific_oids = extract_field(specific_context[{{},{},{-1},{}}], config_args.si.oid) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
 
-                    assert(#specific_sizes == #specific_oids)
+                    local specific_properties = extract_field(specific_context[{{},{},{-1},{}}], si_indices) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
+                    -- good up to here
 
                     -- first we figure out which oids and sizes were represented in specific_context
                     -- populate tables
                     for f=1,#specific_sizes do
                         -- populate size
-                        sizes[specific_sizes[f]] = {losses[f], vel_losses[f], ang_vel_losses[f]}
+                        table.insert(sizes[specific_sizes[f]],{losses[f], vel_losses[f], ang_vel_losses[f]})  -- is this indexing correct?
                     end
 
                     for f=1,#specific_oids do
                         -- populate oid
-                        oids[specific_oids[f]] = {losses[f], vel_losses[f], ang_vel_losses[f]}
+                        table.insert(oids[specific_oids[f]],{losses[f], vel_losses[f], ang_vel_losses[f]})
+                    end
+
+                    for f=1,#specific_properties do
+                        -- populate oid
+                        table.insert(property_table[specific_properties[f]],{losses[f], vel_losses[f], ang_vel_losses[f]})
                     end
 
                     collectgarbage()
@@ -737,31 +774,99 @@ function context_property_analysis(model, dataloader, params_, hypotheses, si_in
     -- sizes[0.5] = table of length num_samples, with each element as {losses[f], vel_losses[f], ang_vel_losses[f]}
 
     -- transform into tensor (num_samples, 3)
-    for t=1,#sizes do
+    for t,_ in pairs(sizes) do
         sizes[t] = torch.Tensor(sizes[t])
     end
 
-    for t=1,#oids do
+    for t,_ in pairs(oids) do
         oids[t] = torch.Tensor(oids[t])
     end
+
+    print('sizes')
+    print(sizes)
+
+    print('oids')
+    print(oids)
+
+    for t,_ in pairs(property_table) do
+        property_table[t] = torch.Tensor(property_table[t])
+    end
+
+    -- print(property_table)
+    -- assert(false)
 
     -- now let's do averaging
     local avg_sizes = {}
     local avg_oids = {}
+    local num_sizes = {}
+    local num_oids = {}
+    local avg_properties = {}
+    local num_properties = {}
 
-    for t=1,#sizes do
+    for t,_ in pairs(sizes) do
         avg_sizes[t] = sizes[t]:mean(1)
+        num_sizes[t] = sizes[t]:size(1)
     end
 
-    for t=1,#oids do
-        avg_oids = oids[t]:mean(1)
+    for t,_ in pairs(property_table) do
+        avg_properties[t] = property_table[t]:mean(1)
+        num_properties[t] = property_table[t]:size(1)
     end
 
-    print('avg loss per size')
-    print(avg_sizes)
-    print('avg loss per oid')
-    print(avg_oids)
-    return avg_sizes, avg_oids
+    for t,_ in pairs(oids) do
+        avg_oids[t] = oids[t]:mean(1)
+        num_oids[t] = oids[t]:size(1)
+    end
+
+    -- return avg_sizes, avg_oids, num_sizes, num_oids
+    return avg_properties, num_properties
+end
+
+-- good
+function extract_context_id_from_batch(batch, context_mask, context_id) 
+    local this_past, context_past, this_future, context_future, mask = unpack(batch)
+
+    local selected_context = torch.squeeze(context_past[{{},{context_id},{-1}}])  -- the last past timestep  -- good
+
+    -- recall context_mask gives you the example within batch for that particular context_id
+    local ex_in_batch_for_context = torch.totable(torch.squeeze(torch.squeeze(context_mask):nonzero(),2))  -- good
+
+    local selected_ex_for_context = {}
+    for _,k in pairs(ex_in_batch_for_context) do
+        table.insert(selected_ex_for_context,context_past[{{k},{context_id}}]:clone())  -- note that we are cloning here
+    end
+
+    selected_ex_for_context = torch.cat(selected_ex_for_context,1)  -- (num_selected_context, 1, num_past, obj_dim)
+
+    return selected_ex_for_context
+end
+
+-- good
+function extract_field(specific_context, si_indices) 
+    local one_hot_field = specific_context[{{},{},{},si_indices}]
+
+    local categories
+    if alleq({si_indices, config_args.si.m}) then
+        categories = config_args.masses -- TODO! do I want to include all of it or do I want to trim the large mass
+    elseif alleq({si_indices, config_args.si.oid}) then
+        categories = config_args.oid_ids -- do I want to trim?
+    elseif alleq({si_indices, config_args.si.os}) then
+        categories = config_args.object_sizes
+    else
+        assert(false, 'Unknown property')
+    end
+
+    -- now turn one_hot to number
+    local fields  = onehot2numall(one_hot_field, categories, mp.cuda)
+    fields = torch.squeeze(fields,2) -- only one context
+    fields = torch.squeeze(fields,2) -- only take one timestep
+    fields = torch.squeeze(fields,2) -- assume the field is only a scalar
+    -- now fields is (num_selected_context)
+
+    -- turn it into a table, listed in order for the context
+    fields = torch.totable(fields)
+
+    return fields
 end
 
 

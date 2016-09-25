@@ -292,16 +292,22 @@ function model:fp_batch(params_, batch, sim)
     -- p_ang_vel: (bsize, 1, p_ang_veldim)
 
     local loss_all = {}
+    local loss_vel_all = {}
+    local loss_ang_vel_all = {}
     for i=1,mp.batch_size do
         local loss_vel = self.criterion:forward(p_vel[{{i}}], gt_vel[{{i}}])
         local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
         local loss = loss_vel + loss_ang_vel
         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
         table.insert(loss_all, loss)
+
+        table.insert(loss_vel_all, loss_vel)
+        table.insert(loss_ang_vel_all, loss_ang_vel)
+
     end
 
     collectgarbage()
-    return torch.Tensor(loss_all), prediction
+    return torch.Tensor(loss_all), prediction, torch.Tensor(loss_vel_all), torch.Tensor(loss_ang_vel_all)
 end
 
 

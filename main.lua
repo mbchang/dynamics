@@ -92,7 +92,7 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-    mp.max_iter = 6000 
+    mp.max_iter = 60 
     mp.nbrhd = true
     mp.lr = 3e-3
     mp.lrdecay = 0.5
@@ -100,7 +100,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 3
     mp.rnn_dim = 64
-    mp.model = 'bl'
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5

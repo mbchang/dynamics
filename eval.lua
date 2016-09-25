@@ -9,7 +9,7 @@ require 'xlua'
 require 'Base'
 require 'sys'
 require 'pl'
-require 'hdf5'
+-- require 'hdf5'
 torch.setdefaulttensortype('torch.FloatTensor')
 require 'data_utils'
 local tablex = require 'pl.tablex'
@@ -726,6 +726,51 @@ function inference(logfile, property, method, cf)
     print('Finished '..property..' inference')
 end
 
+function property_analysis_all(logfile, property)
+    local checkpoints = get_all_checkpoints(mp.logs_root, mp.name)
+
+    -- local analysisLogger = optim.Logger(paths.concat(mp.savedir ..'/', logfile))
+    -- analysisLogger.showPlot = false
+
+    -- iterate through checkpoints backwards (least recent to most recent)
+    for i=#checkpoints,1,-1 do
+        print(' property analysis on snapshot '..checkpoints[i])
+
+        local checkpoint, snapshotfile = load_checkpoint(checkpoints[i])
+
+        inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
+        require 'infer'
+
+        -- save num_correct into a file
+        -- local avg_sizes, avg_oids, num_sizes, num_oids = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
+        -- print(avg_sizes, avg_oids, num_sizes, num_oids)
+
+        local avg_oids, num_oids = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
+        print(avg_oids, num_oids)
+
+        -- local avg_sizes, num_sizes = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
+        -- print(avg_sizes, num_sizes)
+
+        -- print('avg_sizes')
+        -- for k,v in pairs(avg_sizes) do
+        --     print(k)
+        --     print(v)
+        -- end
+
+        print('avg_oids')
+        for k,v in pairs(avg_oids) do
+            print(k)
+            print(v)
+        end
+        -- print('Accuracy',accuracy)
+        -- inferenceLogger:add{[property..' accuracy (test set)'] = accuracy}
+        -- inferenceLogger:style{[property..' accuracy (test set)'] = '~'}
+    end
+    print('Finished property analysis')
+end
+
+
+
 local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
     local num_batches = num_batches or dataloader.total_batches
@@ -850,6 +895,13 @@ function pmofm_b2i_inference()
     inference('pmofm_b2i_infer_cf.log', 'pos_mass_oid_fixedmass', 'backprop', true)
 end
 
+function size_analysis()
+    property_analysis_all('size_analysis.log', 'size')
+end
+
+function oid_analysis()
+    property_analysis_all('oid_analysis.log', 'objtype')
+end
 
 function predict_b2i()
     local snapshot = getLastSnapshot(mp.name)
@@ -905,6 +957,12 @@ elseif mp.mode == 'tva' then
     test_vel_angvel_all()
 elseif mp.mode == 'tf' then
     predict_test_first_timestep_all()
+elseif mp.mode == 'pa' then
+    property_analysis_all()
+elseif mp.mode == 'sa' then
+    size_analysis()
+elseif mp.mode == 'oia' then
+    oid_analysis()
 else
     error('unknown mode')
 end
