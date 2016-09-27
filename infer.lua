@@ -780,41 +780,42 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
                     -- TODO: 
                     local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch)
 
-
-
                     local cd_error, relative_magnitude_error, angle_mask, mask_nElement = angle_magnitude(prediction, batch, true)
                     context_and_wall_mask:cmul(angle_mask)
 
-                    -- apply context_mask to losses. all are tensors of size (bsize)
-                    losses = losses:maskedSelect(context_and_wall_mask)
-                    vel_losses = vel_losses:maskedSelect(context_and_wall_mask)
-                    ang_vel_losses = ang_vel_losses:maskedSelect(context_and_wall_mask)
-                    cd_error = cd_error:maskedSelect(context_and_wall_mask)
-                    relative_magnitude_error = relative_magnitude_error:maskedSelect(context_and_wall_mask)
+                    if context_and_wall_mask:sum() > 0 then
 
-                    -- now all are tensors of size <= bsize
+                        -- apply context_mask to losses. all are tensors of size (bsize)
+                        losses = losses:maskedSelect(context_and_wall_mask)
+                        vel_losses = vel_losses:maskedSelect(context_and_wall_mask)
+                        ang_vel_losses = ang_vel_losses:maskedSelect(context_and_wall_mask)
+                        cd_error = cd_error:maskedSelect(context_and_wall_mask)
+                        relative_magnitude_error = relative_magnitude_error:maskedSelect(context_and_wall_mask)
 
-                    -- we know that there is only context, and that particular context has context id
-                    -- maskedSelect does things in order
-                    local specific_context = extract_context_id_from_batch(batch, context_and_wall_mask, context_id) -- (num_ex_for_context, 1, num_past, obj_dim)
+                        -- now all are tensors of size <= bsize
 
-                    local specific_properties = extract_field(specific_context[{{},{},{-1},{}}], si_indices) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
-                    -- good up to here
+                        -- we know that there is only context, and that particular context has context id
+                        -- maskedSelect does things in order
+                        local specific_context = extract_context_id_from_batch(batch, context_and_wall_mask, context_id) -- (num_ex_for_context, 1, num_past, obj_dim)
 
-                    -- first we figure out which oids and sizes were represented in specific_context
-                    -- populate tables
+                        local specific_properties = extract_field(specific_context[{{},{},{-1},{}}], si_indices) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
+                        -- good up to here
 
-                    for f=1,#specific_properties do
-                        -- populate oid
-                        table.insert(property_table[specific_properties[f]],
-                                {losses[f], 
-                                vel_losses[f], 
-                                ang_vel_losses[f],
-                                cd_error[f],
-                                relative_magnitude_error[f]})
+                        -- first we figure out which oids and sizes were represented in specific_context
+                        -- populate tables
+
+                        for f=1,#specific_properties do
+                            -- populate oid
+                            table.insert(property_table[specific_properties[f]],
+                                    {losses[f], 
+                                    vel_losses[f], 
+                                    ang_vel_losses[f],
+                                    cd_error[f],
+                                    relative_magnitude_error[f]})
+                        end
+
+                        collectgarbage()
                     end
-
-                    collectgarbage()
                 end
             end
         end 
