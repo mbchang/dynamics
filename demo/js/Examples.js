@@ -2772,6 +2772,7 @@ if (!_isBrowser) {
                 options.variableObstacles = true
                 options.friction = false
                 options.drasticSize = true
+                options.variableWall = false  // have some sort of variance
             }
 
             // these should not be mutated
@@ -2783,14 +2784,13 @@ if (!_isBrowser) {
                            max_v0: 20,
                            obj_radius: demo.config.object_base_size.ball,
                            obstacle_side: demo.config.object_base_size.obstacle,
-                           invis_side: demo.config.object_base_size.block,  // 20, and long side is 60
+                           block_side: demo.config.object_base_size.block,  // 20, and long side is 60
                            drasticSize: options.drasticSize
                        };
-            console.assert(self.params.variableObstacles)
 
             // obstacles will be blocks, wall obj will be squares
             console.assert(options.numObj <= 6) // four is the max number that the window size can handle.
-            self.params.num_obstacles = 0//Math.floor(Math.random()*options.numObj)  // can have 0 to n-1 obstacles
+            self.params.num_obstacles = Math.floor(Math.random()*options.numObj)  // can have 0 to n-1 obstacles
             self.params.num_balls = options.numObj - self.params.num_obstacles // guarantee at least one ball.
             console.assert(self.params.num_balls >= 1)
 
@@ -2824,12 +2824,7 @@ if (!_isBrowser) {
 
             // function
             self.rand_pos = function() {
-                let max_obj_size
-                if (self.params.drasticSize) {
-                    // NOTE the big object may not be completely within the world!
-                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
-                } else {
-                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
+                let max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
                 }                
                 return rand_pos(
                     // TODO! CHANGE THIS TO REFLECT BORDER! FOR NOW LET'S JUST DO RECTANGLE
@@ -2849,16 +2844,13 @@ if (!_isBrowser) {
                 if (self.params.drasticSize) {
                     self.possible_sizes = demo.config.drastic_sizes
                 } else {
-                    self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
+                    self.possible_sizes = demo.config.sizes
                 }
             } else {
                 self.possible_sizes = [1]
             }
 
             self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
-
-            self.solid_category = 0x0001
-            self.invis_category = 0x0002
 
             // border
             var world_border = Composite.create({label:'Border'});
