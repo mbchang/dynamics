@@ -871,7 +871,7 @@ function extract_field(specific_context, si_indices)
     elseif alleq({si_indices, config_args.si.oid}) then
         categories = config_args.oid_ids -- do I want to trim?
     elseif alleq({si_indices, config_args.si.os}) then
-        categories = config_args.object_sizes
+        categories = config_args.drastic_object_sizes
     else
         assert(false, 'Unknown property')
     end
