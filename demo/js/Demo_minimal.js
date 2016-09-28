@@ -320,7 +320,7 @@
                 if (loaded_json.config.env=='tower') {
                     let num_stable = 0
                     let num_unstable = 0
-                    for (let b=0; b < 1; b ++) {
+                    for (let b=5; b < 6; b ++) {
                         let options = {out_folder: out_folder, ex: b, exp_name: exp_name, batch_name: batch_name, do_not_save_img: cmd_options.noimg}
                         console.log(batch_name)
                         let is_stable_data = Demo.run(loaded_json, options)

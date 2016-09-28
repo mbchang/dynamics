@@ -2728,6 +2728,457 @@ if (!_isBrowser) {
 
 })();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(function() {
+
+    var World = Matter.World,
+        Bodies = Matter.Bodies,
+        Composite = Matter.Composite,
+        Composites = Matter.Composites,
+        Body = Matter.Body,
+        Common = Matter.Common;
+
+    Example.walls = function(demo, cmd_options) {
+        var Walls = {}
+
+        Walls.create = function(options) {
+            var self = {}; // instance of the Balls class
+
+            // default
+            if (!(typeof options !== 'undefined' &&  options)) {
+                var options = {}
+                options.numObj = 6
+                options.variableMass = true
+                options.variableSize = true
+                options.variableObstacles = true
+                options.friction = false
+                options.drasticSize = true
+            }
+
+            // these should not be mutated
+            self.params = {
+                           variableMass: options.variableMass,
+                           variableSize: options.variableSize,
+                           variableObstacles: options.variableObstacles,
+                           friction: options.friction,
+                           max_v0: 20,
+                           obj_radius: demo.config.object_base_size.ball,
+                           obstacle_side: demo.config.object_base_size.obstacle,
+                           invis_side: demo.config.object_base_size.block,  // 20, and long side is 60
+                           drasticSize: options.drasticSize
+                       };
+            console.assert(self.params.variableObstacles)
+
+            // obstacles will be blocks, wall obj will be squares
+            console.assert(options.numObj <= 6) // four is the max number that the window size can handle.
+            self.params.num_obstacles = 0//Math.floor(Math.random()*options.numObj)  // can have 0 to n-1 obstacles
+            self.params.num_balls = options.numObj - self.params.num_obstacles // guarantee at least one ball.
+            console.assert(self.params.num_balls >= 1)
+
+            // here we should calculate the walls actually, so we can update self.num_obj accordingly
+            // we will just fill up with obstacles of small size
+
+            // you need a function to compute the positions of all the blocks
+            let wall_obstacle_params = {
+                obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
+                window_cx: demo.cx,
+                window_cy: demo.cy,
+                window_width: demo.width,
+                window_height: demo.height,
+                mode: 0 // 0 means flush against the world boundaries
+            };
+
+            self.wall_positions = Walls.create_obstacle_border(wall_obstacle_params)
+            self.num_wall_obj = self.wall_positions.length
+
+            // mock up 
+            self.num_wall_obj = 0
+
+            self.params.num_obj = self.params.num_balls + self.params.num_obstacles + self.num_wall_obj
+
+
+            self.engine = demo.engine;
+            self.engine.world.gravity.x = 0;
+            if (!(typeof options.gravity !== 'undefined' && options.gravity)) {
+                self.engine.world.gravity.y = 0;
+            }
+
+            // function
+            self.rand_pos = function() {
+                let max_obj_size
+                if (self.params.drasticSize) {
+                    // NOTE the big object may not be completely within the world!
+                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
+                } else {
+                    max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
+                }                
+                return rand_pos(
+                    // TODO! CHANGE THIS TO REFLECT BORDER! FOR NOW LET'S JUST DO RECTANGLE
+                    {hi: 2*demo.cx - max_obj_size - wall_obstacle_params.obstacle_size - 1, lo: max_obj_size + wall_obstacle_params.obstacle_size + 1},
+                    {hi: 2*demo.cy - max_obj_size - wall_obstacle_params.obstacle_size - 1, lo: max_obj_size + wall_obstacle_params.obstacle_size + 1});
+                };
+
+            // this is defined here
+
+            if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
+                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+            } else {
+                self.possible_masses = [1]
+            }
+
+            if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
+                if (self.params.drasticSize) {
+                    self.possible_sizes = demo.config.drastic_sizes
+                } else {
+                    self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
+                }
+            } else {
+                self.possible_sizes = [1]
+            }
+
+            self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
+
+            self.solid_category = 0x0001
+            self.invis_category = 0x0002
+
+            // border
+            var world_border = Composite.create({label:'Border'});
+
+            Composite.add(world_border, [
+                Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category}}),  // top
+                Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }),  // bottom
+                Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }), // right
+                Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} })  // left
+            ]);
+
+            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+
+            self.group = Body.nextGroup(true);
+
+            return self
+        };
+
+        // return a list of positions for the obstacles
+        // wop: walls_obstacle_params
+        Walls.create_obstacle_border = function(wop) {
+            let positions = []
+
+            // recall: 
+            // wop = {
+            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
+            //     window_cx: demo.cx,
+            //     window_cy: demo.cy,
+            //     window_width: demo.width,
+            //     window_height: demo.height,
+            //     mode: 0 // 0 means flush against the world boundaries
+            // };
+
+            // TODO: do math.floor or something
+            let num_vertical = wop.window_height/wop.obstacle_size
+            let num_horizontal = wop.window_width/wop.obstacle_size
+
+            // get boundaries of the window
+            let left = wop.window_cx - wop.window_width/2            
+            let right = wop.window_cx + wop.window_width/2 
+            let top = wop.window_cy - wop.window_height/2 
+            let bottom = wop.window_cy + wop.window_height/2 
+
+            // now, let's fill in the border
+            var cur_pos = [wop.obstacle_size/2, wop.obstacle_size/2]  // top left
+            positions.push(cur_pos)
+
+            // move right (-1 because we started off with top left)
+            for (let i=0; i < num_horizontal-1; i ++) {
+                cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
+                positions.push(cur_pos)
+            }
+            // now we've filled the top row
+
+            // move down
+            for (let j=0; j < num_vertical-1; j ++) {
+                cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
+                positions.push(cur_pos)
+            }
+            // now we've filled top and right
+
+            // // move left
+            for (let i=0; i < num_horizontal-1; i ++) {
+                cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
+                positions.push(cur_pos)
+            }
+            // // now we've filled bottom
+
+            // // move up (note the -2)
+            for (let j=0; j < num_vertical-2; j ++) {
+                cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
+                positions.push(cur_pos)
+            }
+            return positions
+        };
+
+        Walls.init = function(self) {  // hockey is like self here
+            // generate wall
+            for (let i=0; i < self.wall_positions.length; i++) {
+                let body_opts = {restitution: 1,
+                                 isStatic:true,
+                                 mass: 1e30, // some really huge mass
+                                 label: "Entity",
+                                 objtype: "obstacle",
+                                 sizemul: 0.5,
+                                 collisionFilter: {
+                                    category: self.solid_category,
+                                    mask: self.solid_category
+                                 }, 
+                             }
+                // console.log(self.params.obstacle_side)
+                let wall_obstacle = Bodies.rectangle(self.wall_positions[i][0], self.wall_positions[i][1], 
+                                                self.params.obstacle_side*body_opts.sizemul, 
+                                                self.params.obstacle_side*body_opts.sizemul, 
+                                                body_opts)
+                World.add(self.engine.world, wall_obstacle);  // TODO! the rectangle is not getting added?              
+            }
+
+
+
+            // generae obstacle sizes
+            self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
+
+            // construct sample sizes
+            let sampled_sizes = []
+            for (let i = 0; i < self.params.num_balls; i ++){
+                sampled_sizes.push(1*self.params.obj_radius)
+            }
+            for (let i = self.params.num_balls; i < self.params.num_balls+self.params.num_invis; i ++){
+                let short_side = self.s[i-(self.params.num_balls)]*self.params.invis_side
+                let long_side = 3*self.s[i-(self.params.num_balls)]*self.params.invis_side
+                sampled_sizes.push(Math.sqrt(Math.pow(short_side,2) + Math.pow(long_side,2)))
+            }
+            
+            for (let i = self.params.num_balls+self.params.num_invis; i < self.params.num_obj; i ++) {
+                sampled_sizes.push(self.s[i-(self.params.num_balls+self.params.num_invis)]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
+            }
+
+            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos)
+
+            // generate random velocities
+            self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
+
+            // generate massses
+            self.m = initialize_masses(self.params.num_balls, self.possible_masses)
+
+            // set positions
+            for (let i = 0; i < self.params.num_balls; i++) {
+                let body_opts = {restitution: 1,
+                                 mass: self.m[i],
+                                 inertia: Infinity,  //rotation
+                                 inverseInertia: 0,  // rotation
+                                 label: "Entity",
+                                 objtype: "ball",
+                                 sizemul: 1,
+                                 collisionFilter: {
+                                    category: self.solid_category,
+                                    mask: self.solid_category
+                                 },
+                             }
+                if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
+                    body_opts.friction = 0;
+                    body_opts.frictionAir = 0;
+                    body_opts.frictionStatic = 0;
+                }   
+
+                let body = Bodies.circle(self.p0[i].x, self.p0[i].y,
+                                        self.params.obj_radius*body_opts.sizemul, body_opts)
+
+                body.render.fillStyle = self.mass_colors[self.m[i]]//'#4ECDC4'
+                body.render.strokeStyle = '#FFA500'// orange
+                body.render.lineWidth = 5
+
+
+                Body.setVelocity(body, self.v0[i])
+
+                // add body to world
+                World.add(self.engine.world, body);
+             }
+
+            // now set the invis. we do this in order because positions computed from sampled_sizes, which is in order
+             for (let i = self.params.num_balls; i < self.params.num_balls+self.params.num_invis; i ++) {
+                    let body_opts = {restitution: 1,
+                                     isStatic:true,
+                                     mass: 1e30, // some really huge mass
+                                     label: "Entity",
+                                     objtype: "block",
+                                     sizemul: demo.config.drastic_sizes[demo.config.drastic_sizes.length-1],  // sizemul is wrong!!!!!!!!!!!!!!!!
+                                     collisionFilter: {
+                                        category: self.invis_category,
+                                        mask: self.invis_category
+                                     },
+                                     // sizemul: self.s_debug[i-self.params.num_balls]
+                                 }
+                // console.log(self.params.obstacle_side)
+                let invis = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
+                                                self.params.invis_side*body_opts.sizemul, 
+                                                self.params.invis_side*3*body_opts.sizemul, 
+                                                body_opts)
+                World.add(self.engine.world, invis);  // TODO! the rectangle is not getting added?
+             }
+
+             // now set the obstacles
+             for (let i = self.params.num_balls+self.params.num_invis; i < self.params.num_obj; i ++) {
+                let body_opts = {restitution: 1,
+                                 isStatic:true,
+                                 mass: 1e30, // some really huge mass
+                                 label: "Entity",
+                                 objtype: "obstacle",
+                                 sizemul: self.s[i-(self.params.num_balls+self.params.num_invis)],
+                                 collisionFilter: {
+                                    category: self.solid_category,
+                                    mask: self.solid_category
+                                 }, 
+                             }
+                // console.log(self.params.obstacle_side)
+                let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
+                                                self.params.obstacle_side*body_opts.sizemul, 
+                                                self.params.obstacle_side*body_opts.sizemul, 
+                                                body_opts)
+                World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+             }
+
+        };
+
+
+        Walls.init_from_trajectories = function(self, trajectories) {
+            // set positions
+            for (let i = 0; i < self.params.num_obj; i++) {
+
+                if (trajectories[i][1].objtype=='ball') {
+                    let body_opts = {restitution: 1,
+                                 mass: trajectories[i][1].mass,
+                                 inertia: Infinity,  //rotation
+                                 inverseInertia: 0,  // rotation
+                                 label: "Entity",
+                                 objtype: trajectories[i][1].objtype,
+                                 sizemul: trajectories[i][1].sizemul,
+                                 collisionFilter: {
+                                    category: self.solid_category,
+                                    mask: self.solid_category
+                                 },
+                                 // collisionFilter: {group:self.group} // remove collision constraints
+                             }
+                    if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
+                        body_opts.friction = 0;
+                        body_opts.frictionAir = 0;
+                        body_opts.frictionStatic = 0;
+                    }
+                    let pos = trajectories[i][1].position
+                    let body = Bodies.circle(pos.x, pos.y,
+                                            self.params.obj_radius*body_opts.sizemul, body_opts)
+
+                    body.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
+                    body.render.strokeStyle = '#FFA500'// orange
+                    body.render.lineWidth = 5
+
+                    // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
+                    Body.setVelocity(body, trajectories[i][1].velocity)
+
+                    // add body to world
+                    World.add(self.engine.world, body);
+                } else if (trajectories[i][1].objtype=='block')  {
+                    let body_opts = {restitution: 1,
+                                     isStatic:true,
+                                     mass: trajectories[i][1].mass, // some really huge mass
+                                     label: "Entity",
+                                     objtype: trajectories[i][1].objtype,
+                                     sizemul: trajectories[i][1].sizemul,
+                                     collisionFilter: {
+                                        category: self.invis_category,
+                                        mask: self.invis_category
+                                     },
+                                     // collisionFilter: {group:self.group}
+                                 }
+                    let pos = trajectories[i][1].position
+                    let obstacle = Bodies.rectangle(pos.x, pos.y, 
+                                                    self.params.invis_side*body_opts.sizemul, 
+                                                    self.params.invis_side*3*body_opts.sizemul, 
+                                                    body_opts)
+                    World.add(self.engine.world, obstacle);
+                }
+
+                else if (trajectories[i][1].objtype=='obstacle')  {
+                    let body_opts = {restitution: 1,
+                                     isStatic:true,
+                                     mass: trajectories[i][1].mass, // some really huge mass
+                                     label: "Entity",
+                                     objtype: trajectories[i][1].objtype,
+                                     sizemul: trajectories[i][1].sizemul,
+                                     collisionFilter: {
+                                        category: self.solid_category,
+                                        mask: self.solid_category
+                                     },
+                                     // collisionFilter: {group:self.group}
+                                 }
+                    let pos = trajectories[i][1].position
+                    let obstacle = Bodies.rectangle(pos.x, pos.y, 
+                                                    self.params.obstacle_side*body_opts.sizemul, 
+                                                    self.params.obstacle_side*body_opts.sizemul, 
+                                                    body_opts)
+                    World.add(self.engine.world, obstacle);
+                }
+             }
+        };
+
+        var walls = Walls.create(cmd_options);
+        // console.log('cmd_options')
+        // console.log(cmd_options)
+        if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
+            !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
+            // console.log('init')
+            Walls.init(walls);  // perhaps here you could do something like Mixed.init_from_trajectories
+        } else {
+            console.log('init_from_trajectories')
+            Walls.init_from_trajectories(walls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+        }
+        return walls;
+    };
+
+})();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (function() {
 
     var World = Matter.World,

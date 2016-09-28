@@ -56,7 +56,7 @@
     Demo.create = function(options) {
         var defaults = {
             isManual: false,
-            sceneName: 'mixed',
+            sceneName: 'walls',
             sceneEvents: []
         };
 
