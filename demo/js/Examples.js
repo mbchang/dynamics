@@ -2812,7 +2812,7 @@ if (!_isBrowser) {
             };
 
             // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
-            let wall_data = Walls.create_obstacle_border(wall_obstacle_params)
+            let wall_data = Walls.create_obstacle_U(wall_obstacle_params)
             self.wall_positions = wall_data[0]
             self.wall_extremes = wall_data[1]
             self.num_wall_obj = self.wall_positions.length
@@ -2881,7 +2881,7 @@ if (!_isBrowser) {
 
         // return a list of positions for the obstacles
 
-        Walls.create_obstacle_border = function(wop) {
+        Walls.create_obstacle_O = function(wop) {
             let positions = []
             let extremes = {}
 
@@ -2951,179 +2951,213 @@ if (!_isBrowser) {
             return [positions, extremes]
         };
 
-        Walls.create_L = function(wop) {
+        Walls.create_obstacle_L = function(wop) {
             let positions = []
             let extremes = {}
 
             // recall: 
-            // wop = {
-            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
+            // let wall_obstacle_params = {
+            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
             //     window_cx: demo.cx,
             //     window_cy: demo.cy,
             //     window_width: demo.width,
             //     window_height: demo.height,
-            //     random: false, // 0 means flush against the world boundaries
-            //     max_cutoff: 3 // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+            //     random: true, // 0 means flush against the world boundaries
+            //     max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+            //     kind: 'O',
+            //     num_h: 9,
+            //     num_v: 7
             // };
 
             // get boundaries of the window
 
+            // border is 800 x 600
+            // I am doing a 9 x 7 box
+
+            var h_pad = (2*wop.window_cx - wop.num_h*wop.obstacle_size)/2  // should be 40
+            var v_pad = (2*wop.window_cy - wop.num_v*wop.obstacle_size)/2  // should be 20
+
             // TODO verify this!
-            var left = wop.obstacle_size/2
-            var top = wop.obstacle_size/2
-            var right = wop.window_cx + wop.window_width/2 - wop.obstacle_size/2
-            var bottom = wop.window_cy + wop.window_height/2 - wop.obstacle_size/2   
-            var vertical_cut = 0
-            var horizontal_cut = 0 
-
-            if (wop.random) {
-                var rnd = random_int(0,wop.max_cutoff*2)
-                horizontal_cut += rnd
-
-                var rnd = random_int(0,wop.max_cutoff*2)
-                vertical_cut += rnd
-            }
-
-            // now sample top left
-            var left_cut = random_int(0,horizontal_cut)
-            var top_cut = random_int(0,vertical_cut)
-            var right_cut = horizontal_cut - left_cut
-            var bottom_cut = vertical_cut - top_cut
-
-            console.log(horizontal_cut, vertical_cut, left_cut, top_cut, right_cut, bottom_cut)
-
-            left += wop.obstacle_size*left_cut
-            top += wop.obstacle_size*top_cut
-            right -= wop.obstacle_size*right_cut
-            bottom -= wop.obstacle_size*bottom_cut
+            var left = h_pad + wop.obstacle_size/2
+            var top = v_pad + wop.obstacle_size/2
+            var right = 2*wop.window_cx - h_pad - wop.obstacle_size/2
+            var bottom = 2*wop.window_cy - v_pad - wop.obstacle_size/2   
 
             extremes.left = left
             extremes.top = top
             extremes.right = right
             extremes.bottom = bottom
 
-            // TODO: verify this
-            let num_vertical = (wop.window_height-vertical_cut*wop.obstacle_size)/wop.obstacle_size
-            let num_horizontal = (wop.window_width-horizontal_cut*wop.obstacle_size)/wop.obstacle_size
+
+            // generative model
+            // sample orientation: 1--> top_left, 2--> bottom_left, 3--> bottom_rigth, 4--> top_right
+            let orientation = random_int(1,4)
+
+            // sample horizontal length
+            let h_length = random_int(1,5)
+
+            // sample vertical length
+            let v_length = random_int(1,3)
+
+            // what is the generative process for this?
+
+
+
+
+
 
             // now, let's fill in the border
             var cur_pos = [left, top]  // top left
             positions.push(cur_pos)
 
             // move right (-1 because we started off with top left)
-            for (let i=0; i < num_horizontal-1; i ++) {
+            for (let i=0; i < wop.num_h-1; i ++) {
                 cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
                 positions.push(cur_pos)
             }
             // now we've filled the top row
 
             // move down
-            for (let j=0; j < num_vertical-1; j ++) {
+            for (let j=0; j < wop.num_v-1; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
                 positions.push(cur_pos)
             }
             // now we've filled top and right
 
             // // move left
-            for (let i=0; i < num_horizontal-1; i ++) {
+            for (let i=0; i < wop.num_h-1; i ++) {
                 cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
                 positions.push(cur_pos)
             }
             // // now we've filled bottom
 
             // // move up (note the -2)
-            for (let j=0; j < num_vertical-2; j ++) {
+            for (let j=0; j < wop.num_v-2; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
                 positions.push(cur_pos)
             }
             return [positions, extremes]
         };
 
-        Walls.create_U = function(wop) {
+        Walls.create_obstacle_U = function(wop) {
             let positions = []
             let extremes = {}
 
             // recall: 
-            // wop = {
-            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
+            // let wall_obstacle_params = {
+            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
             //     window_cx: demo.cx,
             //     window_cy: demo.cy,
             //     window_width: demo.width,
             //     window_height: demo.height,
-            //     random: false, // 0 means flush against the world boundaries
-            //     max_cutoff: 3 // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+            //     random: true, // 0 means flush against the world boundaries
+            //     max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+            //     kind: 'O',
+            //     num_h: 9,
+            //     num_v: 7
             // };
 
             // get boundaries of the window
 
+            // border is 800 x 600
+            // I am doing a 9 x 7 box
+
+            var h_pad = (2*wop.window_cx - wop.num_h*wop.obstacle_size)/2  // should be 40
+            var v_pad = (2*wop.window_cy - wop.num_v*wop.obstacle_size)/2  // should be 20
+
             // TODO verify this!
-            var left = wop.obstacle_size/2
-            var top = wop.obstacle_size/2
-            var right = wop.window_cx + wop.window_width/2 - wop.obstacle_size/2
-            var bottom = wop.window_cy + wop.window_height/2 - wop.obstacle_size/2   
-            var vertical_cut = 0
-            var horizontal_cut = 0 
-
-            if (wop.random) {
-                var rnd = random_int(0,wop.max_cutoff*2)
-                horizontal_cut += rnd
-
-                var rnd = random_int(0,wop.max_cutoff*2)
-                vertical_cut += rnd
-            }
-
-            // now sample top left
-            var left_cut = random_int(0,horizontal_cut)
-            var top_cut = random_int(0,vertical_cut)
-            var right_cut = horizontal_cut - left_cut
-            var bottom_cut = vertical_cut - top_cut
-
-            console.log(horizontal_cut, vertical_cut, left_cut, top_cut, right_cut, bottom_cut)
-
-            left += wop.obstacle_size*left_cut
-            top += wop.obstacle_size*top_cut
-            right -= wop.obstacle_size*right_cut
-            bottom -= wop.obstacle_size*bottom_cut
+            var left = h_pad + wop.obstacle_size/2
+            var top = v_pad + wop.obstacle_size/2
+            var right = 2*wop.window_cx - h_pad - wop.obstacle_size/2
+            var bottom = 2*wop.window_cy - v_pad - wop.obstacle_size/2   
 
             extremes.left = left
             extremes.top = top
             extremes.right = right
             extremes.bottom = bottom
 
-            // TODO: verify this
-            let num_vertical = (wop.window_height-vertical_cut*wop.obstacle_size)/wop.obstacle_size
-            let num_horizontal = (wop.window_width-horizontal_cut*wop.obstacle_size)/wop.obstacle_size
+            // generative model
+            // sample orientation: 1--> left, 2--> top, 3--> right, 4--> bottom
+            let orientation = random_int(1,4)
+
+            // sample horizontal length
+            let h_length = random_int(1,5)
+            let h_offset = random_int(3,5)
+            console.log(h_offset)
+
+            // sample vertical length
+            let v_length = random_int(1,3)
+            let v_offset = 3
 
             // now, let's fill in the border
             var cur_pos = [left, top]  // top left
             positions.push(cur_pos)
 
             // move right (-1 because we started off with top left)
-            for (let i=0; i < num_horizontal-1; i ++) {
+            for (let i=0; i < wop.num_h-1; i ++) {
                 cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
                 positions.push(cur_pos)
             }
             // now we've filled the top row
 
             // move down
-            for (let j=0; j < num_vertical-1; j ++) {
+            for (let j=0; j < wop.num_v-1; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
                 positions.push(cur_pos)
             }
             // now we've filled top and right
 
             // // move left
-            for (let i=0; i < num_horizontal-1; i ++) {
+            for (let i=0; i < wop.num_h-1; i ++) {
                 cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
                 positions.push(cur_pos)
             }
             // // now we've filled bottom
 
             // // move up (note the -2)
-            for (let j=0; j < num_vertical-2; j ++) {
+            for (let j=0; j < wop.num_v-2; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
                 positions.push(cur_pos)
             }
+
+            // now sample the inside
+            if (orientation == 1) {  // protrusion from top or bottom
+                let cur_pos = [left+h_offset*wop.obstacle_size,2*wop.obstacle_size-v_pad]
+                positions.push(cur_pos)
+                for (let j=0; j < v_length-1; j++) {
+                    cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
+                    positions.push(cur_pos)
+                }
+            } else if (orientation == 2) {  // protrusion from left or right
+                let cur_pos = [2*wop.obstacle_size, top+v_offset*wop.obstacle_size]
+                positions.push(cur_pos)
+                for (let j=0; j < h_length-1; j++) {
+                    cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
+                    positions.push(cur_pos)
+                }
+            } else if (orientation == 3) {  // protrusion from left or right
+                let cur_pos = [left+h_offset*wop.obstacle_size,2*wop.window_cy-2*wop.obstacle_size+v_pad]
+                positions.push(cur_pos)
+                for (let j=0; j < v_length-1; j++) {
+                    cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
+                    positions.push(cur_pos)
+                }
+            } else if (orientation == 4) {  // protrusion from left or right
+                let cur_pos = [2*wop.window_cx-2*wop.obstacle_size, top+v_offset*wop.obstacle_size]
+                positions.push(cur_pos)
+                for (let j=0; j < h_length-1; j++) {
+                    cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
+                    positions.push(cur_pos)
+                }
+                console.log(cur_pos)
+            }
+
+
+
+
+
+
+
             return [positions, extremes]
         };
 

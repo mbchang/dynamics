@@ -299,7 +299,7 @@ center_of_mass = function(bodies) {
 
 // random integer inclusive
 random_int = function(lo, hi) {
-    return Math.floor((Math.random()*(hi-lo+1)))
+    return lo+Math.floor((Math.random()*(hi-lo+1)))
 }
 
 
