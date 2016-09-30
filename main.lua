@@ -100,7 +100,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 3
     mp.rnn_dim = 64
-    mp.model = 'bffobj'
+    mp.model = 'lstm'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -143,6 +143,8 @@ elseif mp.model == 'lstmcat' then
     M = require 'lstm_model'
 elseif mp.model == 'bl' then
     M = require 'blstm'
+elseif mp.model == 'lstm' then
+    M = require 'lstm'
 elseif mp.model == 'ff' then
     M = require 'feed_forward_model'
 else
@@ -586,6 +588,8 @@ function model_deps(modeltype)
         M = require 'independent'
     elseif modeltype == 'np' then
         M = require 'nop'
+    elseif modeltype == 'lstm' then
+        M = require 'lstm'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else

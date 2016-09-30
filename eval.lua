@@ -863,6 +863,8 @@ function model_deps(modeltype)
         M = require 'independent'
     elseif modeltype == 'bl' then
         M = require 'blstm'
+    elseif modeltype == 'lstm' then
+        M = require 'lstm'
     elseif modeltype == 'ff' then
         M = require 'feed_forward_model'
     else

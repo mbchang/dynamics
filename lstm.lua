@@ -9,7 +9,6 @@ require 'modules'
 
 nngraph.setDebug(true)
 
--- with a bidirectional lstm, no need to put a mask
 -- however, you can have variable sequence length now!
 function init_network(params)
     -- input: table of length num_obj with size (bsize, num_past*obj_dim)
@@ -33,16 +32,13 @@ function init_network(params)
         nn.FastLSTM.bn = true
         if i == 1 then anLSTM = nn.FastLSTM(in_dim, hid_dim)
         else
-            anLSTM = nn.FastLSTM(2*hid_dim, hid_dim)
+            anLSTM = nn.FastLSTM(hid_dim, hid_dim)
             if mp.dropout > 0 then net:add(nn.Sequencer(nn.Dropout(mp.dropout))) end
         end
-        net:add(nn.BiSequencer(anLSTM))
+        net:add(nn.Sequencer(anLSTM))
         net:add(nn.Sequencer(nn.ReLU()))
     end
-    net:add(nn.Sequencer(nn.Linear(2*hid_dim, out_dim)))
-
-    -- print(nn.FastLSTM.bn)
-    -- assert(false)
+    net:add(nn.Sequencer(nn.Linear(hid_dim, out_dim)))
 
     return net
 end
@@ -109,34 +105,139 @@ function model:clearState()
 end
 
 function model:unpack_batch(batch, sim)
-    local this, context, this_future, context_future, mask = unpack(batch)
+    local this, context, y, context_future, mask = unpack(batch)
+    local x = {this=this,context=context}
 
-    -- need to do relative pair
-    context_future[{{},{},{},{1,6}}] = context_future[{{},{},{},{1,6}}] - context[{{},{},{-1},{1,6}}]:expandAs(context_future[{{},{},{},{1,6}}])
+    -- unpack inputs
+    local this_past     = convert_type(x.this:clone(), mp.cuda)
+    local context       = convert_type(x.context:clone(), mp.cuda)
+    local this_future   = convert_type(y:clone(), mp.cuda)
 
-    local past = torch.cat({unsqueeze(this:clone(),2), context},2)
-    local future = torch.cat({unsqueeze(this_future:clone(),2), context_future},2)
+    local bsize, num_past, obj_dim = this_past:size(1), this_past:size(2), this_past:size(3)
+    local num_context = context:size(2)
 
-    local bsize, num_obj = past:size(1), past:size(2)
-    local num_past, num_future = past:size(3), future:size(3)
-    local obj_dim = past:size(4)
+    -- reshape
+    this_past:resize(this_past:size(1), this_past:size(2)*this_past:size(3))
+    context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
+    this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
 
-    -- now break into different trajectories
+    assert(this_past:size(1) == mp.batch_size and
+            this_past:size(2) == mp.input_dim,
+            'Your batch size or input dim is wrong')
+    assert(context:size(1) == mp.batch_size and
+            context:size(2)==torch.find(mask,1)[1]
+            and context:size(3) == mp.input_dim)
+
+    assert(this_future:size(1) == mp.batch_size and
+            this_future:size(2) == mp.out_dim)
+
     local shuffind
     if sim then
-        shuffind = torch.range(1,num_obj)
+        shuffind = torch.range(1,num_context)
     else
-        shuffind = torch.randperm(num_obj)
+        shuffind = torch.randperm(num_context)
     end
 
-    local all_past = {}
-    local all_future = {}
-    for i =1,num_obj do
-        table.insert(all_past,past[{{},{shuffind[i]}}]:reshape(bsize,num_past*obj_dim))
-        table.insert(all_future,future[{{},{shuffind[i]}}]:reshape(bsize,num_future*obj_dim))
+    -- here you have to create a table of tables
+    -- this: (bsize, input_dim)
+    -- context: (bsize, mp.seq_length, dim)
+    local contexts = {}
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+        table.insert(contexts, torch.squeeze(context[{{},{shuffind[t]}}]))  -- good
     end
+
+    ------------------------------------------------------------------
+    -- here do the local neighborhood thing
+    if self.mp.nbrhd then  
+        self.neighbor_masks = self:select_neighbors(contexts, this_past)  -- this gets updated every batch!
+    else
+        self.neighbor_masks = {}  -- don't mask out neighbors
+        for i=1,#input do
+            table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))  -- good
+        end
+    end
+
+    contexts = self:apply_mask(contexts, self.neighbor_masks)  -- so you wouldn't apply the nbrhd mask on this_past?
+
+    local all_past = contexts
+    table.insert(all_past, this_past:clone())  -- last element is always this_past
+
+    local all_future = {}
+    for i=1,num_context do
+        table.insert(all_future, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim)))
+    end
+    table.insert(all_future, this_future)
+
+    -- the last element is always the focus object
+    -- context are shuffled
 
     return all_past, all_future
+end
+
+-- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
+-- out: {{indices of neighbors}, {indices of non-neighbors}}
+-- maybe I can output a mask? then I can rename this function to neighborhood_mask
+function model:select_neighbors(contexts, this)
+    local threshold
+    local neighbor_masks = {}
+    this = this:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+    for i, c in pairs(contexts) do
+        -- reshape
+        local context = c:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+
+        -- make threshold depend on object id!
+        local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
+        local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
+        local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
+        local template_ball = template:clone()
+        local template_block = template:clone()
+        template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
+        template_block[{{},{},{config_args.oids.block}}]:fill(1)
+
+        if (oid_onehot-template_ball):norm()==0 then
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
+        elseif oid_onehot:equal(template_block) then
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.block
+        else
+            assert(false, 'Unknown object id')
+        end
+
+        -- compute where they will be in the next timestep
+        local this_pos_next, this_pos_now = self:update_position_one(this)
+        local context_pos_next, context_pos_now = self:update_position_one(context)
+
+        -- hacky
+        if mp.nlan then
+            this_pos_next = this_pos_now:clone()
+            context_pos_next = context_pos_now:clone()
+        end
+
+        -- compute euclidean distance between this_pos_next and context_pos_next
+        local euc_dist_next = torch.squeeze(self:euc_dist(this_pos_next, context_pos_next)) -- (bsize)
+        euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
+
+        -- find the indices in the batch for neighbors and non-neighbors
+        local neighbor_mask = convert_type(euc_dist_next:le(threshold), mp.cuda)  -- 1 if neighbor 0 otherwise   -- potential cuda
+        table.insert(neighbor_masks, neighbor_mask:clone()) -- good
+    end
+
+    return neighbor_masks
+end
+
+-- we mask out this as well, because it is as if that interaction didn't happen
+function model:apply_mask(input, batch_mask)
+    assert(#batch_mask == #input)
+    for i, x in pairs(input) do 
+        if type(x) == 'table' then
+            -- mutates within place
+            x[1] = torch.cmul(x[1],batch_mask[i]:view(mp.batch_size,1):expandAs(x[1]))
+            x[2] = torch.cmul(x[2], batch_mask[i]:view(mp.batch_size,1):expandAs(x[2]))
+        else
+            x = torch.cmul(x, convert_type(batch_mask[i]:view(mp.batch_size,1):expandAs(x), mp.cuda))
+            input[i] = x -- it doesn't actually automatically mutate
+        end
+    end
+    return input
 end
 
 
@@ -150,7 +251,7 @@ function model:fp(params_, batch, sim)
     local loss_vels = 0
     local loss_ang_vels = 0
     local loss = 0
-    for i = 1,#prediction do
+    for i = 1,#prediction do  -- note that only the last element is nonzero
         -- table of length num_obj of {bsize, num_future, obj_dim}
         local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
                             unpack(split_output(self.mp):forward(prediction[i]))  -- correct
@@ -182,8 +283,6 @@ end
 function model:bp(batch, prediction, sim)
     self.theta.grad_params:zero() -- the d_parameters
     local all_past, all_future = self:unpack_batch(batch, sim)
-
-    -- local splitter = split_output(self.mp)
 
     local d_pred = {}
     for i = 1, #prediction do
