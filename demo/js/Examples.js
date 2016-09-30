@@ -2766,7 +2766,7 @@ if (!_isBrowser) {
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
                 var options = {}
-                options.numObj = 4
+                options.numObj = 2
                 options.variableMass = false
                 options.variableSize = true
                 options.variableObstacles = true
@@ -2790,7 +2790,7 @@ if (!_isBrowser) {
 
             // obstacles will be blocks, wall obj will be squares
             console.assert(options.numObj <= 6) // four is the max number that the window size can handle.
-            self.params.num_obstacles = Math.floor(Math.random()*options.numObj)  // can have 0 to n-1 obstacles
+            self.params.num_obstacles = 0//Math.floor(Math.random()*options.numObj)  // can have 0 to n-1 obstacles
             self.params.num_balls = options.numObj - self.params.num_obstacles // guarantee at least one ball.
             console.assert(self.params.num_balls >= 1)
 
@@ -2799,13 +2799,16 @@ if (!_isBrowser) {
 
             // you need a function to compute the positions of all the blocks
             let wall_obstacle_params = {
-                obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
+                obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
                 window_cx: demo.cx,
                 window_cy: demo.cy,
                 window_width: demo.width,
                 window_height: demo.height,
                 random: true, // 0 means flush against the world boundaries
-                max_cutoff: 2 // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+                max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+                kind: 'O',
+                num_h: 9,
+                num_v: 7
             };
 
             // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
@@ -2832,15 +2835,8 @@ if (!_isBrowser) {
                 let max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
                 return rand_pos(
                     // TODO! CHANGE THIS TO REFLECT BORDER! FOR NOW LET'S JUST DO RECTANGLE
-                    // {hi: 2*demo.cx - max_obj_size - wall_obstacle_params.obstacle_size - 1, lo: max_obj_size + wall_obstacle_params.obstacle_size + 1},
-                    // {hi: 2*demo.cy - max_obj_size - wall_obstacle_params.obstacle_size - 1, lo: max_obj_size + wall_obstacle_params.obstacle_size + 1});
-
-
                     {hi: self.wall_extremes.right - max_obj_size - 1, lo: self.wall_extremes.left + max_obj_size + 1},
                     {hi: self.wall_extremes.bottom - max_obj_size - 1, lo: self.wall_extremes.top + max_obj_size + 1});
-
-
-
                 };
 
             // this is defined here
@@ -2884,64 +2880,78 @@ if (!_isBrowser) {
         };
 
         // return a list of positions for the obstacles
-        // wop: walls_obstacle_params
-        // Walls.create_obstacle_border = function(wop) {
-        //     let positions = []
-
-        //     // recall: 
-        //     // wop = {
-        //     //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
-        //     //     window_cx: demo.cx,
-        //     //     window_cy: demo.cy,
-        //     //     window_width: demo.width,
-        //     //     window_height: demo.height,
-        //     //     mode: 0 // 0 means flush against the world boundaries
-        //     // };
-
-        //     // TODO: do math.floor or something
-        //     let num_vertical = wop.window_height/wop.obstacle_size
-        //     let num_horizontal = wop.window_width/wop.obstacle_size
-
-        //     // get boundaries of the window
-        //     let left = wop.window_cx - wop.window_width/2            
-        //     let right = wop.window_cx + wop.window_width/2 
-        //     let top = wop.window_cy - wop.window_height/2 
-        //     let bottom = wop.window_cy + wop.window_height/2 
-
-        //     // now, let's fill in the border
-        //     var cur_pos = [wop.obstacle_size/2, wop.obstacle_size/2]  // top left
-        //     positions.push(cur_pos)
-
-        //     // move right (-1 because we started off with top left)
-        //     for (let i=0; i < num_horizontal-1; i ++) {
-        //         cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
-        //         positions.push(cur_pos)
-        //     }
-        //     // now we've filled the top row
-
-        //     // move down
-        //     for (let j=0; j < num_vertical-1; j ++) {
-        //         cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
-        //         positions.push(cur_pos)
-        //     }
-        //     // now we've filled top and right
-
-        //     // // move left
-        //     for (let i=0; i < num_horizontal-1; i ++) {
-        //         cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
-        //         positions.push(cur_pos)
-        //     }
-        //     // // now we've filled bottom
-
-        //     // // move up (note the -2)
-        //     for (let j=0; j < num_vertical-2; j ++) {
-        //         cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
-        //         positions.push(cur_pos)
-        //     }
-        //     return positions
-        // };
 
         Walls.create_obstacle_border = function(wop) {
+            let positions = []
+            let extremes = {}
+
+            // recall: 
+            // let wall_obstacle_params = {
+            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
+            //     window_cx: demo.cx,
+            //     window_cy: demo.cy,
+            //     window_width: demo.width,
+            //     window_height: demo.height,
+            //     random: true, // 0 means flush against the world boundaries
+            //     max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+            //     kind: 'O',
+            //     num_h: 9,
+            //     num_v: 7
+            // };
+
+            // get boundaries of the window
+
+            // border is 800 x 600
+            // I am doing a 9 x 7 box
+
+            var h_pad = (2*wop.window_cx - wop.num_h*wop.obstacle_size)/2  // should be 40
+            var v_pad = (2*wop.window_cy - wop.num_v*wop.obstacle_size)/2  // should be 20
+
+            // TODO verify this!
+            var left = h_pad + wop.obstacle_size/2
+            var top = v_pad + wop.obstacle_size/2
+            var right = 2*wop.window_cx - h_pad - wop.obstacle_size/2
+            var bottom = 2*wop.window_cy - v_pad - wop.obstacle_size/2   
+
+            extremes.left = left
+            extremes.top = top
+            extremes.right = right
+            extremes.bottom = bottom
+
+            // now, let's fill in the border
+            var cur_pos = [left, top]  // top left
+            positions.push(cur_pos)
+
+            // move right (-1 because we started off with top left)
+            for (let i=0; i < wop.num_h-1; i ++) {
+                cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
+                positions.push(cur_pos)
+            }
+            // now we've filled the top row
+
+            // move down
+            for (let j=0; j < wop.num_v-1; j ++) {
+                cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
+                positions.push(cur_pos)
+            }
+            // now we've filled top and right
+
+            // // move left
+            for (let i=0; i < wop.num_h-1; i ++) {
+                cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
+                positions.push(cur_pos)
+            }
+            // // now we've filled bottom
+
+            // // move up (note the -2)
+            for (let j=0; j < wop.num_v-2; j ++) {
+                cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
+                positions.push(cur_pos)
+            }
+            return [positions, extremes]
+        };
+
+        Walls.create_L = function(wop) {
             let positions = []
             let extremes = {}
 
@@ -2957,10 +2967,6 @@ if (!_isBrowser) {
             // };
 
             // get boundaries of the window
-            // let left = wop.window_cx - wop.window_width/2            
-            // let right = wop.window_cx + wop.window_width/2 
-            // let top = wop.window_cy - wop.window_height/2 
-            // let bottom = wop.window_cy + wop.window_height/2 
 
             // TODO verify this!
             var left = wop.obstacle_size/2
@@ -2969,26 +2975,6 @@ if (!_isBrowser) {
             var bottom = wop.window_cy + wop.window_height/2 - wop.obstacle_size/2   
             var vertical_cut = 0
             var horizontal_cut = 0 
-
-            // if (wop.random) {
-            //     // choose a random number in [0, 3] inclusive
-            //     var rnd = random_int(0,wop.max_cutoff)
-            //     left += wop.obstacle_size/2*rnd
-            //     horizontal_cut += rnd
-
-            //     var rnd = random_int(0,wop.max_cutoff)
-            //     top += wop.obstacle_size/2*rnd
-            //     vertical_cut += rnd
-
-            //     var rnd = random_int(0,wop.max_cutoff)
-            //     right -= wop.obstacle_size/2*rnd
-            //     horizontal_cut += rnd
-
-            //     var rnd = random_int(0,wop.max_cutoff)
-            //     bottom -= wop.obstacle_size/2*rnd
-            //     vertical_cut += rnd
-            // }
-
 
             if (wop.random) {
                 var rnd = random_int(0,wop.max_cutoff*2)
@@ -3053,6 +3039,95 @@ if (!_isBrowser) {
             return [positions, extremes]
         };
 
+        Walls.create_U = function(wop) {
+            let positions = []
+            let extremes = {}
+
+            // recall: 
+            // wop = {
+            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[0],
+            //     window_cx: demo.cx,
+            //     window_cy: demo.cy,
+            //     window_width: demo.width,
+            //     window_height: demo.height,
+            //     random: false, // 0 means flush against the world boundaries
+            //     max_cutoff: 3 // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+            // };
+
+            // get boundaries of the window
+
+            // TODO verify this!
+            var left = wop.obstacle_size/2
+            var top = wop.obstacle_size/2
+            var right = wop.window_cx + wop.window_width/2 - wop.obstacle_size/2
+            var bottom = wop.window_cy + wop.window_height/2 - wop.obstacle_size/2   
+            var vertical_cut = 0
+            var horizontal_cut = 0 
+
+            if (wop.random) {
+                var rnd = random_int(0,wop.max_cutoff*2)
+                horizontal_cut += rnd
+
+                var rnd = random_int(0,wop.max_cutoff*2)
+                vertical_cut += rnd
+            }
+
+            // now sample top left
+            var left_cut = random_int(0,horizontal_cut)
+            var top_cut = random_int(0,vertical_cut)
+            var right_cut = horizontal_cut - left_cut
+            var bottom_cut = vertical_cut - top_cut
+
+            console.log(horizontal_cut, vertical_cut, left_cut, top_cut, right_cut, bottom_cut)
+
+            left += wop.obstacle_size*left_cut
+            top += wop.obstacle_size*top_cut
+            right -= wop.obstacle_size*right_cut
+            bottom -= wop.obstacle_size*bottom_cut
+
+            extremes.left = left
+            extremes.top = top
+            extremes.right = right
+            extremes.bottom = bottom
+
+            // TODO: verify this
+            let num_vertical = (wop.window_height-vertical_cut*wop.obstacle_size)/wop.obstacle_size
+            let num_horizontal = (wop.window_width-horizontal_cut*wop.obstacle_size)/wop.obstacle_size
+
+            // now, let's fill in the border
+            var cur_pos = [left, top]  // top left
+            positions.push(cur_pos)
+
+            // move right (-1 because we started off with top left)
+            for (let i=0; i < num_horizontal-1; i ++) {
+                cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
+                positions.push(cur_pos)
+            }
+            // now we've filled the top row
+
+            // move down
+            for (let j=0; j < num_vertical-1; j ++) {
+                cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
+                positions.push(cur_pos)
+            }
+            // now we've filled top and right
+
+            // // move left
+            for (let i=0; i < num_horizontal-1; i ++) {
+                cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
+                positions.push(cur_pos)
+            }
+            // // now we've filled bottom
+
+            // // move up (note the -2)
+            for (let j=0; j < num_vertical-2; j ++) {
+                cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
+                positions.push(cur_pos)
+            }
+            return [positions, extremes]
+        };
+
+
         Walls.init = function(self) {  // hockey is like self here
             // generate wall
             for (let i=0; i < self.wall_positions.length; i++) {
@@ -3061,7 +3136,7 @@ if (!_isBrowser) {
                                  mass: 1e30, // some really huge mass
                                  label: "Entity",
                                  objtype: "obstacle",
-                                 sizemul: 0.5,
+                                 sizemul: 1,
                                  collisionFilter: {
                                     category: self.solid_category,
                                     mask: self.solid_category
