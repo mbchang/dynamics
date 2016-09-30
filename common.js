@@ -297,6 +297,11 @@ center_of_mass = function(bodies) {
     }
 }
 
+// random integer inclusive
+random_int = function(lo, hi) {
+    return Math.floor((Math.random()*(hi-lo+1)))
+}
+
 
 
 // Export
@@ -310,6 +315,7 @@ if (!_isBrowser) {
         this.initialize_velocities = initialize_velocities
         this.initialize_hv = initialize_hv
         this.initialize_positions_variable_size = initialize_positions_variable_size
+        this.random_int = random_int
     };
 }
 
