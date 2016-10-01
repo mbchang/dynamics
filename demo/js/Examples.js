@@ -2772,6 +2772,7 @@ if (!_isBrowser) {
                 options.variableObstacles = true
                 options.friction = false
                 options.drasticSize = true
+                options.wallType = 'L'
             }
 
             // these should not be mutated
@@ -2806,13 +2807,14 @@ if (!_isBrowser) {
                 window_height: demo.height,
                 random: true, // 0 means flush against the world boundaries
                 max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
-                kind: 'O',
+                wallType: options.wallType,
                 num_h: 9,
                 num_v: 7
             };
 
             // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
-            let wall_data = Walls.create_obstacle_U(wall_obstacle_params)
+            let wall_data = Walls.create_obstacle_wall(wall_obstacle_params)
+
             self.wall_positions = wall_data[0]
             self.wall_extremes = wall_data[1]
             self.num_wall_obj = self.wall_positions.length
@@ -2880,6 +2882,18 @@ if (!_isBrowser) {
         };
 
         // return a list of positions for the obstacles
+
+        Walls.create_obstacle_wall = function(wop) {
+            if (wop.wallType == 'O' || wop.wallType == 'I') {  // X means obstacles inside
+                return Walls.create_obstacle_O(wop)
+            } else if (wop.wallType == 'L') {
+                return Walls.create_obstacle_L(wop)
+            } else if (wop.wallType == 'U') {
+                return Walls.create_obstacle_U(wop)
+            } else {
+                console.assert(false, 'unknown wall type')
+            }
+        }
 
         Walls.create_obstacle_O = function(wop) {
             let positions = []
@@ -2990,52 +3004,227 @@ if (!_isBrowser) {
 
 
             // generative model
-            // sample orientation: 1--> top_left, 2--> bottom_left, 3--> bottom_rigth, 4--> top_right
-            let orientation = random_int(1,4)
+            // sample orientation: 1--> top_left, 2--> top_right, 3--> bottom_rigth, 4--> bottom_left
+            let orientation = 1//random_int(1,4)
 
             // sample horizontal length
-            let h_length = random_int(1,5)
+            let h_length= 5//random_int(2,5)
 
             // sample vertical length
-            let v_length = random_int(1,3)
+            let v_length = 3//random_int(2,3)
 
             // what is the generative process for this?
 
+            // well you have 6 line segments: 3 horizontal and 3 vertical
 
+            // let's predefine all the segments and then use them as we need
 
-
-
-
-            // now, let's fill in the border
+            // box segments (you can do slicing later)
+            //////////////////////////////////////////////////////////////////
             var cur_pos = [left, top]  // top left
-            positions.push(cur_pos)
+            // left
 
             // move right (-1 because we started off with top left)
+            let top_outer = [cur_pos]
             for (let i=0; i < wop.num_h-1; i ++) {
                 cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
-                positions.push(cur_pos)
+                top_outer.push(cur_pos)
             }
             // now we've filled the top row
 
             // move down
+            let right_outer = [cur_pos]
             for (let j=0; j < wop.num_v-1; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
-                positions.push(cur_pos)
+                right_outer.push(cur_pos)
             }
             // now we've filled top and right
 
             // // move left
+            let bottom_outer = [cur_pos]
             for (let i=0; i < wop.num_h-1; i ++) {
                 cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
-                positions.push(cur_pos)
+                bottom_outer.push(cur_pos)
             }
             // // now we've filled bottom
 
             // // move up (note the -2)
-            for (let j=0; j < wop.num_v-2; j ++) {
+            let left_outer = [cur_pos]
+            for (let j=0; j < wop.num_v-1; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
-                positions.push(cur_pos)
+                left_outer.push(cur_pos)
             }
+
+
+
+            // // inner segments (don't include)
+            //////////////////////////////////////////////////////////////////
+            // absolute coordinates, not realtive to the wall
+            // let middle = [wop.obstacle_size*h_length, wop.obstacle_size*v_length-v_pad]  
+
+            // let top_inner = [middle]  // go up
+            // cur_pos = [middle[0],middle[1]]
+            // for (let i=0; i < v_length-1; i ++) {
+            //     cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
+            //     top_inner.push(cur_pos)
+            // }
+
+            // let right_inner = [middle]  // go right
+            // cur_pos = [middle[0],middle[1]]
+            // for (let j=0; j < h_length-1; j ++) {
+            //     cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
+            //     right_inner.push(cur_pos)
+            // }
+
+            // let bottom_inner = [middle]  // go down
+            // cur_pos = [middle[0],middle[1]]
+            // for (let i=0; i < v_length-1; i ++) {
+            //     cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
+            //     bottom_inner.push(cur_pos)
+            // }
+
+            // let left_inner = [middle] // go left
+            // cur_pos = [middle[0],middle[1]]
+            // for (let j=0; j < h_length-1; j ++) {
+            //     cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
+            //     left_inner.push(cur_pos)
+            // }
+
+
+            // now sample the inside
+            //////////////////////////////////////////////////////////////////
+            // priority is vertical then horizontal
+            if (orientation == 1) {  // top left corner
+                positions.push.apply(positions, bottom_outer.slice(1))
+                positions.push.apply(positions, right_outer)
+
+                let middle = [wop.obstacle_size*h_length, wop.obstacle_size*v_length-v_pad] 
+                positions.push(middle)
+
+                // left-down
+                var inner_pos = middle
+                // left
+                for (let i=0; i < h_length-1; i++) {
+                    inner_pos = [inner_pos[0]-wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos)
+                }
+                // down
+                for (let i=0; i < wop.num_v-v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]+wop.obstacle_size]
+                    positions.push(inner_pos)
+                }
+
+                // up-right
+                var inner_pos = middle
+                // up: v_length
+                for (let i=0; i < v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]-wop.obstacle_size]
+                    positions.push(inner_pos) 
+                }
+                // right
+                for (let i=0; i < wop.num_h-h_length-1; i++) {
+                    inner_pos = [inner_pos[0]+wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos) 
+                }
+            } else if (orientation == 2) {  // top right corner
+                positions.push.apply(positions, bottom_outer.slice(0,-1))
+                positions.push.apply(positions, left_outer)
+
+                let middle = [wop.obstacle_size*(wop.num_h-h_length+1), wop.obstacle_size*v_length-v_pad] 
+                positions.push(middle)
+
+                // right-down
+                var inner_pos = middle
+                // right
+                for (let i=0; i < h_length-1; i++) {
+                    inner_pos = [inner_pos[0]+wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos)
+                }
+                // down
+                for (let i=0; i < wop.num_v-v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]+wop.obstacle_size]
+                    positions.push(inner_pos)
+                }
+
+                // up-left
+                var inner_pos = middle
+                // up: v_length
+                for (let i=0; i < v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]-wop.obstacle_size]
+                    positions.push(inner_pos) 
+                }
+                // left
+                for (let i=0; i < wop.num_h-h_length-1; i++) {
+                    inner_pos = [inner_pos[0]-wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos) 
+                }
+            } else if (orientation == 3) {  // bottom right corner
+                positions.push.apply(positions, top_outer.slice(1))
+                positions.push.apply(positions, left_outer)
+
+                let middle = [wop.obstacle_size*(wop.num_h-h_length+1), wop.obstacle_size*(wop.num_v-v_length+1)-v_pad] 
+                positions.push(middle)
+
+                // right-up
+                var inner_pos = middle
+                // left
+                for (let i=0; i < h_length-1; i++) {
+                    inner_pos = [inner_pos[0]+wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos)
+                }
+                // up
+                for (let i=0; i < wop.num_v-v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]-wop.obstacle_size]
+                    positions.push(inner_pos)
+                }
+
+                // down-left
+                var inner_pos = middle
+                // down: v_length
+                for (let i=0; i < v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]+wop.obstacle_size]
+                    positions.push(inner_pos) 
+                }
+                // left
+                for (let i=0; i < wop.num_h-h_length-1; i++) {
+                    inner_pos = [inner_pos[0]-wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos) 
+                }
+            } else if (orientation == 4) {  // bottom left corner
+                positions.push.apply(positions, top_outer.slice(0,-1))
+                positions.push.apply(positions, right_outer)
+
+                let middle = [wop.obstacle_size*h_length, wop.obstacle_size*(wop.num_v-v_length+1)-v_pad] 
+                positions.push(middle)
+
+                // left-up
+                var inner_pos = middle
+                // left: h_length
+                for (let i=0; i < h_length-1; i++) {
+                    inner_pos = [inner_pos[0]-wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos)
+                }
+                // up
+                console.log(wop.num_v, v_length)
+                for (let i=0; i < wop.num_v-v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]-wop.obstacle_size]
+                    positions.push(inner_pos)
+                }
+
+                // down-right
+                var inner_pos = middle
+                // down: v_length
+                for (let i=0; i < v_length-1; i++) {
+                    inner_pos = [inner_pos[0], inner_pos[1]+wop.obstacle_size]
+                    positions.push(inner_pos) 
+                }
+                // right
+                for (let i=0; i < wop.num_h-h_length-1; i++) {
+                    inner_pos = [inner_pos[0]+wop.obstacle_size, inner_pos[1]]
+                    positions.push(inner_pos) 
+                }
+            }
+
             return [positions, extremes]
         };
 
@@ -3083,7 +3272,6 @@ if (!_isBrowser) {
             // sample horizontal length
             let h_length = random_int(1,5)
             let h_offset = random_int(3,5)
-            console.log(h_offset)
 
             // sample vertical length
             let v_length = random_int(1,3)
@@ -3149,14 +3337,7 @@ if (!_isBrowser) {
                     cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
                     positions.push(cur_pos)
                 }
-                console.log(cur_pos)
             }
-
-
-
-
-
-
 
             return [positions, extremes]
         };
