@@ -2772,7 +2772,7 @@ if (!_isBrowser) {
                 options.variableObstacles = true
                 options.friction = false
                 options.drasticSize = true
-                options.wallType = 'L'
+                options.wallType = 'U'
             }
 
             // these should not be mutated
@@ -2899,76 +2899,6 @@ if (!_isBrowser) {
                 console.assert(false, 'unknown wall type')
             }
         }
-
-        Walls.create_obstacle_O = function(wop) {
-            let positions = []
-            let extremes = {}
-
-            // recall: 
-            // let wall_obstacle_params = {
-            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
-            //     window_cx: demo.cx,
-            //     window_cy: demo.cy,
-            //     window_width: demo.width,
-            //     window_height: demo.height,
-            //     random: true, // 0 means flush against the world boundaries
-            //     max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
-            //     kind: 'O',
-            //     num_h: 9,
-            //     num_v: 7
-            // };
-
-            // get boundaries of the window
-
-            // border is 800 x 600
-            // I am doing a 9 x 7 box
-
-            var h_pad = (2*wop.window_cx - wop.num_h*wop.obstacle_size)/2  // should be 40
-            var v_pad = (2*wop.window_cy - wop.num_v*wop.obstacle_size)/2  // should be 20
-
-            // TODO verify this!
-            var left = h_pad + wop.obstacle_size/2
-            var top = v_pad + wop.obstacle_size/2
-            var right = 2*wop.window_cx - h_pad - wop.obstacle_size/2
-            var bottom = 2*wop.window_cy - v_pad - wop.obstacle_size/2   
-
-            extremes.left = left
-            extremes.top = top
-            extremes.right = right
-            extremes.bottom = bottom
-
-            // now, let's fill in the border
-            var cur_pos = [left, top]  // top left
-            positions.push(cur_pos)
-
-            // move right (-1 because we started off with top left)
-            for (let i=0; i < wop.num_h-1; i ++) {
-                cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
-                positions.push(cur_pos)
-            }
-            // now we've filled the top row
-
-            // move down
-            for (let j=0; j < wop.num_v-1; j ++) {
-                cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
-                positions.push(cur_pos)
-            }
-            // now we've filled top and right
-
-            // // move left
-            for (let i=0; i < wop.num_h-1; i ++) {
-                cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
-                positions.push(cur_pos)
-            }
-            // // now we've filled bottom
-
-            // // move up (note the -2)
-            for (let j=0; j < wop.num_v-2; j ++) {
-                cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
-                positions.push(cur_pos)
-            }
-            return [positions, extremes]
-        };
 
         Walls.create_obstacle_L = function(wop) {
             let positions = []

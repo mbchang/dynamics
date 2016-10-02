@@ -68,7 +68,6 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
                         let other_size = sampled_sizes[j]  // this is the raw size, sizemul already incorporated. For an obstacle, let it be the diagonal from the center?
                         let this_size = sampled_sizes[i]
                         let min_distance = other_size + this_size
-                        // console.log('min_dist',i,j,min_distance)
 
                         if (euc_dist(proposed_pos, p0[j]) < 1.25*min_distance) {
                             // console.log('num_iters', num_iters)
@@ -88,7 +87,6 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
                     break
                 }
                 // keep trying until you get a match
-                // console.log('num_iters', num_iters, 'propose pos')
                 proposed_pos = rand_pos_fn();
             }
 
