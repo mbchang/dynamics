@@ -155,6 +155,8 @@
             Runner.stop(demo.runner) // seems like this is causing the problem!
         }
 
+        console.log(opt)
+
         var trajectories = data[opt.ex]  // extra 0 for batch mode
         var num_obj = trajectories.length
         var num_steps = trajectories[0].length
@@ -186,7 +188,7 @@
                 } else {
                     body.render.strokeStyle = '#551A8B'// orange #551A8B is purple
                 }
-                body.render.lineWidth = 20
+                body.render.lineWidth = 5
 
                 // set velocity
                 Body.setVelocity(body, {x: 0, y: 0})
@@ -295,7 +297,7 @@
             var fr = new FileReader();
             fr.onload = function(){
                 // let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
-                Demo.run(window.CircularJSON.parse(fr.result), {ex:7})
+                Demo.run(window.CircularJSON.parse(fr.result), {ex:0})
             }
             fr.readAsText(file)
         }

@@ -619,6 +619,9 @@
         if (sim_options.drasticSize) {
             experiment_string += '_dras3'   // change this to _dras if you only have two sizes!
         }
+        if (typeof sim_options.wall !== 'undefined' && sim_options.wall) {
+            experiment_string += '_w' + sim_options.wall   // change this to _dras if you only have two sizes!
+        }
         if (sim_options.gravity) {
             experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
         }
@@ -797,6 +800,12 @@
                     description: 'true if size difference is drastic',
                     required: false
                 }, {
+                    option: 'wall',
+                    alias: 'w',
+                    type: 'String',
+                    description: 'wall type O | L | U | I',
+                    required: false
+                }, {
                     option: 'image',
                     alias: 'i',
                     type: 'Boolean',
@@ -839,6 +848,7 @@
         }
 
         const cmd_options = optionator.parseArgv(process.argv);
+        console.log(cmd_options)
         if (cmd_options.help) console.log(optionator.generateHelp());
         return cmd_options;
     };

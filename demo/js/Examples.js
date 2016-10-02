@@ -2285,7 +2285,7 @@ if (!_isBrowser) {
                 sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
-            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos, [])
+            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos, [], 1.25)
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
@@ -2544,7 +2544,7 @@ if (!_isBrowser) {
                 sampled_sizes.push(self.s[i-(self.params.num_balls+self.params.num_invis)]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
-            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos, [])
+            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos, [], 1.25)
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
@@ -2768,11 +2768,8 @@ if (!_isBrowser) {
                 var options = {}
                 options.numObj = 2
                 options.variableMass = false
-                options.variableSize = true
-                options.variableObstacles = true
                 options.friction = false
-                options.drasticSize = true
-                options.wallType = 'L'
+                options.wall = 'L'
             }
 
             // these should not be mutated
@@ -2787,12 +2784,14 @@ if (!_isBrowser) {
                            invis_side: demo.config.object_base_size.block,  // 20, and long side is 60
                            drasticSize: options.drasticSize
                        };
-            console.assert(self.params.variableObstacles)
 
             // obstacles will be blocks, wall obj will be squares
-            console.assert(options.numObj <= 6) // four is the max number that the window size can handle.
-            self.params.num_obstacles = 0//Math.floor(Math.random()*options.numObj)  // can have 0 to n-1 obstacles
-            self.params.num_balls = options.numObj - self.params.num_obstacles // guarantee at least one ball.
+            if (options.wall == 'I') {
+                self.params.num_obstacles = 2//random_int(1,3)
+            } else {
+                self.params.num_obstacles = 0
+            }
+            self.params.num_balls = options.numObj
             console.assert(self.params.num_balls >= 1)
 
             // here we should calculate the walls actually, so we can update self.num_obj accordingly
@@ -2807,23 +2806,25 @@ if (!_isBrowser) {
                 window_height: demo.height,
                 random: true, // 0 means flush against the world boundaries
                 max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
-                wallType: options.wallType,
-                num_h: 9,
-                num_v: 7,
+                wallType: options.wall,
+                num_h: 9,  // 9 blocks wide
+                num_v: 7,  // 7 blocks long
             };
+            console.log(options)
 
             // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
             let wall_data = Walls.create_obstacle_wall(wall_obstacle_params)
-
             self.wall_positions = wall_data[0]
-            self.wall_extremes = wall_data[1]
+            self.wall_fill_positions = wall_data[1]
+            self.wall_extremes = wall_data[2]
+            self.wall_orientation = wall_data[3]
             self.num_wall_obj = self.wall_positions.length
-
-            // mock up 
-            self.num_wall_obj = 0
+            self.wall_fill_sizes = []
+            for (let i=0; i < self.wall_fill_positions.length; i ++) {
+                self.wall_fill_sizes.push(wall_obstacle_params.obstacle_size*0.5*Math.sqrt(2))
+            }
 
             self.params.num_obj = self.params.num_balls + self.params.num_obstacles + self.num_wall_obj
-
 
             self.engine = demo.engine;
             self.engine.world.gravity.x = 0;
@@ -2832,11 +2833,9 @@ if (!_isBrowser) {
             }
 
             // function
-            // TODO! This should be based on wall_positions!
             self.rand_pos = function() {
                 let max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(Math.max(self.params.obj_radius, self.params.obstacle_side/2), 3*self.params.invis_side/2)
                 return rand_pos(
-                    // TODO! CHANGE THIS TO REFLECT BORDER! FOR NOW LET'S JUST DO RECTANGLE
                     {hi: self.wall_extremes.right - max_obj_size - 1, lo: self.wall_extremes.left + max_obj_size + 1},
                     {hi: self.wall_extremes.bottom - max_obj_size - 1, lo: self.wall_extremes.top + max_obj_size + 1});
                 };
@@ -2849,15 +2848,16 @@ if (!_isBrowser) {
                 self.possible_masses = [1]
             }
 
-            if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
-                if (self.params.drasticSize) {
-                    self.possible_sizes = demo.config.drastic_sizes
-                } else {
-                    self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
-                }
-            } else {
-                self.possible_sizes = [1]
-            }
+            // if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
+            //     if (self.params.drasticSize) {
+            //         self.possible_sizes = demo.config.drastic_sizes
+            //     } else {
+            //         self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
+            //     }
+            // } else {
+            //     self.possible_sizes = [1]
+            // }
+            self.possible_sizes = [1]
 
             self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
 
@@ -2865,21 +2865,16 @@ if (!_isBrowser) {
             self.invis_category = 0x0002
 
             // border
-            var world_border = Composite.create({label:'Border'});
+            // var world_border = Composite.create({label:'Border'});
 
-            Composite.add(world_border, [
-                Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category}}),  // top
-                Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }),  // bottom
-                Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }), // right
-                Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} })  // left
-            ]);
+            // Composite.add(world_border, [
+            //     Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category}}),  // top
+            //     Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }),  // bottom
+            //     Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }), // right
+            //     Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} })  // left
+            // ]);
 
-            World.add(self.engine.world, world_border)  // its parent is a circular reference!
-
-            console.log('after adding border')
-            console.log(self.engine.world)
-            console.log(self.engine.world.bodies.length)
-            console.log(self.engine.world.bodies)
+            // World.add(self.engine.world, world_border)  // its parent is a circular reference!
 
             self.group = Body.nextGroup(true);
 
@@ -2889,7 +2884,8 @@ if (!_isBrowser) {
         // return a list of positions for the obstacles
 
         Walls.create_obstacle_wall = function(wop) {
-            if (wop.wallType == 'O') {  // O means obstacles inside, so our L does not have an indent
+            console.log(wop)
+            if (wop.wallType == 'O' || wop.wallType == 'I') {  // O means obstacles inside, so our L does not have an indent
                 wop.box = 'true'
                 return Walls.create_obstacle_L(wop)
             } else if (wop.wallType == 'L') {
@@ -2941,18 +2937,17 @@ if (!_isBrowser) {
 
             // generative model
             // sample orientation: 1--> top_left, 2--> top_right, 3--> bottom_rigth, 4--> bottom_left
-            let orientation = random_int(1,4)
 
             // sample horizontal length
-            let h_length, v_length
+            let h_length, v_length, orientation
             if (wop.box) {
                 h_length = 1
                 v_length = 1
+                orientation = 1 // just set it to 1
             } else {
-                h_length= random_int(2,5)  // (if it is 1 then it is just a box. We can just do that)
-
-                // sample vertical length
-                v_length = random_int(2,3)
+                h_length= random_int(2,6)  // (if it is 1 then it is just a box. We can just do that)
+                v_length = random_int(2,4)
+                orientation = random_int(1,4)
             }
 
             // box segments (you can do slicing later)
@@ -3028,18 +3023,15 @@ if (!_isBrowser) {
 
                 // now fill in the crevice 
                 // 0-indexed from top-left block
-                filled_positions = positions.slice(0)  // copy
+                filled_positions = convert_to_positions(positions)  // copy
 
                 for (let i=0; i < h_length-1; i ++) {
                     for (let j=0; j < v_length-1; j++) {
-                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
-                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
-                        console.log(i,j)
+                        let fill_pos = {x:i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        y:j*wop.obstacle_size-v_pad + wop.obstacle_size}  // extra wop.obstacle size for pad
                         filled_positions.push(fill_pos)
-                        // positions.push(fill_pos)  // for debugging
                     }
                 }
-
 
             } else if (orientation == 2) {  // top right corner
                 positions.push.apply(positions, bottom_outer.slice(0,-1))
@@ -3076,18 +3068,15 @@ if (!_isBrowser) {
 
                 // now fill in the crevice 
                 // 0-indexed from top-left block
-                filled_positions = positions.slice(0)  // copy
+                filled_positions = convert_to_positions(positions)  // copy
 
                 for (let i=wop.num_h-h_length+1; i < wop.num_h; i ++) {
                     for (let j=0; j < v_length-1; j++) {
-                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
-                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
-                        console.log(i,j)
+                        let fill_pos = {x:i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        y:j*wop.obstacle_size-v_pad + wop.obstacle_size}  // extra wop.obstacle size for pad
                         filled_positions.push(fill_pos)
-                        // positions.push(fill_pos)  // for debugging
                     }
                 }
-
 
             } else if (orientation == 3) {  // bottom right corner
                 positions.push.apply(positions, top_outer.slice(1))
@@ -3124,19 +3113,15 @@ if (!_isBrowser) {
 
                 // now fill in the crevice 
                 // 0-indexed from top-left block
-                filled_positions = positions.slice(0)  // copy
+                filled_positions = convert_to_positions(positions)  // copy
 
                 for (let i=wop.num_h-h_length+1; i < wop.num_h; i ++) {
                     for (let j=wop.num_v-v_length+1; j < wop.num_v; j++) {
-                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
-                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
-                        console.log(i,j)
+                        let fill_pos = {x:i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        y:j*wop.obstacle_size-v_pad + wop.obstacle_size}  // extra wop.obstacle size for pad
                         filled_positions.push(fill_pos)
-                        // positions.push(fill_pos)  // for debugging
                     }
                 }
-
-
 
             } else if (orientation == 4) {  // bottom left corner
                 positions.push.apply(positions, top_outer.slice(0,-1))
@@ -3173,25 +3158,17 @@ if (!_isBrowser) {
 
                 // now fill in the crevice 
                 // 0-indexed from top-left block
-                filled_positions = positions.slice(0)  // copy
+                filled_positions = convert_to_positions(positions)  // copy
 
                 for (let i=0; i < h_length-1; i ++) {
                     for (let j=wop.num_v-v_length+1; j < wop.num_v; j++) {
-                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
-                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
-                        console.log(i,j)
+                        let fill_pos = {x:i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        y:j*wop.obstacle_size-v_pad + wop.obstacle_size}  // extra wop.obstacle size for pad
                         filled_positions.push(fill_pos)
-                        // positions.push(fill_pos)  // for debugging
                     }
                 }
-
             }
-
-
-
-
-
-            return [positions, extremes, orientation]
+            return [positions, filled_positions, extremes, orientation]
         };
 
         Walls.create_obstacle_U = function(wop) {
@@ -3233,7 +3210,7 @@ if (!_isBrowser) {
 
             // generative model
             // sample orientation: 1--> left, 2--> top, 3--> right, 4--> bottom
-            let orientation = random_int(1,4)
+            let orientation = random_int(1,2)
 
             // sample horizontal length
             let h_length = random_int(1,5)
@@ -3305,7 +3282,8 @@ if (!_isBrowser) {
                 }
             }
 
-            return [positions, extremes]
+            let filled_positions = convert_to_positions(positions)
+            return [positions, filled_positions, extremes, orientation]
         };
 
         Walls.init = function(self) {  // hockey is like self here
@@ -3322,32 +3300,31 @@ if (!_isBrowser) {
                                     mask: self.solid_category
                                  }, 
                              }
-                // console.log(self.params.obstacle_side)
                 let wall_obstacle = Bodies.rectangle(self.wall_positions[i][0], self.wall_positions[i][1], 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 body_opts)
-                World.add(self.engine.world, wall_obstacle);  // TODO! the rectangle is not getting added?              
+                World.add(self.engine.world, wall_obstacle);  // TODO! the rectangle is not getting added?        
             }
-            console.log('number of wall blocks')
-            console.log(self.wall_positions.length)
-            console.log('after generating wall')
-            console.log(self.engine.world.bodies.length)
-
-            // generae obstacle sizes
-            self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
 
             // construct sample sizes
-            let sampled_sizes = []
+            let sampled_sizes = self.wall_fill_sizes.slice(0)
+            console.assert(sampled_sizes.length == self.wall_fill_positions.length)
+
             for (let i = 0; i < self.params.num_balls; i ++){
                 sampled_sizes.push(1*self.params.obj_radius)
             }
 
             for (let i = self.params.num_balls; i < self.params.num_balls + self.params.num_obstacles; i ++) {
-                sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
+                sampled_sizes.push(1*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
-            self.p0 = initialize_positions_variable_size(self.params.num_balls + self.params.num_obstacles, sampled_sizes, self.rand_pos, [])
+            // need to make a deepcopy
+            let wall_fill_positions_copy = JSON.parse(JSON.stringify(self.wall_fill_positions))
+
+            let all_pos = initialize_positions_variable_size(self.params.num_balls + self.params.num_obstacles, sampled_sizes, self.rand_pos, wall_fill_positions_copy, 1.1)
+
+            self.p0 = all_pos.slice(-self.params.num_balls - self.params.num_obstacles)
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
@@ -3389,9 +3366,6 @@ if (!_isBrowser) {
                 World.add(self.engine.world, body);
              }
 
-             console.log('after generating circles')
-             console.log(self.engine.world.bodies.length)
-
              // now set the obstacles
              for (let i = self.params.num_balls; i < self.params.num_balls + self.params.num_obstacles; i ++) {
                 let body_opts = {restitution: 1,
@@ -3399,7 +3373,7 @@ if (!_isBrowser) {
                                  mass: 1e30, // some really huge mass
                                  label: "Entity",
                                  objtype: "obstacle",
-                                 sizemul: self.s[i-self.params.num_balls],
+                                 sizemul: 1,
                                  collisionFilter: {
                                     category: self.solid_category,
                                     mask: self.solid_category
@@ -3410,18 +3384,21 @@ if (!_isBrowser) {
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 body_opts)
-                World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+                World.add(self.engine.world, obstacle)
              }
-             console.log('after generating obstacles')
-             console.log(self.engine.world.bodies.length)
-
         };
 
 
         Walls.init_from_trajectories = function(self, trajectories) {
+
+            // console.log(trajectories)
+            // console.log(self.params.num_obj)
+
             // set positions
             for (let i = 0; i < self.params.num_obj; i++) {
 
+                // console.log(i)
+                // console.log(trajectories[i])
                 if (trajectories[i][1].objtype=='ball') {
                     let body_opts = {restitution: 1,
                                  mass: trajectories[i][1].mass,
@@ -3454,26 +3431,7 @@ if (!_isBrowser) {
 
                     // add body to world
                     World.add(self.engine.world, body);
-                } else if (trajectories[i][1].objtype=='block')  {
-                    let body_opts = {restitution: 1,
-                                     isStatic:true,
-                                     mass: trajectories[i][1].mass, // some really huge mass
-                                     label: "Entity",
-                                     objtype: trajectories[i][1].objtype,
-                                     sizemul: trajectories[i][1].sizemul,
-                                     collisionFilter: {
-                                        category: self.invis_category,
-                                        mask: self.invis_category
-                                     },
-                                     // collisionFilter: {group:self.group}
-                                 }
-                    let pos = trajectories[i][1].position
-                    let obstacle = Bodies.rectangle(pos.x, pos.y, 
-                                                    self.params.invis_side*body_opts.sizemul, 
-                                                    self.params.invis_side*3*body_opts.sizemul, 
-                                                    body_opts)
-                    World.add(self.engine.world, obstacle);
-                }
+                } 
 
                 else if (trajectories[i][1].objtype=='obstacle')  {
                     let body_opts = {restitution: 1,
@@ -3506,8 +3464,6 @@ if (!_isBrowser) {
             console.log('init_from_trajectories')
             Walls.init_from_trajectories(walls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
         }
-        console.log('after init')
-        console.log(walls.engine.world)
         return walls;
     };
 
