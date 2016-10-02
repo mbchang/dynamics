@@ -2876,6 +2876,11 @@ if (!_isBrowser) {
 
             World.add(self.engine.world, world_border)  // its parent is a circular reference!
 
+            console.log('after adding border')
+            console.log(self.engine.world)
+            console.log(self.engine.world.bodies.length)
+            console.log(self.engine.world.bodies)
+
             self.group = Body.nextGroup(true);
 
             return self
@@ -3002,22 +3007,15 @@ if (!_isBrowser) {
             extremes.right = right
             extremes.bottom = bottom
 
-
             // generative model
             // sample orientation: 1--> top_left, 2--> top_right, 3--> bottom_rigth, 4--> bottom_left
-            let orientation = 1//random_int(1,4)
+            let orientation = random_int(1,4)
 
             // sample horizontal length
-            let h_length= 5//random_int(2,5)
+            let h_length= random_int(2,5)  //(if it is 1 then it is just a box. We can just do that)
 
             // sample vertical length
-            let v_length = 3//random_int(2,3)
-
-            // what is the generative process for this?
-
-            // well you have 6 line segments: 3 horizontal and 3 vertical
-
-            // let's predefine all the segments and then use them as we need
+            let v_length = random_int(2,3)
 
             // box segments (you can do slicing later)
             //////////////////////////////////////////////////////////////////
@@ -3055,45 +3053,8 @@ if (!_isBrowser) {
                 left_outer.push(cur_pos)
             }
 
-
-
-            // // inner segments (don't include)
-            //////////////////////////////////////////////////////////////////
-            // absolute coordinates, not realtive to the wall
-            // let middle = [wop.obstacle_size*h_length, wop.obstacle_size*v_length-v_pad]  
-
-            // let top_inner = [middle]  // go up
-            // cur_pos = [middle[0],middle[1]]
-            // for (let i=0; i < v_length-1; i ++) {
-            //     cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
-            //     top_inner.push(cur_pos)
-            // }
-
-            // let right_inner = [middle]  // go right
-            // cur_pos = [middle[0],middle[1]]
-            // for (let j=0; j < h_length-1; j ++) {
-            //     cur_pos = [cur_pos[0]+wop.obstacle_size, cur_pos[1]]
-            //     right_inner.push(cur_pos)
-            // }
-
-            // let bottom_inner = [middle]  // go down
-            // cur_pos = [middle[0],middle[1]]
-            // for (let i=0; i < v_length-1; i ++) {
-            //     cur_pos = [cur_pos[0], cur_pos[1]+wop.obstacle_size]
-            //     bottom_inner.push(cur_pos)
-            // }
-
-            // let left_inner = [middle] // go left
-            // cur_pos = [middle[0],middle[1]]
-            // for (let j=0; j < h_length-1; j ++) {
-            //     cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
-            //     left_inner.push(cur_pos)
-            // }
-
-
             // now sample the inside
             //////////////////////////////////////////////////////////////////
-            // priority is vertical then horizontal
             if (orientation == 1) {  // top left corner
                 positions.push.apply(positions, bottom_outer.slice(1))
                 positions.push.apply(positions, right_outer)
@@ -3205,7 +3166,6 @@ if (!_isBrowser) {
                     positions.push(inner_pos)
                 }
                 // up
-                console.log(wop.num_v, v_length)
                 for (let i=0; i < wop.num_v-v_length-1; i++) {
                     inner_pos = [inner_pos[0], inner_pos[1]-wop.obstacle_size]
                     positions.push(inner_pos)
@@ -3364,6 +3324,10 @@ if (!_isBrowser) {
                                                 body_opts)
                 World.add(self.engine.world, wall_obstacle);  // TODO! the rectangle is not getting added?              
             }
+            console.log('number of wall blocks')
+            console.log(self.wall_positions.length)
+            console.log('after generating wall')
+            console.log(self.engine.world.bodies.length)
 
 
 
@@ -3381,8 +3345,6 @@ if (!_isBrowser) {
             }
 
             self.p0 = initialize_positions_variable_size(self.params.num_balls + self.params.num_obstacles, sampled_sizes, self.rand_pos)
-
-            console.log(self.p0)
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
@@ -3424,27 +3386,8 @@ if (!_isBrowser) {
                 World.add(self.engine.world, body);
              }
 
-            // now set the invis. we do this in order because positions computed from sampled_sizes, which is in order
-             // for (let i = self.params.num_balls; i < self.params.num_balls+self.params.num_invis; i ++) {
-             //        let body_opts = {restitution: 1,
-             //                         isStatic:true,
-             //                         mass: 1e30, // some really huge mass
-             //                         label: "Entity",
-             //                         objtype: "block",
-             //                         sizemul: demo.config.drastic_sizes[demo.config.drastic_sizes.length-1],  // sizemul is wrong!!!!!!!!!!!!!!!!
-             //                         collisionFilter: {
-             //                            category: self.invis_category,
-             //                            mask: self.invis_category
-             //                         },
-             //                         // sizemul: self.s_debug[i-self.params.num_balls]
-             //                     }
-             //    // console.log(self.params.obstacle_side)
-             //    let invis = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
-             //                                    self.params.invis_side*body_opts.sizemul, 
-             //                                    self.params.invis_side*3*body_opts.sizemul, 
-             //                                    body_opts)
-             //    World.add(self.engine.world, invis);  // TODO! the rectangle is not getting added?
-             // }
+             console.log('after generating circles')
+             console.log(self.engine.world.bodies.length)
 
              // now set the obstacles
              for (let i = self.params.num_balls; i < self.params.num_balls + self.params.num_obstacles; i ++) {
@@ -3466,6 +3409,8 @@ if (!_isBrowser) {
                                                 body_opts)
                 World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
              }
+             console.log('after generating obstacles')
+             console.log(self.engine.world.bodies.length)
 
         };
 
@@ -3551,16 +3496,15 @@ if (!_isBrowser) {
         };
 
         var walls = Walls.create(cmd_options);
-        // console.log('cmd_options')
-        // console.log(cmd_options)
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            // console.log('init')
             Walls.init(walls);  // perhaps here you could do something like Mixed.init_from_trajectories
         } else {
             console.log('init_from_trajectories')
             Walls.init_from_trajectories(walls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
         }
+        console.log('after init')
+        console.log(walls.engine.world)
         return walls;
     };
 
