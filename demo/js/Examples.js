@@ -2285,7 +2285,7 @@ if (!_isBrowser) {
                 sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
-            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos)
+            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos, [])
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
@@ -2544,7 +2544,7 @@ if (!_isBrowser) {
                 sampled_sizes.push(self.s[i-(self.params.num_balls+self.params.num_invis)]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
-            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos)
+            self.p0 = initialize_positions_variable_size(self.params.num_obj, sampled_sizes, self.rand_pos, [])
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
@@ -2772,7 +2772,7 @@ if (!_isBrowser) {
                 options.variableObstacles = true
                 options.friction = false
                 options.drasticSize = true
-                options.wallType = 'U'
+                options.wallType = 'L'
             }
 
             // these should not be mutated
@@ -2809,7 +2809,7 @@ if (!_isBrowser) {
                 max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
                 wallType: options.wallType,
                 num_h: 9,
-                num_v: 7
+                num_v: 7,
             };
 
             // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
@@ -2889,8 +2889,9 @@ if (!_isBrowser) {
         // return a list of positions for the obstacles
 
         Walls.create_obstacle_wall = function(wop) {
-            if (wop.wallType == 'O' || wop.wallType == 'I') {  // X means obstacles inside
-                return Walls.create_obstacle_O(wop)
+            if (wop.wallType == 'O') {  // O means obstacles inside, so our L does not have an indent
+                wop.box = 'true'
+                return Walls.create_obstacle_L(wop)
             } else if (wop.wallType == 'L') {
                 return Walls.create_obstacle_L(wop)
             } else if (wop.wallType == 'U') {
@@ -2902,6 +2903,7 @@ if (!_isBrowser) {
 
         Walls.create_obstacle_L = function(wop) {
             let positions = []
+            let filled_positions
             let extremes = {}
 
             // recall: 
@@ -2942,10 +2944,16 @@ if (!_isBrowser) {
             let orientation = random_int(1,4)
 
             // sample horizontal length
-            let h_length= random_int(2,5)  //(if it is 1 then it is just a box. We can just do that)
+            let h_length, v_length
+            if (wop.box) {
+                h_length = 1
+                v_length = 1
+            } else {
+                h_length= random_int(2,5)  // (if it is 1 then it is just a box. We can just do that)
 
-            // sample vertical length
-            let v_length = random_int(2,3)
+                // sample vertical length
+                v_length = random_int(2,3)
+            }
 
             // box segments (you can do slicing later)
             //////////////////////////////////////////////////////////////////
@@ -3017,6 +3025,22 @@ if (!_isBrowser) {
                     inner_pos = [inner_pos[0]+wop.obstacle_size, inner_pos[1]]
                     positions.push(inner_pos) 
                 }
+
+                // now fill in the crevice 
+                // 0-indexed from top-left block
+                filled_positions = positions.slice(0)  // copy
+
+                for (let i=0; i < h_length-1; i ++) {
+                    for (let j=0; j < v_length-1; j++) {
+                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
+                        console.log(i,j)
+                        filled_positions.push(fill_pos)
+                        // positions.push(fill_pos)  // for debugging
+                    }
+                }
+
+
             } else if (orientation == 2) {  // top right corner
                 positions.push.apply(positions, bottom_outer.slice(0,-1))
                 positions.push.apply(positions, left_outer)
@@ -3049,6 +3073,22 @@ if (!_isBrowser) {
                     inner_pos = [inner_pos[0]-wop.obstacle_size, inner_pos[1]]
                     positions.push(inner_pos) 
                 }
+
+                // now fill in the crevice 
+                // 0-indexed from top-left block
+                filled_positions = positions.slice(0)  // copy
+
+                for (let i=wop.num_h-h_length+1; i < wop.num_h; i ++) {
+                    for (let j=0; j < v_length-1; j++) {
+                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
+                        console.log(i,j)
+                        filled_positions.push(fill_pos)
+                        // positions.push(fill_pos)  // for debugging
+                    }
+                }
+
+
             } else if (orientation == 3) {  // bottom right corner
                 positions.push.apply(positions, top_outer.slice(1))
                 positions.push.apply(positions, left_outer)
@@ -3081,6 +3121,23 @@ if (!_isBrowser) {
                     inner_pos = [inner_pos[0]-wop.obstacle_size, inner_pos[1]]
                     positions.push(inner_pos) 
                 }
+
+                // now fill in the crevice 
+                // 0-indexed from top-left block
+                filled_positions = positions.slice(0)  // copy
+
+                for (let i=wop.num_h-h_length+1; i < wop.num_h; i ++) {
+                    for (let j=wop.num_v-v_length+1; j < wop.num_v; j++) {
+                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
+                        console.log(i,j)
+                        filled_positions.push(fill_pos)
+                        // positions.push(fill_pos)  // for debugging
+                    }
+                }
+
+
+
             } else if (orientation == 4) {  // bottom left corner
                 positions.push.apply(positions, top_outer.slice(0,-1))
                 positions.push.apply(positions, right_outer)
@@ -3113,9 +3170,28 @@ if (!_isBrowser) {
                     inner_pos = [inner_pos[0]+wop.obstacle_size, inner_pos[1]]
                     positions.push(inner_pos) 
                 }
+
+                // now fill in the crevice 
+                // 0-indexed from top-left block
+                filled_positions = positions.slice(0)  // copy
+
+                for (let i=0; i < h_length-1; i ++) {
+                    for (let j=wop.num_v-v_length+1; j < wop.num_v; j++) {
+                        let fill_pos = [i*wop.obstacle_size + wop.obstacle_size,  // extra wop.obstacle size for pad
+                                        j*wop.obstacle_size-v_pad + wop.obstacle_size]  // extra wop.obstacle size for pad
+                        console.log(i,j)
+                        filled_positions.push(fill_pos)
+                        // positions.push(fill_pos)  // for debugging
+                    }
+                }
+
             }
 
-            return [positions, extremes]
+
+
+
+
+            return [positions, extremes, orientation]
         };
 
         Walls.create_obstacle_U = function(wop) {
@@ -3232,7 +3308,6 @@ if (!_isBrowser) {
             return [positions, extremes]
         };
 
-
         Walls.init = function(self) {  // hockey is like self here
             // generate wall
             for (let i=0; i < self.wall_positions.length; i++) {
@@ -3259,8 +3334,6 @@ if (!_isBrowser) {
             console.log('after generating wall')
             console.log(self.engine.world.bodies.length)
 
-
-
             // generae obstacle sizes
             self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
 
@@ -3274,7 +3347,7 @@ if (!_isBrowser) {
                 sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
-            self.p0 = initialize_positions_variable_size(self.params.num_balls + self.params.num_obstacles, sampled_sizes, self.rand_pos)
+            self.p0 = initialize_positions_variable_size(self.params.num_balls + self.params.num_obstacles, sampled_sizes, self.rand_pos, [])
 
             // generate random velocities
             self.v0 = initialize_velocities(self.params.num_balls,self.params.max_v0)
