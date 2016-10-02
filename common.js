@@ -49,8 +49,13 @@ initialize_positions = function(num_obj, obj_radius, rand_pos_fn){
 }
 
 
+// sampled_sizes = [existing] + [will_sample]
+// p0 --> [existing]
+// num_obj --> [will_sample]
 initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, rand_pos_fn) {
     let p0 = [];  // initial positions
+
+    // here do an assert that num_obj + p0.length = sampled_sizes.length
 
     // set positions
     for (let i = 0; i < num_obj; i++) {
@@ -70,7 +75,6 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
                         let min_distance = other_size + this_size
 
                         if (euc_dist(proposed_pos, p0[j]) < 1.25*min_distance) {
-                            // console.log('num_iters', num_iters)
                             num_iters ++
                             if (num_iters > 20) {
                                 should_break = true
