@@ -48,6 +48,47 @@ function data_process.create(jsonfolder, outfolder, args) -- I'm not sure if thi
     return self
 end
 
+-- focus: (bsize, num_past, obj_dim)
+-- context: ()
+function data_process.k_nearest_context(focus, context, k)
+    local bsize, num_past, obj_dim = context:size(1), context:size(3), context:size(4)
+
+    -- euc_dist is a table of num_context entries of (bsize)
+    -- table size is num_context
+    local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)
+
+    -- for each example in bsize, you want to sort num_context and gets indices
+    local closest, closest_indices = torch.topk(ed, 12) -- get 12 closets
+
+    local new_context = {}
+    for ex = 1, closest_indices:size(1) do  -- go through the batch
+        local contexts_for_ex = context:index(2, closest_indices)  -- (bsize, 12, num_past, obj_dim)
+        table.insert(contexts_for_ex:clone())
+    end
+    new_context = torch.cat(new_context,1)
+    assert(new_context:size(1) == bsize and new_context:size(2) == 12 and new_context:size(3) == num_past and new_context:size(4) == obj_dim)
+    return new_context
+end
+
+-- table of 
+function data_process:get_euc_dist(focus, context, t)
+    local num_context = context:size(2)
+    local t = t or -1  -- default use last timestep
+    local px, py = self.rsi.px, self.rsi.py
+
+    local this_pos = this[{{},{t},{px, py}}]
+    local context_pos = context[{{},{},{t},{px, py}}]
+    local euc_dists = torch.squeeze(compute_euc_dist(this_pos:repeatTensor(1,num_context,1), context_pos),3) -- (bsize, num_context)
+    -- euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
+    -- for i=1,#euc_dists do  -- #euc_dists = num_context
+    --     euc_dists[i] = torch.totable(torch.squeeze(euc_dists[i]))
+    -- end
+    -- euc_dist is a table of num_context entries of tables of length bsize
+    return euc_dists
+end
+
+
+
 function data_process.relative_pair(past, future, relative_to_absolute)
     -- rta: relative to absolute, otherwise we are doing absolute to relative
 
@@ -59,6 +100,7 @@ function data_process.relative_pair(past, future, relative_to_absolute)
     end
     return future
 end
+
 
 -- (num_examples, num_objects, timestesp, a, av)
 -- theta = theta-2pi if pi < theta < 2*pi
@@ -215,7 +257,8 @@ function data_process:expand_for_each_object(unfactorized)
     local obj_index
     if not(string.find(self.jsonfolder, 'balls') == nil) or 
             not(string.find(self.jsonfolder, 'mixed') == nil) or 
-            not(string.find(self.jsonfolder, 'invisible') == nil)then
+            not(string.find(self.jsonfolder, 'invisible') == nil) or 
+            not(string.find(self.jsonfolder, 'walls') == nil) then
         obj_index = self.si.oid[1]
     elseif not(string.find(self.jsonfolder, 'tower') == nil) then
         obj_index = self.si.oid[2]
@@ -387,7 +430,8 @@ function data_process:count_examples(jsonfolder)
     local obj_id
     if not(string.find(self.jsonfolder, 'balls') == nil) or 
             not(string.find(self.jsonfolder, 'mixed') == nil) or 
-            not(string.find(self.jsonfolder, 'invisible') == nil)then
+            not(string.find(self.jsonfolder, 'invisible') == nil) or 
+            not(string.find(self.jsonfolder, 'walls') == nil) then
         obj_id = self.oid_ids[1]
     elseif not(string.find(self.jsonfolder, 'tower') == nil) then
         obj_id = self.oid_ids[3]
@@ -398,6 +442,9 @@ function data_process:count_examples(jsonfolder)
     for _, jsonfile in pairs(ordered_files) do
         local data = load_data_json(paths.concat(jsonfolder,jsonfile))  -- (num_examples, num_obj, num_steps, object_raw_dim)
         local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(data:size()))
+
+        -- print(num_samples, num_obj, num_steps, object_dim)
+        -- assert(false)
         -- now count where there are balls (also works for tower)
         if num_obj > 1 then
             for i=1,num_obj do
@@ -421,8 +468,28 @@ function data_process:create_datasets_batches()
     -- set up
     local flags = pls.split(string.gsub(self.jsonfolder,'/jsons',''), '_')
     local total_samples = tonumber(extract_flag(flags, 'ex'))  -- this is the number of trajectories
-    local num_obj = tonumber(extract_flag(flags, 'n'))
     local num_steps = tonumber(extract_flag(flags, 't'))
+    local num_obj
+
+    if not(string.find(self.jsonfolder, 'walls') == nil) then
+        -- U: 33
+        -- L: 30
+        -- O: 30
+        -- I: 32   
+        if not(string.find(self.jsonfolder, '_wO') == nil) or not(string.find(self.jsonfolder, '_wL') == nil) then
+            num_obj = 30
+        elseif not(string.find(self.jsonfolder, '_wU') == nil) then
+            num_obj = 33
+        elseif not(string.find(self.jsonfolder, '_wI') == nil) then
+            num_obj = 32
+        else
+            assert(false, 'unknown wall type')
+        end
+    else
+        num_obj = tonumber(extract_flag(flags, 'n'))
+    end
+    print('num obj', num_obj)
+
 
     print('Counting Examples')
     local num_examples = self:count_examples(self.jsonfolder)
