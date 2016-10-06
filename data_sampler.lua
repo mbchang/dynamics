@@ -156,12 +156,17 @@ function datasampler:load_batch_id(id)
 end
 
 function datasampler:load_batch_id_first_offset(id)
-    self.current_sampled_id = id
+    return self:load_subbatch_id_any_offset(id, 1)
+end
+
+function datasampler:load_subbatch_id_any_offset(id, offset)
+    -- note that the caller function should set self.current_sampled_id
 
     local batchname = self.savefolder..'/'..'batch'..id
     local nextbatch = torch.load(batchname)   -- focus: (bsize, maxwinsize, obj_dim)
 
-    nextbatch = self:split_time(nextbatch)
+    nextbatch = self:split_time(nextbatch, offset)
+
     if self.relative and not self.sim then 
         nextbatch = self:relative_batch(nextbatch, false) 
     end
@@ -182,26 +187,7 @@ function datasampler:load_subbatch_id(id)
     self.current_sampled_id = id  -- note! I don't even need to change this! This now indexes the subbatches!
     local batch_id = math.floor((self.current_sampled_id-1) / self.num_subbatches_per_batch) + 1
     local offset = (self.current_sampled_id-1) - (self.num_subbatches_per_batch*(batch_id-1)) + 1
-
-    local batchname = self.savefolder..'/'..'batch'..batch_id
-    local nextbatch = torch.load(batchname)   -- focus: (bsize, maxwinsize, obj_dim)
-
-    nextbatch = self:split_time(nextbatch, offset)
-
-    if self.relative and not self.sim then 
-        nextbatch = self:relative_batch(nextbatch, false) 
-    end
-
-    local this, context, y, context_future, mask = unpack(nextbatch)
-
-    mask = torch.zeros(10)
-    mask[{{context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
-
-    -- convert to cuda or double
-    this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
-    nextbatch = {this, context, y, context_future, mask}
-    collectgarbage()
-    return nextbatch
+    return self:load_subbatch_id_any_offset(batch_id, offset)
 end
 
 -- either: focus (num_samples*num_obj, num_steps, obj_dim)
