@@ -19,7 +19,6 @@ function init_network(params)
     -- output: table of length num_obj with size (bsize, num_future*obj_dim)
     local hid_dim = params.rnn_dim
     local obj_dim = params.object_dim
-    local max_obj = params.seq_length
     local num_past = params.num_past
     local num_future = params.num_future
     local in_dim = num_past*obj_dim
