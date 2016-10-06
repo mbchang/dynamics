@@ -53,37 +53,76 @@ end
 function data_process.k_nearest_context(focus, context, k)
     local bsize, num_past, obj_dim = context:size(1), context:size(3), context:size(4)
 
+    -- print(focus:size())
+    -- print(context:size())
+
+    -- print('old context 1')
+    -- print(context[{{},{},{},{1,4}}])
+
     -- euc_dist is a table of num_context entries of (bsize)
     -- table size is num_context
-    local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)
+    local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)  -- good
 
     -- for each example in bsize, you want to sort num_context and gets indices
-    local closest, closest_indices = torch.topk(ed, 12) -- get 12 closets
+    -- print(ed:size())
+    local k = math.min(12, ed:size(2))
+    local closest, closest_indices = torch.topk(ed, k) -- get 12 closests
+
+    -- print('ed')
+    -- print(ed)
+
+    -- print('closest')
+    -- print(closest)
+
+    -- print('closest indices')
+    -- print(closest_indices)
+
+    -- here you can just sort closest_indices
+    closest_indices = torch.sort(closest_indices)  -- sort in the original order they were presented
+    -- print('sorted closest_indices')
+    -- print(closest_indices)
 
     local new_context = {}
     for ex = 1, closest_indices:size(1) do  -- go through the batch
-        local contexts_for_ex = context:index(2, closest_indices)  -- (bsize, 12, num_past, obj_dim)
-        table.insert(contexts_for_ex:clone())
+        -- print('ex', ex)
+        -- print('context[{{ex}}]')
+        -- print(torch.squeeze(context[{{ex}}],1)[{{},{},{1,4}}])
+        -- print('closest_indices[ex]')
+        -- print(closest_indices[ex])
+
+
+
+        local contexts_for_ex = context[{{ex}}]:index(2, closest_indices[ex])  -- (bsize, 12, num_past, obj_dim)
+
+        -- print('contexts_for_ex')
+        -- print(torch.squeeze(contexts_for_ex,1)[{{},{},{1,4}}])
+
+
+        table.insert(new_context, contexts_for_ex:clone())
+
+        -- assert(false)
     end
     new_context = torch.cat(new_context,1)
-    assert(new_context:size(1) == bsize and new_context:size(2) == 12 and new_context:size(3) == num_past and new_context:size(4) == obj_dim)
+
+    -- print('old context 2')
+    -- print(context[{{},{},{},{1,4}}])
+    -- print('new context')
+    -- print(new_context[{{},{},{},{1,4}}])
+    -- assert(false)
+    assert(new_context:size(1) == bsize and new_context:size(2) <= 12 and new_context:size(3) == num_past and new_context:size(4) == obj_dim)
     return new_context
 end
 
--- table of 
-function data_process:get_euc_dist(focus, context, t)
+-- good
+function data_process.get_euc_dist(focus, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep
-    local px, py = self.rsi.px, self.rsi.py
+    local px, py = config_args.rsi.px, config_args.rsi.py
 
-    local this_pos = this[{{},{t},{px, py}}]
-    local context_pos = context[{{},{},{t},{px, py}}]
+    local this_pos = focus[{{},{t},{px, py}}]
+    local context_pos = torch.squeeze(context[{{},{},{t},{px, py}}],3)
+
     local euc_dists = torch.squeeze(compute_euc_dist(this_pos:repeatTensor(1,num_context,1), context_pos),3) -- (bsize, num_context)
-    -- euc_dists = torch.split(euc_dists, 1,2)  --convert to table of (bsize, 1, 1)
-    -- for i=1,#euc_dists do  -- #euc_dists = num_context
-    --     euc_dists[i] = torch.totable(torch.squeeze(euc_dists[i]))
-    -- end
-    -- euc_dist is a table of num_context entries of tables of length bsize
     return euc_dists
 end
 

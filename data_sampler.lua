@@ -173,12 +173,32 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
 
     local this, context, y, context_future, mask = unpack(nextbatch)
 
+    -- you can do an if statemnt for if num_context > 12
+
+    local trimmed_context = data_process.k_nearest_context(this, context, 12)
+    local trimmed_context_future = data_process.k_nearest_context(y, context_future, 12)
+
+    -- assert(false)
+
     mask = torch.zeros(10)
-    mask[{{context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
+    mask[{{trimmed_context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
 
     -- convert to cuda or double
-    this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
-    nextbatch = {this, context, y, context_future, mask}
+    this,trimmed_context,y,trimmed_context_future, mask = unpack(map(convert_type,{this,trimmed_context,y,trimmed_context_future, mask},self.cuda))
+    nextbatch = {this, trimmed_context, y, trimmed_context_future, mask}
+
+
+    -- original
+    -- mask = torch.zeros(10)
+    -- mask[{{context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
+
+    -- -- convert to cuda or double
+    -- this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
+    -- nextbatch = {this, context, y, context_future, mask}
+
+
+
+
     collectgarbage()
     return nextbatch
 end
