@@ -329,6 +329,8 @@ function onehot2numall(onehot_selected, categories, cuda)
     return selected
 end
 
+
+
 -- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
 -- p = preprocess_input(mask)
 --

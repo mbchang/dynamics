@@ -53,12 +53,6 @@ end
 function data_process.k_nearest_context(focus, context, k)
     local bsize, num_past, obj_dim = context:size(1), context:size(3), context:size(4)
 
-    -- print(focus:size())
-    -- print(context:size())
-
-    -- print('old context 1')
-    -- print(context[{{},{},{},{1,4}}])
-
     -- euc_dist is a table of num_context entries of (bsize)
     -- table size is num_context
     local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)  -- good
@@ -68,47 +62,17 @@ function data_process.k_nearest_context(focus, context, k)
     local k = math.min(12, ed:size(2))
     local closest, closest_indices = torch.topk(ed, k) -- get 12 closests
 
-    -- print('ed')
-    -- print(ed)
-
-    -- print('closest')
-    -- print(closest)
-
-    -- print('closest indices')
-    -- print(closest_indices)
-
     -- here you can just sort closest_indices
     closest_indices = torch.sort(closest_indices)  -- sort in the original order they were presented
-    -- print('sorted closest_indices')
-    -- print(closest_indices)
 
     local new_context = {}
     for ex = 1, closest_indices:size(1) do  -- go through the batch
-        -- print('ex', ex)
-        -- print('context[{{ex}}]')
-        -- print(torch.squeeze(context[{{ex}}],1)[{{},{},{1,4}}])
-        -- print('closest_indices[ex]')
-        -- print(closest_indices[ex])
-
-
-
         local contexts_for_ex = context[{{ex}}]:index(2, closest_indices[ex])  -- (bsize, 12, num_past, obj_dim)
-
-        -- print('contexts_for_ex')
-        -- print(torch.squeeze(contexts_for_ex,1)[{{},{},{1,4}}])
-
-
         table.insert(new_context, contexts_for_ex:clone())
 
-        -- assert(false)
+        -- good up to here
     end
-    new_context = torch.cat(new_context,1)
-
-    -- print('old context 2')
-    -- print(context[{{},{},{},{1,4}}])
-    -- print('new context')
-    -- print(new_context[{{},{},{},{1,4}}])
-    -- assert(false)
+    new_context = torch.cat(new_context,1) -- good
     assert(new_context:size(1) == bsize and new_context:size(2) <= 12 and new_context:size(3) == num_past and new_context:size(4) == obj_dim)
     return new_context
 end
