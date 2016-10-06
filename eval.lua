@@ -56,14 +56,14 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-	mp.seq_length = 10
+	-- mp.seq_length = 10
 	mp.num_threads = 1
 	mp.cuda = false
 else
 	mp.winsize = 3  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.seq_length = 10
+	-- mp.seq_length = 10
 	mp.num_threads = 4
 	mp.cuda = false
 end

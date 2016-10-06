@@ -98,14 +98,14 @@ if mp.server == 'pc' then
     mp.lrdecay = 0.5
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
-    mp.layers = 3
-    mp.rnn_dim = 64
-    mp.model = 'lstm'
+    mp.layers = 5
+    mp.rnn_dim = 24
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
     mp.val_eps = 2e-5
-	mp.seq_length = 8 -- for the concatenate model
+	-- mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
     mp.batch_norm = false
@@ -121,7 +121,7 @@ else
 	-- mp.winsize = 3  -- total number of frames
     -- mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	mp.seq_length = 8   -- for the concatenate model
+	-- mp.seq_length = 8   -- for the concatenate model
 	mp.num_threads = 4
 end
 
@@ -220,8 +220,6 @@ function inittrain(preload, model_path, iters)
     test_loader = D.create('testset', tablex.deepcopy(test_args))
     train_test_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     model = M.create(mp, preload, model_path)
-    print(model.network)
-    print(model.theta.params:nElement(), 'parameters')
 
     local train_log_file
     if iters then
@@ -586,6 +584,8 @@ function model_deps(modeltype)
         M = require 'branched_variable_obj_model'
     elseif modeltype == 'ind' then
         M = require 'independent'
+    elseif modeltype == 'bl' then
+        M = require 'blstm'
     elseif modeltype == 'np' then
         M = require 'nop'
     elseif modeltype == 'lstm' then
