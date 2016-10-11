@@ -164,7 +164,7 @@ function model:unpack_batch(batch, sim)
 
     local all_future = {}
     for i=1,num_context do
-        table.insert(all_future, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim)))
+        table.insert(all_future, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim),self.mp.cuda))
     end
     table.insert(all_future, this_future)
 
@@ -248,33 +248,58 @@ function model:fp(params_, batch, sim)
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
 
-    local loss_vels = 0
-    local loss_ang_vels = 0
-    local loss = 0
-    for i = 1,#prediction do  -- note that only the last element is nonzero
-        -- table of length num_obj of {bsize, num_future, obj_dim}
-        local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
-                            unpack(split_output(self.mp):forward(prediction[i]))  -- correct
-        local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-                            unpack(split_output(self.mp):forward(all_future[i]))
 
-        local loss_vel = self.criterion:forward(p_vel, gt_vel)
-        local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
-        local obj_loss = loss_vel + loss_ang_vel
-        obj_loss = obj_loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
-        loss = loss + obj_loss
 
-        loss_vels = loss_vels + loss_vel/p_vel:nElement()
-        loss_ang_vels = loss_ang_vels + loss_ang_vel/p_ang_vel:nElement()        
-    end
 
-    loss = loss/#prediction
-    loss_vels = loss_vels/#prediction
-    loss_ang_vels = loss_ang_vels/#prediction
+    local num_objects = #prediction
 
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+                        unpack(split_output(self.mp):forward(prediction[num_objects]))
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(all_future[num_objects]))
+
+    local loss_vel = self.criterion:forward(p_vel, gt_vel)
+    local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
+    local loss = loss_vel + loss_ang_vel
+
+    loss = loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
+
+    if mp.cuda then cutorch.synchronize() end
     collectgarbage()
-    return loss, prediction, loss_vels, loss_ang_vels
+    return loss, prediction, loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
+
+
+
+
+    -- local loss_vels = 0
+    -- local loss_ang_vels = 0
+    -- local loss = 0
+    -- for i = 1,#prediction do  -- note that only the last element is nonzero
+    --     -- table of length num_obj of {bsize, num_future, obj_dim}
+    --     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+    --                         unpack(split_output(self.mp):forward(prediction[i]))  -- correct
+    --     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+    --                         unpack(split_output(self.mp):forward(all_future[i]))
+
+    --     local loss_vel = self.criterion:forward(p_vel, gt_vel)
+    --     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
+    --     local obj_loss = loss_vel + loss_ang_vel
+    --     obj_loss = obj_loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
+    --     loss = loss + obj_loss
+
+    --     loss_vels = loss_vels + loss_vel/p_vel:nElement()
+    --     loss_ang_vels = loss_ang_vels + loss_ang_vel/p_ang_vel:nElement()        
+    -- end
+
+    -- loss = loss/#prediction
+    -- loss_vels = loss_vels/#prediction
+    -- loss_ang_vels = loss_ang_vels/#prediction
+
+    -- collectgarbage()
+    -- return loss, prediction, loss_vels, loss_ang_vels
 end
+
+
 
 
 -- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
@@ -285,38 +310,75 @@ function model:bp(batch, prediction, sim)
     local all_past, all_future = self:unpack_batch(batch, sim)
 
     local d_pred = {}
-    for i = 1, #prediction do
+    -- for i = 1, #prediction do
 
-        local splitter = split_output(self.mp)
+    --     local splitter = split_output(self.mp)
 
-        local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[i]))
-        local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-                            unpack(split_output(self.mp):forward(all_future[i]))
+    --     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[i]))
+    --     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+    --                         unpack(split_output(self.mp):forward(all_future[i]))
 
-        -- NOTE! is there a better loss function for angle?
-        self.identitycriterion:forward(p_pos, gt_pos)
-        local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
+    --     -- NOTE! is there a better loss function for angle?
+    --     self.identitycriterion:forward(p_pos, gt_pos)
+    --     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
-        self.criterion:forward(p_vel, gt_vel)
-        local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+    --     self.criterion:forward(p_vel, gt_vel)
+    --     local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
 
-        d_vel:mul(mp.vlambda)
-        d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
+    --     d_vel:mul(mp.vlambda)
+    --     d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
 
-        self.identitycriterion:forward(p_ang, gt_ang)
-        local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
+    --     self.identitycriterion:forward(p_ang, gt_ang)
+    --     local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
 
-        self.criterion:forward(p_ang_vel, gt_ang_vel)
-        local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
-        d_ang_vel:mul(mp.lambda)
-        d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
+    --     self.criterion:forward(p_ang_vel, gt_ang_vel)
+    --     local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+    --     d_ang_vel:mul(mp.lambda)
+    --     d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
 
-        self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
-        local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+    --     self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
+    --     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
-        local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
-        table.insert(d_pred, obj_d_pred)
+    --     local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
+    --     table.insert(d_pred, obj_d_pred)
+    -- end
+
+
+    -- no gradient for every step except the last one
+    for i = 1, #prediction-1 do
+        table.insert(d_pred, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim), mp.cuda))
     end
+
+    -- pass gradients through to the last step, the focus object
+    local splitter = split_output(self.mp)
+
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[#prediction]))
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(all_future[#prediction]))
+
+    -- NOTE! is there a better loss function for angle?
+    self.identitycriterion:forward(p_pos, gt_pos)
+    local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
+
+    self.criterion:forward(p_vel, gt_vel)
+    local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
+
+    d_vel:mul(mp.vlambda)
+    d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
+
+    self.identitycriterion:forward(p_ang, gt_ang)
+    local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
+
+    self.criterion:forward(p_ang_vel, gt_ang_vel)
+    local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
+    d_ang_vel:mul(mp.lambda)
+    d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
+
+    self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
+    local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
+
+    local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
+    table.insert(d_pred, obj_d_pred)
 
     self.network:backward(all_past,d_pred)  -- updates grad_params
 
