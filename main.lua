@@ -61,7 +61,7 @@ cmd:option('-im', false, 'infer mass')
 cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
 cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
-cmd:option('-objflag', true, 'for lstm')
+cmd:option('-of', false, 'object flag for lstm')
 
 -- priority sampling
 cmd:option('-ps', false, 'turn on priority sampling')
@@ -118,6 +118,7 @@ if mp.server == 'pc' then
     mp.rs = false
     mp.nlan = true
     mp.fast = true
+    mp.of = true
 else
 	-- mp.winsize = 3  -- total number of frames
     -- mp.num_past = 2 -- total number of past frames
@@ -154,7 +155,7 @@ end
 
 mp.winsize = mp.num_past + mp.num_future
 mp.object_dim = config_args.si.p[2]
-if mp.objflag then mp.object_dim = mp.object_dim + 1 end -- flag 
+if mp.of then mp.object_dim = mp.object_dim + 1 end -- flag 
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 if mp.model == 'crnn' then 

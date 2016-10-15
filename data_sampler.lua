@@ -178,6 +178,11 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
     local trimmed_context = data_process.k_nearest_context(this, context, max_obj)
     local trimmed_context_future = data_process.k_nearest_context(y, context_future, max_obj)
 
+    if context:size(2) <= 12 then  -- it shouldn't be affected
+        assert((trimmed_context-context):norm()==0)
+        assert((trimmed_context_future-context_future):norm()==0)
+    end
+
     mask = torch.zeros(max_obj)  -- 12 is seq_length
     mask[{{trimmed_context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
 

@@ -116,10 +116,10 @@ function model:unpack_batch(batch, sim)
     local bsize, num_past, obj_dim = this_past:size(1), this_past:size(2), this_past:size(3)
     local num_context = context:size(2)
 
-    if mp.objflag then
-        this_past = torch.cat({this_past:clone(), convert_type(torch.ones(mp.batch_size, mp.num_past, 1), mp.cuda)},3)
-        this_future = torch.cat({this_future:clone(), convert_type(torch.ones(mp.batch_size, mp.num_future, 1), mp.cuda)},3)
-        context = torch.cat({context:clone(), convert_type(torch.ones(mp.batch_size, num_context, mp.num_past, 1), mp.cuda)},4)
+    if mp.of then
+        this_past = torch.cat({this_past:clone(), convert_type(torch.ones(mp.batch_size, mp.num_past, 1), mp.cuda)},3)  -- good
+        this_future = torch.cat({this_future:clone(), convert_type(torch.ones(mp.batch_size, mp.num_future, 1), mp.cuda)},3)  -- good
+        context = torch.cat({context:clone(), convert_type(torch.zeros(mp.batch_size, num_context, mp.num_past, 1), mp.cuda)},4)  -- good
     end
 
     -- reshape
@@ -160,7 +160,7 @@ function model:unpack_batch(batch, sim)
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        self.neighbor_masks = self:select_neighbors(contexts, focus_past)  -- this gets updated every batch!
+        self.neighbor_masks = self:select_neighbors(contexts, focus_past:clone())  -- this gets updated every batch!
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
@@ -181,11 +181,6 @@ function model:unpack_batch(batch, sim)
 
     -- the last element is always the focus object
     -- context are shuffled
-
-    -- print(all_past)
-    -- print(all_future)
-
-    -- assert(false)
     return all_past, all_future
 end
 
