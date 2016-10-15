@@ -61,6 +61,7 @@ cmd:option('-im', false, 'infer mass')
 cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
 cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
+cmd:option('-objflag', true, 'for lstm')
 
 -- priority sampling
 cmd:option('-ps', false, 'turn on priority sampling')
@@ -100,7 +101,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 5
     mp.rnn_dim = 24
-    mp.model = 'bffobj'
+    mp.model = 'lstm'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -112,7 +113,7 @@ if mp.server == 'pc' then
     mp.print_every = 1
     mp.save_every = 20
     mp.val_every = 20
-    mp.plot = true--true
+    mp.plot = false--true
 	mp.cuda = false
     mp.rs = false
     mp.nlan = true
@@ -153,6 +154,7 @@ end
 
 mp.winsize = mp.num_past + mp.num_future
 mp.object_dim = config_args.si.p[2]
+if mp.objflag then mp.object_dim = mp.object_dim + 1 end -- flag 
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 if mp.model == 'crnn' then 
@@ -250,6 +252,7 @@ function inittrain(preload, model_path, iters)
     end
     torch.save(args_file, {mp=mp,config_args=config_args})
     print("Initialized Network")
+    print(model.network)
 end
 
 function initsavebatches()

@@ -116,10 +116,16 @@ function model:unpack_batch(batch, sim)
     local bsize, num_past, obj_dim = this_past:size(1), this_past:size(2), this_past:size(3)
     local num_context = context:size(2)
 
+    if mp.objflag then
+        this_past = torch.cat({this_past:clone(), convert_type(torch.ones(mp.batch_size, mp.num_past, 1), mp.cuda)},3)
+        this_future = torch.cat({this_future:clone(), convert_type(torch.ones(mp.batch_size, mp.num_future, 1), mp.cuda)},3)
+        context = torch.cat({context:clone(), convert_type(torch.ones(mp.batch_size, num_context, mp.num_past, 1), mp.cuda)},4)
+    end
+
     -- reshape
-    this_past:resize(this_past:size(1), this_past:size(2)*this_past:size(3))
-    context:resize(context:size(1), context:size(2), context:size(3)*context:size(4))
-    this_future:resize(this_future:size(1),this_future:size(2)*this_future:size(3))
+    this_past = this_past:reshape(this_past:size(1), this_past:size(2)*this_past:size(3))
+    context = context:reshape(context:size(1), context:size(2), context:size(3)*context:size(4))
+    this_future = this_future:reshape(this_future:size(1),this_future:size(2)*this_future:size(3))
 
     assert(this_past:size(1) == mp.batch_size and
             this_past:size(2) == mp.input_dim,
@@ -143,13 +149,18 @@ function model:unpack_batch(batch, sim)
     -- context: (bsize, mp.seq_length, dim)
     local contexts = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(contexts, torch.squeeze(context[{{},{shuffind[t]}}]))  -- good
+        local one_context = torch.squeeze(context[{{},{shuffind[t]}}])
+        table.insert(contexts, one_context)  -- good
     end
+
+    -- TODO: you'd have to modify this_past as well as this_future
+    local focus_past = this_past:clone()
+    local focus_future = this_future:clone()
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        self.neighbor_masks = self:select_neighbors(contexts, this_past)  -- this gets updated every batch!
+        self.neighbor_masks = self:select_neighbors(contexts, focus_past)  -- this gets updated every batch!
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
@@ -160,17 +171,21 @@ function model:unpack_batch(batch, sim)
     contexts = self:apply_mask(contexts, self.neighbor_masks)  -- so you wouldn't apply the nbrhd mask on this_past?
 
     local all_past = contexts
-    table.insert(all_past, this_past:clone())  -- last element is always this_past
+    table.insert(all_past, focus_past)  -- last element is always this_past
 
     local all_future = {}
     for i=1,num_context do
         table.insert(all_future, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim),self.mp.cuda))
     end
-    table.insert(all_future, this_future)
+    table.insert(all_future, focus_future)
 
     -- the last element is always the focus object
     -- context are shuffled
 
+    -- print(all_past)
+    -- print(all_future)
+
+    -- assert(false)
     return all_past, all_future
 end
 
@@ -180,10 +195,13 @@ end
 function model:select_neighbors(contexts, this)
     local threshold
     local neighbor_masks = {}
-    this = this:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+
+    -- print(this:size())
+    -- print(mp.batch_size, mp.num_past, mp.object_dim)
+    this = this:clone():reshape(mp.batch_size, mp.num_past, mp.object_dim)
     for i, c in pairs(contexts) do
         -- reshape
-        local context = c:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
+        local context = c:clone():reshape(mp.batch_size, mp.num_past, mp.object_dim)
 
         -- make threshold depend on object id!
         local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
@@ -248,9 +266,6 @@ function model:fp(params_, batch, sim)
     local all_past, all_future = self:unpack_batch(batch, sim)
     local prediction = self.network:forward(all_past)
 
-
-
-
     local num_objects = #prediction
 
     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
@@ -267,36 +282,6 @@ function model:fp(params_, batch, sim)
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
     return loss, prediction, loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
-
-
-
-
-    -- local loss_vels = 0
-    -- local loss_ang_vels = 0
-    -- local loss = 0
-    -- for i = 1,#prediction do  -- note that only the last element is nonzero
-    --     -- table of length num_obj of {bsize, num_future, obj_dim}
-    --     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
-    --                         unpack(split_output(self.mp):forward(prediction[i]))  -- correct
-    --     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-    --                         unpack(split_output(self.mp):forward(all_future[i]))
-
-    --     local loss_vel = self.criterion:forward(p_vel, gt_vel)
-    --     local loss_ang_vel = self.criterion:forward(p_ang_vel, gt_ang_vel)
-    --     local obj_loss = loss_vel + loss_ang_vel
-    --     obj_loss = obj_loss/(p_vel:nElement()+p_ang_vel:nElement()) -- manually do size average
-    --     loss = loss + obj_loss
-
-    --     loss_vels = loss_vels + loss_vel/p_vel:nElement()
-    --     loss_ang_vels = loss_ang_vels + loss_ang_vel/p_ang_vel:nElement()        
-    -- end
-
-    -- loss = loss/#prediction
-    -- loss_vels = loss_vels/#prediction
-    -- loss_ang_vels = loss_ang_vels/#prediction
-
-    -- collectgarbage()
-    -- return loss, prediction, loss_vels, loss_ang_vels
 end
 
 
@@ -310,39 +295,6 @@ function model:bp(batch, prediction, sim)
     local all_past, all_future = self:unpack_batch(batch, sim)
 
     local d_pred = {}
-    -- for i = 1, #prediction do
-
-    --     local splitter = split_output(self.mp)
-
-    --     local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[i]))
-    --     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-    --                         unpack(split_output(self.mp):forward(all_future[i]))
-
-    --     -- NOTE! is there a better loss function for angle?
-    --     self.identitycriterion:forward(p_pos, gt_pos)
-    --     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
-
-    --     self.criterion:forward(p_vel, gt_vel)
-    --     local d_vel = self.criterion:backward(p_vel, gt_vel):clone()
-
-    --     d_vel:mul(mp.vlambda)
-    --     d_vel = d_vel/d_vel:nElement()  -- manually do sizeAverage
-
-    --     self.identitycriterion:forward(p_ang, gt_ang)
-    --     local d_ang = self.identitycriterion:backward(p_ang, gt_ang):clone()
-
-    --     self.criterion:forward(p_ang_vel, gt_ang_vel)
-    --     local d_ang_vel = self.criterion:backward(p_ang_vel, gt_ang_vel):clone()
-    --     d_ang_vel:mul(mp.lambda)
-    --     d_ang_vel = d_ang_vel/d_ang_vel:nElement()  -- manually do sizeAverage
-
-    --     self.identitycriterion:forward(p_obj_prop, gt_obj_prop)
-    --     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
-
-    --     local obj_d_pred = splitter:backward({prediction[i]}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop}):clone()
-    --     table.insert(d_pred, obj_d_pred)
-    -- end
-
 
     -- no gradient for every step except the last one
     for i = 1, #prediction-1 do
