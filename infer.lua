@@ -356,14 +356,14 @@ function backprop2input(model, dataloader, params_, si_indices)
             local d_focus = d_pairwise_focus + d_identity_focus
 
             -- 4. Zero out everything except the property that you are performing inference on
-            d_focus:resize(mp.batch_size, mp.num_past, mp.object_dim)
+            d_focus = d_focus:reshape(mp.batch_size, mp.num_past, mp.object_dim)
             if si_indices[1] > 1 then
                 d_focus[{{},{},{1,si_indices[1]-1}}]:zero()
             end
             if si_indices[2] < mp.object_dim then
                 d_focus[{{},{},{1,si_indices[2]+1}}]:zero()
             end
-            d_focus:resize(mp.batch_size, mp.num_past*mp.object_dim)
+            d_focus = d_focus:reshape(mp.batch_size, mp.num_past*mp.object_dim)
 
             -- 6. Check that weights have not been changed
                 -- check that all the gradParams are 0 in the network
