@@ -31,6 +31,9 @@ end
 function angle_magnitude(pred, batch, within_batch)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
+    -- print(pred)  -- pred has the additional dimension
+    -- assert(false)
+
     -- first unrelative
     pred = pred:clone():reshape(mp.batch_size, mp.num_future, mp.object_dim)
     pred = data_process.relative_pair(this_past:clone(), pred, true)

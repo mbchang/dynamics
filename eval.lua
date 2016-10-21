@@ -43,7 +43,7 @@ cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- experiment options
 cmd:option('-ns', 3, 'number of test batches')
-cmd:option('-steps', 118, 'steps to simulate')
+cmd:option('-steps', 58, 'steps to simulate')
 cmd:text()
 
 -- parse input params
@@ -253,25 +253,27 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local batch = dataloader:sample_sequential_batch()
 
         -- get data
-        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)
+        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- no flag yet
+
+        local raw_obj_dim = this_orig:size(3)
 
         -- crop to number of timestesp
-        y_orig = y_orig[{{},{1, numsteps}}]
-        context_future_orig = context_future_orig[{{},{},{1, numsteps}}]
+        y_orig = y_orig[{{},{1, numsteps}}]   -- no flag yet
+        context_future_orig = context_future_orig[{{},{},{1, numsteps}}]   -- no flag yet
 
         local num_particles = torch.find(mask,1)[1] + 1
 
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-        local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)
-        local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good
+        local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)   -- no flag yet
+        local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good   -- no flag yet (because we don't know which is focus or context)
 
         assert(past:size(2) == num_particles and future:size(2) == num_particles)
 
         local pred_sim = model_utils.transfer_data(
                             torch.zeros(mp.batch_size, num_particles,
-                                        numsteps, mp.object_dim),
+                                        numsteps, y_orig:size(3)),   -- the dimensionality here inludes a flag; this may be a problem?
                             mp.cuda)
 
         -- loop through time
@@ -292,10 +294,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             for j = 1, num_particles do
                 -- construct batch
-                local this = torch.squeeze(past[{{},{j}}])
+                local this = torch.squeeze(past[{{},{j}}])  -- no flag yet
 
-                local y = future[{{},{j},{t}}]
-                y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed
+                local y = future[{{},{j},{t}}]  -- no flag yet
+                y = torch.squeeze(y,2)  -- no flag food up to here
+                -- y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed  -- no flag 
 
                 if mp.relative then
                     y = data_process.relative_pair(this, y, false)  -- absolute to relative
@@ -315,9 +318,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
+                -- good up to here
+
                 -- predict
                 local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
-                local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)
+                local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)  -- anything we need to do here?
                 count = count + 1
 
                 loss_within_batch = loss_within_batch + loss
@@ -328,8 +333,11 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 counter_within_batch = counter_within_batch + 1
 
-                pred = pred:reshape(mp.batch_size, mp.num_future, mp.object_dim)
-                this = this:reshape(mp.batch_size, mp.num_past, mp.object_dim)  -- unnecessary
+                -- HERE chop off the last part in pred
+                if mp.of then pred = pred[{{},{1,-2}}] end
+
+                pred = pred:reshape(mp.batch_size, mp.num_future, raw_obj_dim)
+                this = this:reshape(mp.batch_size, mp.num_past, raw_obj_dim)  -- unnecessary  -- TODO: object_dim wouldn' match!
 
                 -- relative coords for next timestep
                 if mp.relative then
@@ -583,6 +591,7 @@ function predict_simulate_all()
     local checkpoint, snapshotfile = load_most_recent_checkpoint()
 
     inittest(true, snapshotfile, {sim=true, subdivide=false})  -- assuming the mp.savedir doesn't change
+    require 'infer'
     print('Network parameters')
     print(mp)
 

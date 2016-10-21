@@ -133,7 +133,6 @@ function model:unpack_batch(batch, sim)
     assert(context:size(1) == mp.batch_size and
             context:size(2)==torch.find(mask,1)[1]
             and context:size(3) == mp.input_dim)
-
     assert(this_future:size(1) == mp.batch_size and
             this_future:size(2) == mp.out_dim)
 
@@ -181,7 +180,7 @@ function model:unpack_batch(batch, sim)
 
     -- the last element is always the focus object
     -- context are shuffled
-    return all_past, all_future
+    return all_past, all_future  -- at this point, we have added a dimension to all_past AND all_future
 end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
@@ -191,8 +190,6 @@ function model:select_neighbors(contexts, this)
     local threshold
     local neighbor_masks = {}
 
-    -- print(this:size())
-    -- print(mp.batch_size, mp.num_past, mp.object_dim)
     this = this:clone():reshape(mp.batch_size, mp.num_past, mp.object_dim)
     for i, c in pairs(contexts) do
         -- reshape
@@ -212,6 +209,9 @@ function model:select_neighbors(contexts, this)
         elseif oid_onehot:equal(template_block) then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.block
         else
+            print(oid_onehot)
+            print(template_ball)
+            print((oid_onehot-template_ball):norm())
             assert(false, 'Unknown object id')
         end
 
@@ -276,7 +276,7 @@ function model:fp(params_, batch, sim)
 
     if mp.cuda then cutorch.synchronize() end
     collectgarbage()
-    return loss, prediction, loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
+    return loss, prediction[num_objects], loss_vel/p_vel:nElement(), loss_ang_vel/p_ang_vel:nElement()
 end
 
 
@@ -292,16 +292,17 @@ function model:bp(batch, prediction, sim)
     local d_pred = {}
 
     -- no gradient for every step except the last one
-    for i = 1, #prediction-1 do
+    for i = 1, #all_future-1 do
         table.insert(d_pred, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim), mp.cuda))
     end
 
     -- pass gradients through to the last step, the focus object
     local splitter = split_output(self.mp)
 
-    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[#prediction]))
+    -- local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction[#prediction]))
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop = unpack(splitter:forward(prediction))
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
-                        unpack(split_output(self.mp):forward(all_future[#prediction]))
+                        unpack(split_output(self.mp):forward(all_future[#all_future]))
 
     -- NOTE! is there a better loss function for angle?
     self.identitycriterion:forward(p_pos, gt_pos)

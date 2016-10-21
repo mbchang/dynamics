@@ -99,7 +99,7 @@ if mp.server == 'pc' then
     mp.lrdecay = 0.5
     mp.lrdecayafter = 20
     mp.lrdecay_every = 20
-    mp.layers = 5
+    mp.layers = 2
     mp.rnn_dim = 24
     mp.model = 'lstm'
     mp.im = false
@@ -300,6 +300,8 @@ function feval_train(params_)
     end
 
     local loss, prediction = model:fp(params_, batch)
+    -- print(prediction)
+    -- assert(false)
     local grad = model:bp(batch,prediction)
 
     if mp.L2 > 0 then
