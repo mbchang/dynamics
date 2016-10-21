@@ -250,17 +250,15 @@ local function simulate_all_preprocess(past, future, j, t, num_particles)
     return this, y, context, context_future
 end
 
-local function simulate_all_postprocess(pred, this, y, raw_obj_dim)
+local function simulate_all_postprocess(pred, raw_obj_dim)
     -- HERE chop off the last part in pred
     if mp.of then pred = pred[{{},{1,-2}}] end
 
     pred = pred:reshape(mp.batch_size, mp.num_future, raw_obj_dim)
-    this = this:reshape(mp.batch_size, mp.num_past, raw_obj_dim)  -- unnecessary  -- TODO: object_dim wouldn' match!
 
     -- relative coords for next timestep
     if mp.relative then
         pred = data_process.relative_pair(this, pred, true)  -- relative to absolute
-        y = data_process.relative_pair(this, y, true)
     end
 
     -- restore object properties because we aren't learning them
@@ -278,7 +276,7 @@ local function simulate_all_postprocess(pred, this, y, raw_obj_dim)
     end
 
     pred = unsqueeze(pred, 2)
-    return pred, this, y
+    return pred
 end
 
 
@@ -355,8 +353,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
-                -- good up to here
-
                 -- predict
                 local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
                 local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)  -- anything we need to do here?
@@ -370,7 +366,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 counter_within_batch = counter_within_batch + 1
 
-                pred, this, y = simulate_all_postprocess(pred, this, y, raw_obj_dim)
+                pred = simulate_all_postprocess(pred, raw_obj_dim)
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
@@ -378,8 +374,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             -- update past for next timestep
             if mp.num_past > 1 then
-                past = torch.cat({past[{{},{},{2,-1},{}}],
-                                    pred_sim[{{},{},{t},{}}]}, 3)
+                past = torch.cat({past[{{},{},{2,-1},{}}], pred_sim[{{},{},{t},{}}]}, 3)
             else
                 assert(mp.num_past == 1)
                 past = pred_sim[{{},{},{t},{}}]:clone()
