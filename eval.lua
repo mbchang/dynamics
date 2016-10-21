@@ -250,6 +250,37 @@ local function simulate_all_preprocess(past, future, j, t, num_particles)
     return this, y, context, context_future
 end
 
+local function simulate_all_postprocess(pred, this, y, raw_obj_dim)
+    -- HERE chop off the last part in pred
+    if mp.of then pred = pred[{{},{1,-2}}] end
+
+    pred = pred:reshape(mp.batch_size, mp.num_future, raw_obj_dim)
+    this = this:reshape(mp.batch_size, mp.num_past, raw_obj_dim)  -- unnecessary  -- TODO: object_dim wouldn' match!
+
+    -- relative coords for next timestep
+    if mp.relative then
+        pred = data_process.relative_pair(this, pred, true)  -- relative to absolute
+        y = data_process.relative_pair(this, y, true)
+    end
+
+    -- restore object properties because we aren't learning them
+    pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]
+
+    -- update position
+    pred = model:update_position(this, pred)
+
+    -- update angle
+    pred = model:update_angle(this, pred)
+
+    -- if object is ball, then angle and angular velocity are 0
+    if pred[{{},{},config_args.si.oid[1]}]:equal(convert_type(torch.ones(mp.batch_size,1), mp.cuda)) then
+        pred[{{},{},{config_args.si.a,config_args.si.av}}]:zero()
+    end
+
+    pred = unsqueeze(pred, 2)
+    return pred, this, y
+end
+
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local count = 0
@@ -339,33 +370,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 counter_within_batch = counter_within_batch + 1
 
-                -- HERE chop off the last part in pred
-                if mp.of then pred = pred[{{},{1,-2}}] end
-
-                pred = pred:reshape(mp.batch_size, mp.num_future, raw_obj_dim)
-                this = this:reshape(mp.batch_size, mp.num_past, raw_obj_dim)  -- unnecessary  -- TODO: object_dim wouldn' match!
-
-                -- relative coords for next timestep
-                if mp.relative then
-                    pred = data_process.relative_pair(this, pred, true)  -- relative to absolute
-                    y = data_process.relative_pair(this, y, true)
-                end
-
-                -- restore object properties because we aren't learning them
-                pred[{{},{},{config_args.ossi,-1}}] = this[{{},{-1},{config_args.ossi,-1}}]
-
-                -- update position
-                pred = model:update_position(this, pred)
-
-                -- update angle
-                pred = model:update_angle(this, pred)
-
-                -- if object is ball, then angle and angular velocity are 0
-                if pred[{{},{},config_args.si.oid[1]}]:equal(convert_type(torch.ones(mp.batch_size,1), mp.cuda)) then
-                    pred[{{},{},{config_args.si.a,config_args.si.av}}]:zero()
-                end
-
-                pred = unsqueeze(pred, 2)
+                pred, this, y = simulate_all_postprocess(pred, this, y, raw_obj_dim)
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
