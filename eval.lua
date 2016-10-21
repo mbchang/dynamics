@@ -224,6 +224,32 @@ end
 --     print(this_past[{{1},{1,9}}])
 -- end
 
+local function simulate_all_preprocess(past, future, j, t, num_particles)
+    -- construct batch
+    local this = torch.squeeze(past[{{},{j}}])  -- no flag yet
+
+    local y = future[{{},{j},{t}}]  -- no flag yet
+    y = torch.squeeze(y,2)  -- no flag food up to here
+
+    if mp.relative then
+        y = data_process.relative_pair(this, y, false)  -- absolute to relative
+    end
+
+    local context, context_future
+    if j == 1 then
+        context = past[{{},{j+1,-1}}]
+        context_future = future[{{},{j+1,-1},{t}}]
+    elseif j == num_particles then
+        context = past[{{},{1,-2}}]
+        context_future = future[{{},{1,-2},{t}}]
+    else
+        context = torch.cat({past[{{},{1,j-1}}], past[{{},{j+1,-1}}]},2)
+        context_future = torch.cat({future[{{},{1,j-1},{t}}], future[{{},{j+1,-1},{t}}]},2)
+    end
+
+    return this, y, context, context_future
+end
+
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local count = 0
@@ -293,28 +319,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             local counter_within_batch = 0
 
             for j = 1, num_particles do
-                -- construct batch
-                local this = torch.squeeze(past[{{},{j}}])  -- no flag yet
 
-                local y = future[{{},{j},{t}}]  -- no flag yet
-                y = torch.squeeze(y,2)  -- no flag food up to here
-                -- y = y:reshape(mp.batch_size, mp.num_future, mp.object_dim)  -- fixed  -- no flag 
-
-                if mp.relative then
-                    y = data_process.relative_pair(this, y, false)  -- absolute to relative
-                end
-
-                local context, context_future
-                if j == 1 then
-                    context = past[{{},{j+1,-1}}]
-                    context_future = future[{{},{j+1,-1},{t}}]
-                elseif j == num_particles then
-                    context = past[{{},{1,-2}}]
-                    context_future = future[{{},{1,-2},{t}}]
-                else
-                    context = torch.cat({past[{{},{1,j-1}}], past[{{},{j+1,-1}}]},2)
-                    context_future = torch.cat({future[{{},{1,j-1},{t}}], future[{{},{j+1,-1},{t}}]},2)
-                end
+                local this, y, context, context_future = simulate_all_preprocess(past, future, j, t, num_particles)
 
                 local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
