@@ -120,6 +120,7 @@ function inittest(preload, model_path, opt)
     modelfile = model_path
     print("Network parameters:")
     print(mp)
+    print(model.network)
 end
 
 -- function backprop2input()
@@ -250,7 +251,7 @@ local function simulate_all_preprocess(past, future, j, t, num_particles)
     return this, y, context, context_future
 end
 
-local function simulate_all_postprocess(pred, raw_obj_dim)
+local function simulate_all_postprocess(pred, this, raw_obj_dim)
     -- HERE chop off the last part in pred
     if mp.of then pred = pred[{{},{1,-2}}] end
 
@@ -277,6 +278,19 @@ local function simulate_all_postprocess(pred, raw_obj_dim)
 
     pred = unsqueeze(pred, 2)
     return pred
+end
+
+
+function make_invalid_dummy(this, invalid_focus_mask)
+    -- first we find a valid focus object. that will be our dummy
+    
+
+    -- then, for all invalid focus object, we will replace it with the dummy
+end 
+
+
+function replace_invalid_dummy(pred, y, invalid_focus_mask)
+
 end
 
 
@@ -349,15 +363,45 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             for j = 1, num_particles do
 
+                -- here you should create a mask
+
+                -- select indices of focus and context
+
+
+                -- switch to a new focus object
                 local this, y, context, context_future = simulate_all_preprocess(past, future, j, t, num_particles)
 
+
+                -- Ok, note that you only want the examples where this is a ball or block
+                -- these templates are (bsize, oid_dim)
+                local oid_onehot, template_ball, template_block, template_obstacle = get_oid_templates(this, config_args, mp.cuda)
+                local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
+                local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)
+
+                -- print(invalid_focus_mask)
+                -- assert(false)
+                -- note that we have to keep the batch size constant.
+                -- okay, so I think we'd need to do some dummy filling.
+                -- for the ones that have an obstacle, I just need to fill it with a dummy entry
+                -- then after I predict, I replace it with its corresponding entry in future, but remember to apply relative pair. 
+                -- to check, make sure that the context obstacles just never move.
+
+                -- if we have some entries where obstacle is this
+                if invalid_focus_mask:sum() > 0 then
+                    -- for the ones that have an obstacle, I just need to fill it with a dummy entry
+                    this = make_invalid_dummy(this, invalid_focus_mask:clone())
+                    print('hey')
+                end
+
+                -- construct batch
                 local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
-                -- predict
+                -- evaluate
                 local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
                 local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)  -- anything we need to do here?
                 count = count + 1
 
+                -- record
                 loss_within_batch = loss_within_batch + loss
                 ang_error_within_batch = ang_error_within_batch + angle_error
                 mag_error_within_batch = mag_error_within_batch + relative_magnitude_error
@@ -366,10 +410,18 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 counter_within_batch = counter_within_batch + 1
 
-                pred = simulate_all_postprocess(pred, raw_obj_dim)
+                -- update non-predictive parts of pred
+                pred = simulate_all_postprocess(pred, this, raw_obj_dim)
+
+                -- here you should apply the mask (such that by the end of it pred_sim will look valid)
+                if invalid_focus_mask:sum() > 0 then
+                    -- relative y
+                    pred = replace_invalid_dummy(pred, y, invalid_focus_mask:clone())
+                end
 
                 -- write into pred_sim
                 pred_sim[{{},{j},{t},{}}] = pred
+
             end
 
             -- update past for next timestep
