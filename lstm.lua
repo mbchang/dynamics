@@ -195,14 +195,7 @@ function model:select_neighbors(contexts, this)
         -- reshape
         local context = c:clone():reshape(mp.batch_size, mp.num_past, mp.object_dim)
 
-        -- make threshold depend on object id!
-        local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
-        local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
-        local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
-        local template_ball = template:clone()
-        local template_block = template:clone()
-        template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
-        template_block[{{},{},{config_args.oids.block}}]:fill(1)
+        local oid_onehot, template_ball, template_block = get_oid_templates(this, config_args, self.mp.cuda)
 
         if (oid_onehot-template_ball):norm()==0 then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
@@ -280,6 +273,43 @@ function model:fp(params_, batch, sim)
 end
 
 
+function model:fp_batch(params_, batch, sim)
+    if params_ ~= self.theta.params then self.theta.params:copy(params_) end
+    self.theta.grad_params:zero()  -- reset gradient
+
+    local all_past, all_future = self:unpack_batch(batch, sim)
+
+    local prediction = self.network:forward(all_past)
+
+    local num_objects = #prediction
+
+    local p_pos, p_vel, p_ang, p_ang_vel, p_obj_prop =
+                        unpack(split_output(self.mp):forward(prediction[num_objects]))
+    local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
+                        unpack(split_output(self.mp):forward(all_future[num_objects]))
+    -- p_vel: (bsize, 1, p_veldim)
+    -- p_ang_vel: (bsize, 1, p_ang_veldim)
+
+    local loss_all = {}
+    local loss_vel_all = {}
+    local loss_ang_vel_all = {}
+    for i=1,mp.batch_size do
+        local loss_vel = self.criterion:forward(p_vel[{{i}}], gt_vel[{{i}}])
+        local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
+        local loss = loss_vel + loss_ang_vel
+        loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
+        loss_vel = loss_vel/p_vel[{{i}}]:nElement()
+        loss_ang_vel = loss_ang_vel/p_ang_vel[{{i}}]:nElement()
+        table.insert(loss_all, loss)
+
+        table.insert(loss_vel_all, loss_vel)
+        table.insert(loss_ang_vel_all, loss_ang_vel)
+
+    end
+
+    collectgarbage()
+    return torch.Tensor(loss_all), prediction[num_objects], torch.Tensor(loss_vel_all), torch.Tensor(loss_ang_vel_all)
+end
 
 
 -- local p_pos, p_vel, p_obj_prop=split_output(params):forward(prediction)
@@ -352,6 +382,14 @@ function model:update_position(this, pred)
     local currpos = (pred[{{},{},{px,py}}]:clone()*pnc)
     local currvel = (pred[{{},{},{vx,vy}}]:clone()*vnc)
 
+    -- print('lastpos normalized')
+    -- print(this[{{},{-1},{px,py}}])
+
+    -- print('lastpos unnormalized')
+    -- print(lastpos)
+    -- print('currpos unnormalized')
+    -- print(currpos)
+
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
     local vel = torch.cat({lastvel, currvel},2)
@@ -364,6 +402,9 @@ function model:update_position(this, pred)
     -- normalize again
     pos = pos/pnc
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
+
+    -- print('currpos normalized')
+    -- print(pos[{{},{2,-1},{}}] )
 
     pred[{{},{},{px,py}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
     return pred

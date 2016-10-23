@@ -288,7 +288,7 @@ end
 
 -- invalid_focus_mask: 1 means invalid, 0 valid
 -- good
-function make_invalid_dummy(this, invalid_focus_mask)
+local function make_invalid_dummy(this, invalid_focus_mask)
     local this = this:clone()
     assert(invalid_focus_mask:sum() > 0)
 
@@ -308,7 +308,7 @@ function make_invalid_dummy(this, invalid_focus_mask)
 end 
 
 
-function replace_invalid_dummy(pred, y_before_relative, this, invalid_focus_mask)
+local function replace_invalid_dummy(pred, y_before_relative, this, invalid_focus_mask)
     local pred = pred:clone()
     local y_before_relative = y_before_relative:clone()
     local this = this:clone()
@@ -332,6 +332,15 @@ function replace_invalid_dummy(pred, y_before_relative, this, invalid_focus_mask
     -- to predict against a ground truth here.
 
     return pred  
+end
+
+-- good
+local function apply_mask_avg(tensor, mask)
+    local mask = torch.squeeze(mask:clone())
+    local masked = torch.cmul(tensor:clone(), mask:float())
+    local num_valid = mask:sum()
+    local averaged = masked:sum()/num_valid
+    return averaged
 end
 
 
@@ -365,12 +374,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- get data
         local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- no flag yet
 
-        -- print('this')
-        -- print(torch.squeeze(this_orig[{{},{1},{}}]))
-        -- print('y')
-        -- print(torch.squeeze(y_orig[{{},{1},{}}]))
-        -- assert(false)
-
         local raw_obj_dim = this_orig:size(3)
 
         -- crop to number of timestesp
@@ -398,7 +401,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
-            -- total_particles = total_particles+num_particles
 
             -- it makes no sense to accumulate
             local loss_within_batch = 0
@@ -407,6 +409,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             local vel_loss_within_batch = 0
             local ang_vel_loss_within_batch = 0
             local counter_within_batch = 0
+            local angmag_counter_within_batch = 0
 
             for j = 1, num_particles do
 
@@ -424,6 +427,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local oid_onehot, template_ball, template_block, template_obstacle = get_oid_templates(this, config_args, mp.cuda)
                 local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
                 local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)  -- 1 if invalid
+                local valid_focus_mask = 1-invalid_focus_mask -- 1 if valid
                 -- print(invalid_focus_mask)
                 -- assert(false)
                 -- print(invalid_focus_mask:sum())
@@ -456,17 +460,60 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     -- print('y after batch')
                     -- print(torch.squeeze(y))
 
-                    -- evaluate
-                    local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
-                    local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)  -- anything we need to do here?
+                    -- evaluate: TODO! NEED TO DO fp_batch!
+                    -- local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
+
+                    local loss_batch, pred, vel_loss_batch, ang_vel_loss_batch = model:fp_batch(params_,batch,true)
+
+                    -- local loss_batch = torch.cmul(loss_batch, valid_focus_mask)
+                    local loss = apply_mask_avg(loss_batch, valid_focus_mask)
+                    local vel_loss = apply_mask_avg(vel_loss_batch, valid_focus_mask)
+                    local ang_vel_loss = apply_mask_avg(ang_vel_loss_batch, valid_focus_mask)
+
+                    -- print(valid_focus_mask)
+                    -- assert(false)
+
+                    -- TODO! Actually we should only get the ones that the invalid_mask applies on!
+                    -- local loss = loss_batch:mean()
+                    -- local vel_loss = vel_loss_batch:mean()
+                    -- local ang_vel_loss = ang_vel_loss_batch:mean()
+
+
+                    -- local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)  -- anything we need to do here?
+                    
+
+                    local angle_error_batch, relative_magnitude_error_batch, angle_mask = angle_magnitude(pred, batch, true)
+
+                    -- note that angle_mask is applied over batch_size. 
+                    local valid_focus_angle_mask = torch.cmul(valid_focus_mask,angle_mask)
+                    local angle_error = apply_mask_avg(loss_batch, valid_focus_angle_mask)
+                    local relative_magnitude_error = apply_mask_avg(relative_magnitude_error_batch, valid_focus_angle_mask)
+
+
+
+                    -- okay, so angle_mask 
+
+
+
+
                     -- count = count + 1
 
                     -- record
+
+
                     loss_within_batch = loss_within_batch + loss
-                    ang_error_within_batch = ang_error_within_batch + angle_error
-                    mag_error_within_batch = mag_error_within_batch + relative_magnitude_error
                     vel_loss_within_batch = vel_loss_within_batch + vel_loss
                     ang_vel_loss_within_batch = ang_vel_loss_within_batch + ang_vel_loss
+                    ang_error_within_batch = ang_error_within_batch + angle_error
+                    mag_error_within_batch = mag_error_within_batch + relative_magnitude_error
+
+                    -- loss_within_batch = loss_within_batch + loss/(valid_focus_mask:sum()/valid_focus_mask:size(1))
+                    -- vel_loss_within_batch = vel_loss_within_batch + vel_loss/(valid_focus_mask:sum()/valid_focus_mask:size(1))
+                    -- ang_vel_loss_within_batch = ang_vel_loss_within_batch + ang_vel_loss/(valid_focus_mask:sum()/valid_focus_mask:size(1))
+                    -- ang_error_within_batch = ang_error_within_batch + angle_error/(valid_focus_angle_mask:sum()/valid_focus_angle_mask:size(1))
+                    -- mag_error_within_batch = mag_error_within_batch + relative_magnitude_error/(valid_focus_angle_mask:sum()/valid_focus_angle_mask:size(1))
+
+
 
                     -- counter_within_batch = counter_within_batch + 1  -- actually this should be the fraction of valid examples
                     -- print((1-invalid_focus_mask):sum())
@@ -477,8 +524,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     -- TODO: still needs more work
                     -- print((1-invalid_focus_mask):sum())
                     -- print(invalid_focus_mask)
-                    counter_within_batch = counter_within_batch + (1-invalid_focus_mask):sum()/invalid_focus_mask:size(1) -- actually this should be the fraction of valid examples
-
+                    counter_within_batch = counter_within_batch + valid_focus_mask:sum()/valid_focus_mask:size(1) -- actually this should be the fraction of valid examples
+                    angmag_counter_within_batch = angmag_counter_within_batch + valid_focus_angle_mask:sum()/valid_focus_angle_mask:size(1)
 
                     -- update non-predictive parts of pred
                     pred = simulate_all_postprocess(pred, this, raw_obj_dim)
@@ -525,13 +572,20 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch/num_particles
             -- ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch/num_particles
 
-            print(counter_within_batch)
+            -- losses_through_time_all_batches[{{i},{t}}] = loss_within_batch
+            -- ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch
+            -- mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch
+            -- vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch
+            -- ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch
+
+            -- print(counter_within_batch)
 
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/counter_within_batch
-            ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/counter_within_batch
-            mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/counter_within_batch
             vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch/counter_within_batch
             ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch/counter_within_batch
+
+            ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/angmag_counter_within_batch
+            mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/angmag_counter_within_batch
         end
         --- to be honest I don't think we need to break into past and context
         -- future, but actually that might be good for coloriing past and future, but
@@ -570,14 +624,25 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local averaged_vel_loss_through_time_all_batches = torch.totable(torch.squeeze(vel_loss_through_time_all_batches:mean(1)))
     local averaged_ang_vel_loss_through_time_all_batches = torch.totable(torch.squeeze(ang_vel_loss_through_time_all_batches:mean(1)))
 
+
+
+    print('averaged_losses_through_time_all_batches')
     print(averaged_losses_through_time_all_batches)
+
+    print('averaged_ang_error_through_time_all_batches')
     print(averaged_ang_error_through_time_all_batches)
+
+    print('averaged_mag_error_through_time_all_batches')
     print(averaged_mag_error_through_time_all_batches)
+
+    print('averaged_vel_loss_through_time_all_batches')
     print(averaged_vel_loss_through_time_all_batches)
+
+    print('averaged_ang_vel_loss_through_time_all_batches')
     print(averaged_ang_vel_loss_through_time_all_batches)
 
     for tt=1,#averaged_losses_through_time_all_batches do
-        print(averaged_losses_through_time_all_batches[tt])
+        -- print(averaged_losses_through_time_all_batches[tt])
         gtdivergenceLogger:add{['Timesteps'] = tt, 
                                 ['MSE Error'] = averaged_losses_through_time_all_batches[tt],
                                 ['Cosine Difference'] = averaged_ang_error_through_time_all_batches[tt],

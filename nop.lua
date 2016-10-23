@@ -181,13 +181,15 @@ function model:select_neighbors(contexts, this)
         local context = c:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
 
         -- make threshold depend on object id!
-        local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
-        local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
-        local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
-        local template_ball = template:clone()
-        local template_block = template:clone()
-        template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
-        template_block[{{},{},{config_args.oids.block}}]:fill(1)
+        -- local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
+        -- local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
+        -- local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
+        -- local template_ball = template:clone()
+        -- local template_block = template:clone()
+        -- template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
+        -- template_block[{{},{},{config_args.oids.block}}]:fill(1)
+
+        local oid_onehot, template_ball, template_block = get_oid_templates(this, config_args, self.mp.cuda)
 
         if (oid_onehot-template_ball):norm()==0 then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
@@ -280,6 +282,8 @@ function model:fp_batch(params_, batch, sim)
         local loss_ang_vel = self.criterion:forward(p_ang_vel[{{i}}], gt_ang_vel[{{i}}])
         local loss = loss_vel + loss_ang_vel
         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
+        loss_vel = loss_vel/p_vel[{{i}}]:nElement()
+        loss_ang_vel = loss_ang_vel/p_ang_vel[{{i}}]:nElement()
         table.insert(loss_all, loss)
     end
 

@@ -329,6 +329,27 @@ function onehot2numall(onehot_selected, categories, cuda)
     return selected
 end
 
+function get_oid_templates(this, config_args, cuda)
+
+    local bsize = this:size(1)
+
+    -- make threshold depend on object id!
+    local oid_onehot = torch.squeeze(this[{{},{-1},config_args.si.oid}],2)  -- all are same   -- only need one timestep
+    local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
+    local template = convert_type(torch.zeros(bsize, num_oids), cuda)  -- only need one timestep
+    local template_ball = template:clone()
+    local template_block = template:clone()
+    local template_obstacle = template:clone()
+    template_ball[{{},{config_args.oids.ball}}]:fill(1)
+    template_block[{{},{config_args.oids.block}}]:fill(1)
+    template_obstacle[{{},{config_args.oids.obstacle}}]:fill(1)
+
+    return oid_onehot, template_ball, template_block, template_obstacle
+
+end
+
+
+
 
 
 -- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})

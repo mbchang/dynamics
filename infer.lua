@@ -22,6 +22,7 @@ function relative_error(x, x_hat)
     re:maskedFill(1-mask,0)
 
     assert(x:ne(0):nonzero():nElement()/x:dim() == x:nElement())
+    assert(mask_nElement==mask:sum())
     return re, mask, mask_nElement
 end
 
