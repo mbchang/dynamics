@@ -124,107 +124,6 @@ function inittest(preload, model_path, opt)
     print(model.network)
 end
 
--- function backprop2input()
---     -- for one input
-
---     -- get batch
---     local batch = test_loader:sample_sequential_batch()  -- TODO replace with some other data loader!
---     local this, context, y, mask = unpack(batch)
---     local x = {this=this,context=context}
-
---     if not sim then
---         y = crop_future(y, {y:size(1), mp.winsize-mp.num_past, mp.object_dim},
---                             {2,mp.num_future})
---     end
---     -- convert_type
-
---     -- unpack inputs
---     local this_past     = convert_type(x.this:clone(), mp.cuda)
---     local context       = convert_type(x.context:clone(), mp.cuda)
---     local this_future   = convert_type(y:clone(), mp.cuda)
-
---     function feval_back2mass(inp)
---         -- inp is this_past
---         -- forward
---         local splitter = split_output(mp)
---         local preproc = preprocess_input(mask)
---         if mp.cuda then preproc:cuda() end
---         local input = preproc:forward{inp,context}  -- this changes, context doesn't
---         if torch.find(mask,1)[1] == 1 then input = {input} end
-
---         local prediction = model.network:forward(input)
---         local p_pos, p_vel, p_obj_prop = unpack(splitter:forward(prediction))
---         local gt_pos, gt_vel, gt_obj_prop =
---                             unpack(split_output(mp):forward(this_future))
---         local loss = model.criterion:forward(p_vel, gt_vel)
-
---         -- backward
---         local d_pos = model.identitycriterion:backward(p_pos, gt_pos)
---         local d_vel = model.criterion:backward(p_vel, gt_vel)
---         local d_obj_prop = model.identitycriterion:backward(p_obj_prop,
---                                                             gt_obj_prop)
---         local d_pred = splitter:backward({prediction},
---                                         {d_pos, d_vel, d_obj_prop})
-
---         local g_input = model.network:backward(input, d_pred)
---         if torch.find(mask,1)[1] == 1 then g_input = g_input[1] end
---         preproc:updateGradInput(inp, g_input)
-
---         collectgarbage()
---         return loss, preproc.gradInput[1]  -- this should have been updated
---     end
-
---     local b2i_optstate = {learningRate = 0.01}
-
---     -- infer the masses of ALL THE BALLS (or just you?)
---     -- for now let's just infer the mass of you
-
---     -- or should I preface the network with a wrapper that selects the input, because rmsprop expects a tensor!
-
---     -- perturb
---     -- this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
---     -- this_past[{{},{},{5}}]:fill(1)
---     -- this_past[{{},{},{6,8}}]:fill(0)
---     -- this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
-
---     print('initial input')
---     print(this_past[{{1},{1,9}}])
---     t = 1
---     while t <= 100 do
---         local old_this = this_past:clone()
-
---         -- pass in input to rmsprop: automatically modifies this_past
---         local _, loss = optim.rmsprop(feval_back2mass, this_past, b2i_optstate)  -- not getting updates! (or implicilty updated)
-
---         -- modify only the mass
---         old_this:resize(mp.batch_size, mp.num_past, mp.object_dim)
---         this_past:resize(mp.batch_size, mp.num_past, mp.object_dim)
-
---         -- [{{5,8}}] is the one-hot mass
---         this_past[{{},{},{1,4}}] = old_this[{{},{},{1,4}}]
---         this_past[{{},{},{9}}] = old_this[{{},{},{9}}]
-
---         this_past:resize(mp.batch_size, mp.num_past*mp.object_dim)
-
---         if t % 10 == 0 then
---             b2i_optstate.learningRate = b2i_optstate.learningRate * 0.99
---         end
-
---         if t % 10 == 0 then
---             print(this_past[{{1},{1,9}}])
---         end
-
---         if t % 10 == 0 then
---             print(loss[1])
---         end
---         -- if (this_past-target_input):norm() < 1e-5 then
---         --     break
---         -- end
---         t = t + 1
---     end
---     print ('final input after '..t..' iterations')
---     print(this_past[{{1},{1,9}}])
--- end
 
 local function simulate_all_preprocess(past, future, j, t, num_particles)
     -- construct batch
@@ -233,9 +132,6 @@ local function simulate_all_preprocess(past, future, j, t, num_particles)
     local y = future[{{},{j},{t}}]  -- no flag yet
     y = torch.squeeze(y,2)  -- no flag good up to here
 
-    -- print('orig y')
-    -- print(torch.squeeze(y,2))
-    -- assert(false)
     local y_before_relative = y:clone()
 
     if mp.relative then
@@ -299,7 +195,6 @@ local function make_invalid_dummy(this, invalid_focus_mask)
 
     -- then, for all invalid focus object, we will replace it with the dummy
     local invalid_idxs = torch.find(invalid_focus_mask,1)
-    -- print(invalid_idxs)
     for _,invalid_idx in pairs(invalid_idxs) do
         this[{{invalid_idx},{},{}}] = dummy_focus:clone()
     end
@@ -314,14 +209,6 @@ local function replace_invalid_dummy(pred, y_before_relative, this, invalid_focu
     local this = this:clone()
     assert(invalid_focus_mask:sum() > 0)
 
-    -- print(torch.squeeze(y))
-    -- assert(false)
-
-    -- -- first change y back to absolute
-    -- print('y in replace_invalid_dummy')
-    -- print(torch.squeeze(y_before_relative))
-    -- assert(false)
-
     -- next we will take 
     local invalid_idxs = torch.find(invalid_focus_mask,1)
     for _,invalid_idx in pairs(invalid_idxs) do
@@ -330,7 +217,6 @@ local function replace_invalid_dummy(pred, y_before_relative, this, invalid_focu
 
     -- wait, note that you still need ground truth in order to compute your prediction score. so it is okay
     -- to predict against a ground truth here.
-
     return pred  
 end
 
@@ -413,14 +299,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
             for j = 1, num_particles do
 
-                -- here you should create a mask
-
-                -- select indices of focus and context
-
-
                 -- switch to a new focus object
                 local this, y, context, context_future, y_before_relative = simulate_all_preprocess(past, future, j, t, num_particles)
-
 
                 -- Ok, note that you only want the examples where this is a ball or block
                 -- these templates are (bsize, oid_dim)
@@ -428,15 +308,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
                 local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)  -- 1 if invalid
                 local valid_focus_mask = 1-invalid_focus_mask -- 1 if valid
-                -- print(invalid_focus_mask)
-                -- assert(false)
-                -- print(invalid_focus_mask:sum())
-                -- print(#invalid_focus_mask)
-                -- assert(false)
-                if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
 
-                    -- print(invalid_focus_mask)
-                    -- assert(false)
+                if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
                     -- note that we have to keep the batch size constant.
                     -- okay, so I think we'd need to do some dummy filling.
                     -- for the ones that have an obstacle, I just need to fill it with a dummy entry
@@ -446,23 +319,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     -- if we have some entries where obstacle is this
                     if invalid_focus_mask:sum() > 0 then
                         -- for the ones that have an obstacle, I just need to fill it with a dummy entry
-                        -- print('this before')
-                        -- print(torch.squeeze(this[{{},{-1}}],2))
+                        -- note that we didn't change the context (we should for a valid prediction) but we will replace the prediction anyways
                         this = make_invalid_dummy(this, invalid_focus_mask:clone())
-                        -- print('this after')
-                        -- print(torch.squeeze(this[{{},{-1}}],2))
-                        -- assert(false)
                     end -- good
 
                     -- construct batch
                     local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
-                    -- print('y after batch')
-                    -- print(torch.squeeze(y))
-
-                    -- evaluate: TODO! NEED TO DO fp_batch!
                     -- local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
-
                     local loss_batch, pred, vel_loss_batch, ang_vel_loss_batch = model:fp_batch(params_,batch,true)
 
                     -- local loss_batch = torch.cmul(loss_batch, valid_focus_mask)
@@ -470,18 +334,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     local vel_loss = apply_mask_avg(vel_loss_batch, valid_focus_mask)
                     local ang_vel_loss = apply_mask_avg(ang_vel_loss_batch, valid_focus_mask)
 
-                    -- print(valid_focus_mask)
-                    -- assert(false)
-
-                    -- TODO! Actually we should only get the ones that the invalid_mask applies on!
-                    -- local loss = loss_batch:mean()
-                    -- local vel_loss = vel_loss_batch:mean()
-                    -- local ang_vel_loss = ang_vel_loss_batch:mean()
-
-
-                    -- local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)  -- anything we need to do here?
-                    
-
+                    -- local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)
                     local angle_error_batch, relative_magnitude_error_batch, angle_mask = angle_magnitude(pred, batch, true)
 
                     -- note that angle_mask is applied over batch_size. 
@@ -489,41 +342,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     local angle_error = apply_mask_avg(loss_batch, valid_focus_angle_mask)
                     local relative_magnitude_error = apply_mask_avg(relative_magnitude_error_batch, valid_focus_angle_mask)
 
-
-
-                    -- okay, so angle_mask 
-
-
-
-
-                    -- count = count + 1
-
                     -- record
-
-
                     loss_within_batch = loss_within_batch + loss
                     vel_loss_within_batch = vel_loss_within_batch + vel_loss
                     ang_vel_loss_within_batch = ang_vel_loss_within_batch + ang_vel_loss
                     ang_error_within_batch = ang_error_within_batch + angle_error
                     mag_error_within_batch = mag_error_within_batch + relative_magnitude_error
 
-                    -- loss_within_batch = loss_within_batch + loss/(valid_focus_mask:sum()/valid_focus_mask:size(1))
-                    -- vel_loss_within_batch = vel_loss_within_batch + vel_loss/(valid_focus_mask:sum()/valid_focus_mask:size(1))
-                    -- ang_vel_loss_within_batch = ang_vel_loss_within_batch + ang_vel_loss/(valid_focus_mask:sum()/valid_focus_mask:size(1))
-                    -- ang_error_within_batch = ang_error_within_batch + angle_error/(valid_focus_angle_mask:sum()/valid_focus_angle_mask:size(1))
-                    -- mag_error_within_batch = mag_error_within_batch + relative_magnitude_error/(valid_focus_angle_mask:sum()/valid_focus_angle_mask:size(1))
-
-
-
-                    -- counter_within_batch = counter_within_batch + 1  -- actually this should be the fraction of valid examples
-                    -- print((1-invalid_focus_mask):sum())
-                    -- print((1-invalid_focus_mask):sum())
-                    -- print(invalid_focus_mask:size(1))
-                    -- print(num_particles)
-                    -- assert(false)
-                    -- TODO: still needs more work
-                    -- print((1-invalid_focus_mask):sum())
-                    -- print(invalid_focus_mask)
                     counter_within_batch = counter_within_batch + valid_focus_mask:sum()/valid_focus_mask:size(1) -- actually this should be the fraction of valid examples
                     angmag_counter_within_batch = angmag_counter_within_batch + valid_focus_angle_mask:sum()/valid_focus_angle_mask:size(1)
 
@@ -533,16 +358,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     -- here you should apply the mask (such that by the end of it pred_sim will look valid)
                     if invalid_focus_mask:sum() > 0 then
 
-                        -- print('pred before')
-                        -- print(torch.squeeze(torch.squeeze(pred,2),2))
-
                         -- relative y
                         pred = replace_invalid_dummy(pred, y_before_relative, this, invalid_focus_mask:clone()) -- good
-
-                        -- print('pred after')
-                        -- print(torch.squeeze(torch.squeeze(pred,2),2))
-
-                        -- assert(false)
                     end
 
                     -- write into pred_sim
@@ -552,7 +369,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     -- TODO test this
                     print('#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#')
                     print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)')
-                    -- print(invalid_focus_mask)
                     pred_sim[{{},{j},{t},{}}] = y_before_relative
                 end
             end
@@ -566,20 +382,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             end
 
             -- record
-            -- losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/num_particles
-            -- ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/num_particles
-            -- mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/num_particles
-            -- vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch/num_particles
-            -- ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch/num_particles
-
-            -- losses_through_time_all_batches[{{i},{t}}] = loss_within_batch
-            -- ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch
-            -- mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch
-            -- vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch
-            -- ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch
-
             -- print(counter_within_batch)
-
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/counter_within_batch
             vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch/counter_within_batch
             ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch/counter_within_batch
@@ -608,11 +411,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             save_ex_pred_json({this_orig, context_orig,
                                 y_orig, context_future_orig,
                                 this_pred, context_pred},
-                                -- 'batch'..test_loader.datasamplers[current_dataset].current_sampled_id..'.json',
                                 'batch'..dataloader.current_sampled_id..'.json',
                                 experiment_name,
                                 subfolder)
-                                -- current_dataset)
         end
         collectgarbage()
     end
