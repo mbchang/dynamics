@@ -254,6 +254,16 @@ experiments_dict = {
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Dim 200 LR 0.0003'),
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Dim 200 LR 0.0003'),
 
+        # not yet
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
     ],
 
     'Balls Prediction Mass': [
@@ -284,6 +294,16 @@ experiments_dict = {
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Dim 200 LR 0.0003'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Dim 200 LR 0.0003'),
 
+        # not yet
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
     ],
 
     'Balls Generalization NIPS': [
@@ -465,6 +485,16 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Dim 200 LR 0.0003'),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Dim 200 LR 0.0003'),
 
+        # not yet
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
     ],
 
     'Balls Generalization Mass': [
@@ -493,9 +523,22 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Dim 100 LR 0.0003'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Dim 200 LR 0.0003'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Dim 200 LR 0.0003'),
-        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Dim 200 LR 0.0003'),
+        # ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Dim 200 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim200_fast_nlan_lr0.0003_cuda_modellstm_seed2', 'LSTM OF Dim 200 LR 0.0003'),  # had trouble exploading
 
 
+
+
+        # don't put this in yet
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
     ],
 
     'Tower': [
@@ -547,6 +590,8 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE: 3,4,5 - 6,7,8'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE: 3,4,5 - 6,7,8'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE: 3,4,5 - 6,7,8'),
+
+
 
     ],
 
@@ -1562,6 +1607,16 @@ experiments_dict = {
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed2', 'Bidirectional LSTM Dim 100 LR 0.01'),
 
 
+        # not yet
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers1_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 1 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
 
     ],
 
@@ -1701,6 +1756,7 @@ experiments_dict = {
 
 
 
+
 }
 
 experiments = list(set(itertools.chain.from_iterable([[x[0] for x in y] for y in experiments_dict.values()])))
@@ -1736,10 +1792,17 @@ experiments_to_visualize = [
 
     # Towers Prediction
     # 'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0',
-    'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0',
+    # 'tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0',
 
     # 'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100',
     # 'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100'
+
+    # LSTM OF
+    'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0',
+    'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.0003_modellstm_seed0',
+
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0',
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.0003_modellstm_seed0',
 
 ]
 
@@ -2057,7 +2120,8 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile,two_seeds, saveleg=Fals
             # indep_run_data = np.exp(indep_run_data)
 
             # convert it to log base 10 scale
-            # indep_run_data = np.log10(indep_run_data)
+            if dataset == 'vel_loss' or dataset == 'ang_vel_loss':
+                indep_run_data = np.log10(indep_run_data)
 
             print label, indep_run_data, min_length
 
@@ -2096,7 +2160,7 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile,two_seeds, saveleg=Fals
         plt.ylabel('Relative Error in Magnitude')  # TODO!
         leg = plt.legend(fontsize=14, frameon=False, loc='upper right')
 
-    # plt.savefig(os.path.join(outfolder, outfile))
+    plt.savefig(os.path.join(outfolder, outfile))
 
 
     # if you want separate legend
@@ -2121,7 +2185,6 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile,two_seeds, saveleg=Fals
     #     plt.savefig(os.path.join(outfolder, outfile))
 
     plt.close()
-
 
 
 def plot_div_error(exp_list, dataset, outfolder, outfile,two_seeds):
@@ -2219,7 +2282,6 @@ def plot_div_error(exp_list, dataset, outfolder, outfile,two_seeds):
     #     leg = plt.legend(fontsize=20, frameon=False)
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
-
 
 
 def plot_hybrid_div_error(exp_list, datasets, outfolder, outfile,two_seeds):
@@ -2340,7 +2402,6 @@ def plot_hybrid_div_error(exp_list, datasets, outfolder, outfile,two_seeds):
     plt.close()
 
 
-
 def find_num_obj_in_substring(substring):
     num_objs = []
     for m in re.finditer('_n', substring):
@@ -2349,16 +2410,19 @@ def find_num_obj_in_substring(substring):
         num_objs.append(substring[begin:end]) 
         return ','.join(num_objs)
 
+
 def find_num_obj_in_substring_single(substring):
     begin = substring.find('_n') + len('_n')
     end = begin + substring[begin:].find('_')
     return substring[begin:end]
+
 
 def extract_num_objs(exp_name):
     train_half = exp_name[:exp_name.find('__')]
     test_half = exp_name[exp_name.find('__'):exp_name.find('_layers')]
 
     return {'train': find_num_obj_in_substring(train_half), 'val': find_num_obj_in_substring(train_half), 'test': find_num_obj_in_substring(test_half)}
+
 
 def plot_generalization_error(exp_list, outfolder, outfile,two_seeds):
     ys = []
@@ -2451,14 +2515,14 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile,two_seeds):
     exp_groups = {}
 
     for label in exp_groups_orig:
-        # for name in exp_groups_orig[label]:
-        #     print os.path.join(*[out_root,name,dataset+'_infer_cf.log'])
-        if any(os.path.exists(os.path.join(*[out_root,name,dataset+'_infer_cf.log'])) for name in exp_groups_orig[label]):
+        if all(os.path.exists(os.path.join(*[out_root,name,dataset+'_infer_cf.log'])) for name in exp_groups_orig[label]):
             exp_groups[label] = exp_groups_orig[label]
 
     print 'Experiments with ' + dataset + ' inference', exp_groups
     if not exp_groups:
         return
+
+    pprint.pprint(exp_groups)
 
     for label in exp_groups:
         indep_runs = exp_groups[label]
@@ -2512,23 +2576,35 @@ def plot_experiments(experiments_dict, two_seeds):
         print 'Plotting', e
         plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
         plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
-        # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda.png',two_seeds)
+       
+
+
+
+        # # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda.png',two_seeds)
         # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
         # plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
 
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
 
-        # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
 
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
+
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+
+
+
+
+
 
         # plot_div_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'Cosine Difference', out_root, e+'_anglesimb.png', two_seeds)
         # plot_div_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'Magnitude Difference', out_root, e+'_magsimb.png', two_seeds)

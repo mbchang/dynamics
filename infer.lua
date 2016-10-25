@@ -23,7 +23,7 @@ function relative_error(x, x_hat)
 
     assert(x:ne(0):nonzero():nElement()/x:dim() == x:nElement())
     assert(mask_nElement==mask:sum())
-    return re, mask, mask_nElement
+    return re, mask, mask_nElement  -- mask has 1 where it is valid
 end
 
 -- pred: (bsize, num_future, obj_dim)

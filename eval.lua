@@ -368,7 +368,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 else
                     -- TODO test this
                     print('#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#')
-                    print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)')
+                    print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)', 'batch:',i, 'object:',j,'timestep',t)
                     pred_sim[{{},{j},{t},{}}] = y_before_relative
                 end
             end
@@ -424,8 +424,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local averaged_mag_error_through_time_all_batches = torch.totable(torch.squeeze(mag_error_through_time_all_batches:mean(1)))
     local averaged_vel_loss_through_time_all_batches = torch.totable(torch.squeeze(vel_loss_through_time_all_batches:mean(1)))
     local averaged_ang_vel_loss_through_time_all_batches = torch.totable(torch.squeeze(ang_vel_loss_through_time_all_batches:mean(1)))
-
-
 
     print('averaged_losses_through_time_all_batches')
     print(averaged_losses_through_time_all_batches)
@@ -749,9 +747,16 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
-        local loss, pred, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
 
+
+
+        -- may need to change this
+        local loss, pred, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
         local avg_angle_error, avg_relative_magnitude_error = angle_magnitude(pred, batch)
+
+
+
+
 
         total_avg_vel = total_avg_vel+ avg_batch_vel
         total_avg_ang_vel = total_avg_ang_vel + avg_batch_ang_vel
