@@ -1917,6 +1917,19 @@ def plot(experiments):
         except KeyboardInterrupt:
             sys.exit(0)
 
+def parse_log_file(log_file, data):
+    with open(log_file, 'r') as f:
+        raw = f.readlines()
+    headers = raw[0].strip().split('\t')
+    assert set(headers).issubset(set(data.keys()))
+
+    for t in xrange(1,len(raw)):
+        row = raw[t].strip().split('\t')
+        assert len(row) == len(headers)
+        for k in range(len(headers)):
+            data[headers[k]].append(row[k])
+    return data
+
 # return np array from log file
 def read_log_file(log_file):
     data = {'train':[],'val':[],'test':[]}
@@ -1930,30 +1943,14 @@ def read_log_file(log_file):
     return data
 
 def read_tva_file(log_file):
+    # ang_vel_loss    vel_loss    avg_rel_mag_error   loss    avg_ang_error
     data = {'ang_vel_loss':[],'vel_loss':[],'avg_rel_mag_error':[], 'loss': [], 'avg_ang_error': []}
-    with open(log_file, 'r') as f:
-        raw = f.readlines()
-    for t in xrange(1,len(raw)):
-        [ang_vel_loss, vel_loss, avg_rel_mag_error, loss, avg_ang_error] = raw[t].split('\t')[:5]
-        data['ang_vel_loss'].append(ang_vel_loss)
-        data['vel_loss'].append(vel_loss)
-        data['avg_rel_mag_error'].append(avg_rel_mag_error)
-        data['loss'].append(loss)
-        data['avg_ang_error'].append(avg_ang_error)
-    return data
+    return parse_log_file(log_file, data)
 
 # Cosine Difference   Timesteps   Magnitude Difference    MSE Error
 def read_div_file(log_file):
-    data = {'Cosine Difference':[],'Timesteps':[],'Magnitude Difference':[], 'MSE Error': []}
-    with open(log_file, 'r') as f:
-        raw = f.readlines()
-    for t in xrange(1,len(raw)):
-        [ang_vel_loss, t, avg_rel_mag_error, loss] = raw[t].split('\t')[:4]
-        data['Cosine Difference'].append(ang_vel_loss)
-        data['Timesteps'].append(t)
-        data['Magnitude Difference'].append(avg_rel_mag_error)
-        data['MSE Error'].append(loss)
-    return data
+    data = {'Cosine Difference':[],'Timesteps':[],'Magnitude Difference':[], 'MSE Error': [], 'Velocity Error': [], 'Angular Velocity Error': []}
+    return parse_log_file(log_file, data)
 
 def read_inf_log_file(log_file):
     data = {'mass':[]}
@@ -2009,9 +2006,18 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile,two_seeds):
         exp_groups.setdefault(label, []).append(name)
 
     for label in exp_groups:
+
         indep_runs = exp_groups[label]
 
-        indep_run_data = [[float(x) for x in read_log_file(os.path.join(*[out_root,exp,'experiment.log']))[dataset]] for exp in indep_runs]
+        # do it this way
+        indep_run_data = []
+        for exp in indep_runs:
+            exp_data = read_log_file(os.path.join(*[out_root,exp,'experiment.log']))[dataset]
+            if exp_data:
+                indep_run_data.append([float(x) for x in exp_data])
+
+        # it will only be empty if dataset not in the file
+        if not indep_run_data: continue
 
         if two_seeds:
             min_length = min(len(x) for x in indep_run_data)
@@ -2078,28 +2084,27 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile,two_seeds, saveleg=Fals
         # ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
         # marker = itertools.cycle(('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd')) 
 
+
         indep_runs = exp_groups[label]
 
         # here get all the prediction folders
-        # prediction_folder_exps = []
         for exp in indep_runs:
             prediction_folders = [x for x in os.listdir(os.path.join(out_root,exp)) if 'predictions' in x]
-        #     if not prediction_folders: return
-        #     prediction_folder = prediction_folders[0]  # hacky
-        #     print prediction_folder
-        #     print os.path.join(*[out_root,exp,prediction_folder])
-        #     print os.listdir(os.path.join(*[out_root,exp,prediction_folder]))
-        #     if 'tva.log' not in os.listdir(os.path.join(*[out_root,exp,prediction_folder])): 
-        #         # print 'complain'
-        #         # continue
-        #         return 
-        #     # else:
-        #     #     print 'yaas' #return
-        #     # prediction_folder_exps.append(prediction_folder)
-        # print 'data'
+
+        print 'indep runs', indep_runs
+        print 'prediction_folders', prediction_folders
+
         for prediction_folder in prediction_folders:
 
-            indep_run_data = [[float(x) for x in read_tva_file(os.path.join(*[out_root,exp,prediction_folder,'tva.log']))[dataset]] for exp in indep_runs]
+            # do it this way
+            indep_run_data = []
+            for exp in indep_runs:
+                exp_data = read_tva_file(os.path.join(*[out_root,exp,prediction_folder,'tva.log']))[dataset]
+                if exp_data:
+                    indep_run_data.append([float(x) for x in exp_data])
+
+            # it will only be empty if dataset not in the file
+            if not indep_run_data: continue
 
             if two_seeds:
                 min_length = min(len(x) for x in indep_run_data)
@@ -2138,11 +2143,6 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile,two_seeds, saveleg=Fals
             print 'maxs',maxs, len(maxs)
 
             custom_plot(x, means, mins, maxs, label=label + ' ' + find_num_obj_in_substring(prediction_folder) + ' objects', marker=marker.next())
-            # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # if any('tower' in x for x in indep_runs):
-            #     ax.set_ylim(-8,-1)
-            # else:
-            #     ax.set_ylim(-4, -1)
             if dataset == 'avg_ang_error':
                 ax.set_ylim(0.85,1)
             elif dataset == 'avg_rel_mag_error':
@@ -2215,7 +2215,15 @@ def plot_div_error(exp_list, dataset, outfolder, outfile,two_seeds):
 
         for prediction_folder in prediction_folders:
 
-            indep_run_data = [[float(x) for x in read_div_file(os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log']))[dataset]] for exp in indep_runs]
+            # do it this way
+            indep_run_data = []
+            for exp in indep_runs:
+                exp_data = read_div_file(os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log']))[dataset]
+                if exp_data:
+                    indep_run_data.append([float(x) for x in exp_data])
+
+            # it will only be empty if dataset not in the file
+            if not indep_run_data: continue
 
             if two_seeds:
                 min_length = min(len(x) for x in indep_run_data)
@@ -2240,30 +2248,14 @@ def plot_div_error(exp_list, dataset, outfolder, outfile,two_seeds):
             means = np.mean(indep_run_data,0)
 
             x = range(min_length) # TODO
-            if label == 'Balls Generalization':
+            # if label == 'Balls Generalization':
 
-                print 'x',x, len(x)
-                print 'means',means, len(means)
-                print 'mins',mins, len(mins)
-                print 'maxs',maxs, len(maxs)
+            print 'x',x, len(x)
+            print 'means',means, len(means)
+            print 'mins',mins, len(mins)
+            print 'maxs',maxs, len(maxs)
 
-            # custom_plot(x, means, mins, maxs, label=label + ' ' + find_num_obj_in_substring(prediction_folder) + ' objects', marker=marker.next())
-
-            # if ',' in indep_runs[0]:
-            #     custom_plot(x, means, mins, maxs, label=label + find_num_obj_in_substring(prediction_folder), marker=marker.next())
-            # else:
             custom_plot(x, means, mins, maxs, label=label + find_num_obj_in_substring_single(prediction_folder), marker=marker.next())
-
-            # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # if any('dataset' in x for x in indep_runs):
-            #     ax.set_ylim(-8,-1)
-            # else:
-            #     ax.set_ylim(-4, -1)
-            # if 
-            # if dataset == 'Cosine Difference':
-            #     ax.set_ylim(0.8,1)
-            # elif dataset == 'Magnitude Difference':
-            #     ax.set_ylim(0.0,0.2)
 
             
     # leg = plt.legend(fontsize=20, frameon=False)
@@ -2274,12 +2266,15 @@ def plot_div_error(exp_list, dataset, outfolder, outfile,two_seeds):
     elif dataset == 'Magnitude Difference':
         plt.ylabel('Relative Error in Magnitude')  # TODO!
         leg = plt.legend(fontsize=14, frameon=False, loc='upper left')
-    # elif dataset == 'avg_rel_mag_error':
-    #     plt.ylabel('Relative Error in Magnitude')  # TODO!
-    #     leg = plt.legend(fontsize=20, frameon=False)
-    # elif dataset == 'avg_rel_mag_error':
-    #     plt.ylabel('Relative Error in Magnitude')  # TODO!
-    #     leg = plt.legend(fontsize=20, frameon=False)
+    elif dataset == 'MSE Error':
+        plt.ylabel('Total Mean Squared Error')  # TODO!
+        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')  
+    elif dataset == 'Velocity Error':
+        plt.ylabel('Velocity Mean Squared Error')  # TODO!
+        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')
+    elif dataset == 'Angular Velocity Error':
+        plt.ylabel('Angular Velocity Mean Squared Error')  # TODO!
+        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')         
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
 
@@ -2593,13 +2588,20 @@ def plot_experiments(experiments_dict, two_seeds):
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
 
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
 
         # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
 
         # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
         # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+
+
+
+        # just debugging here
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
 
 
 
@@ -2921,7 +2923,7 @@ def animate(experiments, remove_png):
 #     pprint.pprint(animated_experiments)
 
 
-experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
+# experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 # plot(experiments_to_plot)
 plot_experiments(experiments_dict, False)
 # 
