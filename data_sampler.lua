@@ -175,8 +175,17 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
 
     -- you can do an if statemnt for if num_context > 12
     local max_obj = 12
-    local trimmed_context = data_process.k_nearest_context(this, context, max_obj)
-    local trimmed_context_future = data_process.k_nearest_context(y, context_future, max_obj)
+    -- past
+    local trimmed_context, closest_indices = data_process.k_nearest_context(this:clone(), context:clone(), max_obj)
+
+
+    -- ok, we will take the indices that produced trimmed_context, and get the corresponding future ones.
+    -- future
+    local ntrimmed_context = trimmed_context:size(2)
+    local expand_size = torch.LongStorage{mp.batch_size,ntrimmed_context,context_future:size(3),context_future:size(4)}
+    -- good, and corresponds with trimmed_context
+    local trimmed_context_future = context_future:clone():gather(2,torch.expand(closest_indices:view(mp.batch_size,ntrimmed_context,1,1),expand_size))  -- I think this is all you need
+    -- local trimmed_context_future = data_process.k_nearest_context(y:clone(), context_future:clone(), max_obj)  -- NOTE I DON'T ACTUALLY THINK THIS MAKES SENSE!
 
     if context:size(2) <= 12 then  -- it shouldn't be affected
         assert((trimmed_context-context):norm()==0)
@@ -190,17 +199,7 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
     this,trimmed_context,context, y,trimmed_context_future, context_future, mask = unpack(map(convert_type,{this,trimmed_context,context,y,trimmed_context_future, context_future, mask},self.cuda))
 
     local original_batch = {this, context, y, context_future}
-    nextbatch = {this, trimmed_context, y, trimmed_context_future, mask, original_batch}
-
-
-    -- original
-    -- mask = torch.zeros(10)
-    -- mask[{{context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
-
-    -- -- convert to cuda or double
-    -- this,context,y,context_future, mask = unpack(map(convert_type,{this,context,y,context_future, mask},self.cuda))
-    -- nextbatch = {this, context, y, context_future, mask}
-
+    nextbatch = {this, trimmed_context, y, trimmed_context_future, mask, original_batch, closest_indices}
 
     collectgarbage()
     return nextbatch

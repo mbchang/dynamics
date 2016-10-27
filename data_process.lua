@@ -58,7 +58,6 @@ function data_process.k_nearest_context(focus, context, k)
     local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)  -- good
 
     -- for each example in bsize, you want to sort num_context and gets indices
-    -- print(ed:size())
     local k = math.min(12, ed:size(2))
     local closest, closest_indices = torch.topk(ed, k) -- get 12 closests
 
@@ -74,7 +73,7 @@ function data_process.k_nearest_context(focus, context, k)
     end
     new_context = torch.cat(new_context,1) -- good
     assert(new_context:size(1) == bsize and new_context:size(2) <= 12 and new_context:size(3) == num_past and new_context:size(4) == obj_dim)
-    return new_context
+    return new_context, closest_indices
 end
 
 -- good
