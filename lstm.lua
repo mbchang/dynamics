@@ -143,6 +143,8 @@ function model:unpack_batch(batch, sim)
         shuffind = torch.randperm(num_context)
     end
 
+    -- here you can insert a focus into the context table even though it is not actually a context, unlesss you can insert into the first pposition
+
     -- here you have to create a table of tables
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
@@ -170,13 +172,18 @@ function model:unpack_batch(batch, sim)
     contexts = self:apply_mask(contexts, self.neighbor_masks)  -- so you wouldn't apply the nbrhd mask on this_past?
 
     local all_past = contexts
-    table.insert(all_past, focus_past)  -- last element is always this_past
+    table.insert(all_past, focus_past:clone())  -- last element is always this_past
 
     local all_future = {}
     for i=1,num_context do
         table.insert(all_future, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim),self.mp.cuda))
     end
     table.insert(all_future, focus_future)
+
+    if mp.duo then
+        table.insert(all_past, 1, focus_past:clone())
+        table.insert(all_future, 1, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim),self.mp.cuda))
+    end
 
     -- the last element is always the focus object
     -- context are shuffled
@@ -301,7 +308,6 @@ function model:fp_batch(params_, batch, sim)
         loss_vel = loss_vel/p_vel[{{i}}]:nElement()
         loss_ang_vel = loss_ang_vel/p_ang_vel[{{i}}]:nElement()
         table.insert(loss_all, loss)
-
         table.insert(loss_vel_all, loss_vel)
         table.insert(loss_ang_vel_all, loss_ang_vel)
 

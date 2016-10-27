@@ -62,6 +62,8 @@ cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
 cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
 cmd:option('-of', false, 'object flag for lstm')
+cmd:option('-duo', false, 'duo focus for lstm')
+
 
 -- priority sampling
 cmd:option('-ps', false, 'turn on priority sampling')
@@ -106,6 +108,7 @@ if mp.server == 'pc' then
     mp.cf = false
     mp.val_window = 5
     mp.val_eps = 2e-5
+    mp.duo = false
 	-- mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
