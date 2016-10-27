@@ -337,7 +337,7 @@ function backprop2input(model, dataloader, params_, si_indices)
 
             model.network:clearState() -- zeros out gradInput
 
-            local loss, prediction = model:fp(params_, updated_hypothesis_batch)
+            local loss, prediction = model:fp(params_, updated_hypothesis_batch, true) --this should set sim to true!
             local d_input = model:bp_input(updated_hypothesis_batch,prediction)
 
             -- 0. Get names
@@ -440,7 +440,7 @@ function find_best_hypothesis_b2i(model, params_, batch, indices_names, context_
 
         model.network:clearState() -- zeros out gradInput
 
-        local loss, prediction = model:fp(params_, updated_hypothesis_batch)
+        local loss, prediction = model:fp(params_, updated_hypothesis_batch, true) --this should set sim to true!
         local d_input = model:bp_input(updated_hypothesis_batch,prediction)
 
         -- 0. Get names
@@ -649,7 +649,7 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
 
     for j,h in pairs(hypotheses) do
         local hypothesis_batch = apply_hypothesis_onehot(batch, h, si_indices, context_id)  -- good
-        local test_losses, prediction = model:fp_batch(params_, hypothesis_batch)  -- good
+        local test_losses, prediction = model:fp_batch(params_, hypothesis_batch, true)  -- good  this should set sim to true!
 
         -- test_loss is a tensor of size bsize
         local update_indices = test_losses:lt(best_losses):nonzero()
@@ -782,7 +782,7 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
                 -- at the point, we have 
                 if context_and_wall_mask:sum() > 0 then
                     -- TODO: 
-                    local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch)
+                    local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch, true)  --this should set sim to true!
 
                     local cd_error, relative_magnitude_error, angle_mask, mask_nElement = angle_magnitude(prediction, batch, true)
                     context_and_wall_mask:cmul(angle_mask)
