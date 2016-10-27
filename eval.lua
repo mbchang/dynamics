@@ -339,7 +339,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                     -- note that angle_mask is applied over batch_size. 
                     local valid_focus_angle_mask = torch.cmul(valid_focus_mask,angle_mask)
-                    local angle_error = apply_mask_avg(loss_batch, valid_focus_angle_mask)
+                    local angle_error = apply_mask_avg(angle_error_batch, valid_focus_angle_mask)
                     local relative_magnitude_error = apply_mask_avg(relative_magnitude_error_batch, valid_focus_angle_mask)
 
                     -- record
