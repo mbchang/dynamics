@@ -258,7 +258,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         local batch = dataloader:sample_sequential_batch()
 
         -- get data
-        local this_orig, context_orig, y_orig, context_future_orig, mask = unpack(batch)  -- no flag yet
+        local this_orig, context_orig, y_orig, context_future_orig, mask, original_batch, trimmed_context_indices = unpack(batch)  -- no flag yet
+
+        -- in original batch we have
+        local untrimmed_context_past = original_batch[2]
+        local untrimmed_context_future = original_batch[4]
+        local untrimmed_context_future_orig = untrimmed_context_future:clone()
+        local has_invalid_focus = false
+        -- context_orig and context_future_orig correspond 
 
         local raw_obj_dim = this_orig:size(3)
 
@@ -308,6 +315,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
                 local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)  -- 1 if invalid
                 local valid_focus_mask = 1-invalid_focus_mask -- 1 if valid
+                if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
 
                 if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
                     -- note that we have to keep the batch size constant.
@@ -366,10 +374,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     pred_sim[{{},{j},{t},{}}] = pred
 
                 else
-                    -- TODO test this
+                    -- we only reach here IF all of the FOCUS objects are INVALID
                     print('#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#')
                     print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)', 'batch:',i, 'object:',j,'timestep',t)
-                    pred_sim[{{},{j},{t},{}}] = y_before_relative
+                    assert((torch.squeeze(this[{{},{-1}}])-y_before_relative):norm()==0)  -- they had better be the same if they are stationary (we assume they can't move)
+                    pred_sim[{{},{j},{t},{}}] = y_before_relative -- but does this contain the context though?
+
+                    -- good, this corresponds with y_before_relative
                 end
             end
 
@@ -407,14 +418,49 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             y_orig = data_process.relative_pair(this_orig, y_orig, true)
         end
 
+        -- original
+        -- if saveoutput and i <= mp.ns then
+        --     save_ex_pred_json({this_orig, context_orig,
+        --                         y_orig, context_future_orig,
+        --                         this_pred, context_pred},
+        --                         'batch'..dataloader.current_sampled_id..'.json',
+        --                         experiment_name,
+        --                         subfolder)
+        -- end
+        -------------------------------------------------------------------------
+
+        -- new wall accomodations
+        -- context_pred: (5,ncontext,58,22)
+
+        -- you should replace context_orig and context_future_orig
+        -- if invalid_focus then context_pred = context_future (after it has been mutated)
+        -- this makes no difference if all focus are valid but we will have the if statement for speed purposes
+        if has_invalid_focus then
+            -- you have context_pred, trimmed_context_indices, and untrimmed_context_future
+            -- you also can just use untrimmed_context_past directly
+            -- so you are just basically updating untrimmed_context_future
+            -- trimmed_context_indices is a LongTensor 5 x 12
+            -- order shouldn't matter here I think.
+
+            local k = math.min(12,context_pred:size(2))
+            untrimmed_context_future:scatter(2,trimmed_context_indices:view(mp.batch_size,k,1,1):expandAs(context_future_orig), context_pred:clone())  -- I think this is all you need
+        end
+
+        -- for balls
+        -- untrimmed_context_past = context_orig
+        -- untrimmed_context_future_orig = context_future_orig
+        -- untrimmed_context_future = context_pred (should be completely replaced by context_pred)
+
+        -- good
         if saveoutput and i <= mp.ns then
-            save_ex_pred_json({this_orig, context_orig,
-                                y_orig, context_future_orig,
-                                this_pred, context_pred},
+            save_ex_pred_json({this_orig, untrimmed_context_past,
+                                y_orig, untrimmed_context_future_orig,
+                                this_pred, untrimmed_context_future},
                                 'batch'..dataloader.current_sampled_id..'.json',
                                 experiment_name,
                                 subfolder)
         end
+
         collectgarbage()
     end
 
@@ -441,7 +487,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     print(averaged_ang_vel_loss_through_time_all_batches)
 
     for tt=1,#averaged_losses_through_time_all_batches do
-        -- print(averaged_losses_through_time_all_batches[tt])
         gtdivergenceLogger:add{['Timesteps'] = tt, 
                                 ['MSE Error'] = averaged_losses_through_time_all_batches[tt],
                                 ['Cosine Difference'] = averaged_ang_error_through_time_all_batches[tt],
