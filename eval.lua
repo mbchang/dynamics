@@ -150,7 +150,12 @@ local function simulate_all_preprocess(past, future, j, t, num_particles)
         context_future = torch.cat({future[{{},{1,j-1},{t}}], future[{{},{j+1,-1},{t}}]},2)
     end
 
-    return this, y, context, context_future, y_before_relative
+    -- return this, y, context, context_future, y_before_relative
+    local max_obj = 12
+    local trimmed_context, closest_indices = data_process.k_nearest_context(this:clone(), context:clone(), max_obj)
+    local trimmed_context_future = data_process.k_nearest_context(y_before_relative:clone(), context_future:clone(), max_obj)
+
+    return this, y, trimmed_context, trimmed_context_future, y_before_relative
 end
 
 local function simulate_all_postprocess(pred, this, raw_obj_dim)
@@ -289,10 +294,14 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-        local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)   -- no flag yet
-        local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good   -- no flag yet (because we don't know which is focus or context)
+        -- local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)   -- no flag yet
+        -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good   -- no flag yet (because we don't know which is focus or context)
 
-        assert(past:size(2) == num_particles and future:size(2) == num_particles)
+
+        local past = torch.cat({unsqueeze(this_orig:clone(),2), untrimmed_context_past:clone()},2)   -- no flag yet
+        local future = torch.cat({unsqueeze(y_orig:clone(),2), untrimmed_context_future:clone()},2)  -- good   -- no flag yet (because we don't know which is focus or context)
+
+        local num_particles = past:size(2)
 
         local pred_sim = model_utils.transfer_data(
                             torch.zeros(mp.batch_size, num_particles,
@@ -316,9 +325,20 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             local angmag_counter_within_batch = 0
 
             for j = 1, num_particles do
+                -- print(j)
+
+                -- print(past:size())
+                -- print(future:size())
 
                 -- switch to a new focus object
+                -- TODO: in here you should also do k nearest for context past; what about context future?
                 local this, y, context, context_future, y_before_relative = simulate_all_preprocess(past, future, j, t, num_particles)
+
+
+                -- print(context:size())
+                -- print(context_future:size())
+
+                -- assert(false)
 
                 -- Ok, note that you only want the examples where this is a ball or block
                 -- these templates are (bsize, oid_dim)
@@ -327,6 +347,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
 
                 if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
+                    -- print('0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0')
+                    -- print('invalid_focus_mask:sum() < invalid_focus_mask:size(1)','batch:',i, 'object:',j,'timestep',t)
                     -- note that we have to keep the batch size constant.
                     -- okay, so I think we'd need to do some dummy filling.
                     -- for the ones that have an obstacle, I just need to fill it with a dummy entry
@@ -343,7 +365,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     -- construct batch
                     local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
 
-                    -- local loss, pred, vel_loss, ang_vel_loss = model:fp(params_,batch,true)
                     local loss_batch, pred, vel_loss_batch, ang_vel_loss_batch = model:fp_batch(params_,batch,true)
 
                     -- local loss_batch = torch.cmul(loss_batch, valid_focus_mask)
@@ -390,6 +411,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     pred_sim[{{},{j},{t},{}}] = y_before_relative -- but does this contain the context though?
 
                     -- good, this corresponds with y_before_relative
+
+                    -- this should still hold
                 end
             end
 
@@ -400,6 +423,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 assert(mp.num_past == 1)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
+
+            -- print(counter_within_batch)
+            -- assert(false)
 
             -- record
             -- print(counter_within_batch)
@@ -438,33 +464,47 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- end
         -------------------------------------------------------------------------
 
-        -- new wall accomodations
-        -- context_pred: (5,ncontext,58,22)
+        -- -- new wall accomodations
+        -- -- context_pred: (5,ncontext,58,22)
 
-        -- you should replace context_orig and context_future_orig
-        -- if invalid_focus then context_pred = context_future (after it has been mutated)
-        -- this makes no difference if all focus are valid but we will have the if statement for speed purposes
-        if has_invalid_focus then
-            -- you have context_pred, trimmed_context_indices, and untrimmed_context_future
-            -- you also can just use untrimmed_context_past directly
-            -- so you are just basically updating untrimmed_context_future
-            -- trimmed_context_indices is a LongTensor 5 x 12
-            -- order shouldn't matter here I think.
+        -- -- you should replace context_orig and context_future_orig
+        -- -- if invalid_focus then context_pred = context_future (after it has been mutated)
+        -- -- this makes no difference if all focus are valid but we will have the if statement for speed purposes
+        -- if has_invalid_focus then
+        --     -- you have context_pred, trimmed_context_indices, and untrimmed_context_future
+        --     -- you also can just use untrimmed_context_past directly
+        --     -- so you are just basically updating untrimmed_context_future
+        --     -- trimmed_context_indices is a LongTensor 5 x 12
+        --     -- order shouldn't matter here I think.
 
-            local k = math.min(12,context_pred:size(2))
-            untrimmed_context_future:scatter(2,trimmed_context_indices:view(mp.batch_size,k,1,1):expandAs(context_future_orig), context_pred:clone())  -- I think this is all you need
-        end
+        --     local k = math.min(12,context_pred:size(2))
+        --     untrimmed_context_future:scatter(2,trimmed_context_indices:view(mp.batch_size,k,1,1):expandAs(context_future_orig), context_pred:clone())  -- I think this is all you need
+        
 
-        -- for balls
-        -- untrimmed_context_past = context_orig
-        -- untrimmed_context_future_orig = context_future_orig
-        -- untrimmed_context_future = context_pred (should be completely replaced by context_pred)
+        --     -- this needs some thinking through
+        --     -- first though you need to get the correct context past in.
 
-        -- good
+        -- end
+
+        -- -- for balls
+        -- -- untrimmed_context_past = context_orig
+        -- -- untrimmed_context_future_orig = context_future_orig
+        -- -- untrimmed_context_future = context_pred (should be completely replaced by context_pred)
+
+        -- -- good
+        -- if saveoutput and i <= mp.ns then
+        --     save_ex_pred_json({this_orig, untrimmed_context_past,
+        --                         y_orig, untrimmed_context_future_orig,
+        --                         this_pred, untrimmed_context_future},
+        --                         'batch'..dataloader.current_sampled_id..'.json',
+        --                         experiment_name,
+        --                         subfolder)
+        -- end
+
         if saveoutput and i <= mp.ns then
             save_ex_pred_json({this_orig, untrimmed_context_past,
                                 y_orig, untrimmed_context_future_orig,
-                                this_pred, untrimmed_context_future},
+                                this_pred, context_pred},
                                 'batch'..dataloader.current_sampled_id..'.json',
                                 experiment_name,
                                 subfolder)
