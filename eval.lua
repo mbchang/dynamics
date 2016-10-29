@@ -229,6 +229,17 @@ local function apply_mask_avg(tensor, mask)
     return averaged
 end
 
+local function find_valid_focus_mask(this)
+    -- Ok, note that you only want the examples where this is a ball or block
+    -- these templates are (bsize, oid_dim)
+    local oid_onehot, template_ball, template_block, template_obstacle = get_oid_templates(this, config_args, mp.cuda)
+    local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
+    local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)  -- 1 if invalid
+    local valid_focus_mask = 1-invalid_focus_mask -- 1 if valid
+    if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
+    return valid_focus_mask, invalid_focus_mask
+end
+
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     -- local count = 0
@@ -311,10 +322,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 -- Ok, note that you only want the examples where this is a ball or block
                 -- these templates are (bsize, oid_dim)
-                local oid_onehot, template_ball, template_block, template_obstacle = get_oid_templates(this, config_args, mp.cuda)
-                local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
-                local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)  -- 1 if invalid
-                local valid_focus_mask = 1-invalid_focus_mask -- 1 if valid
+                local valid_focus_mask, invalid_focus_mask = find_valid_focus_mask(this)
+
                 if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
 
                 if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
@@ -788,20 +797,15 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local total_avg_loss = 0
     local total_avg_ang_error = 0
     local total_avg_rel_mag_error = 0
+    -- you should initialize a counter here too.
 
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
 
-
-
         -- may need to change this
         local loss, pred, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
         local avg_angle_error, avg_relative_magnitude_error = angle_magnitude(pred, batch)
-
-
-
-
 
         total_avg_vel = total_avg_vel+ avg_batch_vel
         total_avg_ang_vel = total_avg_ang_vel + avg_batch_ang_vel
