@@ -325,20 +325,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             local angmag_counter_within_batch = 0
 
             for j = 1, num_particles do
-                -- print(j)
-
-                -- print(past:size())
-                -- print(future:size())
 
                 -- switch to a new focus object
                 -- TODO: in here you should also do k nearest for context past; what about context future?
                 local this, y, context, context_future, y_before_relative = simulate_all_preprocess(past, future, j, t, num_particles)
-
-
-                -- print(context:size())
-                -- print(context_future:size())
-
-                -- assert(false)
 
                 -- Ok, note that you only want the examples where this is a ball or block
                 -- these templates are (bsize, oid_dim)
