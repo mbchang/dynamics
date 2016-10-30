@@ -270,15 +270,6 @@ def create_jobs(dry_run, mode, ext):
 
                         else:
                             flagstring = flagstring + " -" + flag + ' \"' + str(job[flag]) + '\"'
-
-
-
-
-
-
-
-
-
                 else:
                     if flag not in ['name']:
                         jobname = jobname + "_" + flag  + str(job[flag])
