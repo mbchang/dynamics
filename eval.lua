@@ -42,6 +42,8 @@ cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 -- dataset
 cmd:option('-test_dataset_folders', '', 'dataset folder')
+-- cmd:option('-train_dataset_folders', '', 'dataset folder')
+
 -- experiment options
 cmd:option('-ns', 3, 'number of test batches')
 cmd:option('-steps', 58, 'steps to simulate')
@@ -231,7 +233,7 @@ local function apply_mask_avg(tensor, mask)
     local masked = torch.cmul(tensor:clone(), mask:float())
     local num_valid = mask:sum()
     local averaged = masked:sum()/num_valid
-    return averaged
+    return averaged, num_valid
 end
 
 local function find_valid_focus_mask(this)
@@ -366,7 +368,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     local angle_error_batch, relative_magnitude_error_batch, angle_mask = angle_magnitude(pred, batch, true)
 
                     -- note that angle_mask is applied over batch_size. 
-                    local valid_focus_angle_mask = torch.cmul(valid_focus_mask,angle_mask)
+                    local valid_focus_angle_mask = torch.cmul(valid_focus_mask,angle_mask) -- correct
                     local angle_error = apply_mask_avg(angle_error_batch, valid_focus_angle_mask)
                     local relative_magnitude_error = apply_mask_avg(relative_magnitude_error_batch, valid_focus_angle_mask)
 
@@ -414,11 +416,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 past = pred_sim[{{},{},{t},{}}]:clone()
             end
 
-            -- print(counter_within_batch)
-            -- assert(false)
-
             -- record
-            -- print(counter_within_batch)
             losses_through_time_all_batches[{{i},{t}}] = loss_within_batch/counter_within_batch
             vel_loss_through_time_all_batches[{{i},{t}}] = vel_loss_within_batch/counter_within_batch
             ang_vel_loss_through_time_all_batches[{{i},{t}}] = ang_vel_loss_within_batch/counter_within_batch
@@ -814,8 +812,6 @@ function property_analysis_all(logfile, property)
     print('Finished property analysis')
 end
 
-
-
 local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local sum_loss = 0
     local num_batches = num_batches or dataloader.total_batches
@@ -909,6 +905,10 @@ function test_vel_angvel_all()
         end
     end
 end
+
+
+
+
 
 
 function predict_test_first_timestep_all()

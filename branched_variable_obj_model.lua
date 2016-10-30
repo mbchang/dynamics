@@ -303,8 +303,8 @@ function model:fp_batch(params_, batch, sim)
         loss = loss/(p_vel[{{i}}]:nElement()+p_ang_vel[{{i}}]:nElement()) -- manually do size average
         loss_vel = loss_vel/p_vel[{{i}}]:nElement()
         loss_ang_vel = loss_ang_vel/p_ang_vel[{{i}}]:nElement()
-        table.insert(loss_all, loss)
 
+        table.insert(loss_all, loss)
         table.insert(loss_vel_all, loss_vel)
         table.insert(loss_ang_vel_all, loss_ang_vel)
 

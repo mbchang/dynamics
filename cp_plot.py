@@ -1551,15 +1551,15 @@ experiments_dict = {
     ],
 
     'Walls Generalization': [
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'No Pairwise No Lookahead'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'No Pairwise No Lookahead'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'No Pairwise No Lookahead'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed0', 'Independent'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed1', 'Independent'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed2', 'Independent'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE No Lookahead'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE No Lookahead'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE No Lookahead'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
+        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed1', 'Bidirectional LSTM'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed2', 'Bidirectional LSTM'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed0', 'Bidirectional LSTM'),
@@ -1685,6 +1685,11 @@ experiments_dict = {
         ('walls_n2_t60_ex50000_wO_rda__walls_n2_t60_ex50000_wO_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('walls_n2_t60_ex50000_wO_rda__walls_n2_t60_ex50000_wO_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('walls_n2_t60_ex50000_wO_rda__walls_n2_t60_ex50000_wO_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    
+        ('walls_n2_t60_ex50000_wO_rda__walls_n2_t60_ex50000_wO_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda__walls_n2_t60_ex50000_wO_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wO_rda__walls_n2_t60_ex50000_wO_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+
     ],
 
     'Walls L': [
@@ -1695,6 +1700,10 @@ experiments_dict = {
         ('walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wL_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wL_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wL_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    
+        ('walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wL_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wL_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wL_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
     ],
 
     'Walls U': [
@@ -1705,6 +1714,11 @@ experiments_dict = {
         ('walls_n2_t60_ex50000_wU_rda__walls_n2_t60_ex50000_wU_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('walls_n2_t60_ex50000_wU_rda__walls_n2_t60_ex50000_wU_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('walls_n2_t60_ex50000_wU_rda__walls_n2_t60_ex50000_wU_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    
+        ('walls_n2_t60_ex50000_wU_rda__walls_n2_t60_ex50000_wU_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wU_rda__walls_n2_t60_ex50000_wU_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wU_rda__walls_n2_t60_ex50000_wU_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+
     ],
 
     'Walls I': [
@@ -1715,6 +1729,10 @@ experiments_dict = {
         ('walls_n2_t60_ex50000_wI_rda__walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('walls_n2_t60_ex50000_wI_rda__walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('walls_n2_t60_ex50000_wI_rda__walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+
+        ('walls_n2_t60_ex50000_wI_rda__walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wI_rda__walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
+        ('walls_n2_t60_ex50000_wI_rda__walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
     ],
 
 
@@ -1812,14 +1830,6 @@ experiments_dict = {
     ]
 
 
-    # DUO
-
-
-
-
-
-
-
 
 }
 
@@ -1862,12 +1872,17 @@ experiments_to_visualize = [
     # 'tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100'
 
     # LSTM OF
-    'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0',
-    'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.0003_modellstm_seed0',
+    # 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0',
+    # 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.0003_modellstm_seed0',
 
-    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0',
-    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.0003_modellstm_seed0',
+    # 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0',
+    # 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.0003_modellstm_seed0',
 
+
+     # Walls
+    # 'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    # 'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+    'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1',
 
 ]
 
@@ -1983,6 +1998,7 @@ def plot(experiments):
             sys.exit(0)
 
 def parse_log_file(log_file, data):
+    print 'log file', log_file
     with open(log_file, 'r') as f:
         raw = f.readlines()
     headers = raw[0].strip().split('\t')
@@ -2637,40 +2653,66 @@ def plot_experiments(experiments_dict, two_seeds):
         plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
         plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
        
-
-
-
-        # # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda.png',two_seeds)
         plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
         # plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
+        # tva balls prediction
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+
+        # tva balls generalization
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+
+
+        # div balls prediction
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+
+        # div balls generalization # TODO: do LSTM
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+
+        # # tva walls prediction
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
+        # tva walls generalization
+        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
-
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
-
-        # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
-
+        # # div walls prediction
         # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
         # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+        
+        # div walls generalization
+        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
 
 
 
-        # just debugging here
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
 
-
-
-
+        # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
 
 
         # plot_div_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'Cosine Difference', out_root, e+'_anglesimb.png', two_seeds)
@@ -2688,6 +2730,11 @@ def plot_experiments(experiments_dict, two_seeds):
         # plot_tva_error([exp for exp in experiments_dict[e] if 'rda__tower' in exp[0]], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
 
+def find_wall_type(exp_name):
+    begin = exp_name.find('_w') + len('_w')
+    end = begin + exp_name[begin:].find('_')
+    wall_type = exp_name[begin:end]
+    return wall_type
 
 
 # Call Demo_minimal here
@@ -2698,17 +2745,31 @@ def visualize(experiments):
             experiment_folder = os.path.join(out_root, experiment_folder)
             if any('predictions' in x for x in os.listdir(experiment_folder)):
                 prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
-                # print prediction_folders
-                # assert(len(prediction_folders)==1)
-                # prediction_folder = prediction_folders[0]
-                for prediction_folder in prediction_folders:
-                    for batch in [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x]:
+                for prediction_folder in prediction_folders[1:]:
+                    for batch in [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x and 'orig' not in x]:
                         mkdir_p(os.path.join(*[experiment_folder,'visual',os.path.splitext(batch)[0]]))
-                        # print os.path.splitext(batch)[0]
 
+                        # if it is a wall add in the walltype
+                        if 'walls' in prediction_folder:
+                            wall_type = find_wall_type(prediction_folder)
+                            wall_json_file = os.path.join(*[experiment_folder, prediction_folder,batch])
+
+                            # first make a copy
+                            copy_file = wall_json_file[:-5]+'_orig.json'
+                            if 'orig' not in wall_json_file:
+                                copy_command = 'cp '+ wall_json_file + ' ' + copy_file
+                                print copy_command
+                                os.system(copy_command)
+
+                            wall_json_data = json.load(open(wall_json_file,'r'))
+                            wall_json_config = wall_json_data['config']      
+                            wall_json_config['wall'] = wall_type
+                            with open(wall_json_file,'w') as f:
+                                f.write(json.dumps(wall_json_data))
+
+                            new_wall_json_data = json.load(open(wall_json_file,'r'))
 
                     command = 'node ' + js_root + '/Demo_minimal.js -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
-                    # print '#'*80
                     print(command)
                     os.system(command)
                     print '#'*80
@@ -2988,7 +3049,7 @@ def animate(experiments, remove_png):
 #     pprint.pprint(animated_experiments)
 
 
-experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
+# experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 # plot(experiments_to_plot)
 plot_experiments(experiments_dict, False)
 # 

@@ -92,7 +92,7 @@ if mp.server == 'pc' then
     mp.data_root = 'mj_data'
     mp.logs_root = 'logs'
     mp.winsize = 3 -- total number of frames
-    mp.num_past = 2 --10
+    -- mp.num_past = 1 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
     mp.max_iter = 60 
@@ -103,7 +103,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 2
     mp.rnn_dim = 24
-    mp.model = 'lstm'
+    mp.model = 'bffobj'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -158,7 +158,7 @@ end
 
 mp.winsize = mp.num_past + mp.num_future
 mp.object_dim = config_args.si.p[2]
-if mp.of then mp.object_dim = mp.object_dim + 1 end -- flag 
+if mp.of and mp.model == 'lstm' then mp.object_dim = mp.object_dim + 1 end -- flag 
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 if mp.model == 'crnn' then 
