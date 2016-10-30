@@ -183,11 +183,11 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'tower_n5_t120_ex25000_rda','tower_n6_t120_ex25000_rda'}", 'test_dataset_folders': "{'tower_n7_t120_ex25000_rda','tower_n8_t120_ex25000_rda'}"},
 
             # {'dataset_folders':"{'walls_n2_t60_ex100_wU_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex100_wU_rda'}"},
-            {'dataset_folders':"{'walls_n2_t60_ex50000_wI_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wI_rda'}"},
-            {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wO_rda'}"},
-            {'dataset_folders':"{'walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wL_rda'}"},
-            {'dataset_folders':"{'walls_n2_t60_ex50000_wU_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda'}"},
-            # {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}"},
+            # {'dataset_folders':"{'walls_n2_t60_ex50000_wI_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wI_rda'}"},
+            # {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wO_rda'}"},
+            # {'dataset_folders':"{'walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wL_rda'}"},
+            # {'dataset_folders':"{'walls_n2_t60_ex50000_wU_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda'}"},
+            {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}"},
             ]
 
 
@@ -210,7 +210,7 @@ def create_jobs(dry_run, mode, ext):
                                                         for duo in [False]:
                                                             for f in [True]:
                                                                 for rs in [True]:
-                                                                    for seed in [0,1,2]:
+                                                                    for seed in [0]:
                                                                         for nlan in [True]:
                                                                             for rnn_dim in [100]:
                                                                                 job['model'] = model
@@ -255,9 +255,30 @@ def create_jobs(dry_run, mode, ext):
                     print "WARNING: Excluding 'False' flag " + flag
             else:
                 if flag in ['dataset_folders', 'test_dataset_folders']:
+
+                    iseval = mode == 'sim' or mode == 'minf' or mode == 'sinf' or mode == 'oinf' or mode == 'tva' or mode == 'sa' or mode == 'oia'
+
                     # eval.lua does not have a 'dataset_folders' flag
-                    if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders') and not(mode == 'tva' and flag == 'dataset_folders') and not(mode == 'sa' and flag == 'dataset_folders') and not(mode == 'oia' and flag == 'dataset_folders'):
-                        flagstring = flagstring + " -" + flag + ' \"' + str(job[flag] + '\"')                        
+                    # if not(mode == 'sim' and flag == 'dataset_folders') and not(mode == 'minf' and flag == 'dataset_folders') and not(mode == 'sinf' and flag == 'dataset_folders') and not(mode == 'oinf' and flag == 'dataset_folders') and not(mode == 'tva' and flag == 'dataset_folders') and not(mode == 'sa' and flag == 'dataset_folders') and not(mode == 'oia' and flag == 'dataset_folders'):
+                    if not(flag == 'dataset_folders' and iseval):
+                        if flag == 'test_dataset_folders' and iseval and job['dataset_folders'] != job['test_dataset_folders']:
+                            # generalization mode: join dataset_folders and test_dataset_folders
+                            train_worlds = str(job['dataset_folders'])[1:]
+                            test_worlds = str(job['test_dataset_folders'])[:-1]
+
+                            flagstring = flagstring + " -" + flag + ' \"' + test_worlds + ',' + train_worlds + '\"'
+
+                        else:
+                            flagstring = flagstring + " -" + flag + ' \"' + str(job[flag]) + '\"'
+
+
+
+
+
+
+
+
+
                 else:
                     if flag not in ['name']:
                         jobname = jobname + "_" + flag  + str(job[flag])
@@ -373,7 +394,7 @@ def to_slurm(jobname, jobcommand, dry_run):
 dry_run = '--rd' not in sys.argv # real deal
 run_experiment(dry_run)
 # run_experimentload(dry_run)
-# sim(dry_run)
+sim(dry_run)
 # minf(dry_run)
 # sinf(dry_run)
 # oinf(dry_run)
