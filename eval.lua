@@ -397,8 +397,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 else
                     -- we only reach here IF all of the FOCUS objects are INVALID
-                    print('#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#')
-                    print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)', 'batch:',i, 'object:',j,'timestep',t)
+                    -- print('#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#')
+                    -- print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)', 'batch:',i, 'object:',j,'timestep',t)
                     assert((torch.squeeze(this[{{},{-1}}])-y_before_relative):norm()==0)  -- they had better be the same if they are stationary (we assume they can't move)
                     pred_sim[{{},{j},{t},{}}] = y_before_relative -- but does this contain the context though?
 

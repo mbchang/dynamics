@@ -34,48 +34,48 @@ def mkdir_p(path):
             raise
 
 experiments_dict = {
-    'Mixed Prediction': [
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+    # 'Mixed Prediction': [
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    #     ('mixed_n6_t60_ex50000_z_o_dras3_rda__mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
-    ],
+    # ],
 
-    'Mixed Prediction Mass': [
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+    # 'Mixed Prediction Mass': [
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    #     ('mixed_n6_t60_ex50000_m_z_o_dras3_rda__mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
-    ],
+    # ],
 
-    'Mixed Generalization': [
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
-    ], 
+    # 'Mixed Generalization': [
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    #     ('mixed_n3_t60_ex50000_z_o_dras3_rda,mixed_n4_t60_ex50000_z_o_dras3_rda__mixed_n5_t60_ex50000_z_o_dras3_rda,mixed_n6_t60_ex50000_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+    # ], 
 
-    'Mixed Generalization Mass': [
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+    # 'Mixed Generalization Mass': [
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
+    #     ('mixed_n3_t60_ex50000_m_z_o_dras3_rda,mixed_n4_t60_ex50000_m_z_o_dras3_rda__mixed_n5_t60_ex50000_m_z_o_dras3_rda,mixed_n6_t60_ex50000_m_z_o_dras3_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
-    ],
+    # ],
 
     'Balls Prediction NIPS': [
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP: 4 - '),
@@ -93,7 +93,7 @@ experiments_dict = {
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE: 4 - '),
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE: 4 - '),
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE: 4 - '),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
 
         # # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim50_fast_nlan_lr0.01_modellstm_seed0', 'LSTM'),
@@ -287,7 +287,7 @@ experiments_dict = {
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+        # ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0', 'LSTM OF Dim 50 LR 0.001'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed1', 'LSTM OF Dim 50 LR 0.001'),
@@ -350,7 +350,7 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE: 3,4,5 - '),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE: 3,4,5 - '),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE: 3,4,5 - '),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+        # ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
 
         # ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim50_fast_nlan_lr0.01_modellstm_seed0', 'LSTM'),
@@ -546,7 +546,7 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
+        # ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_rs_fast_seed0_lr0.0003_modelind', 'Independent'),
 
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed0', 'LSTM OF Dim 50 LR 0.001'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_fast_nlan_lr0.001_modellstm_seed1', 'LSTM OF Dim 50 LR 0.001'),
@@ -598,24 +598,24 @@ experiments_dict = {
 
     ],
 
-    'Tower': [
-        ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0', 'NP'),
-        ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed1', 'NP'),
-        ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed2', 'NP'),
-        ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0', 'NPE'),
-        ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed1', 'NPE'),
-        ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed2', 'NPE'),
-    ],
+    # 'Tower': [
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed0', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed1', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_vlambda100_rs_fast_nlan_lr0.0003_modelnp_lambda100_seed2', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed0', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed1', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda__tower_n5_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_lambda100_seed2', 'NPE'),
+    # ],
 
-    'Tower Generalization': [
-        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100', 'NP'),
-        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed1_lambda100', 'NP'),
-        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed2_lambda100', 'NP'),
-        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100', 'NPE'),
-        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed1_lambda100', 'NPE'),
-        ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed2_lambda100', 'NPE'),
+    # 'Tower Generalization': [
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed0_lambda100', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed1_lambda100', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelnp_seed2_lambda100', 'NP'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed0_lambda100', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed1_lambda100', 'NPE'),
+    #     ('tower_n5_t120_ex25000_rda,tower_n6_t120_ex25000_rda__tower_n7_t120_ex25000_rda,tower_n8_t120_ex25000_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_vlambda100_modelbffobj_seed2_lambda100', 'NPE'),
 
-    ],
+    # ],
 
     'Balls': [
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP: 4 - '),
@@ -823,144 +823,144 @@ experiments_dict = {
     # ],
 
 
-    'BLSTM Actual Generalization': [
-        # Ok, now we are running all of the actual BLSTM experiments
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
+    # 'BLSTM Actual Generalization': [
+    #     # Ok, now we are running all of the actual BLSTM experiments
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
-
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
 
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 1e-05'),  # check if there is a duplicate
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 1e-05'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
 
 
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 1e-05'),  # check if there is a duplicate
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 1e-05'),
 
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
-
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
-
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
-
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
-    ],
-
-
-    'BLSTM Actual Prediction': [
-        #### balls prediction BLSTM dim 50 layers 5
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
-
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
-
-
-        #### balls prediction BLSTM dim 50 layers 2
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
-        # missing 1e-05 for seed2, missing all of seed1
-
-
-        #### balls prediction BLSTM dim 100 layers 5
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
-
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
-
-
-        #### balls prediction BLSTM dim 100 layers 2
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
-
-        # # missing 0.0003 for seed2
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 1e-05'),
 
 
 
-        #### balls prediction BLSTM dim 200 layers 2
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
 
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
-        # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
 
-        #### balls prediction BLSTM dim 200 layers 5
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
 
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
-        ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
-    ],
+
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
+
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
+
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
+
+
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed0_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed0_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed0_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
+
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
+
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
+    #     ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
+    # ],
+
+
+    # 'BLSTM Actual Prediction': [
+    #     #### balls prediction BLSTM dim 50 layers 5
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
+
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.0003'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 0.01'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim50_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 50 LR 1e-05'),
+
+
+    #     #### balls prediction BLSTM dim 50 layers 2
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.0003'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim50_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 50 LR 0.01'),
+    #     # missing 1e-05 for seed2, missing all of seed1
+
+
+    #     #### balls prediction BLSTM dim 100 layers 5
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
+
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.0003_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.0003'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 0.01'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 5 Dim 100 LR 1e-05'),
+
+
+    #     #### balls prediction BLSTM dim 100 layers 2
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.0003_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.0003'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed1_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
+
+    #     # # missing 0.0003 for seed2
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr0.01_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 0.01'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim100_fast_seed2_lr1e-05_modelbl', 'Bidirectional LSTM Layers 2 Dim 100 LR 1e-05'),
+
+
+
+    #     #### balls prediction BLSTM dim 200 layers 2
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed1_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.0003'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 0.01'),
+    #     # ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers2_rs_rnn_dim200_fast_seed2_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 2 Dim 200 LR 1e-05'),
+
+    #     #### balls prediction BLSTM dim 200 layers 5
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed1_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
+
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.0003_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.0003'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr0.01_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 0.01'),
+    #     ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_rs_rnn_dim200_fast_seed2_lr1e-05_cuda_modelbl', 'Bidirectional LSTM Layers 5 Dim 200 LR 1e-05'),
+    # ],
 
     'LSTM': [
 
@@ -1554,15 +1554,15 @@ experiments_dict = {
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed1', 'NP'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed2', 'NP'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed0', 'Independent'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed1', 'Independent'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed2', 'Independent'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed0', 'Independent'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed1', 'Independent'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelind_seed2', 'Independent'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0', 'NPE'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed1', 'NPE'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed2', 'NPE'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed1', 'Bidirectional LSTM'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed2', 'Bidirectional LSTM'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed0', 'Bidirectional LSTM'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed1', 'Bidirectional LSTM'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed2', 'Bidirectional LSTM'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed0', 'Bidirectional LSTM'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.0003_cuda_modellstm_seed0', 'LSTM'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.0003_cuda_modellstm_seed1', 'LSTM'),
         ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.0003_cuda_modellstm_seed2', 'LSTM'),
@@ -1659,9 +1659,9 @@ experiments_dict = {
         # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_modelbl_seed1_expload', 'Bidirectional LSTM Dim 100 LR 0.01'),
         # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_modelbl_seed2_expload', 'Bidirectional LSTM Dim 100 LR 0.01'),
 
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed0', 'Bidirectional LSTM Dim 100 LR 0.01'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed1', 'Bidirectional LSTM Dim 100 LR 0.01'),
-        ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed2', 'Bidirectional LSTM Dim 100 LR 0.01'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed0', 'Bidirectional LSTM Dim 100 LR 0.01'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed1', 'Bidirectional LSTM Dim 100 LR 0.01'),
+        # ('walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_rnn_dim100_fast_nlan_lr0.01_cuda_modelbl_seed2', 'Bidirectional LSTM Dim 100 LR 0.01'),
 
 
         # not yet
@@ -2296,12 +2296,17 @@ def plot_div_error(exp_list, dataset, outfolder, outfile,two_seeds):
 
         for prediction_folder in prediction_folders:
 
-            # do it this way
-            indep_run_data = []
-            for exp in indep_runs:
-                exp_data = read_div_file(os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log']))[dataset]
-                if exp_data:
-                    indep_run_data.append([float(x) for x in exp_data])
+            try:
+                # do it this way
+                indep_run_data = []
+                for exp in indep_runs:
+                    exp_data = read_div_file(os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log']))[dataset]
+                    if exp_data:
+                        indep_run_data.append([float(x) for x in exp_data])
+            except:
+                print '^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&'
+                print 'Skipped', os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log'])
+                continue
 
             # it will only be empty if dataset not in the file
             if not indep_run_data: continue
@@ -3049,8 +3054,8 @@ def animate(experiments, remove_png):
 #     pprint.pprint(animated_experiments)
 
 
-# experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
-# plot(experiments_to_plot)
+experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
+plot(experiments_to_plot)
 plot_experiments(experiments_dict, False)
 # 
 # visualize(experiments_to_visualize)

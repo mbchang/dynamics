@@ -195,24 +195,24 @@ def create_jobs(dry_run, mode, ext):
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['lstm']:
+        for model in ['np']:
             for nbrhd in [True]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
                     for layers in [5]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-2]
-                            for cuda in [True]:
+                            for cuda in [False]:
                                 for im in [False]:
                                     # for veps in [1e-9]:
                                     #     for lda in [100]:
                                     #         for vlda in [100]:
                                     #             for bnorm in [False]:
-                                                    for of in [True]:
+                                                    for of in [False]:
                                                         for duo in [False]:
                                                             for f in [True]:
                                                                 for rs in [True]:
-                                                                    for seed in [0]:
+                                                                    for seed in [0,1,2]:
                                                                         for nlan in [True]:
-                                                                            for rnn_dim in [100]:
+                                                                            for rnn_dim in [50]:
                                                                                 job['model'] = model
                                                                                 job['nbrhd'] = nbrhd
                                                                                 job['layers'] = layers
@@ -229,7 +229,7 @@ def create_jobs(dry_run, mode, ext):
                                                                                 # job['lambda'] = lda
                                                                                 # job['vlambda'] = vlda
                                                                                 # job['batch_norm'] = bnorm
-                                                                                job['rnn_dim'] = rnn_dim
+                                                                                # job['rnn_dim'] = rnn_dim
                                                                                 job['of'] = of
                                                                                 job['duo'] = duo
                                                                                 # job['num_past'] = 1
@@ -265,9 +265,7 @@ def create_jobs(dry_run, mode, ext):
                             # generalization mode: join dataset_folders and test_dataset_folders
                             train_worlds = str(job['dataset_folders'])[1:]
                             test_worlds = str(job['test_dataset_folders'])[:-1]
-
                             flagstring = flagstring + " -" + flag + ' \"' + test_worlds + ',' + train_worlds + '\"'
-
                         else:
                             flagstring = flagstring + " -" + flag + ' \"' + str(job[flag]) + '\"'
                 else:
@@ -373,7 +371,7 @@ def to_slurm(jobname, jobcommand, dry_run):
         slurmfile.write("#SBATCH --output=slurm_logs/" + jobname + ".out\n")
         slurmfile.write("#SBATCH -N 1\n")
         slurmfile.write("#SBATCH -c 1\n")
-        slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
+        # slurmfile.write("#SBATCH --gres=gpu:tesla-k20:1\n")
         slurmfile.write("#SBATCH --mem=30000\n")
         slurmfile.write("#SBATCH --time=6-23:00:00\n")
         slurmfile.write(jobcommand)
@@ -383,14 +381,14 @@ def to_slurm(jobname, jobcommand, dry_run):
         os.system("sbatch slurm_scripts/" + jobname + ".slurm &")
 
 dry_run = '--rd' not in sys.argv # real deal
-run_experiment(dry_run)
+# run_experiment(dry_run)
 # run_experimentload(dry_run)
 sim(dry_run)
 # minf(dry_run)
 # sinf(dry_run)
 # oinf(dry_run)
 # save(dry_run)
-# tva(dry_run)
+tva(dry_run)
 # sa(dry_run)
 # oia(dry_run)
 
