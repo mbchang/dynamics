@@ -145,10 +145,10 @@ def create_jobs(dry_run, mode, ext):
 
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
-            # {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
+            {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
 
             # {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
-            # {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
+            {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
 
 
             # {'dataset_folders':"{'balls_n3_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n3_t60_ex50000_rda'}"},
@@ -187,7 +187,7 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wO_rda'}"},
             # {'dataset_folders':"{'walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wL_rda'}"},
             # {'dataset_folders':"{'walls_n2_t60_ex50000_wU_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda'}"},
-            {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}"},
+            # {'dataset_folders':"{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}", 'test_dataset_folders': "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}"},
             ]
 
 
@@ -195,10 +195,10 @@ def create_jobs(dry_run, mode, ext):
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['np']:
+        for model in ['lstm']:
             for nbrhd in [True]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [5]:  # [2,3,4]
+                    for layers in [3]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-2]
                             for cuda in [False]:
                                 for im in [False]:
@@ -206,13 +206,13 @@ def create_jobs(dry_run, mode, ext):
                                     #     for lda in [100]:
                                     #         for vlda in [100]:
                                     #             for bnorm in [False]:
-                                                    for of in [False]:
+                                                    for of in [True]:
                                                         for duo in [False]:
                                                             for f in [True]:
                                                                 for rs in [True]:
                                                                     for seed in [0,1,2]:
                                                                         for nlan in [True]:
-                                                                            for rnn_dim in [50]:
+                                                                            for rnn_dim in [100]:
                                                                                 job['model'] = model
                                                                                 job['nbrhd'] = nbrhd
                                                                                 job['layers'] = layers
@@ -229,7 +229,7 @@ def create_jobs(dry_run, mode, ext):
                                                                                 # job['lambda'] = lda
                                                                                 # job['vlambda'] = vlda
                                                                                 # job['batch_norm'] = bnorm
-                                                                                # job['rnn_dim'] = rnn_dim
+                                                                                job['rnn_dim'] = rnn_dim
                                                                                 job['of'] = of
                                                                                 job['duo'] = duo
                                                                                 # job['num_past'] = 1

@@ -318,7 +318,7 @@ experiments_dict = {
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
-    
+
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed0', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed1', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
         ('balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed2', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
@@ -522,8 +522,7 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers2_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 2 Dim 100 LR 0.0003'),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
-        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
-    
+        ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),            
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed0', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed1', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
         ('balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed2', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
@@ -581,7 +580,7 @@ experiments_dict = {
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed2', 'LSTM OF Layers 3 Dim 100 LR 0.0003'),
-    
+
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed0', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed1', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
         ('balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim50_duo_fast_nlan_lr0.001_modellstm_seed2', 'LSTM OF DUO Layers 3 Dim 50 LR 0.001'),
@@ -2751,7 +2750,9 @@ def visualize(experiments):
             if any('predictions' in x for x in os.listdir(experiment_folder)):
                 prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
                 for prediction_folder in prediction_folders[1:]:
-                    for batch in [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x and 'orig' not in x]:
+                    # print [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x and 'orig' not in x]
+                    # assert False
+                    for batch in [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x]:
                         mkdir_p(os.path.join(*[experiment_folder,'visual',os.path.splitext(batch)[0]]))
 
                         # if it is a wall add in the walltype
@@ -2759,12 +2760,12 @@ def visualize(experiments):
                             wall_type = find_wall_type(prediction_folder)
                             wall_json_file = os.path.join(*[experiment_folder, prediction_folder,batch])
 
-                            # first make a copy
-                            copy_file = wall_json_file[:-5]+'_orig.json'
-                            if 'orig' not in wall_json_file:
-                                copy_command = 'cp '+ wall_json_file + ' ' + copy_file
-                                print copy_command
-                                os.system(copy_command)
+                            # # first make a copy
+                            # copy_file = wall_json_file[:-5]+'_orig.json'
+                            # if 'orig' not in wall_json_file:
+                            #     copy_command = 'cp '+ wall_json_file + ' ' + copy_file
+                            #     print copy_command
+                            #     os.system(copy_command)
 
                             wall_json_data = json.load(open(wall_json_file,'r'))
                             wall_json_config = wall_json_data['config']      
@@ -2772,7 +2773,17 @@ def visualize(experiments):
                             with open(wall_json_file,'w') as f:
                                 f.write(json.dumps(wall_json_data))
 
-                            new_wall_json_data = json.load(open(wall_json_file,'r'))
+                            # new_wall_json_data = json.load(open(wall_json_file,'r'))
+                            # old_wall_json_data = json.load(open(copy_file,'r'))
+
+                            # new_wall_t = new_wall_json_data['trajectories']
+                            # old_wall_t = old_wall_json_data['trajectories']
+
+                            # # print new_wall_t
+                            # pprint.pprint(old_wall_t)
+
+
+                            # assert False
 
                     command = 'node ' + js_root + '/Demo_minimal.js -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
                     print(command)
@@ -2997,7 +3008,7 @@ def animate(experiments, remove_png):
                 batch_folder = os.path.join(visual_folder, batch_folder)
                 if any(f.endswith('.png') for f in os.listdir(batch_folder)):
                     create_gif_json(batch_folder, gifname)
-                    # overlay_imgs(batch_folder, batch_name, 5)
+                    overlay_imgs(batch_folder, batch_name, 5)
 
                     if remove_png:
                         print 'Removing images from', batch_folder
@@ -3054,13 +3065,13 @@ def animate(experiments, remove_png):
 #     pprint.pprint(animated_experiments)
 
 
-experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
-plot(experiments_to_plot)
-plot_experiments(experiments_dict, False)
+# experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
+# plot(experiments_to_plot)
+# plot_experiments(experiments_dict, False)
 # 
 # visualize(experiments_to_visualize)
 # tower_stability(experiments_to_visualize)
-# animate(experiments_to_visualize, False)
+animate(experiments_to_visualize, False)
 
 
 # Balls Pred
