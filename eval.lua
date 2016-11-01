@@ -437,9 +437,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         local context_pred = pred_sim[{{},{2,-1}}]
 
-        if mp.relative then
-            y_orig = data_process.relative_pair(this_orig, y_orig, true)
-        end
+        -- unnecessary
+        -- if mp.relative then
+        --     y_orig = data_process.relative_pair(this_orig, y_orig, true)
+        -- end
 
         -- original
         -- if saveoutput and i <= mp.ns then
@@ -905,9 +906,6 @@ function test_vel_angvel_all()
         end
     end
 end
-
-
-
 
 
 
