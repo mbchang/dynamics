@@ -144,10 +144,10 @@ def create_jobs(dry_run, mode, ext):
             # {'dataset_folders':"{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}", 'test_dataset_folders': "{'mixed_n6_t60_ex50000_m_z_o_dras3_rda'}"},  # blstm
 
 
-            # {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
+            {'dataset_folders':"{'balls_n3_t60_ex50000_rda','balls_n4_t60_ex50000_rda','balls_n5_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_rda','balls_n7_t60_ex50000_rda','balls_n8_t60_ex50000_rda'}"},  # blstm
             {'dataset_folders':"{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}"},
 
-            # {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
+            {'dataset_folders':"{'balls_n4_t60_ex50000_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_rda'}"},
             {'dataset_folders':"{'balls_n4_t60_ex50000_m_rda'}", 'test_dataset_folders': "{'balls_n4_t60_ex50000_m_rda'}"},  # blstm
 
 
@@ -195,10 +195,10 @@ def create_jobs(dry_run, mode, ext):
     for job in jobs:
         job['name'] = job['dataset_folders'] + '__' + job['test_dataset_folders']
         job['name'] = job['name'].replace('{','').replace('}', '').replace("'","").replace('\\"','')
-        for model in ['lstm']:
+        for model in ['bffobj','np']:
             for nbrhd in [True]:  
                 for nbhrdsize in [3.5]:  # [3, 3.5, 4, 4.5]
-                    for layers in [3]:  # [2,3,4]
+                    for layers in [5]:  # [2,3,4]
                         for lr in [3e-4]:  # [1e-4, 3e-4, 1e-2]
                             for cuda in [False]:
                                 for im in [False]:
@@ -206,7 +206,7 @@ def create_jobs(dry_run, mode, ext):
                                     #     for lda in [100]:
                                     #         for vlda in [100]:
                                     #             for bnorm in [False]:
-                                                    for of in [True]:
+                                                    for of in [False]:
                                                         for duo in [False]:
                                                             for f in [True]:
                                                                 for rs in [True]:
@@ -217,7 +217,7 @@ def create_jobs(dry_run, mode, ext):
                                                                                 job['nbrhd'] = nbrhd
                                                                                 job['layers'] = layers
                                                                                 job['lr'] = lr
-                                                                                job['nbrhdsize'] = nbhrdsize
+                                                                                # job['nbrhdsize'] = nbhrdsize
                                                                                 job['im'] = im
                                                                                 job['fast'] = f
                                                                                 job['rs'] = rs
@@ -229,7 +229,7 @@ def create_jobs(dry_run, mode, ext):
                                                                                 # job['lambda'] = lda
                                                                                 # job['vlambda'] = vlda
                                                                                 # job['batch_norm'] = bnorm
-                                                                                job['rnn_dim'] = rnn_dim
+                                                                                # job['rnn_dim'] = rnn_dim
                                                                                 job['of'] = of
                                                                                 job['duo'] = duo
                                                                                 # job['num_past'] = 1
@@ -388,7 +388,7 @@ sim(dry_run)
 # sinf(dry_run)
 # oinf(dry_run)
 # save(dry_run)
-tva(dry_run)
+# tva(dry_run)
 # sa(dry_run)
 # oia(dry_run)
 
