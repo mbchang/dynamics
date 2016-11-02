@@ -2201,7 +2201,6 @@ def plot_experiment_error(exp_list, dataset, outfolder, outfile,two_seeds):
             ax.set_ylim(-8,-1)
         else:
             ax.set_ylim(-4, -1)
-            # ax.set_ylim(-2.15,-2)
 
     leg = plt.legend(fontsize=8, frameon=False)
     plt.xlabel('Iterations (x 100000)')
@@ -2230,7 +2229,6 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile,two_seeds, saveleg=Fals
         # fig, ax = plt.subplots()
         # ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
         # marker = itertools.cycle(('o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd')) 
-
 
         indep_runs = exp_groups[label]
 
@@ -2732,78 +2730,130 @@ def plot_experiments(experiments_dict, two_seeds):
         plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
         # plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
-        # tva balls prediction
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+        # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
 
-        # tva balls generalization
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+        def has_models(exp_name):
+            return ('modelnp' in exp_name or 'modelbffobj' in exp_name or 'modellstm' in exp_name)
+
+        exp_types = {
+            'bp': 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda',
+            'bg': 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda',
+            'bpm': 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda',
+            'bgm': 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda',
+            'wg': 'rda,walls',
+        }
+
+        tva_labels = {
+            'angle': 'avg_ang_error',
+            'mag': 'avg_rel_mag_error',
+            'v': 'vel_loss',
+            'av': 'ang_vel_loss',
+        }
+
+        div_labels = {
+            'anglesim': 'Cosine Difference',
+            'magsim': 'Magnitude Difference',
+            'msesim': 'MSE Error',
+            'vsim': 'Velocity Error',
+            'avsim': 'Angular Velocity Error'
+        }
+
+        plot_modes = {
+            plot_tva_error: tva_labels,
+            plot_div_error: div_labels
+        }
+
+        # plot tva
+        # for et in exp_types.values():
+        #     for t in tva_labels:
+        #         plot_tva_error(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
+        #                        dataset=tva_labels[t], 
+        #                        outfolder=out_root, 
+        #                        outfile=e+'_'+t+'.png', 
+        #                        two_seeds=two_seeds)
+
+        # # plot div
+        # for et in exp_types.values():
+        #     for d in div_labels:
+        #         plot_div_error(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
+        #                        dataset=div_labels[d], 
+        #                        outfolder=out_root, 
+        #                        outfile=e+'_'+d+'.png', 
+        #                        two_seeds=two_seeds)
 
 
-        # div balls prediction
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+        for et in exp_types.values():
+            for pm in plot_modes:
+                labels = plot_modes[pm]
+                for la in labels:
+                    pm(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
+                       dataset=labels[la], 
+                       outfolder=out_root, 
+                       outfile=e+'_'+la+'.png', 
+                       two_seeds=two_seeds)      
 
-        # div balls generalization # TODO: do LSTM
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
 
-        # # tva walls prediction
+        # # tva balls prediction
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
         # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
-        # tva walls generalization
-        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
-        plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+        # # tva balls generalization
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
-        # # div walls prediction
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+
+        # # div balls prediction
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+
+        # # div balls generalization # TODO: do LSTM
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+
+        # # # tva walls prediction
+        # # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        # # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        # # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        # # plot_tva_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+
+        # # tva walls generalization
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'vel_loss', out_root, e+'_v.png', two_seeds)
+        # plot_tva_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
+
+        # # # div walls prediction
+        # # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        # # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        # # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        # # plot_div_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
         
-        # div walls generalization
-        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
-        plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+        # # div walls generalization
+        # plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Cosine Difference', out_root, e+'_anglesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Magnitude Difference', out_root, e+'_magsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'MSE Error', out_root, e+'_msesim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Velocity Error', out_root, e+'_vsim.png', two_seeds)
+        # plot_div_error([exp for exp in experiments_dict[e] if 'rda,walls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0] or 'modellstm' in exp[0])], 'Angular Velocity Error', out_root, e+'_avsim.png', two_seeds)
+
+
+        # # here, let's plot each variation individually
 
 
 
 
-        # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
 
 
-        # plot_div_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'Cosine Difference', out_root, e+'_anglesimb.png', two_seeds)
-        # plot_div_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'Magnitude Difference', out_root, e+'_magsimb.png', two_seeds)
-
-        # plot_tva_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'avg_ang_error', out_root, e+'_angleb.png', two_seeds, saveleg=True)
-        # plot_tva_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'avg_rel_mag_error', out_root, e+'_magb.png', two_seeds, saveleg=True)
-
-        # plot_tva_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0]) ], 'avg_ang_error', out_root, e+'_angleb.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if '_rda__balls' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])], 'avg_rel_mag_error', out_root, e+'_magb.png', two_seeds)
-
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'mixed_n6_t60_ex50000_m_z_o_dras3_rda__' in exp[0]], 'avg_ang_error', out_root, e+'_angle.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'mixed_n6_t60_ex50000_m_z_o_dras3_rda__' in exp[0]], 'avg_rel_mag_error', out_root, e+'_mag.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'rda__tower' in exp[0]], 'vel_loss', out_root, e+'_vel.png', two_seeds)
-        # plot_tva_error([exp for exp in experiments_dict[e] if 'rda__tower' in exp[0]], 'ang_vel_loss', out_root, e+'_av.png', two_seeds)
 
 
 def find_wall_type(exp_name):
@@ -2819,15 +2869,9 @@ def visualize(experiments):
     for experiment_folder in experiments:
         try:
             experiment_folder = os.path.join(out_root, experiment_folder)
-            # print experiment_folder
-            # print os.listdir(experiment_folder)
             if any('predictions' in x for x in os.listdir(experiment_folder)):
                 prediction_folders = [x for x in os.listdir(experiment_folder) if 'predictions' in x]
-                # print prediction_folders
-                # assert False
                 for prediction_folder in prediction_folders:
-                    # print [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x and 'orig' not in x]
-                    # assert False
                     for batch in [x for x in os.listdir(os.path.join(experiment_folder, prediction_folder)) if 'batch' in x]:
                         mkdir_p(os.path.join(*[experiment_folder,'visual',os.path.splitext(batch)[0]]))
 
@@ -2836,30 +2880,11 @@ def visualize(experiments):
                             wall_type = find_wall_type(prediction_folder)
                             wall_json_file = os.path.join(*[experiment_folder, prediction_folder,batch])
 
-                            # # first make a copy
-                            # copy_file = wall_json_file[:-5]+'_orig.json'
-                            # if 'orig' not in wall_json_file:
-                            #     copy_command = 'cp '+ wall_json_file + ' ' + copy_file
-                            #     print copy_command
-                            #     os.system(copy_command)
-
                             wall_json_data = json.load(open(wall_json_file,'r'))
                             wall_json_config = wall_json_data['config']      
                             wall_json_config['wall'] = wall_type
                             with open(wall_json_file,'w') as f:
                                 f.write(json.dumps(wall_json_data))
-
-                            # new_wall_json_data = json.load(open(wall_json_file,'r'))
-                            # old_wall_json_data = json.load(open(copy_file,'r'))
-
-                            # new_wall_t = new_wall_json_data['trajectories']
-                            # old_wall_t = old_wall_json_data['trajectories']
-
-                            # # print new_wall_t
-                            # pprint.pprint(old_wall_t)
-
-
-                            # assert False
 
                     command = 'node ' + js_root + '/Demo_minimal.js -e ' + os.path.join(experiment_folder, prediction_folder)  # maybe I need to do this in callback? If I do one it should work, but more than that I don't know.
                     print(command)
