@@ -224,7 +224,20 @@
                 // demo.render.context.fillStyle = "rgba(255, 255, 255, 1.0)";
                 demo.render.context.fillRect(0,0,demo.width,demo.height)
                 Render.world(demo.render)
-                let filename = opt.out_folder + '/' + opt.exp_name + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
+                let prediction_folder = path.basename(path.dirname(opt.out_folder))
+
+                // assert
+                let filename = opt.out_folder + '/' + opt.exp_name + '_' + prediction_folder + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
+                // console.log(filename)
+                // console.log(prediction_folder)
+                // console.log('outfolder',opt.out_folder)
+                // console.log('prediction_folder', prediction_folder)
+                // console.log(opt.out_folder)
+                // console.log(opt.exp_name)
+                // console.log(opt.batch_name)
+                // console.log(opt.ex)
+                // console.log(s)
+                // assert(false)
 
                 // let filename = 'out'+s+'_'+s+'.png'  // TODO! rename
                 PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
@@ -309,13 +322,15 @@
         // let experiment_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs/balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj/balls_n8_t60_ex50000_rdpredictions'
         let exp_name = path.basename(path.dirname(experiment_folder))
         let jsons = fs.readdirSync(experiment_folder)
+        let prediction_folder = path.basename(experiment_folder)
 
         for (let j=0; j < jsons.length; j++) {
             let jf = jsons[j]
             if (jf.indexOf('batch') !== -1) {
                 let loaded_json = jsonfile.readFileSync(experiment_folder + '/' + jf)
                 let batch_name = jf.slice(0, -1*'.json'.length)
-                let out_folder = experiment_folder + '/../visual/' + batch_name
+                
+                let out_folder = experiment_folder + '/../visual/' + prediction_folder + '/' + batch_name
 
                 let stability_dists = {}
 

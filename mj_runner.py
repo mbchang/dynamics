@@ -40,14 +40,15 @@ def create_jobs(dry_run, ext):
     toch_root = '/om/user/mbchang/physics/lua'
 
     # world parameters
-    num_objs = [8]  # how far should we go? Let's say the max is 20. Should we include 1?
+    num_objs = [2]  # how far should we go? Let's say the max is 20. Should we include 1?
     friction = [False]
     gravity = [False]
     masses = [False]  # TODO
     sizes = [False]
     num_obstacles = [False]
-    envs = ['tower']
+    envs = ['walls']
     drastic_size = [False]
+    wall_types = ['O','L','U','I']
 
     # mj data generation
     steps = 60
@@ -64,22 +65,24 @@ def create_jobs(dry_run, ext):
             for z in sizes:
                 for o in num_obstacles:
                     for d in drastic_size:
-                        for g in gravity:
-                            for f in friction:
-                                for e in envs:
-                                    job = OrderedDict()
-                                    job['e'] = e
-                                    job['n'] = n
-                                    job['t'] = steps
-                                    job['s'] = samples
-                                    job['m'] = m
-                                    job['g'] = g
-                                    job['f'] = f 
-                                    job['z'] = z
-                                    job['o'] = o
-                                    job['d'] = d
-                                    jobs.append(job)
-                                    # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
+                        for w in wall_types:
+                            for g in gravity:
+                                for f in friction:
+                                    for e in envs:
+                                        job = OrderedDict()
+                                        job['e'] = e
+                                        job['n'] = n
+                                        job['t'] = steps
+                                        job['s'] = samples
+                                        job['m'] = m
+                                        job['g'] = g
+                                        job['f'] = f 
+                                        job['z'] = z
+                                        job['o'] = o
+                                        job['d'] = d
+                                        job['w'] = w
+                                        jobs.append(job)
+                                        # jobs.append(OrderedDict({'e':e,'n':n, 't':samples, 'ex':steps,'g':g,'f':f}))
 
     if dry_run:
         print "NOT starting jobs:"

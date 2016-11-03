@@ -675,7 +675,13 @@
     // }
 
     Demo.generate_data = function(demo, sim_options) {
-        const max_iters_per_json = 100; 
+        // const max_iters_per_json// = 100; 
+        let max_iters_per_json
+        if (sim_options.env == 'walls') {
+            max_iters_per_json = 20
+        } else {
+            max_iters_per_json = 100
+        }
 
         if (!(typeof sim_options.startstep !== 'undefined' &&  sim_options.startstep)) {
             sim_options.startstep = 0

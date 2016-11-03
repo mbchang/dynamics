@@ -2810,7 +2810,7 @@ if (!_isBrowser) {
                 num_h: 9,  // 9 blocks wide
                 num_v: 7,  // 7 blocks long
             };
-            console.log(options)
+            // console.log(options)
 
             // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
             let wall_data = Walls.create_obstacle_wall(wall_obstacle_params)
@@ -2884,7 +2884,7 @@ if (!_isBrowser) {
         // return a list of positions for the obstacles
 
         Walls.create_obstacle_wall = function(wop) {
-            console.log(wop)
+            // console.log(wop)
             if (wop.wallType == 'O' || wop.wallType == 'I') {  // O means obstacles inside, so our L does not have an indent
                 wop.box = 'true'
                 return Walls.create_obstacle_L(wop)
@@ -3210,14 +3210,14 @@ if (!_isBrowser) {
 
             // generative model
             // sample orientation: 1--> left, 2--> top, 3--> right, 4--> bottom
-            let orientation = random_int(1,2)
+            let orientation = random_int(1,4)
 
             // sample horizontal length
-            let h_length = random_int(1,5)
+            let h_length = 3//random_int(1,5)
             let h_offset = random_int(3,5)
 
             // sample vertical length
-            let v_length = random_int(1,3)
+            let v_length = 3//random_int(1,3)
             let v_offset = 3
 
             // now, let's fill in the border
@@ -3464,6 +3464,7 @@ if (!_isBrowser) {
             console.log('init_from_trajectories')
             Walls.init_from_trajectories(walls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
         }
+        // console.log(walls.engine.world.bodies.length)
         return walls;
     };
 
