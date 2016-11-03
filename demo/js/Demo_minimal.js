@@ -227,16 +227,18 @@
                 let prediction_folder = path.basename(path.dirname(opt.out_folder))
 
                 // assert
-                let filename = opt.out_folder + '/' + opt.exp_name + '_' + prediction_folder + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
+                // let filename = opt.out_folder + '/' + opt.exp_name + '_' + prediction_folder + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
+                let filename = opt.out_folder + '/' + prediction_folder + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
+
                 // console.log(filename)
-                // console.log(prediction_folder)
+                // // console.log(prediction_folder)
                 // console.log('outfolder',opt.out_folder)
                 // console.log('prediction_folder', prediction_folder)
-                // console.log(opt.out_folder)
-                // console.log(opt.exp_name)
-                // console.log(opt.batch_name)
-                // console.log(opt.ex)
-                // console.log(s)
+                // // console.log(opt.out_folder)
+                // console.log('exp_name', opt.exp_name)
+                // // console.log(opt.batch_name)
+                // // console.log(opt.ex)
+                // // console.log(s)
                 // assert(false)
 
                 // let filename = 'out'+s+'_'+s+'.png'  // TODO! rename
