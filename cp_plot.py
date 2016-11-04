@@ -1,7 +1,8 @@
 import os
 import sys
 import plot_results
-import errno   
+import errno  
+import copy as copier
 
 import cv2
 import numpy as np
@@ -1813,6 +1814,8 @@ experiments_dict = {
 
     # ],
 
+    # balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed2
+
     ### ICLR (We can do DUO with more data) ###
     'Balls Prediction ICLR': [
         ('balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0', 'NP: 4 - '),
@@ -1946,10 +1949,16 @@ experiments_to_visualize = [
 
      # Walls
     # 'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelnp_seed0',
-    'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+    # 'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_nbrhdsize3.5_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
     # 'walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0',
 
-    # 'walls_n2_t60_ex40_wU_rda'
+    # Balls
+    'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+    'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0'
+
+
+
 ]
 
 # first get it to plot, then you can worry about the error bars later
@@ -1979,7 +1988,8 @@ experiments_to_visualize = [
 # specify paths
 out_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs'
 in_root = '/om/user/mbchang/physics/lua/logs'
-copy_prefix = 'rsync -avz --exclude \'*.t7\' mbchang@openmind7.mit.edu:'
+# copy_prefix = 'rsync -avz --exclude \'*.t7\' mbchang@openmind7.mit.edu:'
+copy_prefix = 'rsync -avz --exclude \'*.t7\' --exclude \'*experiment.log\' mbchang@openmind7.mit.edu:'
 remote_prefix = '/om/user/mbchang/physics/lua/logs/'
 js_root = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/physics_worlds/demo/js'
 
@@ -2004,6 +2014,7 @@ def parse_exp_log(experiments):
     return exp_log_lengths
 
 def copy(experiments):
+    # assert False, 'experiment.log will get erased!'
     exp_log_lengths = parse_exp_log(experiments)
     if len(experiments) > 1:
         remote_paths = remote_prefix + '\{' + ','.join(['\\"' + e + '\\"' for e in experiments]) + '\} '
@@ -2072,6 +2083,7 @@ def parse_log_file(log_file, data):
         assert len(row) == len(headers)
         for k in range(len(headers)):
             data[headers[k]].append(row[k])
+
     return data
 
 # return np array from log file
@@ -2089,7 +2101,21 @@ def read_log_file(log_file):
 def read_tva_file(log_file):
     # ang_vel_loss    vel_loss    avg_rel_mag_error   loss    avg_ang_error
     data = {'ang_vel_loss':[],'vel_loss':[],'avg_rel_mag_error':[], 'loss': [], 'avg_ang_error': []}
-    return parse_log_file(log_file, data)
+    # return parse_log_file(log_file, data)
+
+    tva_data = parse_log_file(log_file, copier.deepcopy(data))
+    zlogfile = os.path.join(os.path.dirname(log_file),'z' + os.path.basename(log_file))
+    if os.path.exists(zlogfile):
+        ztva_data = parse_log_file(zlogfile, copier.deepcopy(data))
+        combined_data = copier.deepcopy(ztva_data)
+
+        for i in range(len(tva_data[tva_data.keys()[0]])):
+            for k in tva_data:
+                combined_data[k].append(tva_data[k][i])
+    else:
+        print 'ztva_data DOES NOT EXIST! ()()()()()()()()()()()()()()()()()()'
+        combined_data = tva_data
+    return combined_data
 
 # Cosine Difference   Timesteps   Magnitude Difference    MSE Error
 def read_div_file(log_file):
@@ -2097,13 +2123,33 @@ def read_div_file(log_file):
     return parse_log_file(log_file, data)
 
 def read_inf_log_file(log_file):
-    data = {'mass':[]}
-    with open(log_file, 'r') as f:
-        raw = f.readlines()
-    for t in xrange(1,len(raw)):
-        mass = raw[t].strip()
-        data['mass'].append(mass)
-    return data
+    def read_inf_log_file_helper(log_file):
+        data = {'mass':[]}
+        with open(log_file, 'r') as f:
+            raw = f.readlines()
+        for t in xrange(1,len(raw)):
+            mass = raw[t].strip()
+            data['mass'].append(mass)
+        return data
+    inf_data = read_inf_log_file_helper(log_file)
+    # print inf_data
+    zlogfile = os.path.join(os.path.dirname(log_file),'z' + os.path.basename(log_file))
+    if os.path.exists(zlogfile):
+        zinfdata = read_inf_log_file_helper(zlogfile)
+        # print zinfdata
+        combined_data = copier.deepcopy(zinfdata)
+
+        for i in range(len(inf_data[inf_data.keys()[0]])):
+            for k in inf_data:
+                combined_data[k].append(inf_data[k][i])
+    else:
+        print 'zinfdata DOES NOT EXIST! ()()()()()()()()()()()()()()()()()()'
+        combined_data = inf_data
+
+    # print combined_data
+    # assert False
+    return combined_data
+
 
 def plot_experiment(exp_list, dataset, outfolder, outfile):
     ys = []
@@ -2250,6 +2296,7 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
                 except:
                     print '^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&'
                     print 'Skipped', os.path.join(*[out_root,exp,prediction_folder,'tva.log'])
+                    # assert False
                     continue
 
                 # it will only be empty if dataset not in the file
@@ -2284,7 +2331,8 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
                 mins = np.min(indep_run_data,0)
                 means = np.mean(indep_run_data,0)
 
-                x = range(1,min_length+1) # TODO NOTE THAT THIS INDEXING STARTS
+                # x = range(1,min_length+1) # TODO NOTE THAT THIS INDEXING STARTS
+                x = range(min_length)
 
                 print 'x',x, len(x)
                 print 'means',means, len(means)
@@ -2296,7 +2344,9 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
                     ax.set_ylim(0.85,1)
                 elif dataset == 'avg_rel_mag_error':
                     ax.set_ylim(0.0,0.2)
-                ax.set_xlim(1, 12)
+                elif dataset == 'vel_loss':
+                    ax.set_ylim(-4, -1.5)
+                # ax.set_xlim(1, 12)
 
     plt.xlabel('Iterations (x 100000)')
     if dataset =='avg_ang_error':
@@ -2305,6 +2355,10 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
 
     elif dataset == 'avg_rel_mag_error':
         plt.ylabel('Relative Error in Magnitude')  # TODO!
+        leg = plt.legend(fontsize=14, frameon=False, loc='upper right')
+
+    elif dataset == 'vel_loss':
+        plt.ylabel('Velocity Mean Squared Error')  # TODO!
         leg = plt.legend(fontsize=14, frameon=False, loc='upper right')
 
     plt.savefig(os.path.join(outfolder, outfile))
@@ -2363,20 +2417,34 @@ def plot_div_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
 
             if filter_fn(prediction_folder):
 
-                try:
+                # try:
                     # do it this way
-                    indep_run_data = []
-                    for exp in indep_runs:
+                indep_run_data = []
+                for exp in indep_runs:
+                    print 'exp', exp, indep_runs
+                    try:
                         exp_data = read_div_file(os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log']))[dataset]
+                        print 'expdata', exp_data
                         if exp_data:
                             indep_run_data.append([float(x) for x in exp_data])
-                except:
-                    print '^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&'
-                    print 'Skipped', os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log'])
-                    continue
+                    except:
+                        print '^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&'
+                        print 'Skipped', os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log'])
+                    
+                    
+                # except:
+                #     print '^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&^&'
+                #     print 'Skipped', os.path.join(*[out_root,exp,prediction_folder,'gt_divergence.log'])
+                #     continue
+
+                # pprint.pprint(indep_run_data)
+                # if 'LSTM' in label:
+                #     print two_seeds
+                #     assert False
 
                 # it will only be empty if dataset not in the file
                 if not indep_run_data: continue
+
 
                 if two_seeds:
                     min_length = min(len(x) for x in indep_run_data)
@@ -2409,6 +2477,10 @@ def plot_div_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
                 print 'maxs',maxs, len(maxs)
 
                 custom_plot(x, means, mins, maxs, label=label + suffix_fn(prediction_folder), marker=marker.next())
+                if dataset == 'Cosine Difference':
+                    ax.set_ylim(0,1)
+                elif dataset == 'Magnitude Difference':
+                    ax.set_ylim(0,1)
 
             
     # leg = plt.legend(fontsize=20, frameon=False)
@@ -2452,6 +2524,101 @@ def plot_div_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
 
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
+
+
+def aggregate_error(exp_list, read_file_fn, read_file, aggregate_fn=lambda x: True):
+
+    # first group all the same labels together. You will use these for error bars
+    if not exp_list: return
+    exp_groups = {}
+
+    for name, label in exp_list:
+        exp_groups.setdefault(label, []).append(name)
+
+    # print 'exp_groups'
+    # pprint.pprint(exp_groups)
+
+    for label in exp_groups:
+
+        indep_runs = exp_groups[label]
+
+        # print 'indep_runs'
+        # pprint.pprint(indep_runs)
+        # assert False
+
+        # here get all the prediction folders
+        for exp in indep_runs:
+            prediction_folders = [x for x in os.listdir(os.path.join(out_root,exp)) if 'predictions' in x]
+
+            print 'prediciton_folders'
+            print prediction_folders
+            # assert False
+
+            # first let's mkdir_p the aggregate folders
+            # these should correspond and be given
+            # aggregate_fn = lambda x: '_n3' in x or '_n4' in x or '_n5' in x
+
+            aggregate_folder = []
+            for pf in prediction_folders:
+                if aggregate_fn(pf) and ',' not in pf:
+                    aggregate_folder.append(pf)
+            aggregate_folder = ','.join(aggregate_folder)
+
+            # aggregate_folder = 'balls_n3_t60_ex50000_rda_predictions,balls_n4_t60_ex50000_rda_predictions,balls_n5_t60_ex50000_rda_predictions'
+
+            print 'aggregate_folder',aggregate_folder
+            # assert False
+
+            aggregate_folder = os.path.join(*[out_root,exp,aggregate_folder])
+            mkdir_p(aggregate_folder)
+
+            aggregate_data = {}
+            for prediction_folder in prediction_folders:
+                if aggregate_fn(prediction_folder) and ',' not in prediction_folder:
+                    print os.path.join(*[out_root,exp,prediction_folder,read_file])
+                    exp_data = read_file_fn(os.path.join(*[out_root,exp,prediction_folder,read_file]))
+                    for key in exp_data:
+                        aggregate_data.setdefault(key, {})[prediction_folder] = [float(x) for x in exp_data[key]]
+
+            # for each run, we have:
+            # aggregate_data[sim_key][prediction_folder]
+
+            averaged_aggregate_data = {}
+
+            # now let's average
+            for key in aggregate_data:
+                data_across_prediction_folders = []
+                for pf in aggregate_data[key]:
+                    data_across_prediction_folders.append(aggregate_data[key][pf])
+                data_across_prediction_folders = np.array(data_across_prediction_folders)
+                averaged_data_across_prediction_folders = np.mean(data_across_prediction_folders,0)
+
+                averaged_aggregate_data[key] = averaged_data_across_prediction_folders
+
+            # now, let's write the logfile
+            logfile = os.path.join(*[out_root,exp,aggregate_folder,read_file])
+
+            print averaged_aggregate_data
+            print 'writing to aggregate logfile:', logfile
+            write_to_logfile(averaged_aggregate_data, logfile)
+            print 'wrote to aggregate logfile:', logfile
+            # assert False
+
+
+def write_to_logfile(data, log_file):
+    with open(log_file, 'w') as f:
+        # first write header
+        f.write('\t'.join(data.keys())+'\n')
+
+
+        # then write the data
+        for i in range(len(data[data.keys()[0]])):
+            # print [data[key][i] for key in data.keys()]
+            row = '\t'.join([str(data[key][i]) for key in data.keys()])
+            print row
+            f.write(row+'\n')
+
+    # a = ['ang_vel_loss\tvel_loss\tavg_rel_mag_error\tloss\tavg_ang_error\t\n', ' 3.8083e-07\t 5.3843e-03\t 8.5574e-02\t 3.5897e-03\t 9.4105e-01\t\n', ' 4.5990e-08\t 4.6008e-03\t 6.6877e-02\t 3.0672e-03\t 9.5021e-01\t\n', ' 8.8294e-09\t 4.2574e-03\t 6.5603e-02\t 2.8383e-03\t 9.5358e-01\t\n', ' 9.6901e-10\t 3.8712e-03\t 6.3431e-02\t 2.5808e-03\t 9.5638e-01\t\n', ' 9.6760e-10\t 3.7299e-03\t 5.7913e-02\t 2.4866e-03\t 9.5891e-01\t\n', ' 7.8275e-10\t 3.6657e-03\t 6.0777e-02\t 2.4438e-03\t 9.5910e-01\t\n', ' 4.1330e-10\t 3.5728e-03\t 5.9032e-02\t 2.3819e-03\t 9.6006e-01\t\n', ' 1.4248e-10\t 3.4550e-03\t 5.8718e-02\t 2.3034e-03\t 9.6076e-01\t\n', ' 2.5126e-11\t 3.5949e-03\t 5.9316e-02\t 2.3966e-03\t 9.6034e-01\t\n', ' 2.9387e-12\t 3.5216e-03\t 5.8928e-02\t 2.3478e-03\t 9.6079e-01\t\n', ' 5.5441e-12\t 3.5105e-03\t 5.7889e-02\t 2.3403e-03\t 9.6070e-01\t\n', ' 1.7771e-12\t 3.4176e-03\t 5.8592e-02\t 2.2784e-03\t 9.6185e-01\t\n']
 
 
 def plot_hybrid_div_error(exp_list, datasets, outfolder, outfile,two_seeds):
@@ -2578,7 +2745,7 @@ def find_num_obj_in_substring(substring):
         begin = m.end()
         end = begin + substring[m.end():].find('_')
         num_objs.append(substring[begin:end]) 
-        return ','.join(num_objs)
+    return ','.join(num_objs)
 
 def find_wall_type_in_substring(substring):
     wall_types = []
@@ -2587,7 +2754,6 @@ def find_wall_type_in_substring(substring):
         end = begin + substring[m.end():].find('_')
         wall_types.append(substring[begin:end]) 
         return ','.join(wall_types)
-
 
 def find_num_obj_in_substring_single(substring):
     begin = substring.find('_n') + len('_n')
@@ -2702,7 +2868,9 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile,two_seeds):
 
     pprint.pprint(exp_groups)
 
-    for label in exp_groups:
+    stats = {}
+
+    for label in sorted(exp_groups):
         indep_runs = exp_groups[label]
 
         indep_run_data = [[float(x) for x in read_inf_log_file(os.path.join(*[out_root,exp,dataset+'_infer_cf.log']))[dataset]] for exp in indep_runs]
@@ -2720,18 +2888,33 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile,two_seeds):
         min_length = min(len(x) for x in indep_run_data)
         indep_run_data = np.array([x[:min_length] for x in indep_run_data])  # (num_seeds, min_length)
 
+        # hacky
+        if '4 - ' in label:
+            label += '4'
+        elif '3,4,5 - ' in label:
+            label += '6,7,8'
+
         print label, indep_run_data, min_length
+        # assert False
 
         # compute max min and average
         maxs = np.max(indep_run_data,0)
         mins = np.min(indep_run_data,0)
         means = np.mean(indep_run_data,0)
 
-        x = range(1,min_length+1) # TODO
+        stats[label] = {'max': maxs[-1], 'min': mins[-1], 'mean': means[-1]}
+
+        if min_length == 12:
+            x = range(1,min_length+1) # TODO
+        else:
+            x = range(0, min_length)
 
         custom_plot(x, means, mins, maxs, label=label, marker=marker.next())
         ax.set_ylim(0., 1)
-        ax.set_xlim(1, 12)
+        if min_length == 12:
+            ax.set_xlim(1, 12)
+        else:
+            ax.set_xlim(0, 12)
 
     # now plot random baseline
     means = [1.0/3]*min_length
@@ -2739,23 +2922,96 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile,two_seeds):
     maxs = means
     custom_plot(x, means, mins, maxs, label='Random', marker=marker.next())
     ax.set_ylim(0., 1)
-    ax.set_xlim(1, 12)
+    ax.set_xlim(0, 12)
 
 
-    leg = plt.legend(fontsize=14, frameon=False, loc='lower right')
+    leg = plt.legend(fontsize=14, ncol=2, frameon=False, loc='lower right')
     plt.xlabel('Iterations (x 100000)')
     plt.ylabel('Accuracy')  # TODO!
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
 
 
+    # now let's plot a bar plot for the stats
+    print stats
+    # full_file = os.path.join(outfolder, outfile)
+    plot_bar_chart(stats, os.path.join(outfolder, 'b_' + outfile))
+
+def plot_bar_chart(stats, outfile):
+    keys = sorted(stats.keys())  
+    key_labels = ['Random'] + [k[:k.find(':')] for k in keys][::2]
+
+    # hardcoded
+    if len(keys) == 6:
+        preds = [k for k in keys if '4 - 4' in k]
+        gens = [k for k in keys if '3,4,5 - 6,7,8' in k]
+
+        print 'stats'
+        pprint.pprint(stats)
+        # preds
+        preds_mean = [1.0/3]+[stats[k]['mean'] for k in preds]
+        preds_min = [1.0/3]+[stats[k]['min'] for k in preds]
+        preds_max = [1.0/3]+[stats[k]['max'] for k in preds]
+
+        # print 'preds_mean', preds_mean
+        # print 'preds_min', preds_min
+        # print 'preds_max', preds_max
+
+        preds_min = [abs(preds_min[i]-preds_mean[i]) for i in range(len(preds_mean))]
+        preds_max = [abs(preds_max[i]-preds_mean[i]) for i in range(len(preds_mean))]
+
+        # gens
+        gens_mean = [1.0/3]+[stats[k]['mean'] for k in gens]
+        gens_min = [1.0/3]+[stats[k]['min'] for k in gens]
+        gens_max = [1.0/3]+[stats[k]['max'] for k in gens]
+
+        gens_min = [abs(gens_min[i]-gens_mean[i]) for i in range(len(gens_mean))]
+        gens_max = [abs(gens_max[i]-gens_mean[i]) for i in range(len(gens_mean))]    
+
+        # print 'preds_mean', preds_mean
+        # print 'preds_min', preds_min
+        # print 'preds_max', preds_max
+        # assert False
+        n_groups = 4
+        fig, ax = plt.subplots()
+        bar_width = 0.35
+        index = np.arange(n_groups)
+        opacity = 0.4
+        error_config = {'ecolor': '0.3'}
+
+        rects1 = plt.bar(index+ bar_width, preds_mean, bar_width,
+                 alpha=opacity,
+                 color='b',
+                 yerr=[preds_min, preds_max],
+                 error_kw=error_config,
+                 label='4 - 4')
+
+        rects2 = plt.bar(index + 2*bar_width, gens_mean, bar_width,
+                     alpha=opacity,
+                     color='r',
+                     yerr=[gens_min, gens_max],
+                     error_kw=error_config,
+                     label='3,4,5 - 6,7,8')
+
+        plt.ylim(0., 1)
+        plt.xlabel('Model')
+        plt.ylabel('Accuracy')
+        plt.xticks(index + 2*bar_width, key_labels)
+        plt.title('Accuracy in Maximum Likelihood Estimate of Mass')
+        plt.legend(fontsize=14,frameon=False, loc='upper left')
+        plt.tight_layout()
+        plt.savefig(outfile)
+        plt.close()
+
+
+
 def plot_experiments(experiments_dict, two_seeds):
     for e in experiments_dict:
         print 'Plotting', e
-        plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
-        plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
+        # plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
+        # plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
        
-        plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
+        # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
         # plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
         # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
@@ -2765,10 +3021,10 @@ def plot_experiments(experiments_dict, two_seeds):
 
 
         exp_types = {
-            'bp': 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda',
-            'bg': 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda',
-            'bpm': 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda',
-            'bgm': 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda',
+            # 'bp': 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda',
+            # 'bg': 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda',
+            # 'bpm': 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda',
+            # 'bgm': 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda',
             'wg': 'rda,walls',
         }
 
@@ -2788,7 +3044,7 @@ def plot_experiments(experiments_dict, two_seeds):
         }
 
         plot_modes = {
-            plot_tva_error: tva_labels,
+            # plot_tva_error: tva_labels,
             plot_div_error: div_labels
         }
 
@@ -2798,16 +3054,31 @@ def plot_experiments(experiments_dict, two_seeds):
 
         bg_filters = {
             '_345678': lambda x: True, # all worlds
-            '_345': lambda x: '_n3' in x or '_n4' in x or '_n5' in x,
-            '_678': lambda x: '_n6' in x or '_n7' in x or '_n8' in x,
+            '_345': lambda x: '_n3' in x or '_n4' in x or '_n5' in x and not ('_n3' in x and '_n4' in x and '_n5' in x and ',' in x),
+            '_678': lambda x: '_n6' in x or '_n7' in x or '_n8' in x and not ('_n6' in x and '_n7' in x and '_n8' in x and ',' in x),
         }
 
         wall_filters = {
             '_OLUI': lambda x: True, # all worlds
-            '_OL': lambda x: '_wO' in x or '_wL' in x,
-            '_UI': lambda x: '_wU' in x or '_wI' in x,
+            '_OL': lambda x: '_wO' in x or '_wL' in x and not ('_wO' in x and '_wL' in x and ',' in x),
+            '_UI': lambda x: '_wU' in x or '_wI' in x and not ('_wU' in x and '_wI' in x and ',' in x),
+            '_O': lambda x: '_wO' in x and not ('_wO' in x and '_wL' in x and ',' in x),
+            '_L': lambda x: '_wL' in x and not ('_wO' in x and '_wL' in x and ',' in x),
+            '_U': lambda x: '_wU' in x and not ('_wU' in x and '_wI' in x and ',' in x),
+            '_I': lambda x: '_wI' in x and not ('_wU' in x and '_wI' in x and ',' in x),
         }
 
+        bga_filters = {
+            '_345678': lambda x: True, # all worlds
+            '_345': lambda x: '_n3' in x and '_n4' in x and '_n5' in x and ',' in x,
+            '_678': lambda x: '_n6' in x and '_n7' in x and '_n8' in x and ',' in x,
+        }
+
+        walla_filters = {
+            '_OLUI': lambda x: True, # all worlds
+            '_OL': lambda x: '_wO' in x and '_wL' in x and ',' in x,
+            '_UI': lambda x: '_wU' in x and '_wI' in x and ',' in x,
+        }
 
         # plot tva
         # for et in exp_types.values():
@@ -2827,23 +3098,70 @@ def plot_experiments(experiments_dict, two_seeds):
         #                        outfile=e+'_'+d+'.png', 
         #                        two_seeds=two_seeds)
 
+        # aggregate_error([exp for exp in experiments_dict[e] if 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda' in exp[0] and has_models(exp[0])])
+        # assert False
+        # a = read_div_file('/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs/balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda__balls_n6_t60_ex50000_rda,balls_n7_t60_ex50000_rda,balls_n8_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0/balls_n3_t60_ex50000_rda_predictions,balls_n4_t60_ex50000_rda_predictions,balls_n5_t60_ex50000_rda_predictions/gt_divergence.log')
+        # print a
+
+
+        # read_fns = {
+        #     read_tva_file: 'tva.log',
+        #     read_div_file: 'gt_divergence.log'
+        # }
+
+        # # # # first let's aggregate, at least for the walls
+        # for etk in exp_types:
+        #     # print 'etk', etk
+        #     et = exp_types[etk]
+
+        #     if 'g' in etk:
+        #         if 'w' not in etk:  # for now restrict to walls
+        #             print 'etk', etk
+
+        #             if etk in ['wg']:
+        #                 filters = {k:v for k,v in wall_filters.items() if k != '_OLUI'}
+        #             else:
+        #                 filters = {k:v for k,v in bg_filters.items() if k != '_345678'}
+
+        #             for f in filters:
+        #                 print 'f', f
+        #                 for rf in read_fns:
+        #                     print 'rf', rf
+                            
+        #                     aggregate_error(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])],
+        #                                     read_file_fn=rf,
+        #                                     read_file = read_fns[rf],
+        #                                     aggregate_fn=filters[f])
+
+
+
+        # # these should correspond and be given
+        # aggregate_fn = lambda x: '_n3' in x or '_n4' in x or '_n5' in x
+        # aggregate_folder = 'balls_n3_t60_ex50000_rda_predictions,balls_n4_t60_ex50000_rda_predictions,balls_n5_t60_ex50000_rda_predictions'
+
+
 
         for etk in exp_types:
             et = exp_types[etk]
             if etk in ['wg']:
                 filters = wall_filters
+                # walla_filters = walla_filters
                 suffix_fn = find_wall_type_in_substring
             else:
                 if etk in ['bp','bpm']:
                     filters = bp_filters
                 else:
-                    filters = bg_filters
+                    # filters = bg_filters
+                    filters = bga_filters
                 suffix_fn = find_num_obj_in_substring
 
             for f in filters:
                 for pm in plot_modes:
                     labels = plot_modes[pm]
                     for la in labels:
+                        # print 'etk', etk, 'filter', f,'pm', pm,'label', la
+                        # pass
+                        two_seeds = True if etk in 'wg' else False
                         pm(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
                            dataset=labels[la], 
                            outfolder=out_root, 
@@ -3159,18 +3477,12 @@ def animate(experiments, remove_png):
             print 'Nothing in', visual_folder
         else:
             animated_experiments.append(experiment_folder)
-            prediction_folders = [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]
+            prediction_folders = [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x)) if 'predictions' in x]
+            # print prediction_folders
+            # assert False
             for pf in prediction_folders:
                 prediction_folder = os.path.join(visual_folder,pf)
                 for batch_folder in os.listdir(prediction_folder):
-                # print pf
-                # print os.listdir(os.path.join(visual_folder,pf))
-                # print '####'
-
-            # print [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]
-            # assert False
-            # for batch_folder in [x for x in os.listdir(visual_folder) if os.path.isdir(os.path.join(visual_folder,x))]:
-
                     print '-'*80
                     batch_name = experiment_folder + '_' + batch_folder
                     gifname = batch_name + '.gif'
@@ -3234,14 +3546,13 @@ def animate(experiments, remove_png):
 #     print 'Animated the following folders:'
 #     pprint.pprint(animated_experiments)
 
-
 # experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 # plot(experiments_to_plot)
-# plot_experiments(experiments_dict, False)
+plot_experiments(experiments_dict, False)
 # 
 # visualize(experiments_to_visualize)
 # tower_stability(experiments_to_visualize)
-animate(experiments_to_visualize, False)
+# animate(experiments_to_visualize, False)
 
 
 # Balls Pred
