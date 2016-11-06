@@ -63,6 +63,7 @@ cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
 cmd:option('-of', false, 'object flag for lstm')
 cmd:option('-duo', false, 'duo focus for lstm')
+cmd:option('-zero', false, 'save 0th iteration')
 
 
 -- priority sampling
@@ -109,6 +110,7 @@ if mp.server == 'pc' then
     mp.val_window = 5
     mp.val_eps = 2e-5
     mp.duo = false
+    mp.zero = true
 	-- mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
@@ -128,6 +130,7 @@ else
     mp.num_future = 1
 	-- mp.seq_length = 8   -- for the concatenate model
 	mp.num_threads = 4
+    -- mp.zero=true
 end
 
 local M
@@ -332,6 +335,23 @@ function train(start_iter, epoch_num)
         train_losses[#train_losses+1] = v_train_loss
         val_losses[#val_losses+1] = v_val_loss
         test_losses[#test_losses+1] = v_test_loss
+
+        if mp.zero then 
+            local model_file = string.format('%s/epoch%d_step%d_%.7f.t7',
+                                        mp.savedir, epoch_num, 0, v_val_loss)
+            print('saving checkpoint to ' .. model_file)
+
+            local checkpoint = {}
+            checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
+            checkpoint.mp = mp
+            checkpoint.train_losses = train_losses
+            checkpoint.val_losses = val_losses
+            checkpoint.test_losses = test_losses
+            checkpoint.iters = t
+            torch.save(model_file, checkpoint)
+            print('Saved model')
+            return
+        end
     end
 
     for t = start_iter,mp.max_iter do
