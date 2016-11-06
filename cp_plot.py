@@ -1956,9 +1956,12 @@ experiments_to_visualize = [
     'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
     'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
     'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0'
+    'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1',
 
-
-
+    # Balls Pred
+    'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
+    'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0',
 ]
 
 # first get it to plot, then you can worry about the error bars later
@@ -2267,7 +2270,7 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
     for name, label in exp_list:
         exp_groups.setdefault(label, []).append(name)
 
-    for label in exp_groups:
+    for label in sorted(exp_groups):
 
         # fig, ax = plt.subplots()
         # ax.ticklabel_format(axis='x', style='sci', scilimits=(-2,2))
@@ -2402,7 +2405,7 @@ def plot_div_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
     for name, label in exp_list:
         exp_groups.setdefault(label, []).append(name)
 
-    for label in exp_groups:
+    for label in sorted(exp_groups):
 
         indep_runs = exp_groups[label]
 
@@ -2973,8 +2976,9 @@ def plot_bar_chart(stats, outfile):
         # print 'preds_max', preds_max
         # assert False
         n_groups = 4
-        fig, ax = plt.subplots()
-        bar_width = 0.35
+        # fig, ax = plt.subplots()
+        fig = plt.figure(figsize=(4, 6))
+        bar_width = 0.3#0.35
         index = np.arange(n_groups)
         opacity = 0.4
         error_config = {'ecolor': '0.3'}
@@ -2996,9 +3000,12 @@ def plot_bar_chart(stats, outfile):
         plt.ylim(0., 1)
         plt.xlabel('Model')
         plt.ylabel('Accuracy')
-        plt.xticks(index + 2*bar_width, key_labels)
-        plt.title('Accuracy in Maximum Likelihood Estimate of Mass')
-        plt.legend(fontsize=14,frameon=False, loc='upper left')
+        print fig.get_size_inches()
+        # assert False
+        plt.xticks(index + 2*bar_width, key_labels, fontsize=10)
+        plt.yticks(fontsize=10)
+        plt.title('Maximum Likelihood Estimate of Mass', fontsize=12)
+        plt.legend(fontsize=10,frameon=False, loc='upper left')
         plt.tight_layout()
         plt.savefig(outfile)
         plt.close()
@@ -3011,7 +3018,7 @@ def plot_experiments(experiments_dict, two_seeds):
         # plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
         # plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
        
-        # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
+        plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
         # plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
         # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
@@ -3021,10 +3028,10 @@ def plot_experiments(experiments_dict, two_seeds):
 
 
         exp_types = {
-            # 'bp': 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda',
-            # 'bg': 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda',
-            # 'bpm': 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda',
-            # 'bgm': 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda',
+            'bp': 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda',
+            'bg': 'balls_n3_t60_ex50000_rda,balls_n4_t60_ex50000_rda,balls_n5_t60_ex50000_rda',
+            'bpm': 'balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda',
+            'bgm': 'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda',
             'wg': 'rda,walls',
         }
 
@@ -3044,7 +3051,7 @@ def plot_experiments(experiments_dict, two_seeds):
         }
 
         plot_modes = {
-            # plot_tva_error: tva_labels,
+            plot_tva_error: tva_labels,
             plot_div_error: div_labels
         }
 
@@ -3141,35 +3148,35 @@ def plot_experiments(experiments_dict, two_seeds):
 
 
 
-        for etk in exp_types:
-            et = exp_types[etk]
-            if etk in ['wg']:
-                filters = wall_filters
-                # walla_filters = walla_filters
-                suffix_fn = find_wall_type_in_substring
-            else:
-                if etk in ['bp','bpm']:
-                    filters = bp_filters
-                else:
-                    # filters = bg_filters
-                    filters = bga_filters
-                suffix_fn = find_num_obj_in_substring
+        # for etk in exp_types:
+        #     et = exp_types[etk]
+        #     if etk in ['wg']:
+        #         filters = wall_filters
+        #         # walla_filters = walla_filters
+        #         suffix_fn = find_wall_type_in_substring
+        #     else:
+        #         if etk in ['bp','bpm']:
+        #             filters = bp_filters
+        #         else:
+        #             # filters = bg_filters
+        #             filters = bga_filters
+        #         suffix_fn = find_num_obj_in_substring
 
-            for f in filters:
-                for pm in plot_modes:
-                    labels = plot_modes[pm]
-                    for la in labels:
-                        # print 'etk', etk, 'filter', f,'pm', pm,'label', la
-                        # pass
-                        two_seeds = True if etk in 'wg' else False
-                        pm(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
-                           dataset=labels[la], 
-                           outfolder=out_root, 
-                           outfile=e+'_'+la+f+'.png', 
-                           two_seeds=two_seeds,
-                           suffix_fn=suffix_fn,
-                           saveleg=False,
-                           filter_fn=filters[f])      
+        #     for f in filters:
+        #         for pm in plot_modes:
+        #             labels = plot_modes[pm]
+        #             for la in labels:
+        #                 # print 'etk', etk, 'filter', f,'pm', pm,'label', la
+        #                 # pass
+        #                 # two_seeds = True if etk in 'wg' else False
+        #                 pm(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
+        #                    dataset=labels[la], 
+        #                    outfolder=out_root, 
+        #                    outfile=e+'_'+la+f+'.png', 
+        #                    two_seeds=two_seeds,
+        #                    suffix_fn=suffix_fn,
+        #                    saveleg=False,
+        #                    filter_fn=filters[f])      
 
 
         # # tva balls prediction
@@ -3484,7 +3491,8 @@ def animate(experiments, remove_png):
                 prediction_folder = os.path.join(visual_folder,pf)
                 for batch_folder in os.listdir(prediction_folder):
                     print '-'*80
-                    batch_name = experiment_folder + '_' + batch_folder
+                    # batch_name = experiment_folder + '_' + batch_folder
+                    batch_name = pf + '_' + batch_folder
                     gifname = batch_name + '.gif'
                     # batch_folder = os.path.join(visual_folder, batch_folder)
                     batch_folder = os.path.join(prediction_folder, batch_folder)
@@ -3548,11 +3556,11 @@ def animate(experiments, remove_png):
 
 # experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 # plot(experiments_to_plot)
-plot_experiments(experiments_dict, False)
+# plot_experiments(experiments_dict, False)
 # 
-# visualize(experiments_to_visualize)
+visualize(experiments_to_visualize)
 # tower_stability(experiments_to_visualize)
-# animate(experiments_to_visualize, False)
+animate(experiments_to_visualize, False)
 
 
 # Balls Pred
