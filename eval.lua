@@ -40,6 +40,8 @@ cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
 cmd:option('-name', "mj", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
+cmd:option('-zero', false, 'manual seed or not')
+
 -- dataset
 cmd:option('-test_dataset_folders', '', 'dataset folder')
 -- cmd:option('-train_dataset_folders', '', 'dataset folder')
@@ -728,6 +730,9 @@ function get_all_checkpoints(logs_folder, experiment_name)
         print('Adding snapshot: '..result)
         table.insert(checkpoints, result)
     end
+
+    -- local checkpoints = {checkpoints[1]}  -- ZERO CHANGED!
+
     return checkpoints
 end
 
@@ -888,6 +893,7 @@ function test_vel_angvel_all()
         local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
         if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
 
+        -- local logfile = 'ztva.log'  -- ZERO CHANGED!
         local logfile = 'tva.log'
         local tvaLogger = optim.Logger(paths.concat(subfolder, logfile))  -- this should be dataloader specific!
         tvaLogger.showPlot = false
@@ -924,7 +930,8 @@ end
 
 
 function mass_inference()
-    inference('mass_infer_cf.log', 'mass', 'max_likelihood', true)
+    inference('mass_infer_cf.log', 'mass', 'max_likelihood', true)  -- ZERO CHANGED!
+    -- inference('zmass_infer_cf.log', 'mass', 'max_likelihood', true)  -- ZERO CHANGED!
 end
 
 -- note that here we need to do inference on the context!
