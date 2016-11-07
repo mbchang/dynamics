@@ -2351,18 +2351,20 @@ def plot_tva_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
                     ax.set_ylim(-4, -1.5)
                 # ax.set_xlim(1, 12)
 
-    plt.xlabel('Iterations (x 100000)')
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.xlabel('Iterations (x 100000)',fontsize=18)
     if dataset =='avg_ang_error':
-        plt.ylabel('Cosine Similarity')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='lower right')
+        plt.ylabel('Cosine Similarity',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='lower right')
 
     elif dataset == 'avg_rel_mag_error':
-        plt.ylabel('Relative Error in Magnitude')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='upper right')
+        plt.ylabel('Relative Error in Magnitude',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='upper right')
 
     elif dataset == 'vel_loss':
-        plt.ylabel('Velocity Mean Squared Error')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='upper right')
+        plt.ylabel('Velocity Mean Squared Error',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='upper right')
 
     plt.savefig(os.path.join(outfolder, outfile))
 
@@ -2487,22 +2489,24 @@ def plot_div_error(exp_list, dataset, outfolder, outfile, two_seeds, suffix_fn, 
 
             
     # leg = plt.legend(fontsize=20, frameon=False)
-    plt.xlabel('Timesteps')
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.xlabel('Timesteps',fontsize=18)
     if dataset =='Cosine Difference':
-        plt.ylabel('Cosine Similarity')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False)
+        plt.ylabel('Cosine Similarity',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False)
     elif dataset == 'Magnitude Difference':
-        plt.ylabel('Relative Error in Magnitude')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')
+        plt.ylabel('Relative Error in Magnitude',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='upper left')
     elif dataset == 'MSE Error':
-        plt.ylabel('Total Mean Squared Error')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')  
+        plt.ylabel('Total Mean Squared Error',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='upper left')  
     elif dataset == 'Velocity Error':
-        plt.ylabel('Velocity Mean Squared Error')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')
+        plt.ylabel('Velocity Mean Squared Error',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='upper left')
     elif dataset == 'Angular Velocity Error':
-        plt.ylabel('Angular Velocity Mean Squared Error')  # TODO!
-        leg = plt.legend(fontsize=14, frameon=False, loc='upper left')    
+        plt.ylabel('Angular Velocity Mean Squared Error',fontsize=18)  # TODO!
+        leg = plt.legend(fontsize=18, frameon=False, loc='upper left')    
 
     # if you want separate legend
     # plt.xlabel('Iterations (x 100000)')
@@ -2928,9 +2932,9 @@ def plot_inf_error(exp_list, dataset, outfolder, outfile,two_seeds):
     ax.set_xlim(0, 12)
 
 
-    leg = plt.legend(fontsize=14, ncol=2, frameon=False, loc='lower right')
+    leg = plt.legend(fontsize=18, ncol=2, frameon=False, loc='lower right')
     plt.xlabel('Iterations (x 100000)')
-    plt.ylabel('Accuracy')  # TODO!
+    plt.ylabel('Accuracy',fontsize=18)  # TODO!
     plt.savefig(os.path.join(outfolder, outfile))
     plt.close()
 
@@ -3018,7 +3022,7 @@ def plot_experiments(experiments_dict, two_seeds):
         # plot_experiment(experiments_dict[e], 'test', out_root, e+'.png')
         # plot_experiment_error(experiments_dict[e], 'test', out_root, e+'_rda.png',two_seeds)
        
-        plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
+        # plot_inf_error([exp for exp in experiments_dict[e] if '_m_' in exp[0]], 'mass', out_root, e+'_mass_inference_rda_with_random.png',two_seeds)
         # plot_generalization_error([exp for exp in experiments_dict[e] if ',' in exp[0]], out_root, e+'_gen.png',two_seeds)
 
         # # plot_hybrid_div_error([exp for exp in experiments_dict[e] if 'balls_n4_t60_ex50000_rda__balls_n4_t60_ex50000_rda' in exp[0] and ('modelnp' in exp[0] or 'modelbffobj' in exp[0])][::-1], ['Cosine Difference','Magnitude Difference'], out_root, e+'_angmagsim.png', two_seeds)
@@ -3148,35 +3152,35 @@ def plot_experiments(experiments_dict, two_seeds):
 
 
 
-        # for etk in exp_types:
-        #     et = exp_types[etk]
-        #     if etk in ['wg']:
-        #         filters = wall_filters
-        #         # walla_filters = walla_filters
-        #         suffix_fn = find_wall_type_in_substring
-        #     else:
-        #         if etk in ['bp','bpm']:
-        #             filters = bp_filters
-        #         else:
-        #             # filters = bg_filters
-        #             filters = bga_filters
-        #         suffix_fn = find_num_obj_in_substring
+        for etk in exp_types:
+            et = exp_types[etk]
+            if etk in ['wg']:
+                filters = wall_filters
+                # walla_filters = walla_filters
+                suffix_fn = find_wall_type_in_substring
+            else:
+                if etk in ['bp','bpm']:
+                    filters = bp_filters
+                else:
+                    # filters = bg_filters
+                    filters = bga_filters
+                suffix_fn = find_num_obj_in_substring
 
-        #     for f in filters:
-        #         for pm in plot_modes:
-        #             labels = plot_modes[pm]
-        #             for la in labels:
-        #                 # print 'etk', etk, 'filter', f,'pm', pm,'label', la
-        #                 # pass
-        #                 # two_seeds = True if etk in 'wg' else False
-        #                 pm(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
-        #                    dataset=labels[la], 
-        #                    outfolder=out_root, 
-        #                    outfile=e+'_'+la+f+'.png', 
-        #                    two_seeds=two_seeds,
-        #                    suffix_fn=suffix_fn,
-        #                    saveleg=False,
-        #                    filter_fn=filters[f])      
+            for f in filters:
+                for pm in plot_modes:
+                    labels = plot_modes[pm]
+                    for la in labels:
+                        # print 'etk', etk, 'filter', f,'pm', pm,'label', la
+                        # pass
+                        # two_seeds = True if etk in 'wg' else False
+                        pm(exp_list=[exp for exp in experiments_dict[e] if et in exp[0] and has_models(exp[0])], 
+                           dataset=labels[la], 
+                           outfolder=out_root, 
+                           outfile=e+'_'+la+f+'.png', 
+                           two_seeds=two_seeds,
+                           suffix_fn=suffix_fn,
+                           saveleg=False,
+                           filter_fn=filters[f])      
 
 
         # # tva balls prediction
@@ -3556,11 +3560,11 @@ def animate(experiments, remove_png):
 
 # experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 # plot(experiments_to_plot)
-# plot_experiments(experiments_dict, False)
+plot_experiments(experiments_dict, False)
 # 
-visualize(experiments_to_visualize)
+# visualize(experiments_to_visualize)
 # tower_stability(experiments_to_visualize)
-animate(experiments_to_visualize, False)
+# animate(experiments_to_visualize, True)
 
 
 # Balls Pred
