@@ -299,7 +299,6 @@ function apply_hypothesis_rand(batch, indices_names, obj_id)
             context_past[{{},{obj_id},{},name_index}] = hypotheses[name]
             -- you can assert that originally zero indices should be zero indices afterwards
         end
-        --good
     end
     return {this_past, context_past, this_future, context_future, mask}
 end
@@ -781,7 +780,6 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
 
                 -- at the point, we have 
                 if context_and_wall_mask:sum() > 0 then
-                    -- TODO: 
                     local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch, true)  --this should set sim to true!
 
                     local cd_error, relative_magnitude_error, angle_mask, mask_nElement = angle_magnitude(prediction, batch, true)

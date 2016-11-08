@@ -1955,7 +1955,7 @@ experiments_to_visualize = [
     # Balls
     'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0',
     'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0',
-    'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0'
+    'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed0',
     'balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers3_nbrhd_nbrhdsize3.5_rs_of_rnn_dim100_fast_nlan_lr0.0003_modellstm_seed1',
 
     # Balls Pred
@@ -3484,6 +3484,12 @@ def animate(experiments, remove_png):
         print '#'*80
         print 'Trying to animate', experiment_folder
         visual_folder = os.path.join(*[out_root, experiment_folder, 'visual'])  # TODO! you have to incorporate prediction folder here too!!!!
+        # print '\nout root'
+        # print out_root
+        # print '\nexperiment folder'
+        # print experiment_folder
+        # print '\nvisual folder'
+        # print visual_folder
         if not os.listdir(visual_folder): 
             print 'Nothing in', visual_folder
         else:
@@ -3560,11 +3566,11 @@ def animate(experiments, remove_png):
 
 # experiments_to_plot = copy(experiments)  # returns a list of experiments that changed
 # plot(experiments_to_plot)
-plot_experiments(experiments_dict, False)
+# plot_experiments(experiments_dict, False)
 # 
-# visualize(experiments_to_visualize)
+visualize(experiments_to_visualize)
 # tower_stability(experiments_to_visualize)
-# animate(experiments_to_visualize, True)
+animate(experiments_to_visualize, True)
 
 
 # Balls Pred

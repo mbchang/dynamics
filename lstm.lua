@@ -9,23 +9,21 @@ require 'modules'
 
 nngraph.setDebug(true)
 
--- however, you can have variable sequence length now!
+-- input: table of length num_obj with size (bsize, num_past*obj_dim)
+-- output: table of length num_obj with size (bsize, num_future*obj_dim)
 function init_network(params)
-    -- input: table of length num_obj with size (bsize, num_past*obj_dim)
-    -- output: table of length num_obj with size (bsize, num_future*obj_dim)
     local hid_dim = params.rnn_dim
     local obj_dim = params.object_dim
     local max_obj = params.seq_length
     local num_past = params.num_past
     local num_future = params.num_future
     local in_dim = num_past*obj_dim
-    local out_dim = num_future*obj_dim  -- note that we will be ignoring the padded areas during backpropagation
+    local out_dim = num_future*obj_di
     local num_layers = params.layers
 
     assert(num_layers > 0)
 
     local net = nn.Sequential()
-
     local anLSTM
     for i = 1, num_layers do
         nn.FastLSTM.usenngraph = true
@@ -33,7 +31,9 @@ function init_network(params)
         if i == 1 then anLSTM = nn.FastLSTM(in_dim, hid_dim)
         else
             anLSTM = nn.FastLSTM(hid_dim, hid_dim)
-            if mp.dropout > 0 then net:add(nn.Sequencer(nn.Dropout(mp.dropout))) end
+            if mp.dropout > 0 then 
+                net:add(nn.Sequencer(nn.Dropout(mp.dropout))) 
+            end
         end
         net:add(nn.Sequencer(anLSTM))
         net:add(nn.Sequencer(nn.ReLU()))
@@ -143,8 +143,6 @@ function model:unpack_batch(batch, sim)
         shuffind = torch.randperm(num_context)
     end
 
-    -- here you can insert a focus into the context table even though it is not actually a context, unlesss you can insert into the first pposition
-
     -- here you have to create a table of tables
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
@@ -154,14 +152,14 @@ function model:unpack_batch(batch, sim)
         table.insert(contexts, one_context)  -- good
     end
 
-    -- TODO: you'd have to modify this_past as well as this_future
     local focus_past = this_past:clone()
     local focus_future = this_future:clone()
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        self.neighbor_masks = self:select_neighbors(contexts, focus_past:clone())  -- this gets updated every batch!
+        -- this gets updated every batch!
+        self.neighbor_masks = self:select_neighbors(contexts, focus_past:clone())  
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
@@ -169,10 +167,10 @@ function model:unpack_batch(batch, sim)
         end
     end
 
-    contexts = self:apply_mask(contexts, self.neighbor_masks)  -- so you wouldn't apply the nbrhd mask on this_past?
+    contexts = self:apply_mask(contexts, self.neighbor_masks)
 
     local all_past = contexts
-    table.insert(all_past, focus_past:clone())  -- last element is always this_past
+    table.insert(all_past, focus_past:clone())  -- last element always this_past
 
     local all_future = {}
     for i=1,num_context do

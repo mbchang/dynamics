@@ -56,7 +56,7 @@ cmd:option('-L2', 0, 'L2 regularization')  -- 0.001
 cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-val_window', 10, 'for testing convergence')
-cmd:option('-val_eps', 1e-6, 'for testing convergence')  -- 1e-5
+cmd:option('-val_eps', 1e-6, 'for testing convergence')
 cmd:option('-im', false, 'infer mass')
 cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
 cmd:option('-vlambda', 1, 'velocity penalization')
@@ -77,8 +77,8 @@ cmd:option('-plot', false, 'turn on/off plot')
 
 -- every options
 cmd:option('-print_every', 500, 'print every number of batches')
-cmd:option('-save_every', 100000, 'save every number of batches')  -- this should be every 100000
-cmd:option('-val_every', 100000,'val every number of batches') -- this should be every 100000 
+cmd:option('-save_every', 100000, 'save every number of batches')
+cmd:option('-val_every', 100000,'val every number of batches')
 cmd:option('-lrdecay_every',2500,'decay lr every number of batches')
 cmd:option('-lrdecayafter', 50000, 'number of epochs before turning down lr')
 cmd:option('-cuda', false, 'gpu')
@@ -93,7 +93,6 @@ if mp.server == 'pc' then
     mp.data_root = 'mj_data'
     mp.logs_root = 'logs'
     mp.winsize = 3 -- total number of frames
-    -- mp.num_past = 1 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
     mp.max_iter = 60 
@@ -111,7 +110,6 @@ if mp.server == 'pc' then
     mp.val_eps = 2e-5
     mp.duo = false
     mp.zero = true
-	-- mp.seq_length = 8 -- for the concatenate model
 	mp.num_threads = 1
     mp.shuffle = false
     mp.batch_norm = false
@@ -125,12 +123,8 @@ if mp.server == 'pc' then
     mp.fast = true
     mp.of = true
 else
-	-- mp.winsize = 3  -- total number of frames
-    -- mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	-- mp.seq_length = 8   -- for the concatenate model
 	mp.num_threads = 4
-    -- mp.zero=true
 end
 
 local M
@@ -306,8 +300,6 @@ function feval_train(params_)
     end
 
     local loss, prediction = model:fp(params_, batch)
-    -- print(prediction)
-    -- assert(false)
     local grad = model:bp(batch,prediction)
 
     if mp.L2 > 0 then
@@ -543,7 +535,6 @@ function read_log_file_3vals(logfile)
     return data
 end
 
--- UPDATE
 function run_experiment_load()
     local snapshot = getLastSnapshot(mp.name)
     local snapshotfile = mp.savedir ..'/'..snapshot
@@ -564,7 +555,7 @@ function run_experiment_load()
     -- because previously we had not saved test_losses.
     if #test_losses == 0 then
         -- read it from the experiment log file
-        test_losses = torch.exp(torch.squeeze(logs_losses[{{},{3}}])):totable()  -- TODO! you need to do torch exp here!
+        test_losses = torch.exp(torch.squeeze(logs_losses[{{},{3}}])):totable()
         assert(#test_losses==#train_losses)
     end
 

@@ -10,7 +10,6 @@ require 'Base'
 require 'sys'
 require 'pl'
 require 'torchx'
--- require 'hdf5'
 torch.setdefaulttensortype('torch.FloatTensor')
 require 'data_utils'
 local tablex = require 'pl.tablex'
@@ -44,7 +43,6 @@ cmd:option('-zero', false, 'manual seed or not')
 
 -- dataset
 cmd:option('-test_dataset_folders', '', 'dataset folder')
--- cmd:option('-train_dataset_folders', '', 'dataset folder')
 
 -- experiment options
 cmd:option('-ns', 3, 'number of test batches')
@@ -61,7 +59,6 @@ if mp.server == 'pc' then
     mp.num_past = 2 --10
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
-	-- mp.seq_length = 10
 	mp.num_threads = 1
 	mp.cuda = false
 else
@@ -251,7 +248,6 @@ end
 
 
 function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
-    -- local count = 0
     local losses_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
     local mag_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
     local ang_error_through_time_all_batches = torch.zeros(dataloader.total_batches, numsteps)
@@ -297,10 +293,9 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
-        -- -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
+        -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
         -- local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)   -- no flag yet
         -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good   -- no flag yet (because we don't know which is focus or context)
-
 
         local past = torch.cat({unsqueeze(this_orig:clone(),2), untrimmed_context_past:clone()},2)   -- no flag yet
         local future = torch.cat({unsqueeze(y_orig:clone(),2), untrimmed_context_future:clone()},2)  -- good   -- no flag yet (because we don't know which is focus or context)
@@ -331,7 +326,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             for j = 1, num_particles do
 
                 -- switch to a new focus object
-                -- TODO: in here you should also do k nearest for context past; what about context future?
                 local this, y, context, context_future, y_before_relative = simulate_all_preprocess(past, future, j, t, num_particles)
 
                 -- Ok, note that you only want the examples where this is a ball or block
@@ -341,8 +335,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
 
                 if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
-                    -- print('0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0O0')
-                    -- print('invalid_focus_mask:sum() < invalid_focus_mask:size(1)','batch:',i, 'object:',j,'timestep',t)
                     -- note that we have to keep the batch size constant.
                     -- okay, so I think we'd need to do some dummy filling.
                     -- for the ones that have an obstacle, I just need to fill it with a dummy entry
@@ -361,12 +353,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                     local loss_batch, pred, vel_loss_batch, ang_vel_loss_batch = model:fp_batch(params_,batch,true)
 
-                    -- local loss_batch = torch.cmul(loss_batch, valid_focus_mask)
                     local loss = apply_mask_avg(loss_batch, valid_focus_mask)
                     local vel_loss = apply_mask_avg(vel_loss_batch, valid_focus_mask)
                     local ang_vel_loss = apply_mask_avg(ang_vel_loss_batch, valid_focus_mask)
 
-                    -- local angle_error, relative_magnitude_error = angle_magnitude(pred, batch)
                     local angle_error_batch, relative_magnitude_error_batch, angle_mask = angle_magnitude(pred, batch, true)
 
                     -- note that angle_mask is applied over batch_size. 
@@ -399,14 +389,8 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 else
                     -- we only reach here IF all of the FOCUS objects are INVALID
-                    -- print('#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#>#')
-                    -- print('invalid_focus_mask:sum() = invalid_focus_mask:size(1)', 'batch:',i, 'object:',j,'timestep',t)
                     assert((torch.squeeze(this[{{},{-1}}])-y_before_relative):norm()==0)  -- they had better be the same if they are stationary (we assume they can't move)
                     pred_sim[{{},{j},{t},{}}] = y_before_relative -- but does this contain the context though?
-
-                    -- good, this corresponds with y_before_relative
-
-                    -- this should still hold
                 end
             end
 
@@ -438,59 +422,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         if numsteps == 1 then this_pred = unsqueeze(this_pred,2) end
 
         local context_pred = pred_sim[{{},{2,-1}}]
-
-        -- unnecessary
-        -- if mp.relative then
-        --     y_orig = data_process.relative_pair(this_orig, y_orig, true)
-        -- end
-
-        -- original
-        -- if saveoutput and i <= mp.ns then
-        --     save_ex_pred_json({this_orig, context_orig,
-        --                         y_orig, context_future_orig,
-        --                         this_pred, context_pred},
-        --                         'batch'..dataloader.current_sampled_id..'.json',
-        --                         experiment_name,
-        --                         subfolder)
-        -- end
-        -------------------------------------------------------------------------
-
-        -- -- new wall accomodations
-        -- -- context_pred: (5,ncontext,58,22)
-
-        -- -- you should replace context_orig and context_future_orig
-        -- -- if invalid_focus then context_pred = context_future (after it has been mutated)
-        -- -- this makes no difference if all focus are valid but we will have the if statement for speed purposes
-        -- if has_invalid_focus then
-        --     -- you have context_pred, trimmed_context_indices, and untrimmed_context_future
-        --     -- you also can just use untrimmed_context_past directly
-        --     -- so you are just basically updating untrimmed_context_future
-        --     -- trimmed_context_indices is a LongTensor 5 x 12
-        --     -- order shouldn't matter here I think.
-
-        --     local k = math.min(12,context_pred:size(2))
-        --     untrimmed_context_future:scatter(2,trimmed_context_indices:view(mp.batch_size,k,1,1):expandAs(context_future_orig), context_pred:clone())  -- I think this is all you need
-        
-
-        --     -- this needs some thinking through
-        --     -- first though you need to get the correct context past in.
-
-        -- end
-
-        -- -- for balls
-        -- -- untrimmed_context_past = context_orig
-        -- -- untrimmed_context_future_orig = context_future_orig
-        -- -- untrimmed_context_future = context_pred (should be completely replaced by context_pred)
-
-        -- -- good
-        -- if saveoutput and i <= mp.ns then
-        --     save_ex_pred_json({this_orig, untrimmed_context_past,
-        --                         y_orig, untrimmed_context_future_orig,
-        --                         this_pred, untrimmed_context_future},
-        --                         'batch'..dataloader.current_sampled_id..'.json',
-        --                         experiment_name,
-        --                         subfolder)
-        -- end
 
         if saveoutput and i <= mp.ns then
             save_ex_pred_json({this_orig, untrimmed_context_past,

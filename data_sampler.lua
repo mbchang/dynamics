@@ -21,7 +21,6 @@ local datasampler = {}
 datasampler.__index = datasampler
 
 
--- function datasampler.create(dataset_name, dataset_folder, shuffle, cuda)
 function datasampler.create(dataset_name, args)
     --[[
         I actually only need dataset_name, dataset_folder, shufffle, cuda. Do I need a priority_sampler?
@@ -206,7 +205,7 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
 end
 
 function datasampler:load_subbatch_id(id)
-    self.current_sampled_id = id  -- note! I don't even need to change this! This now indexes the subbatches!
+    self.current_sampled_id = id
     local batch_id = math.floor((self.current_sampled_id-1) / self.num_subbatches_per_batch) + 1
     local offset = (self.current_sampled_id-1) - (self.num_subbatches_per_batch*(batch_id-1)) + 1
     return self:load_subbatch_id_any_offset(batch_id, offset)
