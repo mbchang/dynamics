@@ -228,7 +228,7 @@ function model:select_neighbors(contexts, this)
         euc_dist_next = euc_dist_next * config_args.position_normalize_constant  -- turn into absolute coordinates
 
         -- find the indices in the batch for neighbors and non-neighbors
-        local neighbor_mask = convert_type(euc_dist_next:le(threshold), mp.cuda)  -- 1 if neighbor 0 otherwise   -- potential cuda
+        local neighbor_mask = convert_type(euc_dist_next:le(threshold), mp.cuda)  -- 1 if neighbor 0 otherwise
         table.insert(neighbor_masks, neighbor_mask:clone()) -- good
     end
 
@@ -338,7 +338,7 @@ function model:bp(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(all_future[#all_future]))
 
-    -- NOTE! is there a better loss function for angle?
+    -- TODO: get better cost function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -386,14 +386,6 @@ function model:update_position(this, pred)
     local currpos = (pred[{{},{},{px,py}}]:clone()*pnc)
     local currvel = (pred[{{},{},{vx,vy}}]:clone()*vnc)
 
-    -- print('lastpos normalized')
-    -- print(this[{{},{-1},{px,py}}])
-
-    -- print('lastpos unnormalized')
-    -- print(lastpos)
-    -- print('currpos unnormalized')
-    -- print(currpos)
-
     -- this is length n+1
     local pos = torch.cat({lastpos, currpos},2)
     local vel = torch.cat({lastvel, currvel},2)
@@ -406,9 +398,6 @@ function model:update_position(this, pred)
     -- normalize again
     pos = pos/pnc
     assert(pos[{{},{1},{}}]:size(1) == pred:size(1))
-
-    -- print('currpos normalized')
-    -- print(pos[{{},{2,-1},{}}] )
 
     pred[{{},{},{px,py}}] = pos[{{},{2,-1},{}}]  -- reassign back to pred
     return pred

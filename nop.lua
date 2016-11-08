@@ -150,7 +150,7 @@ function model:unpack_batch(batch, sim)
     -- context: (bsize, mp.seq_length, dim)
     local contexts = {}
     for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
-        table.insert(contexts, torch.squeeze(context[{{},{t}}]))  -- good
+        table.insert(contexts, torch.squeeze(context[{{},{t}}]))
     end
 
     ------------------------------------------------------------------
@@ -160,7 +160,7 @@ function model:unpack_batch(batch, sim)
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
-            table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))  -- good
+            table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))
         end
     end
 
@@ -180,15 +180,7 @@ function model:select_neighbors(contexts, this)
         -- reshape
         local context = c:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
 
-        -- make threshold depend on object id!
-        -- local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
-        -- local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
-        -- local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
-        -- local template_ball = template:clone()
-        -- local template_block = template:clone()
-        -- template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
-        -- template_block[{{},{},{config_args.oids.block}}]:fill(1)
-
+        -- TODO make threshold depend on object id!
         local oid_onehot, template_ball, template_block = get_oid_templates(this, config_args, self.mp.cuda)
 
         if (oid_onehot-template_ball):norm()==0 then
@@ -215,7 +207,7 @@ function model:select_neighbors(contexts, this)
 
         -- find the indices in the batch for neighbors and non-neighbors
         local neighbor_mask = convert_type(euc_dist_next:le(threshold), mp.cuda)  -- 1 if neighbor 0 otherwise   -- potential cuda
-        table.insert(neighbor_masks, neighbor_mask:clone()) -- good
+        table.insert(neighbor_masks, neighbor_mask:clone())
     end
 
     return neighbor_masks
@@ -310,7 +302,7 @@ function model:bp(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    -- NOTE! is there a better loss function for angle?
+    -- TODO: better loss function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -331,12 +323,6 @@ function model:bp(batch, prediction, sim)
     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
-    ------------------------------------------------------------------
-    -- if mp.cf then
-    --     local collision_mask = collision_filter(batch)
-    --     d_pred:cmul(collision_mask:expandAs(d_pred):float())
-    -- end
-    ------------------------------------------------------------------
 
     -- neighborhood
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}
@@ -367,7 +353,7 @@ function model:bp_input(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    -- NOTE! is there a better loss function for angle?
+    -- TODO: better loss function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -456,7 +442,6 @@ function model:update_angle(this, pred)
     for i = 1,ang:size(2)-1 do
         ang[{{},{i+1},{}}] = ang[{{},{i},{}}] + ang_vel[{{},{i},{}}]  -- last dim=2
     end
-
 
     -- if it is greater than pi, then just wrap it to [-pi, pi] again
     -- if it is less than -pi, then just wrap it to [-pi, pi] again

@@ -175,6 +175,7 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         si_indices = {px=1,py=1,m={1,4},oid={1,2}}
         -- random between 0 and 1 because pos, oid, os are all in that range
         -- {px: rand, py: rand, mass: tensor(4), oid: tensor(3)}
+        -- in progress
         -- hypotheses = generate_random_hypotheses(si_indices, 5,2)  -- good
         -- for n,t in pairs(hypotheses) do
         --     print(hypotheses[n])
@@ -667,39 +668,6 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
     return best_hypotheses
 end
 
--- function eval_straightaway(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
---     local num_correct = 0
---     local count = 0
---     for i = 1, dataloader.total_batches do
---         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
---         local batch = dataloader:sample_sequential_batch(false)
---         local test_losses, prediction = model:fp_batch(params_, batch)
-
---         -- now do a context filter. I want the examples where the focus will NOT hit a context.
---         -- let's take a look at context_collision_filter
-
---         -- also filter out walls
-
---         -- 
-
---         local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
---         -- now that you have best_hypothesis, compare best_hypotheses with truth
---         -- need to construct true hypotheses based on this_past, hypotheses as parameters
---         local this_past = batch[1]:clone()
---         local ground_truth = torch.squeeze(this_past[{{},{-1},si_indices}])  -- object properties always the same across time
---         num_correct, count = count_correct(batch, ground_truth, best_hypotheses, num_correct, count, cf, distance_threshold)
-
---         collectgarbage()
---     end
---     local accuracy
---     if count == 0 then 
---         accuracy = 0
---     else 
---         accuracy =num_correct/count
---     end
---     print(count..' collisions out of '..dataloader.total_batches*mp.batch_size..' examples')
---     return accuracy
--- end
 
 function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, distance_threshold)
     local num_correct = 0
@@ -778,7 +746,6 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
 
                 local context_and_wall_mask = torch.cmul(context_mask, collision_filter_mask)
 
-                -- at the point, we have 
                 if context_and_wall_mask:sum() > 0 then
                     local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch, true)  --this should set sim to true!
 
@@ -942,9 +909,6 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
                 collectgarbage()
             end
         end 
-
-        -- good 
-
     end
 
     local accuracy

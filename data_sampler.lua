@@ -7,7 +7,6 @@ require 'lfs'
 require 'sys'
 require 'torch'
 require 'paths'
--- require 'hdf5'
 require 'data_utils'
 require 'torchx'
 require 'utils'
@@ -23,8 +22,6 @@ datasampler.__index = datasampler
 
 function datasampler.create(dataset_name, args)
     --[[
-        I actually only need dataset_name, dataset_folder, shufffle, cuda. Do I need a priority_sampler?
-
         Input
             dataset_name: file containing data, like 'trainset'
             dataset_folder: folder containing the .h5 files
@@ -91,7 +88,7 @@ end
 function datasampler:split_time(batch, offset)
     local offset = offset or 1
     local focus, context = unpack(batch)
-    assert(focus:size(2) >= self.winsize and context:size(3) >= self.winsize)  -- IS THIS WHAT WE WANT?
+    assert(focus:size(2) >= self.winsize and context:size(3) >= self.winsize)
     assert((offset-1)+self.num_past+self.num_future <= self.maxwinsize)
 
     local focus_past = focus[{{},{offset, (offset-1)+self.num_past}}]
@@ -130,7 +127,7 @@ function datasampler:sample_priority_batch(pow)
     end
 
     if self.priority_sampler.table_is_full and not(self.has_reported) then
-        print(self.dataset_folder..' has seen all batches')  -- DEBUG
+        print(self.dataset_folder..' has seen all batches')
         self.has_reported = true
     end
 
