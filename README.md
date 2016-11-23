@@ -1,5 +1,7 @@
 # Neural Physics Engine
 
+![balls3]("./demo/balls_n3_npe_pred_batch0_ex0.gif")
+
 [Project Website](http://mbchang.github.io/npe)
 
 We present the Neural Physics Engine (NPE), an object-based neural network
