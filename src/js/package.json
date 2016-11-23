@@ -1,0 +1,30 @@
+{
+  "name": "physics_worlds",
+  "version": "1.0.0",
+  "description": "Environment of 2D worlds as testbeds for physics prediction",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Michael Chang",
+  "license": "ISC",
+  "dependencies": {
+    "circular-json": "^0.3.0",
+    "command-line-args": "^3.0.0",
+    "gaussian": "^1.1.0",
+    "graceful-fs": "^4.1.4",
+    "jsonfile": "^2.3.1",
+    "matter-js": "^0.10.0",
+    "mkdirp": "^0.5.1",
+    "node-import": "^0.9.2",
+    "node-progress-bars": "^1.0.0",
+    "optionator": "^0.8.1",
+    "phantomjs": "^2.1.7",
+    "pureimage": "0.0.13",
+    "requirejs": "^2.2.0",
+    "requirejs-plugins": "^1.0.2",
+    "sleep": "^3.0.1",
+    "underscore": "^1.8.3",
+    "yargs": "^4.7.1"
+  }
+}
