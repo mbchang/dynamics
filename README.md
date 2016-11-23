@@ -17,5 +17,5 @@ compositional representation of the structure in physical interactions improves
 its ability to predict movement, generalize to different numbers of objects,
 and infer latent properties of objects such as mass.
 
-The code in this repository is still under active development, so use at your
-own risk.
+_The code in this repository is still under active development, so use at your
+own risk._
