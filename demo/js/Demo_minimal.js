@@ -311,7 +311,6 @@
         window.loadFile = function loadFile(file){
             var fr = new FileReader();
             fr.onload = function(){
-                // let options = {out_folder: out_folder, ex: 0, batch_name: batch_name}
                 Demo.run(window.CircularJSON.parse(fr.result), {ex:0})
             }
             fr.readAsText(file)
@@ -321,7 +320,6 @@
         const cmd_options = Demo.process_cmd_options();
         console.log('processed command options', cmd_options)
         let experiment_folder = cmd_options.exp  // this is the folder that ends with predictions
-        // let experiment_folder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/opmjlogs/balls_n8_t60_ex50000_rd__balls_n8_t60_ex50000_rd_layers3_nbrhd_nbrhdsize3.5_lr0.0003_modelbffobj/balls_n8_t60_ex50000_rdpredictions'
         let exp_name = path.basename(path.dirname(experiment_folder))
         let jsons = fs.readdirSync(experiment_folder)
         let prediction_folder = path.basename(experiment_folder)
@@ -362,7 +360,7 @@
                     jsonfile.writeFileSync(out_folder+'/stability_stats.json', stability_dists=stability_dists)
                     console.log('Wrote to ' + out_folder+'/stability_stats.json')
                 } else {
-                    let options = {out_folder: out_folder, ex: 0, exp_name: exp_name, batch_name: batch_name, do_not_save_img: cmd_options.noimg}
+                    let options = {out_folder: out_folder, ex: 1, exp_name: exp_name, batch_name: batch_name, do_not_save_img: cmd_options.noimg}
                     console.log(batch_name)
                     Demo.run(loaded_json, options)
                     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>')
@@ -370,20 +368,5 @@
             }
             
         }
-        // console.log(jsons)
-
-        // instead of a for loop I should use a call back.
-
-        // but if it is asynchronous may be it will be faster?   
-
-
-
-
     }
 })();
-
-
-// TODO pass in the example in the batch as well as the experiment folder. You can create a image folder if you want 
-
-
-
