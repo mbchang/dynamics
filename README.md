@@ -1,11 +1,11 @@
 # Neural Physics Engine
 
-<kbd><img src="./demo/balls_n3_npe_pred_batch0_ex0.gif" width="140" style="border:5px solid black"></kbd>
-<kbd><img src="./demo/balls_n4_npe_pred_batch0_ex0.gif" width="140" style="border:5px solid black"></kbd>
-<kbd><img src="./demo/balls_n5_npe_pred_batch0_ex0.gif" width="140" style="border:5px solid black"></kbd>
-<kbd><img src="./demo/balls_n6_npe_pred_batch0_ex2.gif" width="140" style="border:5px solid black"></kbd>
-<kbd><img src="./demo/balls_n7_npe_pred_batch0_ex0.gif" width="140" style="border:5px solid black"></kbd>
-<kbd><img src="./demo/balls_n8_npe_pred_batch0_ex0.gif" width="140" style="border:5px solid black"></kbd>
+<kbd><img src="./demo/balls_n3_npe_pred_batch0_ex0.gif" width="20%" style="border:5px solid black"></kbd>
+<kbd><img src="./demo/balls_n4_npe_pred_batch0_ex0.gif" width="20%" style="border:5px solid black"></kbd>
+<kbd><img src="./demo/balls_n5_npe_pred_batch0_ex0.gif" width="20%" style="border:5px solid black"></kbd>
+<kbd><img src="./demo/balls_n6_npe_pred_batch0_ex2.gif" width="20%" style="border:5px solid black"></kbd>
+<kbd><img src="./demo/balls_n7_npe_pred_batch0_ex0.gif" width="20%" style="border:5px solid black"></kbd>
+<kbd><img src="./demo/balls_n8_npe_pred_batch0_ex0.gif" width="20%" style="border:5px solid black"></kbd>
 
 <kbd><img src="./demo/walls_n2_wO_npe_pred_batch0_ex3.gif" width="140" style="border:5px solid black"></kbd>
 <kbd><img src="./demo/walls_n2_wL_npe_pred_batch0_ex2.gif" width="140" style="border:5px solid black"></kbd>
