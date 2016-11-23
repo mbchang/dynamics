@@ -49,12 +49,14 @@ function datasampler.create(dataset_name, args)
     self.cuda=args.cuda
     assert(self.num_past + self.num_future <= self.winsize)
     assert(self.winsize < args.maxwinsize)  -- not sure if this is going to come from config or not
-    if self.subdivide then assert(self.shuffle) end  -- you have to shuffle if you subdivide
+    if self.subdivide then assert(self.shuffle) end
 
     self.savefolder = self.dataset_folder..'/'..'batches'..'/'..self.dataset_name
     print('savefolder', self.savefolder)
     self.num_batches = tonumber(sys.execute("ls -1 " .. self.savefolder .. "/ | wc -l"))
-    self.num_subbatches_per_batch = math.floor(self.maxwinsize/self.winsize)  -- NOTE: assume that all batches contain self.maxwinsize timesteps!
+
+    -- NOTE: assume that all batches contain self.maxwinsize timesteps!
+    self.num_subbatches_per_batch = math.floor(self.maxwinsize/self.winsize)  
     self.num_subbatches = self.num_batches*self.num_subbatches_per_batch
     print(self.dataset_name..': '..self.dataset_folder..
             ' number of batches: '..self.num_batches..
@@ -75,7 +77,7 @@ function datasampler.create(dataset_name, args)
     self.priority_sampler = PS.create(self.total_batches)
 
     self.current_sampled_id = 0
-    self.current_batch = 0  -- may be deprecated
+    self.current_batch = 0
     self.current_subbatch = 0
     self.current_dataset = 1
 

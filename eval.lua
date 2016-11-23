@@ -15,7 +15,7 @@ require 'data_utils'
 local tablex = require 'pl.tablex'
 local pls = require 'pl.stringx'
 
-require 'rnn'  -- also installs moses (https://github.com/Yonaba/Moses/blob/master/doc/tutorial.md), like underscore.js
+require 'rnn'
 require 'torch'
 require 'nngraph'
 require 'Base'
@@ -65,7 +65,6 @@ else
 	mp.winsize = 3  -- total number of frames
     mp.num_past = 2 -- total number of past frames
     mp.num_future = 1
-	-- mp.seq_length = 10
 	mp.num_threads = 4
 	mp.cuda = false
 end
@@ -79,7 +78,7 @@ local subsamp = 1
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.test_dataset_folders = assert(loadstring("return "..string.gsub(mp.test_dataset_folders,'\"',''))())
 mp.savedir = mp.logs_root .. '/' .. mp.name
-mp.relative=true -- TODO_lowpriority: address this!
+mp.relative=true
 
 if mp.seed then torch.manualSeed(123) end
 if mp.cuda then
@@ -92,9 +91,9 @@ local model, test_loader, modelfile, dp
 ------------------------------- Helper Functions -------------------------------
 
 function inittest(preload, model_path, opt)
-    dp = data_process.create(model_path, model_path, config_args)  -- jsonfile and outfile are unpopopulated!  Let's just fill them with the model_path?
+    dp = data_process.create(model_path, model_path, config_args)
     model = M.create(mp, preload, model_path)
-    mp.cuda = false -- NOTE HACKY
+    mp.cuda = false
 
     if not(string.find(mp.savedir, 'tower') == nil) then
         assert((string.find(mp.savedir, 'ball') == nil) and 
@@ -108,7 +107,7 @@ function inittest(preload, model_path, opt)
     local data_loader_args = {data_root=mp.data_root..'/',
                               dataset_folders=mp.test_dataset_folders,
                               maxwinsize=config_args.maxwinsize,
-                              winsize=mp.winsize, -- not sure if this should be in mp
+                              winsize=mp.winsize,
                               num_past=mp.num_past,
                               num_future=mp.num_future,
                               relative=mp.relative,
@@ -128,10 +127,10 @@ end
 
 local function simulate_all_preprocess(past, future, j, t, num_particles)
     -- construct batch
-    local this = torch.squeeze(past[{{},{j}}])  -- no flag yet
+    local this = torch.squeeze(past[{{},{j}}])
 
-    local y = future[{{},{j},{t}}]  -- no flag yet
-    y = torch.squeeze(y,2)  -- no flag good up to here
+    local y = future[{{},{j},{t}}]
+    y = torch.squeeze(y,2)
 
     local y_before_relative = y:clone()
 
@@ -189,7 +188,6 @@ local function simulate_all_postprocess(pred, this, raw_obj_dim)
 end
 
 -- invalid_focus_mask: 1 means invalid, 0 valid
--- good
 local function make_invalid_dummy(this, invalid_focus_mask)
     local this = this:clone()
     assert(invalid_focus_mask:sum() > 0)
@@ -197,7 +195,7 @@ local function make_invalid_dummy(this, invalid_focus_mask)
     -- first we find a valid focus object. that will be our dummy.
     -- we find a zero element
     local dummy_idx = torch.find(invalid_focus_mask,0)[1]
-    local dummy_focus = this[{{dummy_idx},{},{}}]:clone() -- good
+    local dummy_focus = this[{{dummy_idx},{},{}}]:clone() 
 
     -- then, for all invalid focus object, we will replace it with the dummy
     local invalid_idxs = torch.find(invalid_focus_mask,1)
@@ -226,7 +224,7 @@ local function replace_invalid_dummy(pred, y_before_relative, this, invalid_focu
     return pred  
 end
 
--- good
+
 local function apply_mask_avg(tensor, mask)
     local mask = torch.squeeze(mask:clone())
     local masked = torch.cmul(tensor:clone(), mask:float())
@@ -261,7 +259,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     local logfile = 'gt_divergence.log'
     local gtdivergenceLogger = optim.Logger(paths.concat(subfolder, logfile))  -- this should be dataloader specific!
     gtdivergenceLogger.showPlot = false
-    -- I have to averge through all batches
+    -- I have to average through all batches
 
     assert(numsteps <= dataloader.maxwinsize-mp.num_past,
             'Number of predictive steps should be less than '..
@@ -270,7 +268,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
 
-        -- local batch, current_dataset = dataloader:sample_sequential_batch(false)
         local batch = dataloader:sample_sequential_batch()
 
         -- get data
@@ -295,10 +292,10 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
         -- local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)   -- no flag yet
-        -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)  -- good   -- no flag yet (because we don't know which is focus or context)
+        -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)     -- no flag yet (because we don't know which is focus or context)
 
         local past = torch.cat({unsqueeze(this_orig:clone(),2), untrimmed_context_past:clone()},2)   -- no flag yet
-        local future = torch.cat({unsqueeze(y_orig:clone(),2), untrimmed_context_future:clone()},2)  -- good   -- no flag yet (because we don't know which is focus or context)
+        local future = torch.cat({unsqueeze(y_orig:clone(),2), untrimmed_context_future:clone()},2)     -- no flag yet (because we don't know which is focus or context)
 
         local num_particles = past:size(2)
 
@@ -346,7 +343,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                         -- for the ones that have an obstacle, I just need to fill it with a dummy entry
                         -- note that we didn't change the context (we should for a valid prediction) but we will replace the prediction anyways
                         this = make_invalid_dummy(this, invalid_focus_mask:clone())
-                    end -- good
+                    end 
 
                     -- construct batch
                     local batch = {this, context, y, _, mask}  -- you need context_future to be in here!
@@ -381,7 +378,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                     if invalid_focus_mask:sum() > 0 then
 
                         -- relative y
-                        pred = replace_invalid_dummy(pred, y_before_relative, this, invalid_focus_mask:clone()) -- good
+                        pred = replace_invalid_dummy(pred, y_before_relative, this, invalid_focus_mask:clone()) 
                     end
 
                     -- write into pred_sim
@@ -476,72 +473,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
     collectgarbage()
 end
 
--- eventually move this to variable_object_model
--- function inspect_hidden_state(dataloader, params_)
---     local all_euc_dist = {}
---     local all_euc_dist_diff = {}
---     local all_effects_norm = {}
---     for i = 1, dataloader.num_batches do
---         local batch, current_dataset = dataloader:sample_sequential_batch(false)  -- actually you'd do this for multiple batches
---         local euc_dist = model:get_euc_dist(batch[1], batch[2]) -- table of length num_context of {bsize}
---         local euc_dist_diff = model:get_velocity_direction(batch[1], batch[2])
-
---         local loss, pred = model:fp(params_,batch,true)
---         local effects = model.network:listModules()[2].output  -- effects[1] corresponds to context[{{},{1}}]  (bsize, rnn_dim)
---         local effects_norm = {}  -- table of length num_context of {bsize}
---         for j=1,#effects do
---             table.insert(effects_norm, torch.squeeze(effects[j]:norm(2,2)))  -- you want to normalize in batch mode!
---         end
-
---         -- joining the two tables (but if you want to do individaul analysis you wouldn't do this)
---         tablex.insertvalues(all_euc_dist,euc_dist)
---         tablex.insertvalues(all_euc_dist_diff, euc_dist_diff)
---         tablex.insertvalues(all_effects_norm,effects_norm)
---     end
---     all_euc_dist = torch.cat(all_euc_dist)
---     all_euc_dist_diff = torch.cat(all_euc_dist_diff)
---     all_effects_norm = torch.cat(all_effects_norm)
-
-
---     -- here let's split into positive and negative velocity
---     -- positive velocity is going away and negative velocity is going towards
---     local neg_vel_idx = torch.squeeze(all_euc_dist_diff:lt(0):nonzero())  -- indices of all_euc_dist_diff that are negative
---     local pos_vel_idx = torch.squeeze(all_euc_dist_diff:ge(0):nonzero())  -- >=0; moving away
-
---     local neg_vel = all_euc_dist_diff:index(1,neg_vel_idx)
---     local pos_vel = all_euc_dist_diff:index(1,pos_vel_idx)
-
---     local euc_dist_neg_vel = all_euc_dist:index(1,neg_vel_idx)
---     local euc_dist_pos_vel = all_euc_dist:index(1,pos_vel_idx)
-
---     local norm_neg_vel = all_effects_norm:index(1,neg_vel_idx)
---     local norm_pos_vel = all_effects_norm:index(1,pos_vel_idx)
-
---     -- now, plot euc_dist_neg_vel vs norm_neg_vel and euc_dist_pos_vel vs norm_pos_vel
-
---     print('all_euc_dist:norm()', all_euc_dist:norm())
---     print('all_euc_dist_diff:norm()', all_euc_dist_diff:norm())
---     print('all_effects_norm:norm()', all_effects_norm:norm())
-
---     local fname = 'hidden_state_all_testfolders'
---     torch.save(mp.savedir..'/'..fname, {euc_dist=all_euc_dist, 
---                                 euc_dist_diff=all_euc_dist_diff, 
---                                 effects_norm=all_effects_norm})
-
---     local plot_tensor_file = hdf5.open(mp.savedir..'/'..fname..'.h5', 'w')
---     plot_tensor_file:write('euc_dist', all_euc_dist)
---     plot_tensor_file:write('euc_dist_diff', all_euc_dist_diff)
---     plot_tensor_file:write('effects_norm', all_effects_norm)
---     plot_tensor_file:close()
---     print('saved to '..mp.savedir..'/'..fname..'.h5')
---     if mp.server == 'pc' then
---         -- plot_hid_state(fname, all_euc_dist, all_effects_norm, '+')
---         plot_hid_state(fname..'_toward', euc_dist_neg_vel, norm_neg_vel)
---         plot_hid_state(fname..'_away', euc_dist_pos_vel, norm_pos_vel)
-
---     end
--- end
-
 
 -- TODO_lowpriority: move this to plot_results
 function plot_hid_state(fname, x,y)
@@ -557,17 +488,16 @@ end
 
 function save_ex_pred_json(example, jsonfile, current_dataset, subfolder)
     print(current_dataset)
-    -- local flags = pls.split(mp.test_dataset_folders[current_dataset], '_')
     local flags = pls.split(current_dataset, '_')
 
     local world_config = {
         num_past = mp.num_past,
         num_future = mp.num_future,
-        env=flags[1],--test_loader.scenario,
+        env=flags[1],
         numObj=tonumber(extract_flag(flags, 'n')),
-        gravity=false, -- TODO
-        friction=false, -- TODO
-        pairwise=false -- TODO
+        gravity=false,
+        friction=false,
+        pairwise=false
     }
 
     -- first join on the time axis
@@ -588,8 +518,6 @@ function save_ex_pred_json(example, jsonfile, current_dataset, subfolder)
 end
 
 function getLastSnapshot(network_name)
-
-    -- TODO_lowpriority: this should be replaced by savedir!
     local res_file = io.popen("ls -t "..mp.logs_root..'/'..network_name..
                                 " | grep -i epoch | head -n 1")
     local status, result = pcall(function()
@@ -602,23 +530,6 @@ function getLastSnapshot(network_name)
         return result
     end
 end
-
-function run_inspect_hidden_state()
-    local snapshot = getLastSnapshot(mp.name)
-    local snapshotfile = mp.savedir ..'/'..snapshot
-    print('Snapshot file: '..snapshotfile)
-    local checkpoint = torch.load(snapshotfile)
-
-    local saved_args = torch.load(mp.savedir..'/args.t7')
-    mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
-    config_args = saved_args.config_args
-
-    model_deps(mp.model)
-    inittest(true, snapshotfile, {sim=false, subdivide=true})  -- assuming the mp.savedir doesn't change
-
-    inspect_hidden_state(test_loader, checkpoint.model.theta.params, true, mp.steps)
-end
-
 
 function predict_simulate_all()
     local checkpoint, snapshotfile = load_most_recent_checkpoint()
@@ -661,8 +572,6 @@ function get_all_checkpoints(logs_folder, experiment_name)
         print('Adding snapshot: '..result)
         table.insert(checkpoints, result)
     end
-
-    -- local checkpoints = {checkpoints[1]}  -- ZERO CHANGED!
 
     return checkpoints
 end
@@ -723,7 +632,7 @@ function property_analysis_all(logfile, property)
         local avg_property, num_property = property_analysis(model, test_loader, checkpoint.model.theta.params, property)
         print(avg_property, num_property)
 
-        local metrics = {'loss', 'vel_loss', 'ang_loss', 'avg_ang_error', 'avg_rel_mag_error'} -- TODO! need to do cosine distance and magnitude!
+        local metrics = {'loss', 'vel_loss', 'ang_loss', 'avg_ang_error', 'avg_rel_mag_error'}
 
         print('avg_property')
         local logger_table = {}
@@ -760,7 +669,6 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local total_avg_loss = 0
     local total_avg_ang_error = 0
     local total_avg_rel_mag_error = 0
-    -- you should initialize a counter here too.
 
     for i = 1,num_batches do
         if mp.server == 'pc' then xlua.progress(i, num_batches) end
@@ -826,7 +734,7 @@ function test_vel_angvel_all()
 
         -- local logfile = 'ztva.log'  -- ZERO CHANGED!
         local logfile = 'tva.log'
-        local tvaLogger = optim.Logger(paths.concat(subfolder, logfile))  -- this should be dataloader specific!
+        local tvaLogger = optim.Logger(paths.concat(subfolder, logfile))
         tvaLogger.showPlot = false
 
         for c=1,#checkpoints do
@@ -861,23 +769,17 @@ end
 
 
 function mass_inference()
-    inference('mass_infer_cf.log', 'mass', 'max_likelihood', true)  -- ZERO CHANGED!
-    -- inference('zmass_infer_cf.log', 'mass', 'max_likelihood', true)  -- ZERO CHANGED!
+    inference('mass_infer_cf.log', 'mass', 'max_likelihood', true)
 end
 
--- note that here we need to do inference on the context!
 function size_inference()
     inference('size_infer_cf.log', 'size', 'max_likelihood_context', true)
 end
 
--- note that here we need to do inference on the context!
 function objtype_inference()
     inference('objtype_infer_cf.log', 'objtype', 'max_likelihood_context', true)
 end
 
-function pmofm_b2i_inference()
-    inference('pmofm_b2i_infer_cf.log', 'pos_mass_oid_fixedmass', 'backprop', true)
-end
 
 function size_analysis()
     property_analysis_all('size_analysis.log', 'size')
@@ -887,16 +789,6 @@ function oid_analysis()
     property_analysis_all('oid_analysis.log', 'objtype')
 end
 
-function predict_b2i()
-    local snapshot = getLastSnapshot(mp.name)
-    local snapshotfile = mp.savedir ..'/'..snapshot
-    local checkpoint = torch.load(snapshotfile)
-    checkpoint = checkpointtocuda(checkpoint)
-    mp = merge_tables(checkpoint.mp, mp)
-    model_deps(mp.model)
-    inittest(true, snapshotfile)  -- assuming the mp.savedir doesn't change
-    backprop2input()
-end
 
 function model_deps(modeltype)
     if modeltype == 'lstmobj' or
@@ -924,9 +816,6 @@ end
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'sim' then
     predict_simulate_all()
-    -- run_inspect_hidden_state() -- I'm just getting the hidden state here
-elseif mp.mode == 'hid' then
-    run_inspect_hidden_state()
 elseif mp.mode == 'minf' then
     mass_inference()
 elseif mp.mode == 'sinf' then
@@ -935,8 +824,6 @@ elseif mp.mode == 'oinf' then
     objtype_inference()
 elseif mp.mode == 'pmofminf' then
     pmofm_b2i_inference()
-elseif mp.mode == 'b2i' then
-    predict_b2i()
 elseif mp.mode == 'pred' then
     predict()
 elseif mp.mode == 'tva' then

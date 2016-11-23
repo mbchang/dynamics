@@ -11,12 +11,10 @@ local data_process = require 'data_process'
 
 nngraph.setDebug(true)
 
--- with a bidirectional lstm, no need to put a mask
--- however, you can have variable sequence length now!
+
 function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
-
     local bias = not params.nbrhd
 
     local layer, sequencer_type, dcoef
@@ -174,8 +172,6 @@ function model:unpack_batch(batch, sim)
             table.insert(self.neighbor_masks, convert_type(torch.ones(mp.batch_size), self.mp.cuda))  -- good
         end
     end
-    -- print('self.neighbor_masks at context id 5')
-    -- print(self.neighbor_masks[5])
 
     input = self:apply_mask(input, self.neighbor_masks)
 
@@ -192,16 +188,6 @@ function model:select_neighbors(input)
         -- reshape
         local this = pair[1]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
         local context = pair[2]:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
-
-        -- make threshold depend on object id!
-        -- local oid_onehot = this[{{},{},config_args.si.oid}]  -- all are same
-        -- local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
-        -- local template = convert_type(torch.zeros(self.mp.batch_size, self.mp.num_past, num_oids), self.mp.cuda)
-        -- local template_ball = template:clone()
-        -- local template_block = template:clone()
-        -- template_ball[{{},{},{config_args.oids.ball}}]:fill(1)
-        -- template_block[{{},{},{config_args.oids.block}}]:fill(1)
-
         local oid_onehot, template_ball, template_block = get_oid_templates(this, config_args, self.mp.cuda)
 
         -- if oid_onehot:equal(template_ball) then

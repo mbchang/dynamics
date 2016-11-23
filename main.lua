@@ -543,7 +543,6 @@ function run_experiment_load()
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = checkpoint.mp  -- completely overwrite  good
     mp.mode = 'expload'
-    -- mp.cuda = true
     local iters = checkpoint.iters + 1
 
     train_losses = checkpoint.train_losses
@@ -567,8 +566,6 @@ function run_experiment_load()
     print('Learning rate is now '..optim_state.learningRate)
 
     config_args = saved_args.config_args
-
-    -- if mp.server == 'op' then mp.cuda = true end
 
     model_deps(mp.model)
     inittrain(true, mp.savedir ..'/'..snapshot, iters)  -- assuming the mp.savedir doesn't change

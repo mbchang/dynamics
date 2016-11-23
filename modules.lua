@@ -8,8 +8,6 @@ require 'data_utils'
 
 nngraph.setDebug(true)
 
--- local mp = {cuda=false}
-
 function init_object_encoder(input_dim, rnn_inp_dim, bias)
     assert(rnn_inp_dim % 2 == 0)
     local thisp     = nn.Identity()() -- (batch_size, input_dim)
@@ -60,7 +58,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
 
     -- should I combine them first, or should I do a encoding then combine?
     -- I think I should just combine
-    local decoder_in = nn.JoinTable(2)({rnn_out, orig_state})  -- TODO: figure out what dimension this is
+    local decoder_in = nn.JoinTable(2)({rnn_out, orig_state})
 
     local decoder_preout, decoder_net
     if num_layers == 0 or num_layers == 1 then
@@ -84,8 +82,6 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
     end
 
     local decoder_preout = decoder_net(decoder_in)
-
-    -- ------------------------------------------------
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
                 {num_future, object_dim},{{1,6},{7,object_dim}})

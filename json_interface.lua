@@ -3,12 +3,13 @@ local args = require 'config'
 local tablex = require 'pl.tablex'
 local stringx = require 'pl.stringx'
 
--- balls_n8_t60_s50000_mjs2
 function get_global_params(jsonfile)
     local g=0  -- false by default
     local f=0  -- false by default
     local p=0  -- false by default
-    if stringx.count(jsonfile, '_g') == 1 or not(string.find(jsonfile, 'tower') == nil) then  -- if tower is in jsonfile, then also turn gravity on!
+
+    -- if tower is in jsonfile, then also turn gravity on!
+    if stringx.count(jsonfile, '_g') == 1 or not(string.find(jsonfile, 'tower') == nil) then
         g = 1
     end
     if stringx.count(jsonfile, '_f') == 1 then
@@ -99,8 +100,3 @@ function dump_data_json(data, jsonfile)
     json.save(jsonfile, {trajectories=trajectories})
     return trajectories
 end
-
-
--- local d = load_data_json('../data/tower_n8_t75_ex1_m_rd/jsons/tower_n8_t75_ex1_m_rd_chksize1_0.json')
--- dump_data_json(d, '../data/tower_n8_t75_ex1_m_rd/jsons/tower_n8_t75_ex1_m_rd_chksize1_0_dump.json')
--- local d2 = load_data_json('../data/tower_n8_t75_ex1_m_rd/jsons/tower_n8_t75_ex1_m_rd_chksize1_0_dump.json')

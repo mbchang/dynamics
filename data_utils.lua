@@ -347,20 +347,3 @@ function get_oid_templates(this, config_args, cuda)
     return oid_onehot, template_ball, template_block, template_obstacle
 
 end
-
-
-
-
-
--- mask = torch.Tensor({1,0,0,0,0,0,0,0,0,0})
--- p = preprocess_input(mask)
---
--- bsize = 3
--- tp = torch.rand(bsize,10)
--- c = torch.rand(bsize,10,10)
--- x = p:forward({tp, c})
---
--- print(x)
---
--- p:backward({tp,c},x)
--- print(p.gradInput[1])
