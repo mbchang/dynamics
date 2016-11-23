@@ -1,6 +1,6 @@
 # Neural Physics Engine
 
-![balls3](./demo/balls_n3_npe_pred_batch0_ex0.gif)
+<img src="./demo/balls_n3_npe_pred_batch0_ex0.gif" width="50">
 
 [Project Website](http://mbchang.github.io/npe)
 
