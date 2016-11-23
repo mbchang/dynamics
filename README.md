@@ -1,4 +1,4 @@
-# Neural Physics Engine
+# [Neural Physics Engine](http://mbchang.github.io/npe)
 
 <kbd><img src="./demo/balls_n3_npe_pred_batch0_ex0.gif" width="125"></kbd>
 <kbd><img src="./demo/balls_n4_npe_pred_batch0_ex0.gif" width="125"></kbd>
