@@ -33,3 +33,40 @@ Below are some predictions from the model:
 
 _The code in this repository is still under active development, so use at your
 own risk._
+
+## Requirements
+* [Torch7](http://torch.ch/)
+* [matter-js](http://brm.io/matter-js/)
+* [Node.js](https://nodejs.org/en/)
+_More details coming soon._
+
+## Instructions
+_The instructions below are missing some details._
+
+Pretrained network and dataset can be downloaded at:
+
+### Generating Data
+The following commands generates 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `data/` folder. 
+```shell
+> cd src/js
+> node demo/js/Demo.js -e balls -n 4 -t 60 -s 50000 -m
+```
+The following commands generates 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `data/` folder.
+```shell
+> cd src/js
+> node demo/js/Demo.js -e walls -n 2 -t 60 -s 50000 -w U
+```
+
+### Training the Model
+The following commands trains the model for the `balls_n4_t60_s50000_m` dataset. `bffobj` corresponds to the NPE. If you are comfortable looking at code that has not been cleaned up yet, please check out the flags in `src/lua/main.lua`. 
+```shell
+> cd src/lua
+> th main.lua -layers 5 -dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -nbrhd -rs -test_dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -fast -nlan -lr 0.0003 -model bffobj -seed 0 -name balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0 -mode exp
+```
+
+### Prediction
+
+### Inference
+
+
+
