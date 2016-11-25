@@ -58,7 +58,7 @@ The following commands generates 50000 trajectories of 2 balls over 60 timesteps
 > node demo/js/Demo.js -e walls -n 2 -t 60 -s 50000 -w U
 ```
 
-If you prefer, a script (`src/js/mj_runner.py')  (not cleaned up yet) has been provided to make these commands more convenient.
+If you prefer, a script (`src/js/mj_runner.py`)  (not cleaned up yet) has been provided to make these commands more convenient.
 
 
 ### Training the Model
@@ -80,7 +80,7 @@ Here is an example of training on "O" and "I" wall geometries and testing on "U"
 > th main.lua -layers 5 -dataset_folders "{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}" -nbrhd -rs -test_dataset_folders "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}" -fast -nlan -lr 0.0003 -model bffobj -seed 0 -name walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0 -mode exp 
 ```
 
-If you prefer, a script (`src/lua/runner_mj.py')  (not cleaned up yet) has been provided to make these commands more convenient.
+If you prefer, a script (`src/lua/runner_mj.py`)  (not cleaned up yet) has been provided to make these commands more convenient.
 ### Prediction
 The following commands runs simulations using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0`.
 ```shell
