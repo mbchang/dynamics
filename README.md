@@ -95,3 +95,5 @@ The following commands runs mass inference using trained model that was saved in
 > th eval.lua -test_dataset_folders "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda','balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0 -mode minf
 ```
 
+#### Acknowledgements
+We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlm"{u}ller, Adam Lerer, Chelsea Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank Liam Brummit, Kevin Kwok, and Guillermo Webster for help with [matter-js](http://brm.io/matter-js/). M. Chang was graciously supported by MIT’s SuperUROP and UROP programs.
