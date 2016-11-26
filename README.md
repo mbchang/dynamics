@@ -96,4 +96,4 @@ The following commands runs mass inference using trained model that was saved in
 ```
 
 #### Acknowledgements
-We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlm"{u}ller, Adam Lerer, Chelsea Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank Liam Brummit, Kevin Kwok, and Guillermo Webster for help with [matter-js](http://brm.io/matter-js/). M. Chang was graciously supported by MIT’s SuperUROP and UROP programs.
+We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlm&uumlller, Adam Lerer, Chelsea Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank Liam Brummit, Kevin Kwok, and Guillermo Webster for help with [matter-js](http://brm.io/matter-js/). M. Chang was graciously supported by MIT’s SuperUROP and UROP programs.
