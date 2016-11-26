@@ -47,7 +47,9 @@ _The instructions below are missing some details._
 Pretrained network and dataset can be downloaded at: COMING SOON. 
 
 ### Generating Data
-The code to generate data is adapted from the demo code in [matter-js](https://github.com/liabru/matter-js).
+
+The code to generate data is adapted from the demo code in
+[matter-js](https://github.com/liabru/matter-js).
 
 This is an example of generating 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `data/` folder. 
 ```shell
@@ -98,6 +100,13 @@ This is an example of running mass inference using trained model that was saved 
 ```
 
 #### Acknowledgements
-This project was built with [Torch7](http://torch.ch), [rnn](https://github.com/Element-Research/rnn), and [matter-js](http://brm.io/matter-js/). A big thank you to these folks.
 
-We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlmuller, Adam Lerer, Chelsea Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank Liam Brummit, Kevin Kwok, and Guillermo Webster for help with matter-js. M. Chang was graciously supported by MIT’s SuperUROP and UROP programs.
+This project was built with [Torch7](http://torch.ch),
+[rnn](https://github.com/Element-Research/rnn), and
+[matter-js](http://brm.io/matter-js/). A big thank you to these folks.
+
+We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker
+Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlmuller, Adam Lerer, Chelsea
+Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank
+Liam Brummit, Kevin Kwok, and Guillermo Webster for help with matter-js. M.
+Chang was graciously supported by MIT’s SuperUROP and UROP programs.
