@@ -100,4 +100,4 @@ This is an example of running mass inference using trained model that was saved 
 #### Acknowledgements
 This project was built with [Torch7](http://torch.ch), [rnn](https://github.com/Element-Research/rnn), and [matter-js](http://brm.io/matter-js/). A big thank you to these folks.
 
-We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlmuller, Adam Lerer, Chelsea Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank Liam Brummit, Kevin Kwok, and Guillermo Webster for help with. M. Chang was graciously supported by MIT’s SuperUROP and UROP programs.
+We thank Tejas Kulkarni for insightful discussions and guidance. We thank Ilker Yidirim, Erin Reynolds, Feras Saad, Andreas Stuhlmuller, Adam Lerer, Chelsea Finn, Jiajun Wu, and the anonymous reviewers for valuable feedback. We thank Liam Brummit, Kevin Kwok, and Guillermo Webster for help with matter-js. M. Chang was graciously supported by MIT’s SuperUROP and UROP programs.
