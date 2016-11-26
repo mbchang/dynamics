@@ -47,12 +47,12 @@ _The instructions below are missing some details._
 Pretrained network and dataset can be downloaded at: COMING SOON. 
 
 ### Generating Data
-The following commands generates 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `data/` folder. 
+This is an example of generating 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `data/` folder. 
 ```shell
 > cd src/js
 > node demo/js/Demo.js -e balls -n 4 -t 60 -s 50000 -m
 ```
-The following commands generates 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `data/` folder.
+This is an example of generating 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `data/` folder.
 ```shell
 > cd src/js
 > node demo/js/Demo.js -e walls -n 2 -t 60 -s 50000 -w U
@@ -62,7 +62,7 @@ If you prefer, a script (`src/js/mj_runner.py`)  (not cleaned up yet) has been p
 
 
 ### Training the Model
-The following commands trains the model for the `balls_n4_t60_s50000_m` dataset. `bffobj` corresponds to the NPE. The model checkpoints are saved in `src/lua/logs/balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0`. If you are comfortable looking at code that has not been cleaned up yet, please check out the flags in `src/lua/main.lua`. 
+This is an example of training the model for the `balls_n4_t60_s50000_m` dataset. `bffobj` corresponds to the NPE. The model checkpoints are saved in `src/lua/logs/balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0`. If you are comfortable looking at code that has not been cleaned up yet, please check out the flags in `src/lua/main.lua`. 
 ```shell
 > cd src/lua
 > th main.lua -layers 5 -dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -nbrhd -rs -test_dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -fast -nlan -lr 0.0003 -model bffobj -seed 0 -name balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0 -mode exp
@@ -82,14 +82,14 @@ Here is an example of training on "O" and "I" wall geometries and testing on "U"
 
 If you prefer, a script (`src/lua/runner_mj.py`)  (not cleaned up yet) has been provided to make these commands more convenient.
 ### Prediction
-The following commands runs simulations using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0`.
+This is an example of running simulations using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0`.
 ```shell
 > cd src/lua
 > th eval.lua -test_dataset_folders "{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda','balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0 -mode sim
 ```
 
 ### Inference
-The following commands runs mass inference using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0`.
+This is an example of running mass inference using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0`.
 ```shell
 > cd src/lua
 > th eval.lua -test_dataset_folders "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda','balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelbffobj_seed0 -mode minf
