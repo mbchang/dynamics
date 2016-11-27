@@ -51,6 +51,8 @@ luarocks install nn
 luarocks install nngraph
 luarocks install rnn
 luarocks install gnuplot
+luarocks install paths
+luarocks install json
 ```
 
 To install js dependencies, run:
