@@ -39,7 +39,25 @@ own risk._
 * [matter-js](http://brm.io/matter-js/)
 * [Node.js](https://nodejs.org/en/)
 
-_More details coming soon._
+### Dependencies
+_WARNING: the instructions below are not complete._
+
+To install lua dependencies, run:
+
+```bash
+luarocks install pl
+luarocks install torchx
+luarocks install nn
+luarocks install nngraph
+luarocks install rnn
+luarocks install gnuplot
+```
+
+To install js dependencies, run:
+```bash
+cd src/js
+npm install
+```
 
 ## Instructions
 _The instructions below are missing some details._
