@@ -2,7 +2,7 @@
   "name": "physics_worlds",
   "version": "1.0.0",
   "description": "Environment of 2D worlds as testbeds for physics prediction",
-  "main": "main.js",
+  "main": "demo/js/Demo.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

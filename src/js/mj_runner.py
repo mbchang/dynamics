@@ -55,7 +55,7 @@ def create_jobs(dry_run, ext):
     samples = 50000
 
     # generate json files
-    generator = 'node ' + mj_root + 'demo/js/Demo.js'
+    generator = 'node ' + mj_root + 'demo/js/generate.js'
 
     # generate balls
     # make this a method
@@ -119,7 +119,7 @@ def create_jobs(dry_run, ext):
             to_slurm(jobname + ext, jobcommand, dry_run)
 
 def generate_data(dry_run):
-    create_jobs(dry_run=dry_run, ext='')  # the js extension is for positionIterations and velocityIterations = 100, and runner.isFixed
+    create_jobs(dry_run=dry_run, ext='_js2a')  # the js extension is for positionIterations and velocityIterations = 100, and runner.isFixed
 
 def to_slurm(jobname, jobcommand, dry_run):
     print jobname
