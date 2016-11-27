@@ -79,7 +79,7 @@ This is an example of generating 50000 trajectories of 4 balls of variable mass 
 This is an example of generating 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `data/` folder.
 ```shell
 > cd src/js
-> node demo/js/Demo.js -e walls -n 2 -t 60 -s 50000 -w U
+> node demo/js/generate.js -e walls -n 2 -t 60 -s 50000 -w U
 ```
 
 If you prefer, a script (`src/js/mj_runner.py`)  (not cleaned up yet) has been provided to make these commands more convenient.
