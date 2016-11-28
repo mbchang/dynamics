@@ -18,19 +18,7 @@ function init_network(params)
     local bias = not params.nbrhd
 
     local layer, sequencer_type, dcoef
-    if params.model == 'lstmobj' then
-        layer = nn.LSTM(params.rnn_dim,params.rnn_dim)  -- NOTE
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'gruobj' then
-        layer = nn.GRU(params.rnn_dim,params.rnn_dim)
-        sequencer_type = nn.BiSequencer
-        dcoef = 2
-    elseif params.model == 'ffobj' then
-        layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
-        sequencer_type = nn.Sequencer
-        dcoef = 1
-    elseif params.model == 'bffobj' then
+    if params.model == 'npe' then
         layer = nn.Linear(params.rnn_dim, params.rnn_dim, bias)
         sequencer_type = nn.Sequencer
         dcoef = 1

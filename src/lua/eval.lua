@@ -33,11 +33,11 @@ local data_process = require 'data_process'
 
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
-cmd:option('-mode', "exp", 'exp | pred | simulate | save')
+cmd:option('-mode', "exp", 'sim | tva')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
-cmd:option('data_root', '../data', 'subdirectory to save data')
-cmd:option('-name', "mj", 'experiment name')
+cmd:option('data_root', '../../data', 'subdirectory to save data')
+cmd:option('-name', "", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
 cmd:option('-zero', false, 'manual seed or not')
 
@@ -53,7 +53,7 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
-    mp.data_root = 'mj_data'    
+    -- mp.data_root = '../.'    
     mp.logs_root = 'logs'
     mp.winsize = 3 -- total number of frames
     mp.num_past = 2 --10
@@ -732,7 +732,6 @@ function test_vel_angvel_all()
         local subfolder = mp.savedir .. '/' .. experiment_name .. '_predictions/'
         if not paths.dirp(subfolder) then paths.mkdir(subfolder) end
 
-        -- local logfile = 'ztva.log'  -- ZERO CHANGED!
         local logfile = 'tva.log'
         local tvaLogger = optim.Logger(paths.concat(subfolder, logfile))
         tvaLogger.showPlot = false
@@ -791,22 +790,12 @@ end
 
 
 function model_deps(modeltype)
-    if modeltype == 'lstmobj' or
-            modeltype == 'ffobj' or
-                    modeltype == 'gruobj' then
-        M = require 'variable_obj_model'
-    elseif modeltype == 'bffobj' then
-        M = require 'branched_variable_obj_model'
+    if modeltype == 'npe' then
+        M = require 'npe'
     elseif modeltype == 'np' then
         M = require 'nop'
-    elseif modeltype == 'ind' then
-        M = require 'independent'
-    elseif modeltype == 'bl' then
-        M = require 'blstm'
     elseif modeltype == 'lstm' then
         M = require 'lstm'
-    elseif modeltype == 'ff' then
-        M = require 'feed_forward_model'
     else
         error('Unrecognized model')
     end

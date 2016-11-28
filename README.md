@@ -78,12 +78,12 @@ Pretrained network and dataset can be downloaded at: COMING SOON.
 The code to generate data is adapted from the demo code in
 [matter-js](https://github.com/liabru/matter-js).
 
-This is an example of generating 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `src/data/` folder. 
+This is an example of generating 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `data/` folder. 
 ```shell
 > cd src/js
 > node demo/js/generate.js -e balls -n 4 -t 60 -s 50000 -m
 ```
-This is an example of generating 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `src/data/` folder.
+This is an example of generating 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `data/` folder.
 ```shell
 > cd src/js
 > node demo/js/generate.js -e walls -n 2 -t 60 -s 50000 -w U

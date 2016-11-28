@@ -27,7 +27,7 @@ local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | expload | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
-cmd:option('data_root', '../data', 'subdirectory to save data')
+cmd:option('data_root', '../../data', 'subdirectory to save data')
 cmd:option('-model', "npe", 'npe | np | lstm')
 cmd:option('-name', "", 'experiment name')
 cmd:option('-seed', 0, 'manual seed')
@@ -40,7 +40,7 @@ cmd:option('-test_dataset_folders', '', 'dataset folder')
 cmd:option('-rnn_dim', 50, 'hidden dimension')
 cmd:option('-nbrhd', false, 'restrict attention to neighborhood')
 cmd:option('-nbrhdsize', 3.5, 'number of radii out to look. nbhrdsize of 2 is when they exactly touching')
-cmd:option('-layers', 3, 'layers in network')
+cmd:option('-layers', 5, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-batch_norm', false, 'batch norm')
@@ -90,7 +90,7 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
-    mp.data_root = 'mj_data'
+    -- mp.data_root = '../data'
     mp.logs_root = 'logs'
     mp.winsize = 3 -- total number of frames
     mp.num_future = 1 --10
@@ -109,7 +109,7 @@ if mp.server == 'pc' then
     mp.val_window = 5
     mp.val_eps = 2e-5
     mp.duo = false
-    mp.zero = true
+    mp.zero = false
 	mp.num_threads = 1
     mp.shuffle = false
     mp.batch_norm = false
@@ -121,7 +121,7 @@ if mp.server == 'pc' then
     mp.rs = false
     mp.nlan = true
     mp.fast = true
-    mp.of = true
+    mp.of = false
 else
     mp.num_future = 1
 	mp.num_threads = 4
@@ -129,26 +129,12 @@ end
 
 local M
 
-if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
-    M = require 'variable_obj_model'
-elseif mp.model == 'npe' then 
-    M = require 'branched_variable_obj_model'
-elseif mp.model == 'cat' then 
-    M = require 'concatenate'
-elseif mp.model == 'ind' then 
-    M = require 'independent'
+if mp.model == 'npe' then 
+    M = require 'npe'
 elseif mp.model == 'np' then 
     M = require 'nop'
-elseif mp.model == 'crnn' then 
-    M = require 'clique_rnn'
-elseif mp.model == 'lstmcat' then
-    M = require 'lstm_model'
-elseif mp.model == 'bl' then
-    M = require 'blstm'
 elseif mp.model == 'lstm' then
     M = require 'lstm'
-elseif mp.model == 'ff' then
-    M = require 'feed_forward_model'
 else
     error('Unrecognized model')
 end
@@ -158,10 +144,6 @@ mp.object_dim = config_args.si.p[2]
 if mp.of and mp.model == 'lstm' then mp.object_dim = mp.object_dim + 1 end -- flag 
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
-if mp.model == 'crnn' then 
-    mp.input_dim = mp.object_dim 
-    mp.out_dim = mp.object_dim
-end
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
 mp.savedir = mp.logs_root .. '/' .. mp.name
 print(mp.savedir)
@@ -328,7 +310,7 @@ function train(start_iter, epoch_num)
         val_losses[#val_losses+1] = v_val_loss
         test_losses[#test_losses+1] = v_test_loss
 
-        if mp.zero then 
+        -- if mp.zero then 
             local model_file = string.format('%s/epoch%d_step%d_%.7f.t7',
                                         mp.savedir, epoch_num, 0, v_val_loss)
             print('saving checkpoint to ' .. model_file)
@@ -342,8 +324,8 @@ function train(start_iter, epoch_num)
             checkpoint.iters = t
             torch.save(model_file, checkpoint)
             print('Saved model')
-            return
-        end
+            -- return
+        -- end
     end
 
     for t = start_iter,mp.max_iter do
@@ -598,7 +580,7 @@ function model_deps(modeltype)
                     modeltype == 'gruobj' then
         M = require 'variable_obj_model'
     elseif modeltype == 'npe' then
-        M = require 'branched_variable_obj_model'
+        M = require 'npe'
     elseif modeltype == 'ind' then
         M = require 'independent'
     elseif modeltype == 'bl' then
