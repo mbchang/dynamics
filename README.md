@@ -37,7 +37,7 @@ own risk._
 ## Requirements
 * [Torch7](http://torch.ch/)
 * [matter-js](http://brm.io/matter-js/)
-* [Node.js](https://nodejs.org/en/)
+* [Node.js](https://nodejs.org/en/) v6.2.1
 
 ### Dependencies
 _WARNING: the instructions below are not complete._
