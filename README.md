@@ -36,7 +36,6 @@ own risk._
 
 ## Requirements
 * [Torch7](http://torch.ch/)
-* [matter-js](http://brm.io/matter-js/)
 * [Node.js](https://nodejs.org/en/) v6.2.1
 
 ### Dependencies
@@ -79,18 +78,21 @@ Pretrained network and dataset can be downloaded at: COMING SOON.
 The code to generate data is adapted from the demo code in
 [matter-js](https://github.com/liabru/matter-js).
 
-This is an example of generating 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `data/` folder. 
+This is an example of generating 50000 trajectories of 4 balls of variable mass over 60 timesteps. It will create a folder `balls_n4_t60_s50000_m` in the `src/data/` folder. 
 ```shell
 > cd src/js
 > node demo/js/generate.js -e balls -n 4 -t 60 -s 50000 -m
 ```
-This is an example of generating 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `data/` folder.
+This is an example of generating 50000 trajectories of 2 balls over 60 timesteps for wall geometry "U." It will create a folder `walls_n2_t60_s50000_wU` in the `src/data/` folder.
 ```shell
 > cd src/js
 > node demo/js/generate.js -e walls -n 2 -t 60 -s 50000 -w U
 ```
 
 If you prefer, a script (`src/js/mj_runner.py`)  (not cleaned up yet) has been provided to make these commands more convenient.
+
+### Visualization
+Trajectory data is stored in a `.json` file. You can visualize the trajectory by opening `src/js/demo/render.html` in your browser and passing in the `.json` file.
 
 
 ### Training the Model
