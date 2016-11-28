@@ -73,7 +73,9 @@ Pillow==2.8.2
 ## Instructions
 _The instructions below are missing some details._
 
-Pretrained network and dataset can be downloaded at: COMING SOON. 
+<!---
+Pretrained network and dataset can be downloaded at: COMING SOON.
+--> 
 
 ### Generating Data
 The code to generate data is adapted from the demo code in
