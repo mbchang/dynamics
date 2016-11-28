@@ -17,7 +17,6 @@ local model_utils = require 'model_utils'
 local D = require 'general_data_sampler'
 local D2 = require 'datasaver'
 require 'logging_utils'
-
 config_args = require 'config'
 local data_process = require 'data_process'
 
@@ -41,7 +40,7 @@ cmd:option('-nbrhd', false, 'restrict attention to neighborhood')
 cmd:option('-nbrhdsize', 3.5, 'number of radii out to look. nbhrdsize of 2 is when they exactly touching')
 cmd:option('-layers', 5, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
-cmd:option('-diff', false, 'use relative context position and velocity state')
+-- cmd:option('-diff', false, 'use relative context position and velocity state')
 cmd:option('-batch_norm', false, 'batch norm')
 cmd:option('-num_past', 2, 'number of past timesteps')
 cmd:option('-nlan', false, 'no look ahead for neighbors')
@@ -115,7 +114,7 @@ if mp.server == 'pc' then
     mp.print_every = 1
     mp.save_every = 20
     mp.val_every = 20
-    mp.plot = false--true
+    mp.plot = false
 	mp.cuda = false
     mp.rs = false
     mp.nlan = true
