@@ -6,7 +6,6 @@ require 'nn'
 require 'optim'
 require 'image'
 require 'xlua'
-require 'Base'
 require 'sys'
 require 'pl'
 torch.setdefaulttensortype('torch.FloatTensor')
