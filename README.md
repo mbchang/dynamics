@@ -61,6 +61,14 @@ cd src/js
 npm install
 ```
 
+Below are python dependencies:
+```bash
+images2gif==1.0.1
+matplotlib==1.4.3
+numpy==1.10.4
+Pillow==2.8.2
+```
+
 ## Instructions
 _The instructions below are missing some details._
 

@@ -4,7 +4,7 @@ import plot_results
 import errno  
 import copy as copier
 
-import cv2
+# import cv2
 import numpy as np
 from images2gif import writeGif
 from PIL import Image, ImageDraw, ImageFont, ImageOps
