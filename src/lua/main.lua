@@ -24,12 +24,12 @@ local data_process = require 'data_process'
 
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
-cmd:option('-mode', "exp", 'exp | pred | simulate | save')
+cmd:option('-mode', "exp", 'exp | expload | save')
 cmd:option('-server', "op", 'pc = personal | op = openmind')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../data', 'subdirectory to save data')
-cmd:option('-model', "ffobj", 'ff | ffobj | lstmobj | gruobj | cat | ind')
-cmd:option('-name', "mj", 'experiment name')
+cmd:option('-model', "npe", 'npe | np | lstm')
+cmd:option('-name', "", 'experiment name')
 cmd:option('-seed', 0, 'manual seed')
 
 -- dataset
@@ -103,7 +103,7 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 2
     mp.rnn_dim = 24
-    mp.model = 'lstm'
+    mp.model = 'npe'
     mp.im = false
     mp.cf = false
     mp.val_window = 5
@@ -131,7 +131,7 @@ local M
 
 if mp.model == 'lstmobj' or mp.model == 'ffobj' or mp.model == 'gruobj' then
     M = require 'variable_obj_model'
-elseif mp.model == 'bffobj' then 
+elseif mp.model == 'npe' then 
     M = require 'branched_variable_obj_model'
 elseif mp.model == 'cat' then 
     M = require 'concatenate'
@@ -597,7 +597,7 @@ function model_deps(modeltype)
             modeltype == 'ffobj' or
                     modeltype == 'gruobj' then
         M = require 'variable_obj_model'
-    elseif modeltype == 'bffobj' then
+    elseif modeltype == 'npe' then
         M = require 'branched_variable_obj_model'
     elseif modeltype == 'ind' then
         M = require 'independent'
