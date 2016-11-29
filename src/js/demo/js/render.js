@@ -1,4 +1,5 @@
 /**
+* adapted from matter-js
 * The Matter.js demo page controller and example runner.
 *
 * NOTE: For the actual example code, refer to the source files in `/examples/`.
@@ -24,7 +25,6 @@
         var CircularJSON = require('circular-json')
         var assert = require('assert')
         var utils = require('../../utils')
-        // var sleep = require('sleep')
         var PImage = require('pureimage');
         var fs = require('fs');
         var path = require('path')
@@ -49,15 +49,10 @@
     // Create the engine
     Demo.run = function(json_data, opt) {
 
-        //TODO: note that here you should load the demo engine with the json file
 
         // load the config file here.
-        // console.log(json_data)
         let data = json_data.trajectories
         let config = json_data.config
-        // console.log(config)
-
-        // let data = json_data
 
         var demo = {}
         demo.offset = 5;  // world offset
@@ -67,13 +62,12 @@
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
         demo.config.sizes = [2/3, 1, 3/2]  // multiples
-        demo.config.drastic_sizes = [1/2, 1, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
-        // demo.config.drastic_sizes = [1/2, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
+        demo.config.drastic_sizes = [1/2, 1, 2]  // multiples
         demo.config.object_base_size = {'ball': 60, 'obstacle': 80, 'block': 20 }  // radius of ball, side of square obstacle, long side of block
         demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
-        demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
-        demo.config.f = 0 // default? [0,1]
-        demo.config.p = 0 // default? [0,1,2]
+        demo.config.g = 0 // The index of the one hot. 0 is no, 1 is yes
+        demo.config.f = 0 //
+        demo.config.p = 0 //
         demo.config.max_velocity = 60
 
         demo.cx = demo.config.cx;
@@ -98,7 +92,7 @@
             // run the engine
             demo.runner = Runner.create()
             demo.runner.isFixed = true
-            var pcanvas = PImage.make(demo.width, demo.height);  // 693
+            var pcanvas = PImage.make(demo.width, demo.height);
             pcanvas.style = {}  
             console.log(pcanvas)
             demo.render = Render.create({
@@ -107,18 +101,6 @@
                 engine: demo.engine,
             })
             
-
-            // Events.on(demo.render, 'afterRender', function(e) {
-            //     var img = demo.render.canvas.toDataURL("image"+e.timestamp+".png")
-            //     var data = img.replace(/^data:image\/\w+;base64,/, "");
-            //     // var buf = new Buffer(data, 'base64');
-            //     // fs.writeFile('image.png', buf);
-            //     // document.write('<img src="'+img+'"/>');  // how do I save this?
-            //     // PImage.encodePNG(img, fs.createWriteStream('out.png'), function(err) {
-            //     // console.log("wrote out the png file to out.png");
-            //     // });
-            // });
-
             demo.render.hasBounds = true
             demo.render.options.height = demo.height
             demo.render.options.width = demo.width
@@ -148,9 +130,9 @@
             renderOptions.background = '#fff';
         }
 
-        var mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}// TODO eventually call Example[config.env].mass_colors
+        var mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
 
-        // Ok, now let's manually update
+        // now let's manually update
         if (_isBrowser) {
             Runner.stop(demo.runner)
         }
@@ -180,13 +162,13 @@
             var entity_ids = entities.map(function(elem) {
                                 return elem.id});
 
-            for (id = 0; id < entity_ids.length; id++) { //id = 0 corresponds to world!
+            for (id = 0; id < entity_ids.length; id++) {
                 var body = Composite.get(demo.engine.world, entity_ids[id], 'body')
                 // set the position here
                 if (s < config.num_past) {
-                    body.render.strokeStyle = '#FFA500'// orange #551A8B is purple
+                    body.render.strokeStyle = '#FFA500'// orange 
                 } else {
-                    body.render.strokeStyle = '#551A8B'// orange #551A8B is purple
+                    body.render.strokeStyle = '#551A8B'// purple
                 }
                 body.render.lineWidth = 5
 
@@ -196,8 +178,6 @@
                 Body.setAngularVelocity(body, 0)
                 Body.setAngle(body, trajectories[id][s].angle)
                 }
-
-            // Runner.tick(demo.runner, demo.engine);  // ok if I'm just rendering I DON'T NEED THIS! ACTUALY I DON'T NEED THIS AT ALL!
 
             if (config.env == 'tower') {
                 if (s == 59) {
@@ -211,37 +191,17 @@
 
             if (!_isBrowser && !(typeof opt.do_not_save_img !== 'undefined' &&  opt.do_not_save_img)) {
                 demo.render.context.globalAlpha = 0.5
-                // if (s == 24 || s == 25 || s == 26) {
-                //     demo.render.context.fillStyle = 'white'
-                //     console.log(s,'white')
-                // } else {
                     demo.render.context.fillStyle = 'white'
                     demo.render.context.fillRect(0,0,demo.width,demo.height)
                     demo.render.context.fillStyle = 'transparent'
                     demo.render.context.fillRect(0,0,demo.width,demo.height)
                     console.log(s,'transparent')
-                // }
-                // demo.render.context.fillStyle = "rgba(255, 255, 255, 1.0)";
                 demo.render.context.fillRect(0,0,demo.width,demo.height)
                 Render.world(demo.render)
                 let prediction_folder = path.basename(path.dirname(opt.out_folder))
 
-                // assert
-                // let filename = opt.out_folder + '/' + opt.exp_name + '_' + prediction_folder + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
                 let filename = opt.out_folder + '/' + prediction_folder + '_' + opt.batch_name + '_ex' + opt.ex + '_step' + s +'.png'
 
-                // console.log(filename)
-                // // console.log(prediction_folder)
-                // console.log('outfolder',opt.out_folder)
-                // console.log('prediction_folder', prediction_folder)
-                // // console.log(opt.out_folder)
-                // console.log('exp_name', opt.exp_name)
-                // // console.log(opt.batch_name)
-                // // console.log(opt.ex)
-                // // console.log(s)
-                // assert(false)
-
-                // let filename = 'out'+s+'_'+s+'.png'  // TODO! rename
                 PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
                     console.log("wrote out the png file to "+filename);
                 });
@@ -257,9 +217,6 @@
                 }
             }
         }
-        // setInterval(function(){
-        //   console.log('test');
-        // }, 1000);
         f();
 
         if (config.env == 'tower') {
@@ -307,7 +264,6 @@
 
     // call init when the page has loaded fully
     if (!_isAutomatedTest) {
-        // console.log('a')
         window.loadFile = function loadFile(file){
             var fr = new FileReader();
             fr.onload = function(){

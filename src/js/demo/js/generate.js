@@ -580,7 +580,6 @@
                                 '_t' + sim_options.steps +
                                 '_ex' + sim_options.samples
 
-        // should do this using some map function TODO
         if (sim_options.variableMass) {
             experiment_string += '_m' 
         }
@@ -591,19 +590,19 @@
             experiment_string += '_o' 
         }
         if (sim_options.drasticSize) {
-            experiment_string += '_dras3'   // change this to _dras if you only have two sizes!
+            experiment_string += '_dras3'
         }
         if (typeof sim_options.wall !== 'undefined' && sim_options.wall) {
-            experiment_string += '_w' + sim_options.wall   // change this to _dras if you only have two sizes!
+            experiment_string += '_w' + sim_options.wall
         }
         if (sim_options.gravity) {
-            experiment_string += '_gf' //+ sim_options.gravity //TODO: type?
+            experiment_string += '_gf'
         }
         if (sim_options.pairwise) {
-            experiment_string += '_pf' //+ sim_options.pairwise
+            experiment_string += '_pf'
         }
         if (sim_options.friction) {
-            experiment_string += '_fr' //+ sim_options.friction
+            experiment_string += '_fr'
         }
         var savefolder = '../../data/' + experiment_string + '/jsons/'
 
@@ -630,7 +629,7 @@
             sim_options.startstep = 0
         }
 
-        const chunks = chunk(sim_options.samples, max_iters_per_json, sim_options.startstep)  // this should take sim_options.startstep as a parameter!
+        const chunks = chunk(sim_options.samples, max_iters_per_json, sim_options.startstep)
         let num_examples_left = chunks.reduce(function(a, b) { return a + b; }, 0);
 
         if (sim_options.startstep < sim_options.samples) {
@@ -645,7 +644,7 @@
             for (let j=0; j < chunks.length; j++){
                 let chunk_number = j + (sim_options.samples-num_examples_left)/max_iters_per_json
 
-                let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
+                let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)
 
                 if (sim_options.env == 'tower') {
                     let output = Demo.simulate(demo, chunks[j], sim_options, sim_options.startstep);
