@@ -99,38 +99,38 @@ Trajectory data is stored in a `.json` file. You can visualize the trajectory by
 
 
 ### Training the Model
-This is an example of training the model for the `balls_n4_t60_s50000_m` dataset. The model checkpoints are saved in `src/lua/logs/balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0`. If you are comfortable looking at code that has not been cleaned up yet, please check out the flags in `src/lua/main.lua`. 
+This is an example of training the model for the `balls_n4_t60_s50000_m` dataset. The model checkpoints are saved in `src/lua/logs/balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0`. If you are comfortable looking at code that has not been cleaned up yet, please check out the flags in `src/lua/main.lua`. 
 ```shell
 > cd src/lua
-> th main.lua -layers 5 -dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -nbrhd -rs -test_dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnp_seed0 -mode exp
+> th main.lua -layers 5 -dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -nbrhd -rs -test_dataset_folders "{'balls_n4_t60_ex50000_m_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name balls_n4_t60_ex50000_m_rda__balls_n4_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode exp
 ```
 
 Here is an example of training on 3, 4, 5 balls of variable mass and testing on 6, 7, 8 balls of variable mass, provided that those datasets have been generated.
 ```shell
 > cd src/lua
-> th main.lua -layers 5 -dataset_folders "{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}" -nbrhd -rs -test_dataset_folders "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnpe_seed0 -mode exp
+> th main.lua -layers 5 -dataset_folders "{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}" -nbrhd -rs -test_dataset_folders "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode exp
 ```
 
 Here is an example of training on "O" and "I" wall geometries and testing on "U" and "I" wall geometries, provided that those datasets have been generated.
 ```shell
 > cd src/lua
-> th main.lua -layers 5 -dataset_folders "{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}" -nbrhd -rs -test_dataset_folders "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnpe_seed0 -mode exp 
+> th main.lua -layers 5 -dataset_folders "{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}" -nbrhd -rs -test_dataset_folders "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode exp 
 ```
 
 Be sure to look at the command line flags in `main.lua` for more details. You may want to change the number of training iterations if you are just debugging, for example.
 
 ### Prediction
-This is an example of running simulations using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnpe_seed0`.
+This is an example of running simulations using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0`.
 ```shell
 > cd src/lua
-> th eval.lua -test_dataset_folders "{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda','balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnpe_seed0 -mode sim
+> th eval.lua -test_dataset_folders "{'balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda','balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode sim
 ```
 
 ### Inference
-This is an example of running mass inference using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnpe_seed0`.
+This is an example of running mass inference using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0`.
 ```shell
 > cd src/lua
-> th eval.lua -test_dataset_folders "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda','balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_nlan_lr0.0003_modelnpe_seed0 -mode minf
+> th eval.lua -test_dataset_folders "{'balls_n6_t60_ex50000_m_rda','balls_n7_t60_ex50000_m_rda','balls_n8_t60_ex50000_m_rda','balls_n3_t60_ex50000_m_rda','balls_n4_t60_ex50000_m_rda','balls_n5_t60_ex50000_m_rda'}" -name balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode minf
 ```
 
 #### Acknowledgements
