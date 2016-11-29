@@ -89,7 +89,7 @@ if mp.debug then
     mp.lrdecay_every = 20
     mp.layers = 2
     mp.rnn_dim = 24
-    mp.model = 'np'
+    mp.model = 'npe'
     mp.val_window = 5
     mp.val_eps = 2e-5
 	mp.num_threads = 1
@@ -100,7 +100,7 @@ if mp.debug then
     mp.val_every = 20
     mp.plot = false
 	mp.cuda = false
-    mp.rs = false
+    mp.rs = true
     mp.fast = true
     mp.of = false
 else

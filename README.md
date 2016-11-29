@@ -31,7 +31,7 @@ Below are some predictions from the model:
 <kbd><img src="./demo/walls_n2_wU_npe_pred_batch0_ex2.gif" width="125"></kbd>
 <kbd><img src="./demo/walls_n2_wI_npe_pred_batch0_ex2.gif" width="125"></kbd>
 
-_The code in this repository is still under active development, so use at your
+_The code in this repository has not been cleaned up, so use at your
 own risk._
 
 ## Requirements
@@ -39,8 +39,6 @@ own risk._
 * [Node.js](https://nodejs.org/en/) v6.2.1
 
 ### Dependencies
-_WARNING: the instructions below are not complete._
-
 To install lua dependencies, run:
 
 ```bash
@@ -71,7 +69,6 @@ Pillow==2.8.2
 -->
 
 ## Instructions
-_The instructions below are missing some details._
 
 <!---
 Pretrained network and dataset can be downloaded at: COMING SOON.
@@ -117,7 +114,7 @@ Here is an example of training on "O" and "I" wall geometries and testing on "U"
 > th main.lua -layers 5 -dataset_folders "{'walls_n2_t60_ex50000_wO_rda','walls_n2_t60_ex50000_wL_rda'}" -nbrhd -rs -test_dataset_folders "{'walls_n2_t60_ex50000_wU_rda','walls_n2_t60_ex50000_wI_rda'}" -fast -lr 0.0003 -model npe -seed 0 -name walls_n2_t60_ex50000_wO_rda,walls_n2_t60_ex50000_wL_rda__walls_n2_t60_ex50000_wU_rda,walls_n2_t60_ex50000_wI_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode exp 
 ```
 
-Be sure to look at the command line flags in `main.lua` for more details. You may want to change the number of training iterations if you are just debugging, for example.
+Be sure to look at the command line flags in `main.lua` for more details. You may want to change the number of training iterations if you are just debugging, for example. The code defaults to cpu, but you can switch to gpu with the `-cuda` flag.
 
 ### Prediction
 This is an example of running simulations using trained model that was saved in `balls_n3_t60_ex50000_m_rda,balls_n4_t60_ex50000_m_rda,balls_n5_t60_ex50000_m_rda__balls_n6_t60_ex50000_m_rda,balls_n7_t60_ex50000_m_rda,balls_n8_t60_ex50000_m_rda_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0`.
