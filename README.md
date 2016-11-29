@@ -138,6 +138,8 @@ This is an example of running simulations using trained model that was saved in 
 > th eval.lua -test_dataset_folders "{'walls_n2_t60_ex50000_wO','walls_n2_t60_ex50000_wL','walls_n2_t60_ex50000_wU','walls_n2_t60_ex50000_wI'}" -name walls_n2_t60_ex50000_wO,walls_n2_t60_ex50000_wL__walls_n2_t60_ex50000_wU,walls_n2_t60_ex50000_wI_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0 -mode sim
 ```
 
+You can visualize the predictions with `src/js/demo/render.html` and passing in the `.json` files in `src/lua/logs/<experiment_name>/<dataset_name>predictions/<jsonfile>`.
+
 ### Inference
 This is an example of running mass inference using trained model that was saved in `src/lua/logs/balls_n4_t60_ex50000_m__balls_n4_t60_ex50000_m_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0`.
 ```shell
