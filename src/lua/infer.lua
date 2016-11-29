@@ -291,19 +291,12 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
         if mp.debug then xlua.progress(i, dataloader.total_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local num_context = batch[2]:size(2)
-
-        -- I should do obstacle mask here, and make obstacle mask an argument into context collision filter.
-        -- because right now I am assuming that my context object is an obstacle. But actually I can't assume that
-        -- since I might be doing inference on object id.
-
         local valid_contexts = context_collision_filter(batch)
 
         -- note that here at most one element in valid_contexts per row would be lit up.
         -- so each example in the batch has only one context.
         -- for example: [0, 0, 2, 0, 1] means that examples 1,2,4 have no valid context
         -- and context_id 2 is valid in example 3 and context_id 5 is valid in example 5
-
-        -- good up to here
 
         for context_id = 1, num_context do
             -- here let's get a onehot mask to see if the context id is in valid_contexts
@@ -313,25 +306,20 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
             if context_mask:sum() > 0 then  -- it's okay to use sum because it is a ByteTensor
 
                 -- here get the obstacle mask
-                -- TODO! This is important. we need to break it up into si_indices actually
                 local obstacle_index, obstacle_mask
                 -- if size inference then obstacle mask
                 if alleq({si_indices, config_args.si.os}) then
                     obstacle_index = config_args.si.oid[1]+1
-                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
-                    -- that is the problem. I didn't make a copy. 
                     obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
                     context_mask:cmul(obstacle_mask)
                 end
-
-                -- possible todo: if mass inference then don't use obstacles
 
                 local collision_filter_mask = wall_collision_filter(batch, distance_threshold)
 
                 local context_and_wall_mask = torch.cmul(context_mask, collision_filter_mask)
 
                 if context_and_wall_mask:sum() > 0 then
-                    local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch, true)  --this should set sim to true!
+                    local losses, prediction, vel_losses, ang_vel_losses = model:fp_batch(params_, batch, true)
 
                     local cd_error, relative_magnitude_error, angle_mask, mask_nElement = angle_magnitude(prediction, batch, true)
                     context_and_wall_mask:cmul(angle_mask)
@@ -351,12 +339,7 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
                         -- maskedSelect does things in order
                         local specific_context = extract_context_id_from_batch(batch, context_and_wall_mask, context_id) -- (num_ex_for_context, 1, num_past, obj_dim)
 
-                        local specific_properties = extract_field(specific_context[{{},{},{-1},{}}], si_indices) -- num_valid_contexts. NOTE THAT WE ARE NOT DOING BLOCK TOWER!
-                        -- good up to here
-
-                        -- first we figure out which oids and sizes were represented in specific_context
-                        -- populate tables
-
+                        local specific_properties = extract_field(specific_context[{{},{},{-1},{}}], si_indices) -- num_valid_contexts
                         for f=1,#specific_properties do
                             -- populate oid
                             table.insert(property_table[specific_properties[f]],
@@ -395,14 +378,13 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
     return avg_properties, num_properties
 end
 
--- good
 function extract_context_id_from_batch(batch, context_mask, context_id) 
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
-    local selected_context = torch.squeeze(context_past[{{},{context_id},{-1}}])  -- the last past timestep  -- good
+    local selected_context = torch.squeeze(context_past[{{},{context_id},{-1}}])  -- the last past timestep
 
     -- recall context_mask gives you the example within batch for that particular context_id
-    local ex_in_batch_for_context = torch.totable(torch.squeeze(torch.squeeze(context_mask):nonzero(),2))  -- good
+    local ex_in_batch_for_context = torch.totable(torch.squeeze(torch.squeeze(context_mask):nonzero(),2))
 
     local selected_ex_for_context = {}
     for _,k in pairs(ex_in_batch_for_context) do
@@ -414,15 +396,14 @@ function extract_context_id_from_batch(batch, context_mask, context_id)
     return selected_ex_for_context
 end
 
--- good
 function extract_field(specific_context, si_indices) 
     local one_hot_field = specific_context[{{},{},{},si_indices}]
 
     local categories
     if alleq({si_indices, config_args.si.m}) then
-        categories = config_args.masses -- TODO! do I want to include all of it or do I want to trim the large mass
+        categories = config_args.masses
     elseif alleq({si_indices, config_args.si.oid}) then
-        categories = config_args.oid_ids -- do I want to trim?
+        categories = config_args.oid_ids
     elseif alleq({si_indices, config_args.si.os}) then
         categories = config_args.drastic_object_sizes
     else
@@ -451,19 +432,12 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
         local batch = dataloader:sample_sequential_batch(false)
         local num_context = batch[2]:size(2)
 
-
-        -- I should do obstacle mask here, and make obstacle mask an argument into context collision filter.
-        -- because right now I am assuming that my context object is an obstacle. But actually I can't assume that
-        -- since I might be doing inference on object id.
-
         local valid_contexts = context_collision_filter(batch)  -- a (bsize, 1) where elements are the context id
 
         -- note that here at most one element in valid_contexts per row would be lit up.
         -- so each example in the batch has only one context.
         -- for example: [0, 0, 2, 0, 1] means that examples 1,2,4 have no valid context
         -- and context_id 2 is valid in example 3 and context_id 5 is valid in example 5
-
-        -- good up to here
 
         for context_id = 1, num_context do
             -- here let's get a onehot mask to see if the context id is in valid_contexts
@@ -476,8 +450,6 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
                 -- if size inference then obstacle mask
                 if alleq({si_indices, config_args.si.os}) then
                     obstacle_index = config_args.si.oid[1]+1
-                    -- seems to be a problem with resize because resize adds an extra "1". It could be that I'm not looking at the correct part of the memory.
-                    -- that is the problem. I didn't make a copy. 
                     obstacle_mask = batch[2][{{},{context_id},{-1},{obstacle_index}}]:reshape(mp.batch_size, 1):byte()  -- (bsize,1)  1 if it is an obstacle 
                     context_mask:cmul(obstacle_mask)
                 end
@@ -508,14 +480,10 @@ end
 
 -- zero out the examples in which this_past and this_future 
 -- are less than the given angle
--- NOTE that when you do forward pass, you'd have to do something different when you average!
--- NOTE that if we do this after we apply neighbor mask, then we could norm that is 0!
--- we have to deal with that. Wait that should be fine, because collision filter just calculates based on batch
 -- return input, this_future
 function collision_filter(batch)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
-    -- I could compute manual dot product
     -- this_past: (bsize, numpast, objdim)
     -- this_future: (bsize, numfuture, objdim)
     local past = this_past:clone()
@@ -530,18 +498,16 @@ function collision_filter(batch)
     -- manually perform dot product
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
 
-    -- you could just only include those for which dot is < 0
+    -- only include those for which dot is < 0
     local collision_mask = dot:le(0)
     return collision_mask
 end
 
 
 -- zero out collisions with walls
--- good
 function wall_collision_filter(batch, distance_threshold)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
-    -- I could compute manual dot product
     -- this_past: (bsize, numpast, objdim)
     -- this_future: (bsize, numfuture, objdim)
     local past = this_past:clone()
@@ -557,7 +523,7 @@ function wall_collision_filter(batch, distance_threshold)
     -- manually perform dot product
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
 
-    -- you could just only include those for which dot is < 0
+    --  only include those for which dot is < 0
     local collision_mask = dot:le(0) -- 1 if collision  -- good  (5 x 1)
 
     -- for wall collision:
@@ -572,7 +538,7 @@ function wall_collision_filter(batch, distance_threshold)
     local topwall = 0
     local rightwall = 2*config_args.cx
     local bottomwall = 2*config_args.cy
-    local walls = (torch.Tensor{leftwall, topwall, rightwall, bottomwall})/config_args.position_normalize_constant  -- size (4)  -- TODO! You have to normalize!
+    local walls = (torch.Tensor{leftwall, topwall, rightwall, bottomwall})/config_args.position_normalize_constant  -- size (4)
 
     local leftwall_normal = torch.Tensor({{1,0}})
     local topwall_normal = torch.Tensor({{0,1}})
@@ -598,14 +564,9 @@ function wall_collision_filter(batch, distance_threshold)
     local close_walls_filter = d2wall:le(distance_threshold/config_args.position_normalize_constant)  -- one ball diameter  (bsize,4)
 
     close_walls_filter:add(d2wallpast:le(distance_threshold/config_args.position_normalize_constant))  -- filter distance of past as well  -- wait if I add this in I get more examples?
-
     close_walls_filter:clamp(0,1)
-    -- so :cmul does: filtering out the past will have < ones in the close_wall_filters, which means >= ones in the obstacle filter
-    -- what that means is that we will kick out the ones that have past AND future by the walls. 
-    -- but actually we want the OR. We want the ones whose past OR future are in the walls. Or do we?
 
     -- dot the wall's normal with your velocity vector
-    -- what if two walls are equally close?
     -- past_vel (bsize, 2)
     -- wall_normals (4,2)
     -- result (bsize, 4)
@@ -634,7 +595,6 @@ function wall_collision_filter(batch, distance_threshold)
     return object_collision_mask
 end
 
--- unnormalized!
 -- return (bsize, num_contex)
 local function context_object_sizes(context_past)
     local context = context_past:clone()
@@ -644,22 +604,15 @@ local function context_object_sizes(context_past)
     local context_os = context[{{},{},{1},config_args.si.os}]  -- (bsize, num_context, 1, 3)
 
     -- (bsize, num_context, 1, 1)
-    local context_basesizes_num = onehot2numall(context_oids, config_args.object_base_size_ids_upper)  -- TODO: incorporate the actual object base size into here!
+    local context_basesizes_num = onehot2numall(context_oids, config_args.object_base_size_ids_upper)
     
-    -- TO SWITCH BETWEEN DRASTIC SIZE AND NORMAL, JUST CHANGE object_sizes in config!
-    local context_os_num = onehot2numall(context_os, config_args.drastic_object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
-    -- local context_os_num = onehot2numall(context_os, config_args.object_sizes)  -- TODO: make sure you distinguish between normal and drastic!
+    local context_os_num = onehot2numall(context_os, config_args.drastic_object_sizes)
 
     -- now squeeze out third and fourth dimensions --> (bsize, num_context)
     context_basesizes_num = torch.squeeze(torch.squeeze(context_basesizes_num,4),3)  -- note that order matters!
     context_os_num = torch.squeeze(torch.squeeze(context_os_num,4),3)  -- note that order matters!
 
-    -- assert(false, 'did you incorporate object base size? and did you take the diagonal into account?')
-
     local object_sizes = torch.cmul(context_basesizes_num, context_os_num)
-    -- good up to here
-
-    -- my only worry is that we won't get enough examples
 
     return object_sizes
 end
@@ -684,7 +637,6 @@ end
 function context_collision_filter(batch)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
 
-    -- I could compute manual dot product
     -- this_past: (bsize, numpast, objdim)
     -- this_future: (bsize, numfuture, objdim)
     local past = this_past:clone()
@@ -699,7 +651,7 @@ function context_collision_filter(batch)
     -- manually perform dot product
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
 
-    -- you could just only include those for which dot is < 0
+    -- only include those for which dot is < 0
     local collision_mask = dot:le(0) -- 1 if collision  -- good
 
     local pnc = config_args.position_normalize_constant
@@ -721,7 +673,7 @@ function context_collision_filter(batch)
 
     -- only consider looking at the context if there is a collision at all
     if collision_mask:sum() > 0 then
-        -- 1. They have to be within (obj_radius + obstacle_diagonal + vnc) of each other
+        -- They have to be within (obj_radius + obstacle_diagonal + vnc) of each other
 
         local cpast = context_past:clone()
         local num_context = context_past:size(2)
@@ -732,25 +684,17 @@ function context_collision_filter(batch)
         local cpast_vel = torch.squeeze(cpast[{{},{},{-1},{vx,vy}}],3)
 
         -- Next, let's compute fla and cla: "focus look ahead" and "context look ahead" respectively.
-        -- these are unnormalized!
         -- note that these may go outside of the world boundaries
-        -- NOTE! we are using different constants to normalize the velocity and position! We have to unnormalize first
         local fla = past_pos*pnc + past_vel*vnc  -- (bsize, 2)
         local cla = cpast_pos*pnc + cpast_vel*vnc -- (bsize, num_context, 2)
 
-        -- complication! fla and cla may go outside of the world boundaries! Is that a problem?
         -- a context object may also bounce off a wall. Well in that case the context object 
         -- would not hit the focus object. In our scheme, we let the object go out of bounds
         -- because we are not looking at focus objects within the wall boundary, and if a context
         -- object ends up bouncing with the focus object between t and t+1 after it bounces 
         -- off a wall during that same time interval, we'd ignore it because it's cla would be
         -- out of bounds which we won't look at anyways. Note that we are applying the 
-        -- wall collision filter only during count_correct. Should we apply it earlier?
-        -- AKA, would it affect the code if I did this first? Well, when I apply the wall
-        -- collision filter I am just going to ignore that example anyway, so this would
-        -- just be extra computation, which is okay.
-
-        -- good up to here
+        -- wall collision filter only during count_correct. 
 
         -- let's compute the euc dist between fla and cla (unnormalized)
         assert(alleq({torch.totable(fla:size()), {mp.batch_size, 2}}))
@@ -758,17 +702,14 @@ function context_collision_filter(batch)
         local euc_dist_la = compute_euc_dist_o2m(fla, cla)  -- (bsize, num_context)
 
         -- get the thresholds for each context (bsize, num_context)
-        -- WE ARE ASSUMING THAT THE FOCUS OBJECT IS A BALL AND HAS SIZE MULTIPLIER ONE! 
-        -- do an assert for this. Need to take object_type and size_multiplier into account.
+        -- We are assuming that the focus object is a ball and has a size multiplier of one
         -- not that here the distances are unnormalized.
-        -- assert for all rows of focus? NOTE THIS! Well, in expand_for_each_object, we've ensured that the focus object will always be a ball
         assert(past[{{},{},{config_args.si.oid[1]}}]:eq(1)) -- make sure it is a ball
         assert(past[{{},{},{config_args.si.os[1]+1}}]:eq(1))  -- make sure size multiplier is 1
         local distance_to_context_edge = config_args.object_base_size.ball  -- note that later we can do something like context_object_sizes for different sized focuses
         local ball_radii = torch.Tensor(mp.batch_size, num_context):fill(distance_to_context_edge) -- this is the base. then we will add in the obstacle sizes
 
         -- now get the respective obstacle sizes and add that to disance_thresholds (bsize, num_context)
-        -- NOTE: this needs to tkae drastic size into account!
         -- we don't need a padding because fla and cla will only exactly equal (size_upper(ball) + size_upper(context)) if the 
         -- collision happens at exactly t+1
         -- the distance threshold is the distance for which the focus object would be exactly
@@ -776,7 +717,7 @@ function context_collision_filter(batch)
         -- we would potentially collide. I say potentially to cover the case when the ball
         -- is near the flat edge of an obstacle, so it would be within the boundary, but 
         -- it might not collide. Recall that we will only be taking one context, so 
-        -- we would throw out examples that have mbiguous cases.
+        -- we would throw out examples that have ambiguous cases.
         -- outside this threshold, there is no way we could collide.
         local context_sizes = context_object_sizes(context_past)
         local distance_thresholds = torch.add(ball_radii, context_sizes)
@@ -784,26 +725,6 @@ function context_collision_filter(batch)
         -- if la is > threshold we take it out. if it is <= threshold, we keep it
         -- 1 if within threshold aka POTENTIAL collision
         local la_within_threshold = (euc_dist_la-distance_thresholds):le(0)
-
-        -- 2. here we will see if the ball is moving toward a context object.
-        -- [i,j]=1 if the focus object was moving toward context j of example i
-        -- this actually shouldn't matter?
-        -- you know actually this might not be the case if the context is moving towards you.
-        -- so let's not include it. Is this necessary? Checking fla and cla actually 
-        -- is more general than thiss
-        -- local moving_toward_context = check_moving_toward_context(past_pos, cpast_pos, past_vel)  -- (bsize, num_context) 
-
-        -- now we apply the following filters. 
-        -- a) It must be moving towards context 
-        -- b) la must be within threshold
-        -- local within_threshold_moving_toward_context = torch.cmul(la_within_threshold, moving_toward_context)  -- (bsize, num_context)
-
-        -- check for each row, and record the indices of that 1. There should only be 1 of thoe indices.
-        -- returns a table of size (bsize). Each element of this table is another table with the indices in that row.
-        -- if a row doesn't have any indices, then it is an empty table
-        -- here we have all the contexts that meet our collision criteria. All we need to do now is to check if there is only one context in an example
-        -- local within_threshold_moving_toward_context_indices = torch.find(within_threshold_moving_toward_context,1,2)  -- search over dimension 2
-
         local la_within_threshold_indices = torch.find(la_within_threshold,1,2)  -- search over dimension 2
 
         -- here we impose the constraint that only 1 context should be potentially colliding
@@ -822,12 +743,9 @@ function context_collision_filter(batch)
         -- now turn valid_contexts into a tensor (bsize, 1).
         valid_contexts = torch.Tensor(valid_contexts):reshape(mp.batch_size,1)  -- this will be your mask
 
-        -- good up to here
-
         return valid_contexts
     else 
-        -- this is not a byte tensor! because it is not supposed to be a binary mask.
         -- this is only for getting the indices of the colliding context object for each example. 
-        return collision_mask:float()   -- they are all 0 so we are good
+        return collision_mask:float()
     end
 end
