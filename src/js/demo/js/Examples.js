@@ -1961,51 +1961,6 @@ if (!_isBrowser) {
 
     var World = Matter.World,
         Bodies = Matter.Bodies,
-        Composites = Matter.Composites,
-        Body = Matter.Body;;
-
-    Example.m_simpleBalls = function(demo) {
-
-        var engine = demo.engine,
-            world = engine.world;
-
-        engine.world.gravity.y = 0;
-        engine.world.gravity.x = 0;
-
-        // now, can I make it generate random initial locations and velocities?
-        var num_obj = 5
-        // use demo.offset, demo.cx, demo.cy
-
-        world.bounds = {
-                min: { x: 0, y: 0 },
-                max: { x: 2*demo.cx, y: 2*demo.cy }
-            }
-        console.log(world.bounds)
-
-        var stack = Composites.stack(0, 100, 5, 1, 20, 0, function(x, y) {
-            var body = Bodies.circle(x, y, 50, { restitution: 1,
-                                             friction: 0,
-                                             frictionAir: 0,
-                                             frictionStatic: 0,
-                                             inertia: Infinity,
-                                             inverseInertia: 0});  // I initialize the velocity, but they don't continue?
-            // Body.setVelocity(body, {x: 5, y: 5});  // this takes out a ball?  If you have more balls than can fit, then this will start moving the balls before all of them fit!
-            return body
-        });
-        World.add(world, stack);
-
-        // doing it this way makes it so that all the balls have initial positions first, and then they move
-        engine.world.composites[0].bodies.map(function(elem) {
-            Body.setVelocity(elem,{x: 5, y: 5});
-        })
-    };
-
-})();
-
-(function() {
-
-    var World = Matter.World,
-        Bodies = Matter.Bodies,
         Composite = Matter.Composite,
         Composites = Matter.Composites,
         Body = Matter.Body,
@@ -2026,7 +1981,7 @@ if (!_isBrowser) {
             }
 
             // these should not be mutated
-            self.params = {num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+            self.params = {num_obj: options.numObj,
                            variableMass: options.variableMass,
                            friction: options.friction,
                            max_v0: 20,
@@ -2045,10 +2000,8 @@ if (!_isBrowser) {
                     {hi: 2*demo.cy - self.params.obj_radius - 1, lo: self.params.obj_radius + 1});
                 };
 
-            // this is defined here
-
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+                self.possible_masses = demo.config.masses
             } else {
                 self.possible_masses = [1]
             }
@@ -2065,14 +2018,14 @@ if (!_isBrowser) {
                 Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
             ]);
 
-            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+            World.add(self.engine.world, world_border)  // its parent is a circular reference
 
             self.group = Body.nextGroup(true);
 
             return self
         };
 
-        Balls.init = function(self) {  // hockey is like self here
+        Balls.init = function(self) {
             // generate positions
             self.p0 = initialize_positions(self.params.num_obj, self.params.obj_radius, self.rand_pos)
 
@@ -2124,7 +2077,7 @@ if (!_isBrowser) {
                                  label: "Entity",
                                  objtype: trajectories[i][1].objtype,
                                  sizemul: trajectories[i][1].sizemul,
-                                 collisionFilter: {group:self.group}, // remove collision constraints  comment out because otherwise they may overlap.
+                                 collisionFilter: {group:self.group}, // remove collision constraints
                                  angle: trajectories[i][1].angle // initial angle
                              }
                 if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
@@ -2151,10 +2104,10 @@ if (!_isBrowser) {
         var balls = Balls.create(cmd_options);
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            Balls.init(balls);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Balls.init(balls);
         } else {
             console.log('init_from_trajectories')
-            Balls.init_from_trajectories(balls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Balls.init_from_trajectories(balls, cmd_options.trajectories);
         }
         return balls;
     };
@@ -2173,7 +2126,7 @@ if (!_isBrowser) {
         var Mixed = {}
 
         Mixed.create = function(options) {
-            var self = {}; // instance of the Balls class
+            var self = {};
 
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
@@ -2188,7 +2141,7 @@ if (!_isBrowser) {
 
             // these should not be mutated
             self.params = {
-                           num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+                           num_obj: options.numObj,
                            variableMass: options.variableMass,
                            variableSize: options.variableSize,
                            variableObstacles: options.variableObstacles,
@@ -2220,7 +2173,7 @@ if (!_isBrowser) {
             self.rand_pos = function() {
                 let max_obj_size
                 if (self.params.drasticSize) {
-                    // NOTE the big object may not be completely within the world!
+                    // Note the big object may not be completely within the world
                     max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
                 } else {
                     max_obj_size = demo.config.sizes[demo.config.sizes.length-1]*Math.max(self.params.obj_radius, self.params.obstacle_side/2)
@@ -2230,10 +2183,8 @@ if (!_isBrowser) {
                     {hi: 2*demo.cy - max_obj_size - 1, lo: max_obj_size + 1});
                 };
 
-            // this is defined here
-
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+                self.possible_masses = demo.config.masses//[1, 5, 25]
             } else {
                 self.possible_masses = [1]
             }
@@ -2242,7 +2193,7 @@ if (!_isBrowser) {
                 if (self.params.drasticSize) {
                     self.possible_sizes = demo.config.drastic_sizes
                 } else {
-                    self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
+                    self.possible_sizes = demo.config.sizes//[1, 5, 25]
                 }
             } else {
                 self.possible_sizes = [1]
@@ -2260,17 +2211,14 @@ if (!_isBrowser) {
                 Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1 })  // left
             ]);
 
-            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+            World.add(self.engine.world, world_border)  // its parent is a circular reference
 
             self.group = Body.nextGroup(true);
 
             return self
         };
 
-        Mixed.init = function(self) {  // hockey is like self here
-            // generate positions
-            // let object_size = self.params.obj_radius*self.possible_sizes[self.possible_sizes.length-1]  // if not variableSize, then sizemul will be 1 anyway
-
+        Mixed.init = function(self) {
             // generae obstacle sizes
             self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
 
@@ -2279,9 +2227,7 @@ if (!_isBrowser) {
             for (let i = 0; i < self.params.num_balls; i ++){
                 sampled_sizes.push(1*self.params.obj_radius)
             }
-            // console.log(sampled_sizes)
             for (let i = self.params.num_balls; i < self.params.num_obj; i ++) {
-                // sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
                 sampled_sizes.push(self.s[i-self.params.num_balls]*self.params.obstacle_side*0.5*Math.sqrt(2)) // this should be divided by 2 and squared
             }
 
@@ -2330,17 +2276,14 @@ if (!_isBrowser) {
                                      mass: 1e30, // some really huge mass
                                      label: "Entity",
                                      objtype: "obstacle",
-                                     sizemul: self.s[i-self.params.num_balls]  // sizemul is wrong!!!!!!!!!!!!!!!!
-                                     // sizemul: self.s_debug[i-self.params.num_balls]
+                                     sizemul: self.s[i-self.params.num_balls]
                                  }
-                // console.log(self.params.obstacle_side)
                 let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 body_opts)
-                World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+                World.add(self.engine.world, obstacle);
              }
-
         };
 
 
@@ -2372,7 +2315,6 @@ if (!_isBrowser) {
                     body.render.strokeStyle = '#FFA500'// orange
                     body.render.lineWidth = 5
 
-                    // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
                     Body.setVelocity(body, { x: 0, y: 0 })
                     Body.setAngularVelocity(body, 0)
 
@@ -2397,15 +2339,12 @@ if (!_isBrowser) {
         };
 
         var mixed = Mixed.create(cmd_options);
-        // console.log('cmd_options')
-        // console.log(cmd_options)
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            // console.log('init')
-            Mixed.init(mixed);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Mixed.init(mixed);
         } else {
             console.log('init_from_trajectories')
-            Mixed.init_from_trajectories(mixed, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Mixed.init_from_trajectories(mixed, cmd_options.trajectories);
         }
         return mixed;
     };
@@ -2426,7 +2365,7 @@ if (!_isBrowser) {
         var Invisible = {}
 
         Invisible.create = function(options) {
-            var self = {}; // instance of the Balls class
+            var self = {};
 
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
@@ -2441,7 +2380,7 @@ if (!_isBrowser) {
 
             // these should not be mutated
             self.params = {
-                           num_obj: options.numObj,  // this should be inferred from the engine? Well if the engine already has objects you should yield, basically
+                           num_obj: options.numObj,
                            variableMass: options.variableMass,
                            variableSize: options.variableSize,
                            variableObstacles: options.variableObstacles,
@@ -2485,7 +2424,7 @@ if (!_isBrowser) {
             // this is defined here
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+                self.possible_masses = demo.config.masses//[1, 5, 25]
             } else {
                 self.possible_masses = [1]
             }
@@ -2494,7 +2433,7 @@ if (!_isBrowser) {
                 if (self.params.drasticSize) {
                     self.possible_sizes = demo.config.drastic_sizes
                 } else {
-                    self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
+                    self.possible_sizes = demo.config.sizes//[1, 5, 25]
                 }
             } else {
                 self.possible_sizes = [1]
@@ -2515,17 +2454,14 @@ if (!_isBrowser) {
                 Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} })  // left
             ]);
 
-            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+            World.add(self.engine.world, world_border)  // its parent is a circular reference
 
             self.group = Body.nextGroup(true);
 
             return self
         };
 
-        Invisible.init = function(self) {  // hockey is like self here
-            // generate positions
-            // let object_size = self.params.obj_radius*self.possible_sizes[self.possible_sizes.length-1]  // if not variableSize, then sizemul will be 1 anyway
-
+        Invisible.init = function(self) {
             // generae obstacle sizes
             self.s = initialize_sizes(self.params.num_obstacles, self.possible_sizes)
 
@@ -2593,19 +2529,17 @@ if (!_isBrowser) {
                                      mass: 1e30, // some really huge mass
                                      label: "Entity",
                                      objtype: "block",
-                                     sizemul: demo.config.drastic_sizes[demo.config.drastic_sizes.length-1],  // sizemul is wrong!!!!!!!!!!!!!!!!
+                                     sizemul: demo.config.drastic_sizes[demo.config.drastic_sizes.length-1],
                                      collisionFilter: {
                                         category: self.invis_category,
                                         mask: self.invis_category
                                      },
-                                     // sizemul: self.s_debug[i-self.params.num_balls]
                                  }
-                // console.log(self.params.obstacle_side)
                 let invis = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
                                                 self.params.invis_side*body_opts.sizemul, 
                                                 self.params.invis_side*3*body_opts.sizemul, 
                                                 body_opts)
-                World.add(self.engine.world, invis);  // TODO! the rectangle is not getting added?
+                World.add(self.engine.world, invis);
              }
 
              // now set the obstacles
@@ -2621,14 +2555,12 @@ if (!_isBrowser) {
                                         mask: self.solid_category
                                      }, 
                                  }
-                // console.log(self.params.obstacle_side)
                 let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 body_opts)
-                World.add(self.engine.world, obstacle);  // TODO! the rectangle is not getting added?
+                World.add(self.engine.world, obstacle);
              }
-
         };
 
 
@@ -2648,7 +2580,6 @@ if (!_isBrowser) {
                                     category: self.solid_category,
                                     mask: self.solid_category
                                  },
-                                 // collisionFilter: {group:self.group} // remove collision constraints
                              }
                     if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                         body_opts.friction = 0;
@@ -2663,7 +2594,6 @@ if (!_isBrowser) {
                     body.render.strokeStyle = '#FFA500'// orange
                     body.render.lineWidth = 5
 
-                    // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
                     Body.setVelocity(body, trajectories[i][1].velocity)
 
                     // add body to world
@@ -2679,7 +2609,6 @@ if (!_isBrowser) {
                                         category: self.invis_category,
                                         mask: self.invis_category
                                      },
-                                     // collisionFilter: {group:self.group}
                                  }
                     let pos = trajectories[i][1].position
                     let obstacle = Bodies.rectangle(pos.x, pos.y, 
@@ -2700,7 +2629,6 @@ if (!_isBrowser) {
                                         category: self.solid_category,
                                         mask: self.solid_category
                                      },
-                                     // collisionFilter: {group:self.group}
                                  }
                     let pos = trajectories[i][1].position
                     let obstacle = Bodies.rectangle(pos.x, pos.y, 
@@ -2713,39 +2641,17 @@ if (!_isBrowser) {
         };
 
         var invisible = Invisible.create(cmd_options);
-        // console.log('cmd_options')
-        // console.log(cmd_options)
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            // console.log('init')
-            Invisible.init(invisible);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Invisible.init(invisible);
         } else {
             console.log('init_from_trajectories')
-            Invisible.init_from_trajectories(invisible, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Invisible.init_from_trajectories(invisible, cmd_options.trajectories);
         }
         return invisible;
     };
 
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 (function() {
@@ -2761,7 +2667,7 @@ if (!_isBrowser) {
         var Walls = {}
 
         Walls.create = function(options) {
-            var self = {}; // instance of the Balls class
+            var self = {};
 
             // default
             if (!(typeof options !== 'undefined' &&  options)) {
@@ -2787,32 +2693,26 @@ if (!_isBrowser) {
 
             // obstacles will be blocks, wall obj will be squares
             if (options.wall == 'I') {
-                self.params.num_obstacles = 2//random_int(1,3)
+                self.params.num_obstacles = 2
             } else {
                 self.params.num_obstacles = 0
             }
             self.params.num_balls = options.numObj
             console.assert(self.params.num_balls >= 1)
 
-            // here we should calculate the walls actually, so we can update self.num_obj accordingly
-            // we will just fill up with obstacles of small size
-
-            // you need a function to compute the positions of all the blocks
             let wall_obstacle_params = {
                 obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
                 window_cx: demo.cx,
                 window_cy: demo.cy,
                 window_width: demo.width,
                 window_height: demo.height,
-                random: true, // 0 means flush against the world boundaries
-                max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
+                random: true,
+                max_cutoff: 2,
                 wallType: options.wall,
                 num_h: 9,  // 9 blocks wide
                 num_v: 7,  // 7 blocks long
             };
-            // console.log(options)
 
-            // self.wall_positions, self.wall_extremes = Walls.create_obstacle_border(wall_obstacle_params)
             let wall_data = Walls.create_obstacle_wall(wall_obstacle_params)
             self.wall_positions = wall_data[0]
             self.wall_fill_positions = wall_data[1]
@@ -2840,23 +2740,12 @@ if (!_isBrowser) {
                     {hi: self.wall_extremes.bottom - max_obj_size - 1, lo: self.wall_extremes.top + max_obj_size + 1});
                 };
 
-            // this is defined here
-
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
                 self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
             } else {
                 self.possible_masses = [1]
             }
 
-            // if (typeof self.params.variableSize!== 'undefined' &&  self.params.variableSize) {
-            //     if (self.params.drasticSize) {
-            //         self.possible_sizes = demo.config.drastic_sizes
-            //     } else {
-            //         self.possible_sizes = demo.config.sizes//[1, 5, 25] // let's just try mass of 20 for now
-            //     }
-            // } else {
-            //     self.possible_sizes = [1]
-            // }
             self.possible_sizes = [1]
 
             self.mass_colors = demo.config.mass_colors//{'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
@@ -2864,27 +2753,13 @@ if (!_isBrowser) {
             self.solid_category = 0x0001
             self.invis_category = 0x0002
 
-            // border
-            // var world_border = Composite.create({label:'Border'});
-
-            // Composite.add(world_border, [
-            //     Bodies.rectangle(demo.cx, -demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category}}),  // top
-            //     Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }),  // bottom
-            //     Bodies.rectangle(demo.width + demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} }), // right
-            //     Bodies.rectangle(-demo.offset, demo.cy, 2*demo.offset, demo.height + 2*demo.offset, { isStatic: true, restitution: 1, collisionFilter: {category: self.solid_category} })  // left
-            // ]);
-
-            // World.add(self.engine.world, world_border)  // its parent is a circular reference!
-
             self.group = Body.nextGroup(true);
 
             return self
         };
 
-        // return a list of positions for the obstacles
 
         Walls.create_obstacle_wall = function(wop) {
-            // console.log(wop)
             if (wop.wallType == 'O' || wop.wallType == 'I') {  // O means obstacles inside, so our L does not have an indent
                 wop.box = 'true'
                 return Walls.create_obstacle_L(wop)
@@ -2902,29 +2777,9 @@ if (!_isBrowser) {
             let filled_positions
             let extremes = {}
 
-            // recall: 
-            // let wall_obstacle_params = {
-            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
-            //     window_cx: demo.cx,
-            //     window_cy: demo.cy,
-            //     window_width: demo.width,
-            //     window_height: demo.height,
-            //     random: true, // 0 means flush against the world boundaries
-            //     max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
-            //     kind: 'O',
-            //     num_h: 9,
-            //     num_v: 7
-            // };
-
-            // get boundaries of the window
-
-            // border is 800 x 600
-            // I am doing a 9 x 7 box
-
             var h_pad = (2*wop.window_cx - wop.num_h*wop.obstacle_size)/2  // should be 40
             var v_pad = (2*wop.window_cy - wop.num_v*wop.obstacle_size)/2  // should be 20
 
-            // TODO verify this!
             var left = h_pad + wop.obstacle_size/2
             var top = v_pad + wop.obstacle_size/2
             var right = 2*wop.window_cx - h_pad - wop.obstacle_size/2
@@ -2945,13 +2800,12 @@ if (!_isBrowser) {
                 v_length = 1
                 orientation = 1 // just set it to 1
             } else {
-                h_length= random_int(2,6)  // (if it is 1 then it is just a box. We can just do that)
+                h_length= random_int(2,6)  // (if it is 1 then it is just a box)
                 v_length = random_int(2,4)
                 orientation = random_int(1,4)
             }
 
             // box segments (you can do slicing later)
-            //////////////////////////////////////////////////////////////////
             var cur_pos = [left, top]  // top left
             // left
 
@@ -2987,7 +2841,6 @@ if (!_isBrowser) {
             }
 
             // now sample the inside
-            //////////////////////////////////////////////////////////////////
             if (orientation == 1) {  // top left corner
                 positions.push.apply(positions, bottom_outer.slice(1))
                 positions.push.apply(positions, right_outer)
@@ -3175,29 +3028,9 @@ if (!_isBrowser) {
             let positions = []
             let extremes = {}
 
-            // recall: 
-            // let wall_obstacle_params = {
-            //     obstacle_size: self.params.obstacle_side*demo.config.drastic_sizes[1],
-            //     window_cx: demo.cx,
-            //     window_cy: demo.cy,
-            //     window_width: demo.width,
-            //     window_height: demo.height,
-            //     random: true, // 0 means flush against the world boundaries
-            //     max_cutoff: 2, // let's say that you can cut off a maximum of 3 blocks off each side (left, right, top, bottom), total is 6 block decrease
-            //     kind: 'O',
-            //     num_h: 9,
-            //     num_v: 7
-            // };
-
-            // get boundaries of the window
-
-            // border is 800 x 600
-            // I am doing a 9 x 7 box
-
             var h_pad = (2*wop.window_cx - wop.num_h*wop.obstacle_size)/2  // should be 40
             var v_pad = (2*wop.window_cy - wop.num_v*wop.obstacle_size)/2  // should be 20
 
-            // TODO verify this!
             var left = h_pad + wop.obstacle_size/2
             var top = v_pad + wop.obstacle_size/2
             var right = 2*wop.window_cx - h_pad - wop.obstacle_size/2
@@ -3243,9 +3076,9 @@ if (!_isBrowser) {
                 cur_pos = [cur_pos[0]-wop.obstacle_size, cur_pos[1]]
                 positions.push(cur_pos)
             }
-            // // now we've filled bottom
+            // now we've filled bottom
 
-            // // move up (note the -2)
+            // move up (note the -2)
             for (let j=0; j < wop.num_v-2; j ++) {
                 cur_pos = [cur_pos[0], cur_pos[1]-wop.obstacle_size]
                 positions.push(cur_pos)
@@ -3286,7 +3119,7 @@ if (!_isBrowser) {
             return [positions, filled_positions, extremes, orientation]
         };
 
-        Walls.init = function(self) {  // hockey is like self here
+        Walls.init = function(self) {
             // generate wall
             for (let i=0; i < self.wall_positions.length; i++) {
                 let body_opts = {restitution: 1,
@@ -3304,7 +3137,7 @@ if (!_isBrowser) {
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 body_opts)
-                World.add(self.engine.world, wall_obstacle);  // TODO! the rectangle is not getting added?        
+                World.add(self.engine.world, wall_obstacle);       
             }
 
             // construct sample sizes
@@ -3379,7 +3212,6 @@ if (!_isBrowser) {
                                     mask: self.solid_category
                                  }, 
                              }
-                // console.log(self.params.obstacle_side)
                 let obstacle = Bodies.rectangle(self.p0[i].x, self.p0[i].y, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
                                                 self.params.obstacle_side*body_opts.sizemul, 
@@ -3390,15 +3222,8 @@ if (!_isBrowser) {
 
 
         Walls.init_from_trajectories = function(self, trajectories) {
-
-            // console.log(trajectories)
-            // console.log(self.params.num_obj)
-
             // set positions
             for (let i = 0; i < self.params.num_obj; i++) {
-
-                // console.log(i)
-                // console.log(trajectories[i])
                 if (trajectories[i][1].objtype=='ball') {
                     let body_opts = {restitution: 1,
                                  mass: trajectories[i][1].mass,
@@ -3411,7 +3236,6 @@ if (!_isBrowser) {
                                     category: self.solid_category,
                                     mask: self.solid_category
                                  },
-                                 // collisionFilter: {group:self.group} // remove collision constraints
                              }
                     if (!(typeof self.params.friction !== 'undefined' &&  self.params.friction)) {
                         body_opts.friction = 0;
@@ -3426,7 +3250,6 @@ if (!_isBrowser) {
                     body.render.strokeStyle = '#FFA500'// orange
                     body.render.lineWidth = 5
 
-                    // for some reason, when I log body.velocity it is correct, but when I log body and inspect the velocity it is incorrect?
                     Body.setVelocity(body, trajectories[i][1].velocity)
 
                     // add body to world
@@ -3444,7 +3267,6 @@ if (!_isBrowser) {
                                         category: self.solid_category,
                                         mask: self.solid_category
                                      },
-                                     // collisionFilter: {group:self.group}
                                  }
                     let pos = trajectories[i][1].position
                     let obstacle = Bodies.rectangle(pos.x, pos.y, 
@@ -3459,33 +3281,15 @@ if (!_isBrowser) {
         var walls = Walls.create(cmd_options);
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            Walls.init(walls);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Walls.init(walls);
         } else {
             console.log('init_from_trajectories')
-            Walls.init_from_trajectories(walls, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Walls.init_from_trajectories(walls, cmd_options.trajectories);
         }
-        // console.log(walls.engine.world.bodies.length)
         return walls;
     };
 
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 (function() {
@@ -3519,7 +3323,7 @@ if (!_isBrowser) {
             self.world = self.engine.world;
 
             if (typeof self.params.variableMass !== 'undefined' &&  self.params.variableMass) {
-                self.possible_masses = demo.config.masses//[1, 5, 25] // let's just try mass of 20 for now
+                self.possible_masses = demo.config.masses//[1, 5, 25]
             } else {
                 self.possible_masses = [1]
             }
@@ -3533,15 +3337,13 @@ if (!_isBrowser) {
                 Bodies.rectangle(demo.cx, demo.height+demo.offset, demo.width + 2*demo.offset, 2*demo.offset, { isStatic: true, restitution: 1 }),  // bottom
             ]);
 
-            World.add(self.engine.world, world_border)  // its parent is a circular reference!
+            World.add(self.engine.world, world_border)  // its parent is a circular reference
 
             self.group = Body.nextGroup(true);
 
             return self;
         }
         Tower.init = function(self){
-
-
             // generate massses
             self.m = initialize_masses(self.params.num_obj, self.possible_masses)
 
@@ -3568,7 +3370,7 @@ if (!_isBrowser) {
                 } else {
                     x = gaussian(x, variance).ppf(Math.random())
                 }
-                y = y - (past_offset + offset) + eps // hmmm, this seems to solve it?
+                y = y - (past_offset + offset) + eps
 
                 var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, 3*self.params.size*self.sizemul, 
                         {label: "Entity", restitution: 0, mass: self.m[i], objtype: 'block', sizemul: self.sizemul, friction: 1})
@@ -3586,7 +3388,6 @@ if (!_isBrowser) {
             // center of masses, with self.coms[0] being the com of the bottom block
             self.coms = center_of_mass(self.world.bodies)
             self.stable = Tower.is_stable_config(self.params.size*self.sizemul, self.world.bodies, self.coms)
-            // console.log('is stable config', self.stable)
         }
         Tower.init_from_trajectories = function(self, trajectories){
             // set gravity to 0
@@ -3595,7 +3396,6 @@ if (!_isBrowser) {
 
             // stack upwards
             for (let i = 0; i < self.params.num_obj; i ++) {
-                // if (i==1) {
                 let body_opts = {label: "Entity", 
                                  restitution: 0, 
                                  mass: trajectories[i][1].mass, 
@@ -3613,25 +3413,17 @@ if (!_isBrowser) {
                 Body.setAngle(block, trajectories[i][1].angle)
                 Body.setVelocity(block, { x: 0, y: 0 })
                 Body.setAngularVelocity(block, 0)
-
-                // if (i==1) {
-                //     block.render.fillStyle = 'black'
-                // } else {
-                //     block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
-                // }
                 block.render.fillStyle = self.mass_colors[trajectories[i][1].mass]//'#4ECDC4'
 
                 block.render.strokeStyle = '#FFA500'// orange
                 block.render.lineWidth = 5
 
                 World.add(self.world, block)
-                // }
             }
 
             // center of masses, with self.coms[0] being the com of the bottom block
             self.coms = center_of_mass(self.world.bodies)
             self.stable = Tower.is_stable_config(self.params.size*self.sizemul, self.world.bodies, self.coms)
-            // console.log('is stable config', self.stable)
         }
 
 
@@ -3658,8 +3450,6 @@ if (!_isBrowser) {
 
                     if (coms[j] < below_left || coms[j] > below_right) {
                         stable = false
-                        // console.log('unstable')
-                        // break
                     }
                 }
             }
@@ -3667,15 +3457,12 @@ if (!_isBrowser) {
         }
 
         var tower = Tower.create(cmd_options);
-        // console.log('cmd_options')
-        // console.log(cmd_options)
         if (!(typeof cmd_options !== 'undefined' &&  cmd_options) ||
             !(typeof cmd_options.trajectories !== 'undefined' &&  cmd_options.trajectories)) {
-            // console.log('init')
-            Tower.init(tower);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Tower.init(tower);
         } else {
             console.log('init_from_trajectories')
-            Tower.init_from_trajectories(tower, cmd_options.trajectories);  // perhaps here you could do something like Mixed.init_from_trajectories
+            Tower.init_from_trajectories(tower, cmd_options.trajectories);
         }
         return tower;
 
@@ -3715,14 +3502,10 @@ if (!_isBrowser) {
         }
         SquareTower.init = function(self){
             // set the first object
-            // TODO actually maybe I should just set x to be the middle? so the tower doesn't hit the walls
-            // var x = rand_pos({hi: 2*self.params.cx - self.params.size - 1, lo: self.params.size + 1},
-            //                     {hi: 2*self.params.cy - self.params.size - 1, lo: self.params.size + 1}).x;
-
             var eps = 0.0001  // to prevent bounce-back
 
             var x = demo.cx
-            var y = 2*demo.cy - self.params.size/2  // TODO: This should be at the bottom! Note that higher y is lower in the screen
+            var y = 2*demo.cy - self.params.size/2
             var lastBlock = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, 
                         {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul, friction: 1})
             Body.setVelocity(lastBlock, { x: 0, y: 0 })
@@ -3733,15 +3516,12 @@ if (!_isBrowser) {
             for (var i = 1; i < self.params.num_obj; i ++) {
                 x = gaussian(x, variance).ppf(Math.random())
                 // x = demo.cx
-                y = y - self.params.size + eps // hmmm, this seems to solve it?
+                y = y - self.params.size + eps
                 var block = Bodies.rectangle(x, y, self.params.size*self.sizemul, self.params.size*self.sizemul, 
                         {label: "Entity", restitution: 0, mass: 1, objtype: 'block', sizemul: self.sizemul, friction: 1})  // stack upwards
                 Body.setVelocity(lastBlock, { x: 0, y: 0 })
                 lastBlock = block;
                 World.add(self.world, lastBlock)
-
-                // console.log(lastBlock)
-                // console.log(lastBlock.parts)
             }
         }
 
@@ -3779,8 +3559,6 @@ if (!_isBrowser) {
             var cradle = Composites.newtonsCradle(280, 100, self.params.num_obj, 30, 200);
             World.add(self.world, cradle);
             Body.translate(cradle.bodies[0], { x: -180, y: -100 });
-
-            // TODO: For each body in newton's cradle, label it an entity
         }
 
         var cradle = Cradle.create();
@@ -3798,7 +3576,6 @@ if (!_isBrowser) {
         Composites = Matter.Composites,
         Constraint = Matter.Constraint;
 
-    // TODO!
     Example.chain = function(demo) {
         self.params = {num_obj: options.numObj};
         var engine = demo.engine,
