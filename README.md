@@ -88,7 +88,9 @@ This is an example of generating 50000 trajectories of 2 balls over 60 timesteps
 > node demo/js/generate.js -e walls -n 2 -t 60 -s 50000 -w U
 ```
 
-It takes quite a bit of time to generate 50000 trajectories, so 200 trajectories is enough for debugging purposes.
+It takes quite a bit of time to generate 50000 trajectories, so 200
+trajectories is enough for debugging purposes. In that case you may want to
+change the flags accordingly in the examples below.
 
 ### Visualization
 Trajectory data is stored in a `.json` file. You can visualize the trajectory by opening `src/js/demo/render.html` in your browser and passing in the `.json` file.
@@ -114,9 +116,8 @@ Here is an example of training on "O" and "I" wall geometries and testing on "U"
 ```
 
 Be sure to look at the command line flags in `main.lua` for more details. You
-may want to change the number of training iterations if you are just debugging,
-for example (In that case you may want to change the dataset name in the examples above). The code defaults to cpu, but you can switch to gpu with the
-    `-cuda` flag.
+may want to change the number of training iterations if you are just debugging
+. The code defaults to cpu, but you can switch to gpu with the `-cuda` flag.
 
 ### Prediction
 This is an example of running simulations using trained model that was saved in `src/lua/logs/balls_n4_t60_ex50000_m__balls_n4_t60_ex50000_m_layers5_nbrhd_rs_fast_lr0.0003_modelnpe_seed0`.
