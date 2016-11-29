@@ -1,8 +1,3 @@
-// if (!_isBrowser) {
-//     var jsonfile = require('jsonfile')
-// }
-
-// common functions (I could pass these in later)
 euc_dist = function(p1, p2) {
     var x2 = Math.pow(p1.x - p2.x, 2),
         y2 = Math.pow(p1.y - p2.y, 2);
@@ -53,9 +48,6 @@ initialize_positions = function(num_obj, obj_radius, rand_pos_fn){
 // p0 --> [existing]
 // num_obj --> [will_sample]
 initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, rand_pos_fn, p0, mul) {
-    // let p0 = [];  // initial positions
-
-    // here do an assert that num_obj + p0.length = sampled_sizes.length
     console.assert(num_obj + p0.length == sampled_sizes.length)
     console.log(num_obj + p0.length == sampled_sizes.length)
 
@@ -72,7 +64,7 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
             // true if overlaps
             while ((function(){
                     for (var j = 0; j < p0.length; j++) {
-                        let other_size = sampled_sizes[j]  // this is the raw size, sizemul already incorporated. For an obstacle, let it be the diagonal from the center?
+                        let other_size = sampled_sizes[j]  // this is the raw size, sizemul already incorporated. For an obstacle, let it be the diagonal from the center
                         let this_size = sampled_sizes[i]
                         let min_distance = other_size + this_size
 
@@ -81,7 +73,7 @@ initialize_positions_variable_size_limited = function(num_obj, sampled_sizes, ra
                             if (num_iters > 20) {
                                 should_break = true
                                 console.log('num_iters', num_iters, '> threshold. should_break set to true')
-                                break  // you will return false then THis breaks out of the entire while loop!
+                                break
                             }
                             return true;
                         }
@@ -132,7 +124,7 @@ initialize_velocities = function(num_obj, max_v0) {
     for (var i = 0; i < num_obj; i++) {
 
         // generate random initial velocities b/w -max_v0 and max_v0 inclusive
-        var vx = Math.floor((Math.random()*2*max_v0+1)-max_v0)  // this should be Math.floor((Math.random()*2*max_v0+1)-max_v0)
+        var vx = Math.floor((Math.random()*2*max_v0+1)-max_v0)
         var vy = Math.floor((Math.random()*2*max_v0+1)-max_v0)
         v0.push({x: vx, y: vy})
     }
@@ -150,30 +142,8 @@ initialize_hv = function(num_obj) {
     return a0;
 }
 
-// initialize_angles = function(num_obj, max_a0) {
-//     var a0 = [];
-//     for (var i = 0; i < num_obj; i++) {
-
-//         // generate random initial angles b/w -max_a0 and max_a0 inclusive
-//         var a = Math.random()*2*max_a0+1-max_a0
-//         a0.push(a)
-//     }
-//     return a0;
-// }
-
-// initialize_angle_velocities = function(num_obj, max_av0) {
-//     var av0 = [];
-//     for (var i = 0; i < num_obj; i++) {
-
-//         // generate random initial angles b/w -max_a0 and max_a0 inclusive
-//         var av = Math.random()*2*max_av0+1-max_av0
-//         av0.push(av)
-//     }
-//     return av0;
-// }
 
 initialize_masses = function(num_obj, possible_masses) {
-    // TODO: this should be categorical!
     var masses = [];
     for (var i = 0; i < num_obj; i++) {
 
@@ -185,7 +155,6 @@ initialize_masses = function(num_obj, possible_masses) {
 }
 
 initialize_sizes = function(num_obj, possible_sizes) {
-    // TODO: this should be categorical!
     var sizes = [];
     for (var i = 0; i < num_obj; i++) {
 
@@ -199,9 +168,6 @@ initialize_sizes = function(num_obj, possible_sizes) {
 // assume trajectories ordered from bottom to top
 is_stable_trajectory = function(trajectories) {
     // not stable if top block's y position is different it's original y position by a factor of a block length
-    // but what if it is horizontal?
-    // how about x position?
-    // or you can just do Euclidean distance
     let top = trajectories[trajectories.length-1]
     let initial = {x: top[0].position.x, y: top[0].position.y}
     let final = {x: top[top.length-1].position.x, y: top[top.length-1].position.y}
@@ -216,9 +182,6 @@ is_stable_trajectory = function(trajectories) {
 
 fraction_unstable = function(trajectories, stability_threshold) {
     // not stable if top block's y position is different it's original y position by a factor of a block length
-    // but what if it is horizontal?
-    // how about x position?
-    // or you can just do Euclidean distance
     let num_fell = 0
     for (let i = 0; i < trajectories.length; i ++) {
         let obj = trajectories[i]
@@ -233,25 +196,6 @@ fraction_unstable = function(trajectories, stability_threshold) {
     console.log('Num fell', num_fell)
     return num_fell
 }
-
-// objects: array of bodies
-// center of mass
-// origin: demo.cx
-// assume that bodies are ordered bottom to top
-// center_of_mass = function(bodies) {
-//     let com
-//     if (bodies.length == 1) {
-//         com = bodies[0].position.x
-//     } else {
-//         // jth iteration: (prev)*((j-1)/j) + curr/j
-//         let above = bodies.slice(0,-1)  // all elements before last element
-//         let body = bodies[bodies.length-1]  // last element
-//         let len = bodies.length
-//         com = center_of_mass(above)*(len-1)/len + body.mass*body.position.x/len
-//     }
-//     // console.log(com)
-//     return com
-// }
 
 // objects: array of bodies
 // center of mass
@@ -274,7 +218,6 @@ center_of_mass2 = function(bodies) {
             total_mass += bodies[i].mass
             sum += bodies[i].mass*bodies[i].position.x
         }
-        // return sum/total_mass  // you could also just return this if you want the last one
         return coms
     }
 }
@@ -297,7 +240,6 @@ center_of_mass = function(bodies) {
             total_mass += curr_body.mass
             sum += curr_body.mass*curr_body.position.x
         }
-        //return sum/total_mass  // you could also just return this if you want the last one
         return coms
     }
 }
@@ -332,7 +274,5 @@ if (!_isBrowser) {
         this.convert_to_positions = convert_to_positions
     };
 }
-
-// load_trajectory('balls.json')
 
 
