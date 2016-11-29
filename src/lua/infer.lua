@@ -266,7 +266,7 @@ function max_likelihood(model, dataloader, params_, hypotheses, si_indices, cf, 
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.total_batches do
-        if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
+        if mp.debug then xlua.progress(i, dataloader.total_batches) end
         local batch = dataloader:sample_sequential_batch(false)
 
         local best_hypotheses = find_best_hypotheses(model, params_, batch, hypotheses, si_indices, 0)
@@ -297,7 +297,7 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
     -- you will add to these as you encounter context objects with those properties
 
     for i = 1, dataloader.total_batches do
-        if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
+        if mp.debug then xlua.progress(i, dataloader.total_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local num_context = batch[2]:size(2)
 
@@ -456,7 +456,7 @@ function max_likelihood_context(model, dataloader, params_, hypotheses, si_indic
     local num_correct = 0
     local count = 0
     for i = 1, dataloader.total_batches do
-        if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
+        if mp.debug then xlua.progress(i, dataloader.total_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local num_context = batch[2]:size(2)
 

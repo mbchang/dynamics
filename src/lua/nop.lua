@@ -2,7 +2,6 @@ require 'nn'
 require 'rnn'
 require 'torch'
 require 'nngraph'
-require 'Base'
 require 'IdentityCriterion'
 require 'data_utils'
 require 'infer'
@@ -196,10 +195,8 @@ function model:select_neighbors(contexts, this)
         local context_pos_next, context_pos_now = self:update_position_one(context)
 
         -- hacky
-        if mp.nlan then
-            this_pos_next = this_pos_now:clone()
-            context_pos_next = context_pos_now:clone()
-        end
+        this_pos_next = this_pos_now:clone()
+        context_pos_next = context_pos_now:clone()
 
         -- compute euclidean distance between this_pos_next and context_pos_next
         local euc_dist_next = torch.squeeze(self:euc_dist(this_pos_next, context_pos_next)) -- (bsize)

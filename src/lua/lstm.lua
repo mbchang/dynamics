@@ -2,7 +2,6 @@ require 'nn'
 require 'rnn'
 require 'torch'
 require 'nngraph'
-require 'Base'
 require 'IdentityCriterion'
 require 'data_utils'
 require 'modules'
@@ -18,7 +17,7 @@ function init_network(params)
     local num_past = params.num_past
     local num_future = params.num_future
     local in_dim = num_past*obj_dim
-    local out_dim = num_future*obj_di
+    local out_dim = num_future*obj_dim
     local num_layers = params.layers
 
     assert(num_layers > 0)
@@ -178,11 +177,6 @@ function model:unpack_batch(batch, sim)
     end
     table.insert(all_future, focus_future)
 
-    if mp.duo then
-        table.insert(all_past, 1, focus_past:clone())
-        table.insert(all_future, 1, convert_type(torch.zeros(mp.batch_size, mp.num_future*mp.object_dim),self.mp.cuda))
-    end
-
     -- the last element is always the focus object
     -- context are shuffled
     return all_past, all_future  -- at this point, we have added a dimension to all_past AND all_future
@@ -217,11 +211,8 @@ function model:select_neighbors(contexts, this)
         local this_pos_next, this_pos_now = self:update_position_one(this)
         local context_pos_next, context_pos_now = self:update_position_one(context)
 
-        -- hacky
-        if mp.nlan then
-            this_pos_next = this_pos_now:clone()
-            context_pos_next = context_pos_now:clone()
-        end
+        this_pos_next = this_pos_now:clone()
+        context_pos_next = context_pos_now:clone()
 
         -- compute euclidean distance between this_pos_next and context_pos_next
         local euc_dist_next = torch.squeeze(self:euc_dist(this_pos_next, context_pos_next)) -- (bsize)

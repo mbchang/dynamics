@@ -17,7 +17,6 @@ local pls = require 'pl.stringx'
 require 'rnn'
 require 'torch'
 require 'nngraph'
-require 'Base'
 require 'IdentityCriterion'
 require 'gnuplot'
 
@@ -33,7 +32,7 @@ local data_process = require 'data_process'
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'sim | tva')
-cmd:option('-server', "op", 'pc = personal | op = openmind')
+cmd:option('-debug', false, 'true for debug mode')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../../data', 'subdirectory to save data')
 cmd:option('-name', "", 'experiment name')
@@ -50,9 +49,7 @@ cmd:text()
 -- parse input params
 mp = cmd:parse(arg)
 
-if mp.server == 'pc' then
-    -- mp.data_root = '../.'    
-    mp.logs_root = 'logs'
+if mp.debug then
     mp.winsize = 3 -- total number of frames
     mp.num_past = 2 --10
     mp.num_future = 1 --10
@@ -264,7 +261,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             dataloader.maxwinsize-mp.num_past+1)
     for i = 1, dataloader.total_batches do
 
-        if mp.server == 'pc' then xlua.progress(i, dataloader.total_batches) end
+        if mp.debug then xlua.progress(i, dataloader.total_batches) end
 
         local batch = dataloader:sample_sequential_batch()
 
@@ -304,7 +301,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         -- loop through time
         for t = 1, numsteps do
-            if mp.server == 'pc' then xlua.progress(t, numsteps) end
+            if mp.debug then xlua.progress(t, numsteps) end
 
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
@@ -669,7 +666,7 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
     local total_avg_rel_mag_error = 0
 
     for i = 1,num_batches do
-        if mp.server == 'pc' then xlua.progress(i, num_batches) end
+        if mp.debug then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
 
         -- may need to change this

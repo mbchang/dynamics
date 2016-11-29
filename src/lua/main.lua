@@ -23,7 +23,7 @@ local data_process = require 'data_process'
 ------------------------------------- Init -------------------------------------
 local cmd = torch.CmdLine()
 cmd:option('-mode', "exp", 'exp | expload | save')
-cmd:option('-server', "op", 'pc = personal | op = openmind')
+cmd:option('-debug', false, 'true for debug mode')
 cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../../data', 'subdirectory to save data')
 cmd:option('-model', "npe", 'npe | np | lstm')
@@ -42,7 +42,7 @@ cmd:option('-layers', 5, 'layers in network')
 cmd:option('-relative', true, 'relative state vs absolute state')
 cmd:option('-batch_norm', false, 'batch norm')
 cmd:option('-num_past', 2, 'number of past timesteps')
-cmd:option('-nlan', false, 'no look ahead for neighbors')
+cmd:option('-num_future', 1, 'number of future timesteps')
 
 -- training options
 cmd:option('-opt', "rmsprop", 'rmsprop | adam')
@@ -57,7 +57,6 @@ cmd:option('-val_eps', 1e-6, 'for testing convergence')
 cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
 cmd:option('-of', false, 'object flag for lstm')
-cmd:option('-duo', false, 'duo focus for lstm')
 cmd:option('-rs', false, 'turn on random sampling')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 cmd:option('-dropout', 0.0, 'dropout for lstm')
@@ -79,9 +78,7 @@ cmd:text()
 -- parse input params
 mp = cmd:parse(arg)
 
-if mp.server == 'pc' then
-    mp.logs_root = 'logs'
-    mp.winsize = 3 -- total number of frames
+if mp.debug then
     mp.num_future = 1 --10
 	mp.batch_size = 5 --1
     mp.max_iter = 60 
@@ -92,10 +89,9 @@ if mp.server == 'pc' then
     mp.lrdecay_every = 20
     mp.layers = 2
     mp.rnn_dim = 24
-    mp.model = 'npe'
+    mp.model = 'np'
     mp.val_window = 5
     mp.val_eps = 2e-5
-    mp.duo = false
 	mp.num_threads = 1
     mp.shuffle = false
     mp.batch_norm = false
@@ -105,11 +101,9 @@ if mp.server == 'pc' then
     mp.plot = false
 	mp.cuda = false
     mp.rs = false
-    mp.nlan = true
     mp.fast = true
     mp.of = false
 else
-    mp.num_future = 1
 	mp.num_threads = 4
 end
 
@@ -409,7 +403,7 @@ function test(dataloader, params_, saveoutput, num_batches)
     if mp.fast then num_batches = math.min(5000, num_batches) end
     print('Testing '..num_batches..' batches')
     for i = 1,num_batches do
-        if mp.server == 'pc' then xlua.progress(i, num_batches) end
+        if mp.debug then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
         local test_loss, prediction = model:fp(params_, batch)
         sum_loss = sum_loss + test_loss
