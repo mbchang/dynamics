@@ -1,4 +1,5 @@
 /**
+* Adapted from matter-js demo code
 * The Matter.js demo page controller and example runner.
 *
 * NOTE: For the actual example code, refer to the source files in `/examples/`.
@@ -26,8 +27,6 @@
         var utils = require('../../utils');
         var mkdirp = require('mkdirp');
         var fs = require('fs');
-        // var PImage = require('pureimage');
-        // var ProgressBar = require('node-progress-bars');
         require('./Examples')
         module.exports = Demo;
         window = {};
@@ -78,10 +77,10 @@
             demo.runner = Engine.run(demo.engine);
             demo.runner.isFixed = true
 
-            // // get container element for the canvas
+            // get container element for the canvas
             demo.container = document.getElementById('canvas-container');  // this requires a browser
 
-            // // create a debug renderer
+            // create a debug renderer
             demo.render = Render.create({
                 element: demo.container,
                 engine: demo.engine,
@@ -125,7 +124,7 @@
         }
 
         // set up a scene with bodies
-        Demo.reset(demo);  // somehow the canvas dims are (600, 800)
+        Demo.reset(demo);
 
         if (_isBrowser)
             Demo.setScene(demo, demo.sceneName);
@@ -137,7 +136,6 @@
     };
 
     // call init when the page has loaded fully
-    // NOTE THIS IS WHEN THE PAGE GETS LOADED!
     if (!_isAutomatedTest) {
         if (window.addEventListener) {
             window.addEventListener('load', Demo.init);
@@ -147,7 +145,7 @@
     }
 
     Demo.setScene = function(demo, sceneName) {
-        Example[sceneName](demo);  // this is where you set the scene! It's not referencing where I want for some reason
+        Example[sceneName](demo);
     };
 
     // the functions for the demo interface and controls below
@@ -267,9 +265,8 @@
 
     Demo.setUpdateSourceLink = function(sceneName) {
         var demoViewSource = document.getElementById('demo-view-source'),
-            sourceUrl = 'https://github.com/liabru/matter-js/blob/master/examples';  // ah, it goes to the github. Let's reference your demo locally
-            // sourceUrl = '../../examples';  // ah, it goes to the github. Let's reference your demo locally
-        demoViewSource.setAttribute('href', sourceUrl + '/' + sceneName + '.js');  // it's not even looking here!
+            sourceUrl = 'https://github.com/liabru/matter-js/blob/master/examples';
+        demoViewSource.setAttribute('href', sourceUrl + '/' + sceneName + '.js');
     };
 
     Demo.setManualControl = function(demo, isManual) {
@@ -372,9 +369,6 @@
         demo.engine.world.gravity.x = 0;
         demo.engine.timing.timeScale = 1;
 
-
-        // These are the world boundaries!
-        // TODO: make these world boundaries variable
         demo.offset = 5;  // world offset
         demo.config = {}
         demo.config.cx = 400;
@@ -382,13 +376,12 @@
         demo.config.masses = [1, 5, 25]
         demo.config.mass_colors = {'1':'#C7F464', '5':'#FF6B6B', '25':'#4ECDC4'}
         demo.config.sizes = [2/3, 1, 3/2]  // multiples
-        demo.config.drastic_sizes = [1/2, 1, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
-        // demo.config.drastic_sizes = [1/2, 2]  // multiples  NOTE THAT WE HAVE THREE VALUES NOW!
+        demo.config.drastic_sizes = [1/2, 1, 2]  // multiples 
         demo.config.object_base_size = {'ball': 60, 'obstacle': 80, 'block': 20 }  // radius of ball, side of square obstacle, long side of block
         demo.config.objtypes = ['ball', 'obstacle', 'block']  // squares are obstacles
-        demo.config.g = 0 // default? [0,1] Or should we make this a list? The index of the one hot. 0 is no, 1 is yes
-        demo.config.f = 0 // default? [0,1]
-        demo.config.p = 0 // default? [0,1,2]
+        demo.config.g = 0 // The index of the one hot. 0 is no, 1 is yes
+        demo.config.f = 0 // 
+        demo.config.p = 0 // 
         demo.config.max_velocity = 60
 
         demo.cx = demo.config.cx;
@@ -438,23 +431,14 @@
         }
     };
 
-    // Demo.simulate = function(demo, scenarioName, numsteps, numsamples) {
     Demo.simulate = function(demo, num_samples, sim_options, startstep) {
         var trajectories = []
 
-        // var bar = new ProgressBar({
-        //     schema: ' [:bar] :current/:total :percent :elapseds :etas',
-        //     total : num_samples
-        // });
-
-        // TODO! join sim_options with config.
         console.log(sim_options)
         if (sim_options.env == 'tower') {
             var num_unstable = 0
             var num_stable = 0
             var total_fell = 0
-            // var com_num_unstable = 0
-            // var com_num_stable = 0
             var stability_threshold = 5
         }
 
@@ -468,13 +452,11 @@
             Demo.reset(demo);
             var scenario = Example[sim_options.env](demo, sim_options)
             var trajectory = []
-            // bar.tick()
-            // console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
             console.log(s)
 
 
             // initialize trajectory conatiner
-            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+            for (id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world
                 trajectory[id] = [];
             }
 
@@ -494,14 +476,14 @@
             for (let i = 0; i < sim_options.steps; i++) {
 
 
-                for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world!
+                for (let id = 0; id < scenario.params.num_obj; id++) { //id = 0 corresponds to world
                     trajectory[id][i] = {};
                     let body = Composite.get(scenario.engine.world, entity_ids[id], 'body')
                     for (let k of ['position', 'velocity', 'mass', 'angle', 'angularVelocity', 'objtype', 'sizemul']){
-                        trajectory[id][i][k] = utils.copy(body[k])  // angularVelocity may sometimes not be copied?
+                        trajectory[id][i][k] = utils.copy(body[k])
 
                         // check if undefined.
-                        if (!(typeof trajectory[id][i][k] !== 'undefined')) {  // it could that 0 is false!
+                        if (!(typeof trajectory[id][i][k] !== 'undefined')) {
                             should_break = true;
                             console.log('trajectory[id][i][k] is undefined', trajectory[id][i][k])
                             console.log('id',id,'i',i,'k',k)
@@ -524,7 +506,6 @@
                         console.log('this position', trajectory[id][i]['position'])
                         break;
                     }
-                    // console.log('t', i, 'object id', body.id, 'pos', body.position, 'vel', body.velocity)//, 'sizemul', body.sizemul, 'objtype', body.objtype, 'mass', body.mass, 'inverseMass', body.inverseMass)
                 }
                 if (should_break) {break;}
 
@@ -534,12 +515,7 @@
                     demo.render.context.fillStyle = 'white'
                     demo.render.context.fillRect(0,0,demo.width,demo.height)
                     Render.world(demo.render)
-                    // let filename = 'out'+i+'_'+s+'.png'  // TODO! rename
-                    // PImage.encodePNG(demo.render.canvas, fs.createWriteStream(filename), function(err) {
-                    //     console.log("wrote out the png file to out"+filename);
-                    // });
                 }
-
 
                 // if (sim_options.env == 'tower') {
                 //     if (i == 59) {
@@ -555,7 +531,6 @@
             if (should_break) {
                 console.log('Break. Trying again.')
             } else {  // valid trajectory
-                // hereif it 
                 if (sim_options.env == 'tower') {
                     // if (is_stable_trajectory(trajectory) > stability_threshold) {
 
@@ -582,7 +557,6 @@
                         continue
                     }
                 }
-                // console.log('added')
                 trajectories[s] = trajectory;  // basically I can't reach this part
                 s++;
             }
@@ -631,10 +605,6 @@
         if (sim_options.friction) {
             experiment_string += '_fr' //+ sim_options.friction
         }
-
-        // let savefolder = '/Users/MichaelChang/Documents/Researchlink/SuperUROP/Code/dynamics/mj_data/' +
-        //                 experiment_string + '/jsons/'
-        // experiment_string += '_rda'
         var savefolder = '../../data/' + experiment_string + '/jsons/'
 
         if (!fs.existsSync(savefolder)){
@@ -646,33 +616,6 @@
         let sim_file = savefolder + experiment_string + '.json';
         return sim_file;
     };
-
-
-    // Demo.generate_chunk = function(chunks, chunk_number, sim_options, num_unstable, num_comunstable) {
-    //     let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
-
-    //     if (sim_options.env == 'tower') {
-    //         let output = Demo.simulate(demo, chunks[j], sim_options);  // add sim_options.start_step here
-    //         let trajectories = output[0]
-    //         let num_unstable_chunk = output[1]
-    //         let com_num_unstable_chunk = output[2]
-    //         num_unstable += num_unstable_chunk
-    //         num_comunstable += com_num_unstable_chunk
-
-    //         jsonfile.writeFileSync(sim_file,
-    //                             {trajectories:trajectories, config:sim_options}
-    //                             );
-    //         console.log('Wrote to ' + sim_file)
-    //     } else {
-    //         let trajectories = Demo.simulate(demo, chunks[j], sim_options);
-
-    //         jsonfile.writeFileSync(sim_file,
-    //                             {trajectories:trajectories, config:sim_options}
-    //                             );
-    //         console.log('Wrote to ' + sim_file)
-    //     }
-    //     return [num_unstable, num_comunstable]  // do I need to return chunks?
-    // }
 
     Demo.generate_data = function(demo, sim_options) {
         // const max_iters_per_json// = 100; 
@@ -700,11 +643,7 @@
             }
 
             for (let j=0; j < chunks.length; j++){
-                let chunk_number = j + (sim_options.samples-num_examples_left)/max_iters_per_json // +1?
-
-                // this should be put into a separate method!
-                // TODODO
-                // chunk_number = 10  // comment this out if you are doing all of the data generation!
+                let chunk_number = j + (sim_options.samples-num_examples_left)/max_iters_per_json
 
                 let sim_file = Demo.create_json_fname(chunks[j], chunk_number, sim_options)  // this should also have to deal with sim_options.startstep!
 
@@ -731,9 +670,6 @@
                                         );
                     console.log('Wrote to ' + sim_file)
                 }
-                // TODODO
-
-                // return // comment this out if you are doing all of the data generation!
 
                 // let unstable_counts = Demo.generate_chunk(chunks, chunk_number, sim_options, num_unstable, num_comunstable)
                 // num_unstable = unstable_counts[0]
@@ -816,31 +752,31 @@
                     alias: 'i',
                     type: 'Boolean',
                     description: 'include image frames',
-                    default: false // TODO should this be int or boolean?
+                    default: false
                 }, {
                     option: 'gravity',
                     alias: 'g',
                     type: 'Boolean',
                     description: 'include gravity',
-                    default: false // TODO should this be int or boolean?
+                    default: false
                 }, {
-                    option: 'friction',  // TODO: shoud this be int or boolean?
+                    option: 'friction',
                     alias: 'f',
                     type: 'Boolean',
                     description: 'include friction',
                     default: false
                 }, {
-                    option: 'pairwise', // TODO
+                    option: 'pairwise',
                     alias: 'p',
                     type: 'Boolean',
                     description: 'include pairwise forces',
-                    default: false  // TODO: should this be int or boolean?
+                    default: false
                 }, {
-                    option: 'startstep', // TODO
+                    option: 'startstep',
                     alias: 'y',
                     type: 'Int',
                     description: 'starting step to generation',
-                    default: false  // TODO: should this be int or boolean?
+                    default: false
                 }]
         });
 
