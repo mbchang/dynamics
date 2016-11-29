@@ -11,7 +11,6 @@ local data_process = require 'data_process'
 nngraph.setDebug(true)
 
 -- with a bidirectional lstm, no need to put a mask
--- however, you can have variable sequence length now!
 function init_network(params)
     -- encoder produces: (bsize, rnn_inp_dim)
     -- decoder expects (bsize, 2*rnn_hid_dim)
@@ -27,7 +26,7 @@ function init_network(params)
     if num_layers == 1 then
         object_core:add(nn.Linear(params.input_dim, params.rnn_dim, bias))
     else
-        for i = 1, params.layers do -- TODO make sure this is comparable to encoder decoder architecture in terms of layers
+        for i = 1, params.layers do
             if i == 1 then 
                 object_core:add(nn.Linear(params.input_dim, params.rnn_dim, bias))
                 object_core:add(nn.ReLU())
@@ -87,7 +86,7 @@ function model.create(mp_, preload, model_path)
             self.identitycriterion:cuda()
         end
     else
-        self.criterion = nn.MSECriterion(false)  -- not size averaging!
+        self.criterion = nn.MSECriterion(false)  -- not size averaging
         self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
         if self.mp.cuda then
@@ -148,14 +147,14 @@ function model:unpack_batch(batch, sim)
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
     local contexts = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length
         table.insert(contexts, torch.squeeze(context[{{},{t}}]))
     end
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        self.neighbor_masks = self:select_neighbors(contexts, this_past)  -- this gets updated every batch!
+        self.neighbor_masks = self:select_neighbors(contexts, this_past)  -- this gets updated every batch
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
@@ -170,7 +169,6 @@ end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
--- maybe I can output a mask? then I can rename this function to neighborhood_mask
 function model:select_neighbors(contexts, this)
     local threshold
     local neighbor_masks = {}
@@ -179,11 +177,11 @@ function model:select_neighbors(contexts, this)
         -- reshape
         local context = c:clone():resize(mp.batch_size, mp.num_past, mp.object_dim)
 
-        -- TODO make threshold depend on object id!
+        -- TODO make threshold depend on object id
         local oid_onehot, template_ball, template_block = get_oid_templates(this, config_args, self.mp.cuda)
 
         if (oid_onehot-template_ball):norm()==0 then
-            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized
         elseif oid_onehot:equal(template_block) then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.block
         else
@@ -299,7 +297,7 @@ function model:bp(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    -- TODO: better loss function for angle
+    -- TODO: change loss function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -350,7 +348,7 @@ function model:bp_input(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    -- TODO: better loss function for angle
+    -- TODO: change loss function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -459,8 +457,6 @@ end
 
 -- return a table of euc dist between this and each of context
 -- size is the number of items in context
--- is this for the last timestep of this?
--- TODO_lowpriority: later we can plot for all timesteps
 function model:get_euc_dist(this, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep

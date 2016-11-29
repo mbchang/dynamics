@@ -86,7 +86,7 @@ function model.create(mp_, preload, model_path)
             self:cuda()
         end
     else
-        self.criterion = nn.MSECriterion(false)  -- not size averaging!
+        self.criterion = nn.MSECriterion(false)  -- not size averaging
         self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
         if self.mp.cuda then
@@ -145,14 +145,14 @@ function model:unpack_batch(batch, sim)
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
     local input = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length
         table.insert(input, {this_past,torch.squeeze(context[{{},{t}}])})  -- good
     end
 
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch!
+        self.neighbor_masks = self:select_neighbors(input)  -- this gets updated every batch
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
         for i=1,#input do
@@ -179,7 +179,7 @@ function model:select_neighbors(input)
 
         -- if oid_onehot:equal(template_ball) then
         if (oid_onehot-template_ball):norm()==0 then
-            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized
         elseif oid_onehot:equal(template_block) then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.block
         else
@@ -461,7 +461,6 @@ end
 -- return a table of euc dist between this and each of context
 -- size is the number of items in context
 -- is this for the last timestep of this?
--- TODO_lowpriority: later we can plot for all timesteps
 function model:get_euc_dist(this, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep

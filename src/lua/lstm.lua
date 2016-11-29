@@ -70,7 +70,7 @@ function model.create(mp_, preload, model_path)
             self.identitycriterion:cuda()
         end
     else
-        self.criterion = nn.MSECriterion(false)  -- not size averaging!
+        self.criterion = nn.MSECriterion(false)  -- not size averaging
         self.identitycriterion = nn.IdentityCriterion()
         self.network = init_network(self.mp)
         if self.mp.cuda then
@@ -146,7 +146,7 @@ function model:unpack_batch(batch, sim)
     -- this: (bsize, input_dim)
     -- context: (bsize, mp.seq_length, dim)
     local contexts = {}
-    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length!
+    for t=1,torch.find(mask,1)[1] do  -- not actually mp.seq_length
         local one_context = torch.squeeze(context[{{},{shuffind[t]}}])
         table.insert(contexts, one_context)  -- good
     end
@@ -157,7 +157,7 @@ function model:unpack_batch(batch, sim)
     ------------------------------------------------------------------
     -- here do the local neighborhood thing
     if self.mp.nbrhd then  
-        -- this gets updated every batch!
+        -- this gets updated every batch
         self.neighbor_masks = self:select_neighbors(contexts, focus_past:clone())  
     else
         self.neighbor_masks = {}  -- don't mask out neighbors
@@ -197,7 +197,7 @@ function model:select_neighbors(contexts, this)
         local oid_onehot, template_ball, template_block = get_oid_templates(this, config_args, self.mp.cuda)
 
         if (oid_onehot-template_ball):norm()==0 then
-            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized!
+            threshold = self.mp.nbrhdsize*config_args.object_base_size.ball  -- this is not normalized
         elseif oid_onehot:equal(template_block) then
             threshold = self.mp.nbrhdsize*config_args.object_base_size.block
         else
@@ -329,7 +329,7 @@ function model:bp(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(all_future[#all_future]))
 
-    -- TODO: get better cost function for angle
+    -- TODO: change cost function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -427,7 +427,6 @@ end
 -- return a table of euc dist between this and each of context
 -- size is the number of items in context
 -- is this for the last timestep of this?
--- TODO_lowpriority: later we can plot for all timesteps
 function model:get_euc_dist(this, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep

@@ -289,7 +289,7 @@ function train(start_iter, epoch_num)
             print('saving checkpoint to ' .. model_file)
 
             local checkpoint = {}
-            checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
+            checkpoint.model = model
             checkpoint.mp = mp
             checkpoint.train_losses = train_losses
             checkpoint.val_losses = val_losses
@@ -339,7 +339,7 @@ function train(start_iter, epoch_num)
                 print('saving checkpoint to ' .. model_file)
 
                 local checkpoint = {}
-                checkpoint.model = model  -- TODO_lowpriority: should I save the model.theta?
+                checkpoint.model = model
                 checkpoint.mp = mp
                 checkpoint.train_losses = train_losses
                 checkpoint.val_losses = val_losses
@@ -523,8 +523,7 @@ function run_experiment_load()
     model_deps(mp.model)
     inittrain(true, mp.savedir ..'/'..snapshot, iters)  -- assuming the mp.savedir doesn't change
 
-    -- you should now write the experiment logger
-    -- you won't be able to write the train logger though! You'd have to save the original file
+    -- now write the experiment logger
     assert(#train_losses==#val_losses and #train_losses==#test_losses)
     for i=1,#train_losses do
         local train_loss = train_losses[i]
