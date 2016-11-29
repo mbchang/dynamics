@@ -54,17 +54,10 @@ cmd:option('-lr', 0.0003, 'learning rate')
 cmd:option('-lrdecay', 0.99, 'learning rate annealing')
 cmd:option('-val_window', 10, 'for testing convergence')
 cmd:option('-val_eps', 1e-6, 'for testing convergence')
-cmd:option('-im', false, 'infer mass')
-cmd:option('-cf', false, 'collision filter')  -- should be on if -im is on
 cmd:option('-vlambda', 1, 'velocity penalization')
 cmd:option('-lambda', 1, 'angle penalization')
 cmd:option('-of', false, 'object flag for lstm')
 cmd:option('-duo', false, 'duo focus for lstm')
-cmd:option('-zero', false, 'save 0th iteration')
-
-
--- priority sampling
-cmd:option('-ps', false, 'turn on priority sampling')
 cmd:option('-rs', false, 'turn on random sampling')
 cmd:option('-sharpen', 1, 'sharpen exponent')
 cmd:option('-dropout', 0.0, 'dropout for lstm')
@@ -87,7 +80,6 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.server == 'pc' then
-    -- mp.data_root = '../data'
     mp.logs_root = 'logs'
     mp.winsize = 3 -- total number of frames
     mp.num_future = 1 --10
@@ -101,12 +93,9 @@ if mp.server == 'pc' then
     mp.layers = 2
     mp.rnn_dim = 24
     mp.model = 'npe'
-    mp.im = false
-    mp.cf = false
     mp.val_window = 5
     mp.val_eps = 2e-5
     mp.duo = false
-    mp.zero = false
 	mp.num_threads = 1
     mp.shuffle = false
     mp.batch_norm = false
@@ -212,15 +201,9 @@ function inittrain(preload, model_path, iters)
 
     trainLogger = optim.Logger(paths.concat(mp.savedir ..'/', train_log_file))
     experimentLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'experiment.log'))
-    if mp.im then
-        inferenceLogger = optim.Logger(paths.concat(mp.savedir ..'/', 'infer.log'))
-    end
     if mp.plot == false then
         trainLogger.showPlot = false
         experimentLogger.showPlot = false
-        if mp.im then
-            inferenceLogger.showPlot = false
-        end
     end
 
     -- save args
@@ -273,7 +256,7 @@ end
 function feval_train(params_)
     local batch
     if mp.rs then
-        batch = train_loader:sample_random_batch(mp.sharpen)
+        batch = train_loader:sample_random_batch()
     else
         batch = train_loader:sample_priority_batch(mp.sharpen)
     end
@@ -307,7 +290,6 @@ function train(start_iter, epoch_num)
         val_losses[#val_losses+1] = v_val_loss
         test_losses[#test_losses+1] = v_test_loss
 
-        -- if mp.zero then 
             local model_file = string.format('%s/epoch%d_step%d_%.7f.t7',
                                         mp.savedir, epoch_num, 0, v_val_loss)
             print('saving checkpoint to ' .. model_file)
@@ -321,8 +303,6 @@ function train(start_iter, epoch_num)
             checkpoint.iters = t
             torch.save(model_file, checkpoint)
             print('Saved model')
-            -- return
-        -- end
     end
 
     for t = start_iter,mp.max_iter do

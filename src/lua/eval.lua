@@ -6,7 +6,6 @@ require 'nn'
 require 'optim'
 require 'image'
 require 'xlua'
--- require 'Base'
 require 'sys'
 require 'pl'
 require 'torchx'
@@ -39,7 +38,6 @@ cmd:option('logs_root', 'logs', 'subdirectory to save logs and checkpoints')
 cmd:option('data_root', '../../data', 'subdirectory to save data')
 cmd:option('-name', "", 'experiment name')
 cmd:option('-seed', true, 'manual seed or not')
-cmd:option('-zero', false, 'manual seed or not')
 
 -- dataset
 cmd:option('-test_dataset_folders', '', 'dataset folder')

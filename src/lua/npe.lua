@@ -322,12 +322,6 @@ function model:bp(batch, prediction, sim)
     local d_obj_prop = self.identitycriterion:backward(p_obj_prop, gt_obj_prop):clone()
 
     local d_pred = splitter:backward({prediction}, {d_pos, d_vel, d_ang, d_ang_vel, d_obj_prop})
-    ------------------------------------------------------------------
-    -- if mp.cf then
-    --     local collision_mask = collision_filter(batch)
-    --     d_pred:cmul(collision_mask:expandAs(d_pred):float())
-    -- end
-    ------------------------------------------------------------------
 
     -- neighborhood
     local decoder_in = self.network.modules[1].output  -- table {pairwise_out, this_past}

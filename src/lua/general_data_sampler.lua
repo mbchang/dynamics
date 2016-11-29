@@ -99,10 +99,10 @@ function general_datasampler:sample_priority_batch(pow)
     return batch, self.current_dataset
 end
 
-function general_datasampler:sample_random_batch(pow)
+function general_datasampler:sample_random_batch()
 
     self.current_dataset = math.random(#self.datasamplers)
-    local batch = self.datasamplers[self.current_dataset]:sample_random_batch(pow)
+    local batch = self.datasamplers[self.current_dataset]:sample_random_batch()
     self.current_sampled_id = self.datasamplers[self.current_dataset].current_sampled_id
     if plseq.reduce('and', plseq.map(function(x) return x.has_reported end,
             self.datasamplers)) and not(self.has_reported) then
