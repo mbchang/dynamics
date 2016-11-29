@@ -182,8 +182,7 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
     local ntrimmed_context = trimmed_context:size(2)
     local expand_size = torch.LongStorage{mp.batch_size,ntrimmed_context,context_future:size(3),context_future:size(4)}
     -- good, and corresponds with trimmed_context
-    local trimmed_context_future = context_future:clone():gather(2,torch.expand(closest_indices:view(mp.batch_size,ntrimmed_context,1,1),expand_size))  -- I think this is all you need
-    -- local trimmed_context_future = data_process.k_nearest_context(y:clone(), context_future:clone(), max_obj)  -- NOTE I DON'T ACTUALLY THINK THIS MAKES SENSE!
+    local trimmed_context_future = context_future:clone():gather(2,torch.expand(closest_indices:view(mp.batch_size,ntrimmed_context,1,1),expand_size))
 
     if context:size(2) <= 12 then  -- it shouldn't be affected
         assert((trimmed_context-context):norm()==0)
@@ -191,7 +190,7 @@ function datasampler:load_subbatch_id_any_offset(id, offset)
     end
 
     mask = torch.zeros(max_obj)  -- 12 is seq_length
-    mask[{{trimmed_context_future:size(2)}}] = 1 -- I'm assuming that mask is for the number of context, but you can redefine this
+    mask[{{trimmed_context_future:size(2)}}] = 1
 
     -- convert to cuda or double
     this,trimmed_context,context, y,trimmed_context_future, context_future, mask = unpack(map(convert_type,{this,trimmed_context,context,y,trimmed_context_future, context_future, mask},self.cuda))

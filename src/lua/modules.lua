@@ -31,12 +31,11 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
     local rnn_out = nn.Identity()()
 
     local out_dim = num_future * object_dim
-    -- -- ok, here we will have to split up the output
     local decoder_preout = nn.Linear(rnn_hid_dim, out_dim)(rnn_out)
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
                 {num_future, object_dim},{{1,6},{7,object_dim}})
-                (decoder_preout):split(2)  -- contains info about objectdim!
+                (decoder_preout):split(2)  -- contains info about objectdim
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
     local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
@@ -54,9 +53,6 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
     -- orig_state (batch_size, mp.num_past*mp.object_dim)
     local orig_state = nn.Identity()()
     local decoder_in_dim = identity_dim + rnn_hid_dim
-
-    -- should I combine them first, or should I do a encoding then combine?
-    -- I think I should just combine
     local decoder_in = nn.JoinTable(2)({rnn_out, orig_state})
 
     local decoder_preout, decoder_net
@@ -84,7 +80,7 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
                 {num_future, object_dim},{{1,6},{7,object_dim}})
-                (decoder_preout):split(2)  -- contains info about objectdim!
+                (decoder_preout):split(2)  -- contains info about objectdim
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
     local world_state = world_state_pre -- linear
     local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})

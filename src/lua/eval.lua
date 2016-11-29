@@ -23,7 +23,6 @@ require 'gnuplot'
 -- Local Imports
 local model_utils = require 'model_utils'
 local D = require 'general_data_sampler'
-local D2 = require 'datasaver'
 require 'logging_utils'
 require 'json_interface'
 
@@ -208,14 +207,10 @@ local function replace_invalid_dummy(pred, y_before_relative, this, invalid_focu
     local this = this:clone()
     assert(invalid_focus_mask:sum() > 0)
 
-    -- next we will take 
     local invalid_idxs = torch.find(invalid_focus_mask,1)
     for _,invalid_idx in pairs(invalid_idxs) do
         pred[{{invalid_idx},{},{}}] = y_before_relative[{{invalid_idx},{},{}}]:clone() -- replace with ground truth
     end
-
-    -- wait, note that you still need ground truth in order to compute your prediction score. so it is okay
-    -- to predict against a ground truth here.
     return pred  
 end
 
@@ -229,13 +224,12 @@ local function apply_mask_avg(tensor, mask)
 end
 
 local function find_valid_focus_mask(this)
-    -- Ok, note that you only want the examples where this is a ball or block
     -- these templates are (bsize, oid_dim)
     local oid_onehot, template_ball, template_block, template_obstacle = get_oid_templates(this, config_args, mp.cuda)
     local num_oids = config_args.si.oid[2]-config_args.si.oid[1]+1
     local invalid_focus_mask = oid_onehot:eq(template_obstacle):sum(2):eq(num_oids)  -- 1 if invalid
     local valid_focus_mask = 1-invalid_focus_mask -- 1 if valid
-    if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
+    if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end
     return valid_focus_mask, invalid_focus_mask
 end
 
@@ -286,9 +280,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
         -- arbitrary notion of ordering here
         -- past: (bsize, num_particles, mp.numpast*mp.objdim)
         -- future: (bsize, num_particles, (mp.winsize-mp.numpast), mp.objdim)
-        -- local past = torch.cat({unsqueeze(this_orig:clone(),2), context_orig},2)   -- no flag yet
-        -- local future = torch.cat({unsqueeze(y_orig:clone(),2), context_future_orig},2)     -- no flag yet (because we don't know which is focus or context)
-
         local past = torch.cat({unsqueeze(this_orig:clone(),2), untrimmed_context_past:clone()},2)   -- no flag yet
         local future = torch.cat({unsqueeze(y_orig:clone(),2), untrimmed_context_future:clone()},2)     -- no flag yet (because we don't know which is focus or context)
 
@@ -296,7 +287,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
         local pred_sim = model_utils.transfer_data(
                             torch.zeros(mp.batch_size, num_particles,
-                                        numsteps, y_orig:size(3)),   -- the dimensionality here inludes a flag; this may be a problem?
+                                        numsteps, y_orig:size(3)),
                             mp.cuda)
 
         -- loop through time
@@ -324,7 +315,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 -- these templates are (bsize, oid_dim)
                 local valid_focus_mask, invalid_focus_mask = find_valid_focus_mask(this)
 
-                if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end -- NOTE added this!
+                if invalid_focus_mask:sum() > 0 then has_invalid_focus = true end
 
                 if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
                     -- note that we have to keep the batch size constant.
@@ -382,7 +373,7 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
                 else
                     -- we only reach here IF all of the FOCUS objects are INVALID
                     assert((torch.squeeze(this[{{},{-1}}])-y_before_relative):norm()==0)  -- they had better be the same if they are stationary (we assume they can't move)
-                    pred_sim[{{},{j},{t},{}}] = y_before_relative -- but does this contain the context though?
+                    pred_sim[{{},{j},{t},{}}] = y_before_relative
                 end
             end
 
@@ -469,7 +460,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 end
 
 
--- TODO_lowpriority: move this to plot_results
 function plot_hid_state(fname, x,y)
     gnuplot.pngfigure(mp.savedir..'/'..fname..'.png')
     gnuplot.xlabel('Euclidean Distance')
@@ -577,9 +567,7 @@ function load_checkpoint(snapshot)
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
     config_args = saved_args.config_args
-
-    -- NOTE THIS IS ONLY FOR THE EXPERIMENTS THAT DON'T HAVE object_base_size_ids_upper!
-    config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
+    -- config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
 
     model_deps(mp.model)
     return checkpoint, snapshotfile
@@ -795,7 +783,6 @@ function model_deps(modeltype)
         error('Unrecognized model')
     end
 end
-
 
 ------------------------------------- Main -------------------------------------
 if mp.mode == 'sim' then

@@ -31,8 +31,7 @@ Below are some predictions from the model:
 <kbd><img src="./demo/walls_n2_wU_npe_pred_batch0_ex2.gif" width="125"></kbd>
 <kbd><img src="./demo/walls_n2_wI_npe_pred_batch0_ex2.gif" width="125"></kbd>
 
-_The code in this repository has not been cleaned up, so use at your
-own risk._
+_NOTE: The code in this repository has not been cleaned up._
 
 ## Requirements
 * [Torch7](http://torch.ch/)

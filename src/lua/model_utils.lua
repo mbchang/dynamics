@@ -14,7 +14,7 @@ function model_utils.combine_all_parameters(...)
     --[[ like module:getParameters, but operates on many modules ]]--
 
     -- get parameters
-    local networks = {...}  -- variable number of arguments?
+    local networks = {...}
     local parameters = {}
     local gradParameters = {}
     for i = 1, #networks do

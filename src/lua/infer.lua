@@ -61,12 +61,10 @@ function angle_magnitude(pred, batch, within_batch)
     local cosine_diff = torch.cdiv(numerator,denominator)
 
     -- local angle = torch.acos(cosine_diff)  -- (bsize, num_future, 1)
-    local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)  -- if I do acos then I get nan
+    local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)
     angle:maskedFill(1-mask,0)  -- zero out the ones where velocity was zero
 
     -- so angle is (bsize, etc, etc)
-    -- but you have to be careful
-
     if within_batch then
         return angle, relative_magnitude_error, mask, mask_nElement
     else
@@ -99,25 +97,22 @@ function generate_onehot_hypotheses_orig(num_hypotheses, indices)
 end
 
 function infer_properties(model, dataloader, params_, property, method, cf)
-    -- TODO for other properties
     local hypotheses, si_indices, indices, num_hypotheses, distance_threshold
     if property == 'mass' then
         si_indices = tablex.deepcopy(config_args.si.m)
-        -- si_indices[2] = si_indices[2]-1  -- ignore mass 1e30
         indices = {1,2,3}
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        hypotheses = generate_onehot_hypotheses(num_hypotheses,indices) -- good, works for mass 
+        hypotheses = generate_onehot_hypotheses(num_hypotheses,indices) 
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
         indices = {1,2,3}  -- only going to use drastic sizes
-        hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good, works for batch_size
+        hypotheses = generate_onehot_hypotheses(num_hypotheses, indices)
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
         si_indices = tablex.deepcopy(config_args.si.oid)
-        -- si_indices[2] = si_indices[2]-1  -- ignore jenga block
-        indices = {1,2}  -- this changes if we are in the invisible world!
+        indices = {1,2}  -- this changes if we are in the invisible world
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
@@ -159,7 +154,6 @@ function property_analysis(model, dataloader, params_, property)
         property_table[2] = {} 
     end
 
-    -- you should give the table to the function 
     local avg_properties, num_properties = context_property_analysis(model, dataloader, params_, si_indices, property_table, distance_threshold)
 
     return avg_properties, num_properties
@@ -177,12 +171,11 @@ function apply_hypothesis_onehot(batch, hyp, si_indices, obj_id)
     local num_context = context_past:size(2)
     local num_past = context_past:size(3)
 
-    if obj_id == 0 then  -- protocol for this
-        -- you should assert that si_indices is for mass.
+    if obj_id == 0 then
         assert(alleq({si_indices, config_args.si.m}))
         this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_past, 1)
     else
-        -- here you should see if si_indices are for object type. if your hypothesis is for a ball, then make mass = 1. If 
+        -- see if si_indices are for object type. if your hypothesis is for a ball, then make mass = 1.
         local ball_oid_onehot = torch.zeros(#config_args.oid_ids)
         ball_oid_onehot[{{config_args.oid_ids[1]}}]:fill(1)
         if (alleq({si_indices, config_args.si.oid})) and hyp:equal(ball_oid_onehot) then
@@ -191,7 +184,6 @@ function apply_hypothesis_onehot(batch, hyp, si_indices, obj_id)
             context_past[{{},{obj_id},{},config_args.si.m}] = mass_one_hot:view(1,1,1,#config_args.masses)
                                                                     :expandAs(context_past[{{},{obj_id},{},config_args.si.m}])
         end
-        -- HERE NOTE THAT YOU ARE NOT FILTERING FOR OBSTACLE! YOU WILL FILTER LATER!
         -- now apply the hypothesis as usual
         context_past[{{},{obj_id},{},si_indices}] = torch.repeatTensor(hyp, num_ex, 1, num_past, 1)
     end
@@ -214,7 +206,6 @@ function count_correct(batch, ground_truth, best_hypotheses, num_correct, count,
 
         -- after applying both filters, you have the examples in which the focus object
         -- reverses direction and the object whose property you are inferring is an obstacle
-        -- you may now proceed.
 
         local collision_filter_indices = torch.squeeze(collision_filter_mask):nonzero()
         if collision_filter_indices:nElement() > 0 then

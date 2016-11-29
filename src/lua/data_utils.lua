@@ -77,7 +77,7 @@ function save_to_hdf5(filename, data)
     -- data: dict of {datapath: data}
     local myFile = hdf5.open(filename, 'w')
     for k,v in pairs(data) do
-        myFile:write(k, v)  -- I can write many preds in here, indexed by the starting time?
+        myFile:write(k, v)
     end
     myFile:close()
 end
@@ -319,7 +319,7 @@ function onehot2numall(onehot_selected, categories, cuda)
     local num_obj = onehot_selected:size(2)
     local num_steps = onehot_selected:size(3)
 
-    local selected = convert_type(torch.zeros(num_ex*num_obj*num_steps, 1), cuda)  -- this is not cuda-ed!
+    local selected = convert_type(torch.zeros(num_ex*num_obj*num_steps, 1), cuda)  -- this is not cuda-ed
     onehot_selected = onehot_selected:reshape(num_ex*num_obj*num_steps, #categories)  -- I get weird numbers if I use resize and the num_steps = 1
 
     for row=1,onehot_selected:size(1) do

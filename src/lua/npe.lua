@@ -167,7 +167,6 @@ end
 
 -- in: model input: table of length num_context-1 of {(bsize, num_past*obj_dim),(bsize, num_past*obj_dim)}
 -- out: {{indices of neighbors}, {indices of non-neighbors}}
--- maybe I can output a mask? then I can rename this function to neighborhood_mask
 function model:select_neighbors(input)
     local threshold
     local neighbor_masks = {}
@@ -298,7 +297,7 @@ function model:bp(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    -- NOTE! is there a better loss function for angle?
+    -- NOTE better loss function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -349,7 +348,7 @@ function model:bp_input(batch, prediction, sim)
     local gt_pos, gt_vel, gt_ang, gt_ang_vel, gt_obj_prop =
                         unpack(split_output(self.mp):forward(this_future))
 
-    -- NOTE! is there a better loss function for angle?
+    -- NOTE better loss function for angle
     self.identitycriterion:forward(p_pos, gt_pos)
     local d_pos = self.identitycriterion:backward(p_pos, gt_pos):clone()
 
@@ -460,7 +459,6 @@ end
 
 -- return a table of euc dist between this and each of context
 -- size is the number of items in context
--- is this for the last timestep of this?
 function model:get_euc_dist(this, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep

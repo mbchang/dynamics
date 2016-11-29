@@ -15,7 +15,6 @@ local tablex = require 'pl.tablex'
 -- Local Imports
 local model_utils = require 'model_utils'
 local D = require 'general_data_sampler'
-local D2 = require 'datasaver'
 require 'logging_utils'
 config_args = require 'config'
 local data_process = require 'data_process'
@@ -513,7 +512,7 @@ function run_experiment_load()
 
 
     if ((iters-1) >= mp.lrdecayafter and (iters-1) % mp.lrdecay_every == 0) then
-        mp.lr = mp.lr*mp.lrdecay  -- because we usually decay right after we save?
+        mp.lr = mp.lr*mp.lrdecay
     end
     optim_state = {learningRate   = mp.lr}
     print('Learning rate is now '..optim_state.learningRate)
