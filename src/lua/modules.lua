@@ -9,8 +9,8 @@ nngraph.setDebug(true)
 
 function init_object_encoder(input_dim, rnn_inp_dim, bias)
     assert(rnn_inp_dim % 2 == 0)
-    local thisp     = nn.Identity()() -- (batch_size, input_dim)
-    local contextp  = nn.Identity()() -- (batch_size, partilce_dim)
+    local thisp     = nn.Identity()()
+    local contextp  = nn.Identity()()
 
     -- (batch_size, rnn_inp_dim/2)
     local thisp_out     = nn.ReLU()
@@ -35,16 +35,15 @@ function init_object_decoder(rnn_hid_dim, num_future, object_dim)
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
                 {num_future, object_dim},{{1,6},{7,object_dim}})
-                (decoder_preout):split(2)  -- contains info about objectdim
+                (decoder_preout):split(2)
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
-    local world_state = world_state_pre -- linear
+    local world_state = world_state_pre
     local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
     local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
     return nn.gModule({rnn_out}, {decoder_out})
 end
 
 function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, num_future, object_dim, identity_dim)
-    -- rnn_out (batch_size, rnn_hid_dim)
     local rnn_out = nn.Identity()()
     local out_dim = num_future * object_dim
 
@@ -80,9 +79,9 @@ function init_object_decoder_with_identity(rnn_hid_dim, num_layers, num_past, nu
 
     local world_state_pre, obj_prop_pre = split_tensor(3,
                 {num_future, object_dim},{{1,6},{7,object_dim}})
-                (decoder_preout):split(2)  -- contains info about objectdim
+                (decoder_preout):split(2)
     local obj_prop = nn.Sigmoid()(obj_prop_pre)
-    local world_state = world_state_pre -- linear
+    local world_state = world_state_pre
     local dec_out_reshaped = nn.JoinTable(3)({world_state,obj_prop})
     local decoder_out = nn.Reshape(out_dim, true)(dec_out_reshaped)
     return nn.gModule({rnn_out, orig_state}, {decoder_out})

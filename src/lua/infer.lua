@@ -54,13 +54,11 @@ function angle_magnitude(pred, batch, within_batch)
     local relative_magnitude_error, mask, mask_nElement = relative_error(torch.squeeze(torch.squeeze(gt_vel_magnitude:clone(),2),2), 
                                                     torch.squeeze(torch.squeeze(pred_vel_magnitude:clone(),2),2))  -- (bsize)
 
-
     -- get cosine difference
     local numerator = torch.cmul(pred_vel, gt_vel):sum(3) -- (bsize, num_future, 1)
     local denominator = torch.cmul(pred_vel_magnitude,gt_vel_magnitude)  -- (bsize, num_future, 1)
     local cosine_diff = torch.cdiv(numerator,denominator)
 
-    -- local angle = torch.acos(cosine_diff)  -- (bsize, num_future, 1)
     local angle = torch.squeeze(torch.squeeze(cosine_diff,2),2) -- (bsize, num_future, 1)
     angle:maskedFill(1-mask,0)  -- zero out the ones where velocity was zero
 
@@ -103,22 +101,26 @@ function infer_properties(model, dataloader, params_, property, method, cf)
         indices = {1,2,3}
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses,indices) 
-        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. so we only look at collisions not in that padding.
+
+        -- because we are basically saying we are drawing a ball-radius-sized buffer around the walls. 
+        -- so we only look at collisions not in that padding.
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  
     elseif property == 'size' then 
         si_indices = tablex.deepcopy(config_args.si.os)
         num_hypotheses = si_indices[2]-si_indices[1]+1
-        indices = {1,2,3}  -- only going to use drastic sizes
+        indices = {1,2,3}
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices)
         distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
     elseif property == 'objtype' then
         si_indices = tablex.deepcopy(config_args.si.oid)
-        indices = {1,2}  -- this changes if we are in the invisible world
+        indices = {1,2}
         num_hypotheses = si_indices[2]-si_indices[1]+1
         hypotheses = generate_onehot_hypotheses(num_hypotheses, indices) -- good
-        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  -- the smallest side of the obstacle. This makes a difference
+
+        -- the smallest side of the obstacle. This makes a difference
+        distance_threshold = config_args.object_base_size.ball+config_args.velocity_normalize_constant  
     elseif property == 'pos_mass_oid_fixedmass' then  -- b2i on context
         -- infer pos, mass in {1, 1e30}, oid in {1,2}
-        -- we are doing dras3!
         si_indices = {px=1,py=1,m={1,4},oid={1,2}}
         -- random between 0 and 1 because pos, oid, os are all in that range
         -- {px: rand, py: rand, mass: tensor(4), oid: tensor(3)}
@@ -159,7 +161,6 @@ function property_analysis(model, dataloader, params_, property)
     return avg_properties, num_properties
 end
 
--- copies batch
 function apply_hypothesis_onehot(batch, hyp, si_indices, obj_id)
     local this_past, context_past, this_future, context_future, mask = unpack(batch)
     this_past = this_past:clone()
@@ -175,7 +176,6 @@ function apply_hypothesis_onehot(batch, hyp, si_indices, obj_id)
         assert(alleq({si_indices, config_args.si.m}))
         this_past[{{},{},si_indices}] = torch.repeatTensor(hyp, num_ex, num_past, 1)
     else
-        -- see if si_indices are for object type. if your hypothesis is for a ball, then make mass = 1.
         local ball_oid_onehot = torch.zeros(#config_args.oid_ids)
         ball_oid_onehot[{{config_args.oid_ids[1]}}]:fill(1)
         if (alleq({si_indices, config_args.si.oid})) and hyp:equal(ball_oid_onehot) then
@@ -232,8 +232,8 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
     local best_hypotheses = torch.zeros(mp.batch_size,hypothesis_length)
 
     for j,h in pairs(hypotheses) do
-        local hypothesis_batch = apply_hypothesis_onehot(batch, h, si_indices, context_id)  -- good
-        local test_losses, prediction = model:fp_batch(params_, hypothesis_batch, true)  -- good  this should set sim to true!
+        local hypothesis_batch = apply_hypothesis_onehot(batch, h, si_indices, context_id)
+        local test_losses, prediction = model:fp_batch(params_, hypothesis_batch, true) -- sim should be true
 
         -- test_loss is a tensor of size bsize
         local update_indices = test_losses:lt(best_losses):nonzero()

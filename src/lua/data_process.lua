@@ -23,10 +23,10 @@ function data_process.create(jsonfolder, outfolder, args)
     self.si = args.si -- {px: {1}, py: {2}, vx: {3}, vy: {4}, m: {5,8}, oid: {9}}
     self.oid_ids = args.oid_ids
     self.boolean = args.boolean
-    self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't NOTE: not spending my time permuting for now
+    self.permute_context = args.permute_context  -- bool: if True will expand the dataset, False won't
     self.bsize = args.batch_size
     self.shuffle = args.shuffle
-    self.jsonfolder = jsonfolder--..'/jsons'
+    self.jsonfolder = jsonfolder
     self.outfolder = outfolder -- save stuff to here.
 
     -- here you can also include have world parameters
@@ -48,14 +48,12 @@ function data_process.create(jsonfolder, outfolder, args)
     return self
 end
 
--- focus: (bsize, num_past, obj_dim)
--- context: ()
 function data_process.k_nearest_context(focus, context, k)
     local bsize, num_past, obj_dim = context:size(1), context:size(3), context:size(4)
 
     -- euc_dist is a table of num_context entries of (bsize)
     -- table size is num_context
-    local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)  -- good
+    local ed = data_process.get_euc_dist(focus:clone(), context:clone())  -- (bsize, num_context)  
 
     -- for each example in bsize, you want to sort num_context and gets indices
     local k = math.min(12, ed:size(2))
@@ -64,25 +62,14 @@ function data_process.k_nearest_context(focus, context, k)
     -- here you can just sort closest_indices
     closest_indices = torch.sort(closest_indices)  -- sort in the original order they were presented
 
-    -- print(context:size())
-
     local expand_size = torch.LongStorage{bsize,k,num_past,obj_dim}
     local new_context = context:clone():gather(2,torch.expand(closest_indices:view(mp.batch_size,k,1,1),expand_size))
-
-    -- local new_context = {}
-    -- for ex = 1, closest_indices:size(1) do  -- go through the batch
-    --     local contexts_for_ex = context[{{ex}}]:index(2, closest_indices[ex])  -- (bsize, 12, num_past, obj_dim)
-    --     table.insert(new_context, contexts_for_ex:clone())
-
-    --     -- good up to here
-    -- end
-    -- new_context = torch.cat(new_context,1) -- good
 
     assert(new_context:size(1) == bsize and new_context:size(2) <= 12 and new_context:size(3) == num_past and new_context:size(4) == obj_dim)
     return new_context, closest_indices
 end
 
--- good
+
 function data_process.get_euc_dist(focus, context, t)
     local num_context = context:size(2)
     local t = t or -1  -- default use last timestep
@@ -100,7 +87,6 @@ end
 function data_process.relative_pair(past, future, relative_to_absolute)
     -- rta: relative to absolute, otherwise we are doing absolute to relative
 
-    -- TODO: use config args for this!
     if relative_to_absolute then
         future[{{},{},{1,6}}] = future[{{},{},{1,6}}] + past[{{},{-1},{1,6}}]:expandAs(future[{{},{},{1,6}}])
     else
@@ -206,17 +192,17 @@ function data_process:properties2onehotall(trajectories)  -- (num_ex, num_obj, n
     local pairwise = trajectories[{{},{},{},{self.rsi.p}}]:clone()
 
     -- next, convert all to onehot
-    masses = self:num2onehotall(masses, self.masses)  -- good
-    objtypes = self:num2onehotall(objtypes, self.oid_ids)  -- good
-    obj_sizes = self:num2onehotall(obj_sizes, self.obj_sizes)  -- good
-    gravity = self:num2onehotall(gravity, self.boolean)  -- good
-    friction = self:num2onehotall(friction, self.boolean)  -- good
-    pairwise = self:num2onehotall(pairwise, self.boolean)  -- good
+    masses = self:num2onehotall(masses, self.masses)  
+    objtypes = self:num2onehotall(objtypes, self.oid_ids)  
+    obj_sizes = self:num2onehotall(obj_sizes, self.obj_sizes)  
+    gravity = self:num2onehotall(gravity, self.boolean)  
+    friction = self:num2onehotall(friction, self.boolean)  
+    pairwise = self:num2onehotall(pairwise, self.boolean)  
 
     -- last, rejoin
     local propertiesonehot = {masses, objtypes, obj_sizes,
                               gravity, friction, pairwise}
-    local trajectoriesonehot = torch.cat({before, unpack(propertiesonehot)}, 4)  -- good
+    local trajectoriesonehot = torch.cat({before, unpack(propertiesonehot)}, 4)  
     return trajectoriesonehot
 end
 
@@ -245,15 +231,6 @@ function data_process:onehot2propertiesall(trajectoriesonehot)
     return trajectories
 end
 
-
---[[ Expands the number of examples per batch to have an example per particle
-    Input: unfactorized: (num_samples x num_obj x windowsize x 8)
-    Output:
-        {
-            focus: (num_samples*num_obj, num_steps, obj_dim)
-            context: (num_samples*num_obj x (num_obj-1) x num_steps x 8) or {}
-        }
---]]
 function data_process:expand_for_each_object(unfactorized)
     local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(unfactorized:size()))
     local focus = {}
@@ -302,8 +279,8 @@ function data_process:expand_for_each_object(unfactorized)
                 end
 
                 assert(this:size()[1] == others:size()[1])
-                table.insert(focus, this) -- good
-                table.insert(context, others) -- good
+                table.insert(focus, this) 
+                table.insert(context, others) 
             end
         end
     else
@@ -327,7 +304,6 @@ function data_process:condense(focus, context)
     -- duplicates may exist, they may not because each object gets a chance to a focus object
     -- so the same set of trajectories would appear num_obj times
     focus = unsqueeze(focus, 2)
-    -- TODO_lowpriority get rid of duplicates!
     return torch.cat({focus, context},2)
 end
 
@@ -422,7 +398,7 @@ end
 function data_process:iter_files_ordered(folder)
     local files = {}
     for f in paths.iterfiles(folder) do
-        table.insert(files, f) -- good
+        table.insert(files, f) 
     end
     table.sort(files)  -- mutates files
     return files
@@ -451,8 +427,6 @@ function data_process:count_examples(jsonfolder)
         local data = load_data_json(paths.concat(jsonfolder,jsonfile))  -- (num_examples, num_obj, num_steps, object_raw_dim)
         local num_samples, num_obj, num_steps, object_dim = unpack(torch.totable(data:size()))
 
-        -- print(num_samples, num_obj, num_steps, object_dim)
-        -- assert(false)
         -- now count where there are balls (also works for tower)
         if num_obj > 1 then
             for i=1,num_obj do
@@ -479,11 +453,7 @@ function data_process:create_datasets_batches()
     local num_steps = tonumber(extract_flag(flags, 't'))
     local num_obj
 
-    if not(string.find(self.jsonfolder, 'walls') == nil) then
-        -- U: 33
-        -- L: 30
-        -- O: 30
-        -- I: 32   
+    if not(string.find(self.jsonfolder, 'walls') == nil) then  
         if not(string.find(self.jsonfolder, '_wO') == nil) or not(string.find(self.jsonfolder, '_wL') == nil) then
             num_obj = 30
         elseif not(string.find(self.jsonfolder, '_wU') == nil) then
@@ -517,30 +487,8 @@ function data_process:create_datasets_batches()
 
     -- now, let's implement the queue
     local leftover_examples = {}
-
-    ----------------------------------------------------------
-    -- it's a good thing I don't need to do leftover examples
-
-    -- local counters = {trainset=3400, valset=750, testset=750}
-    -- -- now I need to figure out which jsons have not been seen yet.
-    -- local count_logfile = 'tower_n10_t120_ex25000_rd_count.txt'
-    -- local seen_jsons = {}
-    -- for line in io.lines(count_logfile) do table.insert(seen_jsons, line) end
-
-    -- TODODO
     local ordered_files = self:iter_files_ordered(self.jsonfolder)
     for _, jsonfile in pairs(ordered_files) do 
-    --      if not(isin(jsonfile, jsons)) do
-    --          then do the stuff
-    ----------------------------------------------------------
-
-
-    -- for jsonfile in paths.iterfiles(self.jsonfolder) do  -- order doesn't matter
-
-        ----------------------------------------------------------
-        -- if not(isin(jsonfile, seen_jsons)) then
-
-        ----------------------------------------------------------
 
        -- note that this may not all be the same batch size! They will even out at the end though
        local new_batches = self:json2batches(paths.concat(self.jsonfolder,jsonfile))
@@ -550,7 +498,7 @@ function data_process:create_datasets_batches()
            assert(self:check_overflow(counters, limits) >= 0)
            -- check to see if this batch is of batch_size
            if batch[1]:size(1) < self.bsize then
-               table.insert(leftover_examples, batch)  -- good
+               table.insert(leftover_examples, batch)  
                print('leftover examples')
                print(leftover_examples)
            else
@@ -559,21 +507,15 @@ function data_process:create_datasets_batches()
             end
            collectgarbage()
        end
-       ----------------------------------------------------------
-       -- end
-       ----------------------------------------------------------
     end
 
     -- now concatenate all the leftover_batches. They had better be a multiple of self.bsize
     leftover_examples = join_table_of_tables(leftover_examples)
-    -- leftover_examples = join_table_of_tables({unpack(leftover_examples), unpack(leftover_examples)})  -- for debugging
 
     print('Merged leftover examples:')
     print(leftover_examples)
     if #leftover_examples > 0 then
         assert(leftover_examples[1]:size(1)==leftover_examples[2]:size(1))  -- check that focus and context have same number of batches
-        -- assert(leftover_examples[1]:size(1) % self.bsize == 0)  -- this is taken care of by our truncation = true below
-        -- assert(self:check_overflow(counters, limits)*self.bsize == leftover_examples[1]:size(1)) -- we have exactly enough examples to fill the dataset quotas
         local leftover_batches = self:split2batchesall(leftover_examples[1], leftover_examples[2], true)  -- guaranteed to output batches of self.bsize
         assert(self:check_overflow(counters, limits) == #leftover_batches)  -- we have exactly enough batches left to fill the dataset quotas
         print('Saving leftover_batches')
@@ -593,7 +535,7 @@ function data_process:split2batchesall(focus, context, truncate)
     local context_batches = self:split2batches(context, truncate)
     local all_batches = {}
     for b=1,#focus_batches do
-        table.insert(all_batches, {focus_batches[b], context_batches[b]}) -- good
+        table.insert(all_batches, {focus_batches[b], context_batches[b]}) 
     end
     return all_batches
 end
@@ -601,8 +543,8 @@ end
 function data_process:json2batches(jsonfile)
     local data = load_data_json(jsonfile)
     assert(data:size(3) == self.maxwinsize)
-    data = self:normalize(data)  -- good
-    data = self:properties2onehotall(data)  -- good
+    data = self:normalize(data)  
+    data = self:properties2onehotall(data)  
     local focus, context = self:expand_for_each_object(data)
     return self:split2batchesall(focus, context)
 end
@@ -612,7 +554,6 @@ end
 -- batch size can be one
 -- assume that the trajectories are not sliced into past and future for now
 function data_process:record_trajectories(batch, config, jsonfile)
-    -- now I have to combine focus and context and remove duplicates?
     local trajectories = self:condense(unpack(batch))
     local trajectories = self:onehot2propertiesall(trajectories)
     local unnormalized = self:unnormalize(trajectories)
