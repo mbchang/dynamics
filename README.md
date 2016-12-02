@@ -36,8 +36,6 @@ Below are some predictions from the model:
 <kbd><img src="./demo/walls_n2_wU_npe_pred_batch0_ex2.gif" width="125"></kbd>
 <kbd><img src="./demo/walls_n2_wI_npe_pred_batch0_ex2.gif" width="125"></kbd>
 
-_NOTE: The code in this repository is still in the process of being cleaned up._
-
 ## Requirements
 * [Torch7](http://torch.ch/)
 * [Node.js](https://nodejs.org/en/) v6.2.1
@@ -73,6 +71,8 @@ Pillow==2.8.2
 -->
 
 ## Instructions
+
+_NOTE: The code in this repository is still in the process of being cleaned up._
 
 <!---
 Pretrained network and dataset can be downloaded at: COMING SOON.
