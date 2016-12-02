@@ -20,6 +20,8 @@ compositional representation of the structure in physical interactions improves
 its ability to predict movement, generalize to different numbers of objects,
 and infer latent properties of objects such as mass.
 
+##
+
 Below are some predictions from the model:
 
 <kbd><img src="./demo/balls_n3_npe_pred_batch0_ex0.gif" width="125"></kbd>
