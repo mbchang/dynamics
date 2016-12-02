@@ -241,9 +241,9 @@ function find_best_hypotheses(model, params_, batch, hypotheses, si_indices, con
         if update_indices:nElement() > 0 then
             update_indices = torch.squeeze(update_indices,2)
             --best_loss should equal test loss at the indices where test loss < best_loss
-            best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices)) -- works
+            best_losses:indexCopy(1,update_indices,test_losses:index(1,update_indices))
             -- best_hypotheses should equal h at the indices where test loss < best_loss
-            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))  -- works
+            best_hypotheses:indexCopy(1,update_indices,torch.repeatTensor(h,update_indices:size(1),1))
         end
         -- check that everything has been updated
         assert(not(best_losses:equal(torch.Tensor(mp.batch_size):fill(math.huge))))
@@ -283,9 +283,6 @@ function context_property_analysis(model, dataloader, params_, si_indices, prope
 
     local num_correct = 0
     local count = 0
-
-    -- here you will keep a bunch of datastructures for all the properties. 
-    -- you will add to these as you encounter context objects with those properties
 
     for i = 1, dataloader.total_batches do
         if mp.debug then xlua.progress(i, dataloader.total_batches) end
@@ -524,7 +521,7 @@ function wall_collision_filter(batch, distance_threshold)
     local dot = torch.sum(torch.cmul(past_vel, future_vel),2)
 
     --  only include those for which dot is < 0
-    local collision_mask = dot:le(0) -- 1 if collision  -- good  (5 x 1)
+    local collision_mask = dot:le(0) -- 1 if collision (5 x 1)
 
     -- for wall collision:
     -- get the direction of the velocity at time t. The normal of the wall dotted with that velocity should be positive.

@@ -8,8 +8,6 @@ require 'modules'
 
 nngraph.setDebug(true)
 
--- input: table of length num_obj with size (bsize, num_past*obj_dim)
--- output: table of length num_obj with size (bsize, num_future*obj_dim)
 function init_network(params)
     local hid_dim = params.rnn_dim
     local obj_dim = params.object_dim

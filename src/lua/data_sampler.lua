@@ -21,13 +21,6 @@ datasampler.__index = datasampler
 
 
 function datasampler.create(dataset_name, args)
-    --[[
-        Input
-            dataset_name: file containing data, like 'trainset'
-            dataset_folder: folder containing the .h5 files
-            shuffle: boolean
-    --]]
-
     local self = {}
     setmetatable(self, datasampler)
     self.dataset_folder=args.dataset_folder
