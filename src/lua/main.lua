@@ -62,8 +62,6 @@ cmd:option('-dropout', 0.0, 'dropout for lstm')
 
 -- experiment options
 cmd:option('-plot', false, 'turn on/off plot')
-
--- every options
 cmd:option('-print_every', 500, 'print every number of batches')
 cmd:option('-save_every', 100000, 'save every number of batches')
 cmd:option('-val_every', 100000,'val every number of batches')
@@ -78,8 +76,8 @@ cmd:text()
 mp = cmd:parse(arg)
 
 if mp.debug then
-    mp.num_future = 1 --10
-	mp.batch_size = 5 --1
+    mp.num_future = 1
+	mp.batch_size = 5
     mp.max_iter = 60 
     mp.nbrhd = true
     mp.lr = 3e-3
@@ -120,7 +118,7 @@ end
 
 mp.winsize = mp.num_past + mp.num_future
 mp.object_dim = config_args.si.p[2]
-if mp.of and mp.model == 'lstm' then mp.object_dim = mp.object_dim + 1 end -- flag 
+if mp.of and mp.model == 'lstm' then mp.object_dim = mp.object_dim + 1 end
 mp.input_dim = mp.object_dim*mp.num_past
 mp.out_dim = mp.object_dim*mp.num_future
 mp.name = string.gsub(string.gsub(string.gsub(mp.name,'{',''),'}',''),"'",'')
@@ -164,7 +162,7 @@ function inittrain(preload, model_path, iters)
     local data_loader_args = {data_root=mp.data_root..'/',
                               dataset_folders=mp.dataset_folders,
                               maxwinsize=config_args.maxwinsize,
-                              winsize=mp.winsize, -- not sure if this should be in mp
+                              winsize=mp.winsize,
                               num_past=mp.num_past,
                               num_future=mp.num_future,
                               relative=mp.relative,
@@ -180,7 +178,7 @@ function inittrain(preload, model_path, iters)
     test_args.dataset_folders = mp.test_dataset_folders
 
     train_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
-    val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))  -- using testcfgs
+    val_loader =  D.create('valset', tablex.deepcopy(data_loader_args))
     test_loader = D.create('testset', tablex.deepcopy(test_args))
     train_test_loader = D.create('trainset', tablex.deepcopy(data_loader_args))
     model = M.create(mp, preload, model_path)
@@ -358,7 +356,9 @@ function train(start_iter, epoch_num)
                 local val_avg_delta = (val_loss_window[{{2,-1}}] - val_loss_window[{{1,-2}}]):mean()
                 print('Average change in val loss over '..mp.val_window..
                         ' validations: '..val_avg_delta)
-                -- test if the loss is going down. the average pairwise delta should be negative, and the last should be less than the first
+
+                -- test if the loss is going down. 
+                -- the average pairwise delta should be negative, and the last should be less than the first
                 if val_avg_delta < 0 and torch.lt(max_val_loss_idx,min_val_loss_idx) then
                     print('Loss is decreasing')
                     -- if not we can lower the learning rate
@@ -380,7 +380,7 @@ function train(start_iter, epoch_num)
         -- lr decay
         -- here you can adjust the learning rate based on val loss
         if t >= mp.lrdecayafter and (t-start_iter+1) % mp.lrdecay_every == 0 then
-            mp.lr = mp.lr*mp.lrdecay  -- I should mutate this because it should keep track of the current lr anyway
+            mp.lr = mp.lr*mp.lrdecay
             optim_state.learningRate = mp.lr  
             print('Learning rate is now '..optim_state.learningRate)
         end
@@ -458,8 +458,6 @@ function run_experiment()
     experiment()
 end
 
-
--- will have to change this soon
 function read_log_file_3vals(logfile)
     local data1 = {}
     local data2 = {}
@@ -493,7 +491,7 @@ function run_experiment_load()
     print(snapshotfile)
     local checkpoint = torch.load(snapshotfile)
     local saved_args = torch.load(mp.savedir..'/args.t7')
-    mp = checkpoint.mp  -- completely overwrite  good
+    mp = checkpoint.mp  -- completely overwrite
     mp.mode = 'expload'
     local iters = checkpoint.iters + 1
 
@@ -536,30 +534,17 @@ function run_experiment_load()
                                ['log MSE loss (test set)'] = '~'}
     end
 
-    -- These are things you have to set; although priority sampler might not be reset
     local epoch_num = math.floor(iters / train_loader.num_batches) + 1
-
-
     experiment(iters, epoch_num)
 end
 
 function model_deps(modeltype)
-    if modeltype == 'lstmobj' or
-            modeltype == 'ffobj' or
-                    modeltype == 'gruobj' then
-        M = require 'variable_obj_model'
-    elseif modeltype == 'npe' then
+    if modeltype == 'npe' then
         M = require 'npe'
-    elseif modeltype == 'ind' then
-        M = require 'independent'
-    elseif modeltype == 'bl' then
-        M = require 'blstm'
     elseif modeltype == 'np' then
         M = require 'nop'
     elseif modeltype == 'lstm' then
         M = require 'lstm'
-    elseif modeltype == 'ff' then
-        M = require 'feed_forward_model'
     else
         error('Unrecognized model')
     end
