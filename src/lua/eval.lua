@@ -297,7 +297,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             -- for each particle, update to the next timestep, given
             -- the past configuration of everybody
 
-            -- it makes no sense to accumulate
             local loss_within_batch = 0
             local mag_error_within_batch = 0
             local ang_error_within_batch = 0
@@ -319,14 +318,13 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
 
                 if invalid_focus_mask:sum() < invalid_focus_mask:size(1) then
                     -- note that we have to keep the batch size constant.
-                    -- okay, so I think we'd need to do some dummy filling.
-                    -- for the ones that have an obstacle, I just need to fill it with a dummy entry
-                    -- then after I predict, I replace it with its corresponding entry in future, but remember to apply relative pair. 
+                    -- for the ones that have an obstacle, need to fill it with a dummy entry
+                    -- then after predict, replace it with its corresponding entry in future, but remember to apply relative pair. 
                     -- to check, make sure that the context obstacles just never move.
 
                     -- if we have some entries where obstacle is this
                     if invalid_focus_mask:sum() > 0 then
-                        -- for the ones that have an obstacle, I just need to fill it with a dummy entry
+                        -- for the ones that have an obstacle, need to fill it with a dummy entry
                         -- note that we didn't change the context (we should for a valid prediction) but we will replace the prediction anyways
                         this = make_invalid_dummy(this, invalid_focus_mask:clone())
                     end 
@@ -393,10 +391,6 @@ function simulate_all(dataloader, params_, saveoutput, numsteps, gt)
             ang_error_through_time_all_batches[{{i},{t}}] = ang_error_within_batch/angmag_counter_within_batch
             mag_error_through_time_all_batches[{{i},{t}}] = mag_error_within_batch/angmag_counter_within_batch
         end
-        --- to be honest I don't think we need to break into past and context
-        -- future, but actually that might be good for coloriing past and future, but
-        -- actually I don't think so. For now let's just adapt it
-
         -- at this point, pred_sim should be all filled out
         -- break pred_sim into this and context_future
         -- recall: pred_sim: (batch_size,seq_length+1,numsteps,object_dim)
@@ -567,8 +561,6 @@ function load_checkpoint(snapshot)
     local saved_args = torch.load(mp.savedir..'/args.t7')
     mp = merge_tables(saved_args.mp, mp) -- overwrite saved mp with our mp when applicable
     config_args = saved_args.config_args
-    -- config_args.object_base_size_ids_upper={60,80*math.sqrt(2)/2,math.sqrt(math.pow(60,2)+math.pow(60/3,2))}
-
     model_deps(mp.model)
     return checkpoint, snapshotfile
 end
@@ -657,7 +649,6 @@ local function test_vel_angvel(dataloader, params_, saveoutput, num_batches)
         if mp.debug then xlua.progress(i, num_batches) end
         local batch = dataloader:sample_sequential_batch(false)
 
-        -- may need to change this
         local loss, pred, avg_batch_vel, avg_batch_ang_vel  = model:fp(params_, batch)
         local avg_angle_error, avg_relative_magnitude_error = angle_magnitude(pred, batch)
 
@@ -795,8 +786,6 @@ elseif mp.mode == 'oinf' then
     objtype_inference()
 elseif mp.mode == 'pmofminf' then
     pmofm_b2i_inference()
-elseif mp.mode == 'pred' then
-    predict()
 elseif mp.mode == 'tva' then
     test_vel_angvel_all()
 elseif mp.mode == 'tf' then
