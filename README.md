@@ -1,7 +1,9 @@
 # [Neural Physics Engine](http://mbchang.github.io/npe)
 
-[Project Website](http://mbchang.github.io/npe)
+This repository contains the code described in [https://arxiv.org/abs/1612.00341](https://arxiv.org/abs/1612.00341).
+Project website: [http://mbchang.github.io/npe](http://mbchang.github.io/npe)
 
+## Abstract
 We present the Neural Physics Engine (NPE), an object-based neural network
 architecture for learning predictive models of intuitive physics. We propose a
 factorization of a physical scene into composable object-based representations
