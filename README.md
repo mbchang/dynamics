@@ -20,6 +20,15 @@ compositional representation of the structure in physical interactions improves
 its ability to predict movement, generalize to different numbers of objects,
 and infer latent properties of objects such as mass.
 
+### Citation
+If this paper is helpful, or you use our code, please cite us!
+@article{chang2016compositional,
+    title={A Compositional Object-Based Approach to Learning Physical Dynamics},
+    author={Chang, Michael B and Ullman, Tomer and Torralba, Antonio and Tenenbaum, Joshua B},
+    journal={arXiv preprint arXiv:1612.00341},
+    year={2016}
+}
+
 ##
 
 Below are some predictions from the model:
