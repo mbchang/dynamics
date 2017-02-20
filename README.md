@@ -1,6 +1,6 @@
 # [Neural Physics Engine](http://mbchang.github.io/npe)
 
-This repository contains the code described in [https://arxiv.org/abs/1612.00341](https://arxiv.org/abs/1612.00341).
+This repository contains the code described in [https://arxiv.org/abs/1612.00341](https://arxiv.org/abs/1612.00341), accepted to [ICLR 2017](http://www.iclr.cc/doku.php?id=ICLR2017:main&redirect=1).
 
 Project website: [http://mbchang.github.io/npe](http://mbchang.github.io/npe)
 
